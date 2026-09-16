@@ -5,6 +5,7 @@
 
 #import "SettingsViewController.h"
 #import "CapabilityManager.h"
+#import "JBHideViewController.h"
 #import "JailbreakEnvironment.h"
 #import "IPTheme.h"
 #import "RuntimeEnvironment.h"
@@ -201,6 +202,46 @@
     return row;
 }
 
+- (UIView *)jbHideRow {
+    UIView *row = [[UIView alloc] init];
+    row.translatesAutoresizingMaskIntoConstraints = NO;
+    row.backgroundColor = [UIColor clearColor];
+    row.userInteractionEnabled = YES;
+
+    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(openJBHide)];
+    [row addGestureRecognizer:tap];
+
+    UILabel *titleLbl = [[UILabel alloc] init];
+    titleLbl.translatesAutoresizingMaskIntoConstraints = NO;
+    titleLbl.text = @"إخفاء الجلبريك";
+    titleLbl.font = [UIFont systemFontOfSize:16 weight:UIFontWeightSemibold];
+    titleLbl.textColor = [UIColor whiteColor];
+    titleLbl.textAlignment = NSTextAlignmentRight;
+    [row addSubview:titleLbl];
+
+    UIImageView *chevron = [[UIImageView alloc] init];
+    chevron.translatesAutoresizingMaskIntoConstraints = NO;
+    chevron.image = [UIImage systemImageNamed:@"eye.slash"];
+    chevron.tintColor = [UIColor whiteColor];
+    [row addSubview:chevron];
+
+    [NSLayoutConstraint activateConstraints:@[
+        [chevron.leadingAnchor constraintEqualToAnchor:row.leadingAnchor],
+        [chevron.centerYAnchor constraintEqualToAnchor:row.centerYAnchor],
+        [chevron.widthAnchor constraintEqualToConstant:22],
+        [chevron.heightAnchor constraintEqualToConstant:22],
+        [titleLbl.leadingAnchor constraintEqualToAnchor:chevron.trailingAnchor constant:12],
+        [titleLbl.trailingAnchor constraintEqualToAnchor:row.trailingAnchor],
+        [titleLbl.centerYAnchor constraintEqualToAnchor:row.centerYAnchor],
+        [row.heightAnchor constraintEqualToConstant:44]
+    ]];
+    return row;
+}
+
+- (void)openJBHide {
+    [self.navigationController pushViewController:[JBHideViewController new] animated:YES];
+}
+
 - (UIView *)aboutRow {
     UIView *row = [[UIView alloc] init];
     row.translatesAutoresizingMaskIntoConstraints = NO;
@@ -308,6 +349,10 @@
         UIView *row = [self toolRowWithName:c.name path:c.path available:c.isAvailable];
         [self.contentStack addArrangedSubview:row];
     }
+
+    // ─── Jailbreak Hiding ───
+    [self.contentStack addArrangedSubview:[self sectionDivider]];
+    [self.contentStack addArrangedSubview:[self jbHideRow]];
 
     // ─── About ───
     [self.contentStack addArrangedSubview:[self sectionDivider]];
