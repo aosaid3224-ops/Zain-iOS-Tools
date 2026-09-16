@@ -134,13 +134,13 @@ static int spider_faccessat(int fd, const char *path, int mode, int flag) {
 }
 static int spider_open(const char *path, int flags, ...) {
     mode_t mode = 0;
-    if (flags & O_CREAT) { va_list a; va_start(a, flags); mode = va_arg(a, mode_t); va_end(a); }
+    if (flags & O_CREAT) { va_list a; va_start(a, flags); mode = (mode_t)va_arg(a, int); va_end(a); }
     if (pathIsBlocked(path)) return blockedErrno();
     return open(path, flags, mode);
 }
 static int spider_openat(int fd, const char *path, int flags, ...) {
     mode_t mode = 0;
-    if (flags & O_CREAT) { va_list a; va_start(a, flags); mode = va_arg(a, mode_t); va_end(a); }
+    if (flags & O_CREAT) { va_list a; va_start(a, flags); mode = (mode_t)va_arg(a, int); va_end(a); }
     if (pathIsBlocked(path)) return blockedErrno();
     return openat(fd, path, flags, mode);
 }
