@@ -7,9 +7,9 @@
 //
 
 #import "JBHideViewController.h"
-#import "SpiderManagedAppsRegistry.h"
-#import "SpiderJBHideEngine.h"
-#import "SpiderJBHideStateStore.h"
+#import "../Core/JBHide/SpiderManagedAppsRegistry.h"
+#import "../Core/JBHide/SpiderJBHideEngine.h"
+#import "../Core/JBHide/SpiderJBHideStateStore.h"
 
 @interface JBHideAppCell : UITableViewCell
 @property (nonatomic, strong) UISwitch *toggle;
@@ -120,6 +120,7 @@
     cell.detailTextLabel.numberOfLines = 2;
     cell.imageView.image = app.icon;
     cell.toggle.on = [SpiderJBHideStateStore sharedStore].stateForBundleID(app.bundleID).enabled;
+    cell.toggle.tag = indexPath.row;
     cell.tag = indexPath.row;
     [cell.spinner stopAnimating];
     return cell;
