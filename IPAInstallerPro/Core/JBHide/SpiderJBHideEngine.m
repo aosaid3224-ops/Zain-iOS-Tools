@@ -4,10 +4,11 @@
 
 #import "SpiderJBHideEngine.h"
 #import "SpiderJBHideStateStore.h"
-#import "RootlessManager.h"
-#import "OperationLog.h"
-#import "ProcessRunner.h"
-#import "RuntimeDiagnostics.h"
+#import "../RootlessManager.h"
+#import "../OperationLog.h"
+#import "../ProcessRunner.h"
+#import "../CommandResult.h"
+#import "../RuntimeDiagnostics.h"
 #import <UIKit/UIKit.h>
 
 static NSString *const kDylibBaseName = @"libspiderjbhide";
@@ -140,9 +141,9 @@ static NSString *const kDylibBaseName = @"libspiderjbhide";
 
     NSString *helper = [self helperPath];
     for (NSString *pair in @[ @[stageDylib, dylibDest], @[stagePlist, plistDest] ]) {
-        ProcessResult *pr = [ProcessRunner runCommand:helper arguments:@[@"--copy-tree", pair[0], pair[1]] timeout:10];
-        if (pr.terminationStatus != 0) {
-            return [self failApply:bundleID error:[NSString stringWithFormat:@"فشل النسخ إلى TweakInject (exit %d). %@", pr.terminationStatus, pr.stderrOutput ?: @""]];
+        CommandResult *pr = [[ProcessRunner sharedRunner] runCommand:helper arguments:@[@"--copy-tree", pair[0], pair[1]] timeout:10];
+        if (pr.exitCode != 0) {
+            return [self failApply:bundleID error:[NSString stringWithFormat:@"فشل النسخ إلى TweakInject (exit %d). %@", pr.exitCode, pr.stderrText ?: @""]];
         }
     }
     [[NSFileManager defaultManager] removeItemAtPath:stage error:nil];
@@ -223,7 +224,7 @@ static NSString *const kDylibBaseName = @"libspiderjbhide";
         for (NSString *p in @[ [self dylibPathForBundleID:bundleID inDirectory:dir],
                                [self filterPlistPathForBundleID:bundleID inDirectory:dir] ]) {
             if ([[NSFileManager defaultManager] fileExistsAtPath:p]) {
-                [ProcessRunner runCommand:helper arguments:@[@"/bin/rm", @"-f", p] timeout:10];
+                [[ProcessRunner sharedRunner] runCommand:helper arguments:@[@"/bin/rm", @"-f", p] timeout:10];
             }
         }
         [self killAppWithBundleID:bundleID];
@@ -289,9 +290,9 @@ static NSString *const kDylibBaseName = @"libspiderjbhide";
     id service = [fbsClass performSelector:@selector(sharedService)];
     if (!service) return;
     NSNumber *pid = nil;
-    ProcessResult *ps = [ProcessRunner runCommand:@"/usr/bin/pgrep" arguments:@[@"-f", bundleID] timeout:5];
-    if (ps.terminationStatus == 0 && ps.stdoutOutput.length) {
-        NSString *firstLine = [ps.stdoutOutput componentsSeparatedByCharactersInSet:[NSCharacterSet newlineCharacterSet]].firstObject;
+    CommandResult *ps = [[ProcessRunner sharedRunner] runCommand:@"/usr/bin/pgrep" arguments:@[@"-f", bundleID] timeout:5];
+    if (ps.exitCode == 0 && ps.stdoutText.length) {
+        NSString *firstLine = [ps.stdoutText componentsSeparatedByCharactersInSet:[NSCharacterSet newlineCharacterSet]].firstObject;
         NSInteger parsed = firstLine.integerValue;
         if (parsed > 0) pid = @(parsed);
     }
