@@ -74,8 +74,16 @@
     if (!bundleID.length) return;
     SpiderJBHideAppState *st = [self stateForBundleID:bundleID];
     st.enabled = enabled;
-    if (!enabled) { st.status = SpiderJBHideStatusOff; st.lastError = nil; }
-    else if (st.status == SpiderJBHideStatusOff) st.status = SpiderJBHideStatusConfigured;
+    if (!enabled) {
+        // Preserve a Failed record (with its reason) even after the user
+        // turns the toggle off; only clear genuine non-failed states.
+        if (st.status != SpiderJBHideStatusFailed) {
+            st.status = SpiderJBHideStatusOff;
+            st.lastError = nil;
+        }
+    } else if (st.status == SpiderJBHideStatusOff || st.status == SpiderJBHideStatusFailed) {
+        st.status = SpiderJBHideStatusConfigured;
+    }
     _cache[bundleID] = st;
     [self save];
 }
