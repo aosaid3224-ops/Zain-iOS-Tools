@@ -314,23 +314,30 @@ static BOOL swz_canOpenURL(UIApplication *self, SEL _cmd, NSURL *url) {
 
 #pragma mark - Load marker
 
+static void writeLoadMarkerToDir(NSString *dir, NSString *bundleID) {
+    if (!dir.length) return;
+    [[NSFileManager defaultManager] createDirectoryAtPath:dir
+                              withIntermediateDirectories:YES attributes:@{ NSFilePosixPermissions: @0755 } error:nil];
+    NSString *path = [dir stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.load.plist", bundleID]];
+    NSDictionary *marker = @{
+        @"bundleID": bundleID,
+        @"timestamp": [NSDate date],
+        @"version": @SPIDER_JBHIDE_VERSION,
+        @"pid": @(getpid())
+    };
+    NSString *tmp = [path stringByAppendingString:@".tmp"];
+    if ([marker writeToFile:tmp atomically:YES]) {
+        rename(tmp.fileSystemRepresentation, path.fileSystemRepresentation);
+    }
+}
+
 static void writeLoadMarker(void) {
     @autoreleasepool {
         NSString *bundleID = [[NSBundle mainBundle] bundleIdentifier] ?: @"unknown";
-        NSString *dir = @"/var/mobile/Library/SpiderJB";
-        [[NSFileManager defaultManager] createDirectoryAtPath:dir
-                                  withIntermediateDirectories:YES attributes:@{ NSFilePosixPermissions: @0755 } error:nil];
-        NSString *path = [dir stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.load.plist", bundleID]];
-        NSDictionary *marker = @{
-            @"bundleID": bundleID,
-            @"timestamp": [NSDate date],
-            @"version": @SPIDER_JBHIDE_VERSION,
-            @"pid": @(getpid())
-        };
-        NSString *tmp = [path stringByAppendingString:@".tmp"];
-        if ([marker writeToFile:tmp atomically:YES]) {
-            rename(tmp.fileSystemRepresentation, path.fileSystemRepresentation);
-        }
+        // PRIMARY: the app's own data container — always writable, even sandboxed.
+        writeLoadMarkerToDir([NSHomeDirectory() stringByAppendingPathComponent:@"Library/SpiderJB"], bundleID);
+        // SECONDARY: shared marker dir (fallback for verification from outside).
+        writeLoadMarkerToDir(@"/var/mobile/Library/SpiderJB", bundleID);
     }
 }
 
