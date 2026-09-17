@@ -1,19 +1,16 @@
 //
 //  SpiderManagedAppsRegistry.m
 //
-//  Source of truth: the persisted OperationLog. Only bundle IDs that went
-//  through a SUCCESSFUL installation pipeline appear here. Names/icons are
-//  resolved from the live bundle on disk; apps uninstalled since are dropped.
-//
 
 #import "SpiderManagedAppsRegistry.h"
-#import "RootlessManager.h"
+#import "SpiderInstalledAppsStore.h"
 
 @implementation SpiderManagedApp
 @end
 
 @implementation SpiderManagedAppsRegistry {
     NSArray<SpiderManagedApp *> *_cached;
+    BOOL _legacyMigrated;
 }
 
 + (instancetype)sharedRegistry {
@@ -28,12 +25,12 @@
 - (NSArray<SpiderManagedApp *> *)managedApps { return _cached ?: @[]; }
 
 - (void)refresh {
-    NSMutableSet<NSString *> *bundleIDs = [NSMutableSet set];
-    [self collectBundleIDsFromOperationLogInto:bundleIDs];
+    [self migrateLegacyOnce];
 
     NSMutableArray<SpiderManagedApp *> *apps = [NSMutableArray array];
-    for (NSString *bid in bundleIDs) {
-        SpiderManagedApp *app = [self resolveAppForBundleID:bid];
+    NSDictionary *stored = [SpiderInstalledAppsStore sharedStore].allApps;
+    for (NSString *bid in stored) {
+        SpiderManagedApp *app = [self resolveAppForBundleID:bid storedEntry:stored[bid]];
         if (app) [apps addObject:app];
     }
     [apps sortUsingComparator:^NSComparisonResult(SpiderManagedApp *a, SpiderManagedApp *b) {
@@ -42,14 +39,25 @@
     _cached = [apps copy];
 }
 
-#pragma mark - OperationLog scan
+#pragma mark - One-time legacy migration from OperationLog
 
-- (void)collectBundleIDsFromOperationLogInto:(NSMutableSet<NSString *> *)outSet {
+- (void)migrateLegacyOnce {
+    if (_legacyMigrated) return;
+    _legacyMigrated = YES;
+
     NSString *docs = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES).firstObject;
     NSString *logPath = [docs stringByAppendingPathComponent:@"IPAInstallerPro_OperationLog.plist"];
     id root = [NSDictionary dictionaryWithContentsOfFile:logPath] ?: [NSArray arrayWithContentsOfFile:logPath];
     if (!root) return;
-    [self walk:root into:outSet];
+
+    NSMutableSet<NSString *> *found = [NSMutableSet set];
+    [self walk:root into:found];
+    for (NSString *bid in found) {
+        // Only add if the pipeline never recorded it in the authoritative store.
+        if (![SpiderInstalledAppsStore sharedStore].allApps[bid]) {
+            [[SpiderInstalledAppsStore sharedStore] noteInstalledAppWithBundleID:bid path:nil];
+        }
+    }
 }
 
 - (void)walk:(id)node into:(NSMutableSet<NSString *> *)outSet {
@@ -61,8 +69,7 @@
                             [phaseName isEqualToString:@"VERIFY"] ||
                             [phaseName isEqualToString:@"COMPLETE"];
         if (installPhase && [resultName isEqualToString:@"SUCCESS"]) {
-            NSString *bid = [self bundleIDFromContext:d[@"context"]];
-            if (!bid) bid = [self bundleIDFromTarget:d[@"target"]];
+            NSString *bid = [self bundleIDFromContext:d[@"context"]] ?: [self bundleIDFromTarget:d[@"target"]];
             if ([self isValidBundleID:bid]) [outSet addObject:bid];
         }
         [d enumerateKeysAndObjectsUsingBlock:^(id k, id v, BOOL *s) { [self walk:v into:outSet]; }];
@@ -73,10 +80,9 @@
 
 - (NSString *)bundleIDFromContext:(id)context {
     if (![context isKindOfClass:[NSDictionary class]]) return nil;
-    NSDictionary *c = context;
-    for (NSString *key in c) {
+    for (NSString *key in (NSDictionary *)context) {
         if ([key.lowercaseString containsString:@"bundleid"] || [key.lowercaseString isEqualToString:@"bundle"]) {
-            id v = c[key];
+            id v = context[key];
             if ([v isKindOfClass:[NSString class]] && [self isValidBundleID:v]) return v;
         }
     }
@@ -85,15 +91,12 @@
 
 - (NSString *)bundleIDFromTarget:(id)target {
     if (![target isKindOfClass:[NSString class]]) return nil;
-    NSString *path = (NSString *)target;
-    if (![path hasSuffix:@".app"] && ![path containsString:@".app/"]) return nil;
+    NSString *path = target;
+    if (![path containsString:@".app"]) return nil;
     NSString *appDir = path;
-    if ([path containsString:@".app/"]) {
-        NSRange r = [path rangeOfString:@".app/"];
-        appDir = [path substringToIndex:r.location + 4];
-    }
-    NSString *infoPath = [appDir stringByAppendingPathComponent:@"Info.plist"];
-    NSDictionary *info = [NSDictionary dictionaryWithContentsOfFile:infoPath];
+    NSRange r = [path rangeOfString:@".app"];
+    if (r.location != NSNotFound) appDir = [path substringToIndex:r.location + 4];
+    NSDictionary *info = [NSDictionary dictionaryWithContentsOfFile:[appDir stringByAppendingPathComponent:@"Info.plist"]];
     NSString *bid = info[@"CFBundleIdentifier"];
     return [self isValidBundleID:bid] ? bid : nil;
 }
@@ -105,21 +108,26 @@
     return [re rangeOfFirstMatchInString:bid options:0 range:NSMakeRange(0, bid.length)].location == 0;
 }
 
-#pragma mark - App resolution
+#pragma mark - Resolution (keeps recorded-but-missing apps)
 
-- (SpiderManagedApp *)resolveAppForBundleID:(NSString *)bid {
-    // LaunchServices lookup (private API, mirrors ForensicRegistrationProbe).
-    Class proxyClass = NSClassFromString(@"LSApplicationProxy");
-    if (!proxyClass) return nil;
-    id proxy = [proxyClass applicationProxyForIdentifier:bid];
-    if (!proxy) return nil;
-    NSURL *bundleURL = [proxy valueForKey:@"bundleURL"];
-    if (!bundleURL) return nil;
-    NSString *path = bundleURL.path;
-    if (!path.length || ![path hasSuffix:@".app"]) return nil;
-
+- (SpiderManagedApp *)resolveAppForBundleID:(NSString *)bid storedEntry:(NSDictionary *)entry {
     SpiderManagedApp *app = [SpiderManagedApp new];
     app.bundleID = bid;
+    app.currentlyInstalled = YES;
+
+    Class proxyClass = NSClassFromString(@"LSApplicationProxy");
+    id proxy = proxyClass ? [proxyClass applicationProxyForIdentifier:bid] : nil;
+    NSURL *bundleURL = proxy ? [proxy valueForKey:@"bundleURL"] : nil;
+
+    NSString *path = bundleURL.path ?: entry[@"path"];
+    if (!path.length || ![path hasSuffix:@".app"]) {
+        // Recorded but not currently on device: KEEP the row, flag it.
+        app.currentlyInstalled = NO;
+        app.name = bid;
+        app.bundlePath = entry[@"path"] ?: @"";
+        return app;
+    }
+
     app.bundlePath = path;
     NSString *localizedName = [proxy valueForKey:@"localizedName"];
     if (!localizedName.length) {
@@ -137,7 +145,7 @@
     NSDictionary *icons = info[@"CFBundleIcons"];
     NSDictionary *primary = icons[@"CFBundlePrimaryIcon"];
     if ([primary isKindOfClass:[NSDictionary class]]) iconFiles = primary[@"CFBundleIconFiles"];
-    if (!iconFiles.count) iconFiles = info[@"CFBundleIconFiles"];
+    if (![iconFiles isKindOfClass:[NSArray class]] || !iconFiles.count) iconFiles = info[@"CFBundleIconFiles"];
     if (![iconFiles isKindOfClass:[NSArray class]] || !iconFiles.count) return nil;
 
     NSString *name = iconFiles.lastObject;
