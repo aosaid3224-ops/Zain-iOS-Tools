@@ -116,10 +116,12 @@
     SpiderManagedApp *app = self.apps[indexPath.row];
     cell.app = app;
     cell.textLabel.text = app.name;
-    cell.detailTextLabel.text = [NSString stringWithFormat:@"%@\n%@", app.bundleID, [self statusTextForBundleID:app.bundleID]];
-    cell.detailTextLabel.numberOfLines = 2;
+    NSString *presence = app.currentlyInstalled ? @"" : @"غير مثبت حاليًا على الجهاز — السجل محفوظ\n";
+    cell.detailTextLabel.text = [NSString stringWithFormat:@"%@%@\n%@", presence, app.bundleID, [self statusTextForBundleID:app.bundleID]];
+    cell.detailTextLabel.numberOfLines = 3;
     cell.imageView.image = app.icon;
     cell.toggle.on = [SpiderJBHideStateStore sharedStore].stateForBundleID(app.bundleID).enabled;
+    cell.toggle.enabled = app.currentlyInstalled;
     cell.toggle.tag = indexPath.row;
     cell.tag = indexPath.row;
     [cell.spinner stopAnimating];
@@ -137,6 +139,10 @@
             return st.lastError.length
                 ? [NSString stringWithFormat:@"الحالة: مُفعّل — لم يُطبَّق بعد ⚠️\n%@", st.lastError]
                 : @"الحالة: مُفعّل — لم يُطبَّق بعد ⚠️";
+        case SpiderJBHideStatusFailed:
+            return st.lastError.length
+                ? [NSString stringWithFormat:@"الحالة: فشل ❌\n%@", st.lastError]
+                : @"الحالة: فشل ❌";
         default: return @"الحالة: معطّل";
     }
 }
@@ -147,6 +153,12 @@
     NSInteger row = sender.tag;
     if (row < 0 || row >= (NSInteger)self.apps.count) return;
     SpiderManagedApp *app = self.apps[row];
+    if (!app.currentlyInstalled) {
+        [sender setOn:NO animated:YES];
+        self.statusBar.text = @"هذا التطبيق غير مثبت حاليًا على الجهاز. السجل محفوظ — أعد تثبيته من Spider لتفعيل الإخفاء.";
+        self.statusBar.textColor = UIColor.systemOrangeColor;
+        return;
+    }
     sender.enabled = NO;
 
     JBHideAppCell *cell = (JBHideAppCell *)[self.tableView cellForRowAtIndexPath:[NSIndexPath indexPathForRow:row inSection:0]];
