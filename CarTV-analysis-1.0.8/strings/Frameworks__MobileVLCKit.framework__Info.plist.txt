@@ -1,0 +1,18 @@
+bplist00
+ !"#$"%&'()_
+BuildMachineOSBuild_
+CFBundleDevelopmentRegion_
+CFBundleExecutable_
+CFBundleIdentifier_
+CFBundleInfoDictionaryVersion\CFBundleName_
+CFBundlePackageType_
+CFBundleShortVersionString_
+CFBundleSignature_
+CFBundleSupportedPlatforms_
+CFBundleVersionZDTCompiler_
+DTPlatformBuild^DTPlatformName_
+DTPlatformVersionZDTSDKBuildYDTSDKNameWDTXcode\DTXcodeBuild_
+MinimumOSVersion^UIDeviceFamilyW21H1320Ren\MobileVLCKit_
+org.videolan.mobilevlckitS6.0TFMWKS1.0T????
+XiPhoneOSQ1_
+"com.apple.compilers.llvm.clang.1_0V19E239XiphoneosT15.4\iphoneos15.4T1330V13E113S9.0

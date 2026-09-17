@@ -1,0 +1,35 @@
+{
+  "CFBundleName": "ScreenRelay",
+  "DTSDKName": "iphoneos26.5",
+  "DTXcode": "2660",
+  "DTSDKBuild": "23F81a",
+  "CFBundleDevelopmentRegion": "en",
+  "CFBundleVersion": "21",
+  "BuildMachineOSBuild": "25F84",
+  "DTPlatformName": "iphoneos",
+  "CFBundlePackageType": "XPC!",
+  "CFBundleShortVersionString": "1.0.8",
+  "CFBundleSupportedPlatforms": [
+    "iPhoneOS"
+  ],
+  "CFBundleInfoDictionaryVersion": "6.0",
+  "CFBundleExecutable": "ScreenRelay",
+  "DTCompiler": "com.apple.compilers.llvm.clang.1_0",
+  "UIRequiredDeviceCapabilities": [
+    "arm64"
+  ],
+  "MinimumOSVersion": "18",
+  "CFBundleIdentifier": "com.lyntra.player.ScreenRelay",
+  "UIDeviceFamily": [
+    1
+  ],
+  "DTPlatformVersion": "26.5",
+  "DTXcodeBuild": "17F113",
+  "CFBundleDisplayName": "CarTV",
+  "DTPlatformBuild": "23F81a",
+  "NSExtension": {
+    "NSExtensionPointIdentifier": "com.apple.broadcast-services-upload",
+    "NSExtensionPrincipalClass": "ScreenRelay.LyntraScreenRelayHandler",
+    "RPBroadcastProcessMode": "RPBroadcastProcessModeSampleBuffer"
+  }
+}
