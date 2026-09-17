@@ -1,15 +1,18 @@
 //
 //  SpiderJBHideEngine.m
 //
+//  Mechanism: per-app ElleKit injection via the rootless TweakInject dir.
+//  Strict states: Off / Configured / Applied / Verified / Failed.
+//  Verification = real kill + real launch + in-process load marker.
+//
 
 #import "SpiderJBHideEngine.h"
 #import "SpiderJBHideStateStore.h"
 #import "../RootlessManager.h"
-#import "../OperationLog.h"
 #import "../ProcessRunner.h"
 #import "../CommandResult.h"
-#import "../RuntimeDiagnostics.h"
 #import <UIKit/UIKit.h>
+#import <dlfcn.h>
 
 static NSString *const kDylibBaseName = @"libspiderjbhide";
 
@@ -64,6 +67,19 @@ static NSString *const kDylibBaseName = @"libspiderjbhide";
 
 + (NSString *)markerDirectoryPath { return @"/var/mobile/Library/SpiderJB"; }
 
+// Primary marker: inside the TARGET app's data container — always writable
+// by the injected process even when sandboxed. Shared path is a fallback.
+- (NSString *)markerPathForBundleID:(NSString *)bundleID {
+    NSString *home = nil;
+    Class proxyClass = NSClassFromString(@"LSApplicationProxy");
+    id proxy = proxyClass ? [proxyClass applicationProxyForIdentifier:bundleID] : nil;
+    NSURL *container = proxy ? [proxy valueForKey:@"dataContainerURL"] : nil;
+    if (container.path.length) home = container.path;
+    if (!home.length) home = NSHomeDirectory();
+    NSString *dir = [home stringByAppendingPathComponent:@"Library/SpiderJB"];
+    return [dir stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.load.plist", bundleID]];
+}
+
 - (BOOL)isMechanismAvailableWithReason:(NSString **)reason {
     if (self.tweakInjectDirectories.count == 0) {
         if (reason) *reason = @"لم يتم العثور على مجلد TweakInject في بيئة الجلبريك الحالية.";
@@ -108,9 +124,9 @@ static NSString *const kDylibBaseName = @"libspiderjbhide";
 - (SpiderJBHideResult *)applyHidingForBundleIDSync:(NSString *)bundleID {
     NSString *reason = nil;
     if (![self isMechanismAvailableWithReason:&reason]) {
-        [[SpiderJBHideStateStore sharedStore] updateStatus:SpiderJBHideStatusConfigured
+        [[SpiderJBHideStateStore sharedStore] updateStatus:SpiderJBHideStatusFailed
                                                      error:reason forBundleID:bundleID];
-        return [SpiderJBHideResult resultWithSuccess:NO status:SpiderJBHideStatusConfigured
+        return [SpiderJBHideResult resultWithSuccess:NO status:SpiderJBHideStatusFailed
                                               error:reason report:nil];
     }
 
@@ -119,8 +135,6 @@ static NSString *const kDylibBaseName = @"libspiderjbhide";
     NSString *plistDest = [self filterPlistPathForBundleID:bundleID inDirectory:dir];
     NSString *bundledDylib = [[NSBundle mainBundle] pathForResource:kDylibBaseName ofType:@"dylib"];
 
-    // Stage files in a temp dir then promote via the root helper (TweakInject
-    // is root-owned on rootless bootstraps).
     NSString *stage = [NSTemporaryDirectory() stringByAppendingPathComponent:[NSUUID UUID].UUIDString];
     [[NSFileManager defaultManager] createDirectoryAtPath:stage withIntermediateDirectories:YES attributes:nil error:nil];
     NSString *stageDylib = [stage stringByAppendingPathComponent:dylibDest.lastPathComponent];
@@ -128,10 +142,12 @@ static NSString *const kDylibBaseName = @"libspiderjbhide";
 
     NSError *err = nil;
     if (![[NSFileManager defaultManager] copyItemAtPath:bundledDylib toPath:stageDylib error:&err]) {
+        [[NSFileManager defaultManager] removeItemAtPath:stage error:nil];
         return [self failApply:bundleID error:[NSString stringWithFormat:@"فشل تجهيز المكتبة: %@", err.localizedDescription]];
     }
     NSDictionary *filter = @{ @"Filter": @{ @"Bundles": @[bundleID] } };
     if (![filter writeToFile:stagePlist atomically:YES]) {
+        [[NSFileManager defaultManager] removeItemAtPath:stage error:nil];
         return [self failApply:bundleID error:@"فشل إنشاء ملف الترشيح (plist)."];
     }
     [[NSFileManager defaultManager] setAttributes:@{ NSFilePosixPermissions: @0755 }
@@ -140,41 +156,43 @@ static NSString *const kDylibBaseName = @"libspiderjbhide";
                                      ofItemAtPath:stagePlist error:nil];
 
     NSString *helper = [self helperPath];
-    for (NSString *pair in @[ @[stageDylib, dylibDest], @[stagePlist, plistDest] ]) {
-        CommandResult *pr = [[ProcessRunner sharedRunner] runCommand:helper arguments:@[@"--copy-tree", pair[0], pair[1]] timeout:10];
+    for (NSArray *pair in @[ @[stageDylib, dylibDest], @[stagePlist, plistDest] ]) {
+        CommandResult *pr = [[ProcessRunner sharedRunner] runCommand:helper
+                                                          arguments:@[@"--copy-tree", pair[0], pair[1]]
+                                                            timeout:10];
         if (pr.exitCode != 0) {
+            [[NSFileManager defaultManager] removeItemAtPath:stage error:nil];
             return [self failApply:bundleID error:[NSString stringWithFormat:@"فشل النسخ إلى TweakInject (exit %d). %@", pr.exitCode, pr.stderrText ?: @""]];
         }
     }
     [[NSFileManager defaultManager] removeItemAtPath:stage error:nil];
 
-    // Static verification
     SpiderJBHideResult *st = [self staticStatusForBundleID:bundleID];
     if (!st.success) {
-        [[SpiderJBHideStateStore sharedStore] updateStatus:SpiderJBHideStatusConfigured
+        [[SpiderJBHideStateStore sharedStore] updateStatus:SpiderJBHideStatusFailed
                                                      error:st.errorMessage forBundleID:bundleID];
         return st;
     }
 
     [[SpiderJBHideStateStore sharedStore] updateStatus:SpiderJBHideStatusApplied error:nil forBundleID:bundleID];
-
-    // Runtime verification: kill + relaunch + marker file + process liveness.
     return [self verifyHidingForBundleID:bundleID];
 }
 
 - (SpiderJBHideResult *)failApply:(NSString *)bundleID error:(NSString *)error {
-    [[SpiderJBHideStateStore sharedStore] updateStatus:SpiderJBHideStatusConfigured
+    [[SpiderJBHideStateStore sharedStore] updateStatus:SpiderJBHideStatusFailed
                                                  error:error forBundleID:bundleID];
-    return [SpiderJBHideResult resultWithSuccess:NO status:SpiderJBHideStatusConfigured
+    return [SpiderJBHideResult resultWithSuccess:NO status:SpiderJBHideStatusFailed
                                           error:error report:nil];
 }
 
 #pragma mark - Verify (runtime)
 
 - (SpiderJBHideResult *)verifyHidingForBundleID:(NSString *)bundleID {
-    // Clear stale marker
-    NSString *marker = [[[self class] markerDirectoryPath] stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.load.plist", bundleID]];
+    NSString *marker = [self markerPathForBundleID:bundleID];
+    NSString *sharedMarker = [[[self class] markerDirectoryPath] stringByAppendingPathComponent:
+                              [NSString stringWithFormat:@"%@.load.plist", bundleID]];
     [[NSFileManager defaultManager] removeItemAtPath:marker error:nil];
+    [[NSFileManager defaultManager] removeItemAtPath:sharedMarker error:nil];
 
     [self killAppWithBundleID:bundleID];
 
@@ -189,24 +207,26 @@ static NSString *const kDylibBaseName = @"libspiderjbhide";
 
     if (!launched) {
         NSString *msg = @"تعذّر طلب إطلاق التطبيق. إذا كان التطبيق مخفيًا في مكتبة التطبيقات فأعد ترتيبه.";
-        [[SpiderJBHideStateStore sharedStore] updateStatus:SpiderJBHideStatusApplied error:msg forBundleID:bundleID];
-        return [SpiderJBHideResult resultWithSuccess:NO status:SpiderJBHideStatusApplied error:msg report:nil];
+        [[SpiderJBHideStateStore sharedStore] updateStatus:SpiderJBHideStatusFailed error:msg forBundleID:bundleID];
+        return [SpiderJBHideResult resultWithSuccess:NO status:SpiderJBHideStatusFailed error:msg report:nil];
     }
 
-    // Poll marker (written by the injected dylib inside the target process).
     BOOL markerOK = NO;
     for (int i = 0; i < 20; i++) {
         [NSThread sleepForTimeInterval:0.5];
-        NSDictionary *m = [NSDictionary dictionaryWithContentsOfFile:marker];
-        NSDate *ts = m[@"timestamp"];
-        if (ts && [ts compare:probeStart] != NSOrderedAscending) { markerOK = YES; break; }
-        if (m && !ts) { markerOK = YES; break; }
+        for (NSString *candidate in @[marker, sharedMarker]) {
+            NSDictionary *m = [NSDictionary dictionaryWithContentsOfFile:candidate];
+            NSDate *ts = m[@"timestamp"];
+            if (ts && [ts compare:probeStart] != NSOrderedAscending) { markerOK = YES; break; }
+            if (m && !ts) { markerOK = YES; break; }
+        }
+        if (markerOK) break;
     }
 
     if (!markerOK) {
-        NSString *msg = @"المكتبة لم تُحمَّل داخل التطبيق. السبب الأكثر شيوعًا: تعطيل «Tweak Injection» لهذا التطبيق من إعدادات Dopamine، أو أن نوع الكشف يتجاوز آلية الإخفاء المتاحة.";
-        [[SpiderJBHideStateStore sharedStore] updateStatus:SpiderJBHideStatusApplied error:msg forBundleID:bundleID];
-        return [SpiderJBHideResult resultWithSuccess:NO status:SpiderJBHideStatusApplied error:msg report:nil];
+        NSString *msg = @"المكتبة لم تُحمَّل داخل التطبيق. الأسباب المحتملة بالترتيب: (1) التطبيق لم يُقتل فعليًا وظل يعمل بالعملية القديمة، (2) تعطيل «Tweak Injection» لهذا التطبيق من إعدادات Dopamine، (3) آلية الكشف تتجاوز الإخفاء المتاح.";
+        [[SpiderJBHideStateStore sharedStore] updateStatus:SpiderJBHideStatusFailed error:msg forBundleID:bundleID];
+        return [SpiderJBHideResult resultWithSuccess:NO status:SpiderJBHideStatusFailed error:msg report:nil];
     }
 
     [[SpiderJBHideStateStore sharedStore] markVerifiedForBundleID:bundleID];
@@ -262,7 +282,7 @@ static NSString *const kDylibBaseName = @"libspiderjbhide";
     return [SpiderJBHideResult resultWithSuccess:YES status:SpiderJBHideStatusApplied error:nil report:nil];
 }
 
-#pragma mark - Process control (mirrors ApplicationManager patterns)
+#pragma mark - Process control
 
 - (BOOL)launchAppWithBundleID:(NSString *)bundleID {
     Class wsClass = NSClassFromString(@"LSApplicationWorkspace");
@@ -270,34 +290,39 @@ static NSString *const kDylibBaseName = @"libspiderjbhide";
     id workspace = [wsClass performSelector:@selector(defaultWorkspace)];
     if (!workspace) return NO;
     if ([workspace respondsToSelector:@selector(openApplicationWithBundleID:)]) {
-        BOOL ok = (BOOL)(intptr_t)[workspace performSelector:@selector(openApplicationWithBundleID:) withObject:bundleID];
-        return ok;
-    }
-    NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@"%@://", [bundleID componentsSeparatedByString:@"."].lastObject.lowercaseString]];
-    if (url) {
-        id app = [UIApplication sharedApplication];
-        if ([app respondsToSelector:@selector(canOpenURL:)] && [app canOpenURL:url]) {
-            [app performSelector:@selector(openURL:options:completionHandler:) withObject:url withObject:@{} withObject:nil];
-            return YES;
-        }
+        return (BOOL)(intptr_t)[workspace performSelector:@selector(openApplicationWithBundleID:) withObject:bundleID];
     }
     return NO;
 }
 
+// Unconditional kill via FBSSystemService (mirrors ApplicationManager's
+// proven pattern). The previous pgrep-based gate meant the kill often never
+// fired — iOS process names don't contain the bundle ID — so the old process
+// survived and the freshly injected dylib never got a chance to load.
 - (void)killAppWithBundleID:(NSString *)bundleID {
-    Class fbsClass = NSClassFromString(@"FBSSystemService");
-    if (!fbsClass) return;
-    id service = [fbsClass performSelector:@selector(sharedService)];
-    if (!service) return;
-    NSNumber *pid = nil;
-    CommandResult *ps = [[ProcessRunner sharedRunner] runCommand:@"/usr/bin/pgrep" arguments:@[@"-f", bundleID] timeout:5];
-    if (ps.exitCode == 0 && ps.stdoutText.length) {
-        NSString *firstLine = [ps.stdoutText componentsSeparatedByCharactersInSet:[NSCharacterSet newlineCharacterSet]].firstObject;
-        NSInteger parsed = firstLine.integerValue;
-        if (parsed > 0) pid = @(parsed);
-    }
-    if (pid) {
-        [service performSelector:@selector(killApplication:options:withResult:) withObject:bundleID withObject:@{} withObject:nil];
+    if (!bundleID.length) return;
+    @try {
+        dlopen("/System/Library/PrivateFrameworks/FrontBoardServices.framework/FrontBoardServices", RTLD_LAZY);
+        Class FBSSystemService_class = NSClassFromString(@"FBSSystemService");
+        if (!FBSSystemService_class || ![FBSSystemService_class respondsToSelector:@selector(sharedService)]) return;
+        id service = [FBSSystemService_class performSelector:@selector(sharedService)];
+        SEL killSel = @selector(terminateApplication:forReason:andReport:completion:);
+        if (!service || ![service respondsToSelector:killSel]) return;
+        NSMethodSignature *sig = [service methodSignatureForSelector:killSel];
+        if (!sig) return;
+        NSInvocation *inv = [NSInvocation invocationWithMethodSignature:sig];
+        [inv setSelector:killSel];
+        [inv setTarget:service];
+        NSString *bid = bundleID;
+        NSNumber *reason = @(1);
+        NSNumber *report = @(NO);
+        [inv setArgument:&bid atIndex:2];
+        [inv setArgument:&reason atIndex:3];
+        [inv setArgument:&report atIndex:4];
+        [inv invoke];
+        [NSThread sleepForTimeInterval:0.8];
+    } @catch (NSException *e) {
+        NSLog(@"[SpiderJBHide] kill failed: %@", e);
     }
 }
 
