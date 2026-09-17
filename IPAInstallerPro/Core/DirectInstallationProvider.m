@@ -2296,6 +2296,42 @@ extern char **environ;
 
 #pragma mark - Launch Readiness Gate
 
+#pragma mark - Bundle-scoped dependency index (v3.2.2)
+
+// FIX(v3.2.2): Non-standard layouts in modded IPAs (e.g. FFmpeg-style dylib
+// trees referencing "@rpath/libavutil_sci.framework/libavutil" from a custom
+// subdirectory) defeat the fixed candidate list. This builds a one-time,
+// cached index of every file inside the app bundle and is consulted ONLY
+// after every standard candidate fails. Purely additive — no existing
+// candidate, gate, or special case is altered.
+- (NSSet<NSString *> *)bundlePathIndexForApp:(NSString *)appPath {
+    static NSCache<NSString *, NSSet<NSString *> *> *indexCache = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        indexCache = [NSCache new];
+        indexCache.totalCostLimit = 32 * 1024 * 1024;
+    });
+    NSSet<NSString *> *cached = [indexCache objectForKey:appPath];
+    if (cached) return cached;
+
+    NSMutableSet<NSString *> *paths = [NSMutableSet set];
+    const NSUInteger kIndexCap = 50000;
+    NSUInteger count = 0;
+    NSDirectoryEnumerator *enumerator = [[NSFileManager defaultManager]
+        enumeratorAtURL:[NSURL fileURLWithPath:appPath]
+        includingPropertiesForKeys:nil
+        options:0
+        errorHandler:nil];
+    // Note: no SkipsPackageDescendants — we must descend into .framework
+    // bundles because the dependency leaf itself is "X.framework/X".
+    for (NSURL *url in enumerator) {
+        if (++count > kIndexCap) break;
+        [paths addObject:url.path];
+    }
+    [indexCache setObject:paths forKey:appPath cost:paths.count * 64];
+    return paths;
+}
+
 - (BOOL)dependency:(NSString *)dependency resolvesForBinary:(NSString *)binaryPath appPath:(NSString *)appPath rpaths:(NSArray<MachORPath *> *)rpaths {
     if (!dependency.length || !binaryPath.length || !appPath.length) return NO;
 
@@ -2423,6 +2459,30 @@ extern char **environ;
 
     for (NSString *candidate in candidates) {
         if (candidate.length && [fm fileExistsAtPath:candidate]) return YES;
+    }
+
+    // FIX(v3.2.2): Last-resort bundle-scoped lookup for non-standard layouts.
+    // Only reached when every standard candidate failed. Absolute-path
+    // dependencies are intentionally excluded — if the file is truly absent
+    // from disk there is nothing an in-bundle search could satisfy.
+    BOOL isAppRelativeRef = [dependency hasPrefix:@"@rpath/"] ||
+                            [dependency hasPrefix:@"@loader_path"] ||
+                            [dependency hasPrefix:@"@executable_path"] ||
+                            ![dependency hasPrefix:@"/"];
+    if (isAppRelativeRef) {
+        NSString *leaf = nil;
+        if ([dependency hasPrefix:@"@rpath/"]) leaf = [dependency substringFromIndex:[@"@rpath/" length]];
+        else if ([dependency hasPrefix:@"@loader_path"]) leaf = [dependency substringFromIndex:[@"@loader_path" length]];
+        else if ([dependency hasPrefix:@"@executable_path"]) leaf = [dependency substringFromIndex:[@"@executable_path" length]];
+        else leaf = dependency;
+        leaf = [leaf stringByStandardizingPath];
+        if (leaf.length && ![leaf hasPrefix:@".."]) {
+            NSString *suffix = [@"/" stringByAppendingString:leaf];
+            NSSet<NSString *> *index = [self bundlePathIndexForApp:appPath];
+            for (NSString *indexedPath in index) {
+                if ([indexedPath hasSuffix:suffix]) return YES;
+            }
+        }
     }
     return NO;
 }
