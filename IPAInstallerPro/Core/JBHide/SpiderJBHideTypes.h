@@ -2,17 +2,22 @@
 //  SpiderJBHideTypes.h
 //  IPAInstallerPro — Jailbreak Hiding
 //
-//  Per-app jailbreak-detection mitigation states.
-//  Principle: Configured != Applied != Verified. Never assume.
+//  Strict state machine. Toggle ON never equals "protection active".
+//   Off        — mechanism absent
+//   Configured — requested, saved, not yet applied
+//   Applied    — mechanism files in place + static checks pass
+//   Verified   — proven by a real launch + in-process load marker
+//   Failed     — operation did not complete or could not be proven
 //
 
 #import <Foundation/Foundation.h>
 
 typedef NS_ENUM(NSInteger, SpiderJBHideStatus) {
-    SpiderJBHideStatusOff = 0,        // mechanism absent
-    SpiderJBHideStatusConfigured = 1, // toggle saved, mechanism not confirmed
-    SpiderJBHideStatusApplied = 2,    // mechanism files in place + static verify
-    SpiderJBHideStatusVerified = 3    // proven by real launch probe
+    SpiderJBHideStatusOff = 0,
+    SpiderJBHideStatusConfigured = 1,
+    SpiderJBHideStatusApplied = 2,
+    SpiderJBHideStatusVerified = 3,
+    SpiderJBHideStatusFailed = 4
 };
 
 @interface SpiderJBHideResult : NSObject
