@@ -138,7 +138,7 @@
 + (instancetype)destructiveWithTitle:(NSString *)title {
     IPButton *b = [self baseWithTitle:title];
     b.backgroundColor = [IPTheme errorColor];
-    [b setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    [b setTitleColor:[IPTheme textPrimaryColor] forState:UIControlStateNormal];
     b.contentEdgeInsets = UIEdgeInsetsMake(11, 20, 11, 20);
     return b;
 }
