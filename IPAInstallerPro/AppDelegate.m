@@ -54,8 +54,8 @@
     [tabAppearance configureWithDefaultBackground];
     tabAppearance.backgroundEffect = [UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemChromeMaterialDark];
     tabAppearance.backgroundColor = glassBackground;
-    tabAppearance.shadowColor = [UIColor colorWithWhite:1.0 alpha:0.12];
-    tabAppearance.stackedLayoutAppearance.normal.iconColor = [UIColor colorWithWhite:1.0 alpha:0.42];
+    tabAppearance.shadowColor = [IPTheme separatorColor];
+    tabAppearance.stackedLayoutAppearance.normal.iconColor = [IPTheme separatorStrongColor];
     tabAppearance.stackedLayoutAppearance.normal.titleTextAttributes = @{NSForegroundColorAttributeName: [UIColor colorWithWhite:1.0 alpha:0.48], NSFontAttributeName: [UIFont systemFontOfSize:11 weight:UIFontWeightMedium]};
     tabAppearance.stackedLayoutAppearance.selected.iconColor = glassTint;
     tabAppearance.stackedLayoutAppearance.selected.titleTextAttributes = @{NSForegroundColorAttributeName: glassTint, NSFontAttributeName: [UIFont systemFontOfSize:11 weight:UIFontWeightSemibold]};
@@ -64,7 +64,7 @@
         tabBarController.tabBar.scrollEdgeAppearance = tabAppearance;
     }
     tabBarController.tabBar.tintColor = glassTint;
-    tabBarController.tabBar.unselectedItemTintColor = [UIColor colorWithWhite:1.0 alpha:0.42];
+    tabBarController.tabBar.unselectedItemTintColor = [IPTheme separatorStrongColor];
     tabBarController.tabBar.translucent = YES;
 
     for (UINavigationController *nav in tabBarController.viewControllers) {
