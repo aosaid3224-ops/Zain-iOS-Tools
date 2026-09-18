@@ -3,6 +3,7 @@
 //
 
 #import "IPComponents.h"
+#import "IPTheme.h"
 
 #pragma mark - Hairline
 
