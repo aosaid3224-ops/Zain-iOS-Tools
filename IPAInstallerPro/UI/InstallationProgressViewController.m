@@ -51,14 +51,14 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
         _titleLabel = [[UILabel alloc] init];
         _titleLabel.translatesAutoresizingMaskIntoConstraints = NO;
         _titleLabel.font = [UIFont systemFontOfSize:15 weight:UIFontWeightMedium];
-        _titleLabel.textColor = [UIColor whiteColor];
+        _titleLabel.textColor = [IPTheme textPrimaryColor];
         _titleLabel.text = title;
         [self addSubview:_titleLabel];
 
         _subtitleLabel = [[UILabel alloc] init];
         _subtitleLabel.translatesAutoresizingMaskIntoConstraints = NO;
         _subtitleLabel.font = [UIFont systemFontOfSize:12 weight:UIFontWeightRegular];
-        _subtitleLabel.textColor = [UIColor colorWithWhite:0.6 alpha:1.0];
+        _subtitleLabel.textColor = [IPTheme textSecondaryColor];
         _subtitleLabel.text = subtitle;
         [self addSubview:_subtitleLabel];
 
@@ -108,23 +108,23 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
         switch (self.phaseState) {
             case PhaseVisualStatePending:
                 self.iconLabel.text = @"\u25cb";
-                self.iconLabel.textColor = [UIColor colorWithWhite:0.4 alpha:1.0];
-                self.titleLabel.textColor = [UIColor colorWithWhite:0.5 alpha:1.0];
-                self.subtitleLabel.textColor = [UIColor colorWithWhite:0.35 alpha:1.0];
+                self.iconLabel.textColor = [IPTheme textTertiaryColor];
+                self.titleLabel.textColor = [IPTheme textSecondaryColor];
+                self.subtitleLabel.textColor = [IPTheme textTertiaryColor];
                 self.pulsingDot.hidden = YES;
                 break;
             case PhaseVisualStateActive:
                 self.iconLabel.text = @"\u25c9";
                 self.iconLabel.textColor = [UIColor colorWithRed:0.2 green:0.6 blue:1.0 alpha:1.0];
-                self.titleLabel.textColor = [UIColor whiteColor];
-                self.subtitleLabel.textColor = [UIColor colorWithWhite:0.7 alpha:1.0];
+                self.titleLabel.textColor = [IPTheme textPrimaryColor];
+                self.subtitleLabel.textColor = [IPTheme textSecondaryColor];
                 self.pulsingDot.hidden = NO;
                 break;
             case PhaseVisualStateSuccess:
                 self.iconLabel.text = @"\u2713";
                 self.iconLabel.textColor = [UIColor colorWithRed:0.3 green:0.85 blue:0.4 alpha:1.0];
-                self.titleLabel.textColor = [UIColor whiteColor];
-                self.subtitleLabel.textColor = [UIColor colorWithWhite:0.6 alpha:1.0];
+                self.titleLabel.textColor = [IPTheme textPrimaryColor];
+                self.subtitleLabel.textColor = [IPTheme textSecondaryColor];
                 self.pulsingDot.hidden = YES;
                 break;
             case PhaseVisualStateFailed:
@@ -254,7 +254,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
         logTitle.translatesAutoresizingMaskIntoConstraints = NO;
         logTitle.text = @"\u0627\u0644\u0644\u0648\u063a \u0627\u0644\u062e\u0627\u0645 (Raw Log)";
         logTitle.font = [UIFont systemFontOfSize:14 weight:UIFontWeightBold];
-        logTitle.textColor = [UIColor whiteColor];
+        logTitle.textColor = [IPTheme textPrimaryColor];
         [self.logContainer addSubview:logTitle];
 
         UIButton *copyLogBtn = [UIButton buttonWithType:UIButtonTypeSystem];
@@ -538,7 +538,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
     _headerLabel = [[UILabel alloc] init];
     _headerLabel.translatesAutoresizingMaskIntoConstraints = NO;
     _headerLabel.font = [UIFont systemFontOfSize:22 weight:UIFontWeightBold];
-    _headerLabel.textColor = [UIColor whiteColor];
+    _headerLabel.textColor = [IPTheme textPrimaryColor];
     _headerLabel.textAlignment = NSTextAlignmentCenter;
     _headerLabel.text = @"\u062c\u0627\u0631\u064d \u0627\u0644\u062a\u062b\u0628\u064a\u062a...";
     [_containerView addSubview:_headerLabel];
@@ -546,7 +546,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
     _appNameLabel = [[UILabel alloc] init];
     _appNameLabel.translatesAutoresizingMaskIntoConstraints = NO;
     _appNameLabel.font = [UIFont systemFontOfSize:14 weight:UIFontWeightMedium];
-    _appNameLabel.textColor = [UIColor colorWithWhite:0.6 alpha:1.0];
+    _appNameLabel.textColor = [IPTheme textSecondaryColor];
     _appNameLabel.textAlignment = NSTextAlignmentCenter;
     _appNameLabel.text = [self.ipaPath lastPathComponent] ?: @"";
     [_containerView addSubview:_appNameLabel];
@@ -554,7 +554,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
     _progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
     _progressView.translatesAutoresizingMaskIntoConstraints = NO;
     _progressView.progressTintColor = [UIColor colorWithRed:0.2 green:0.6 blue:1.0 alpha:1.0];
-    _progressView.trackTintColor = [UIColor colorWithWhite:0.15 alpha:1.0];
+    _progressView.trackTintColor = [IPTheme textPrimaryColor];
     _progressView.layer.cornerRadius = 2;
     _progressView.clipsToBounds = YES;
     [_containerView addSubview:_progressView];
@@ -571,14 +571,14 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
     liveTitle.translatesAutoresizingMaskIntoConstraints = NO;
     liveTitle.text = @"الإخراج الحي للعملية";
     liveTitle.font = [UIFont systemFontOfSize:13 weight:UIFontWeightSemibold];
-    liveTitle.textColor = [UIColor colorWithWhite:0.75 alpha:1.0];
+    liveTitle.textColor = [IPTheme textSecondaryColor];
     [_liveOutputCard addSubview:liveTitle];
 
     _liveStateLabel = [[UILabel alloc] init];
     _liveStateLabel.translatesAutoresizingMaskIntoConstraints = NO;
     _liveStateLabel.text = @"الحالة الحية: بانتظار البدء";
     _liveStateLabel.font = [UIFont systemFontOfSize:12 weight:UIFontWeightMedium];
-    _liveStateLabel.textColor = [UIColor colorWithWhite:0.55 alpha:1.0];
+    _liveStateLabel.textColor = [IPTheme textSecondaryColor];
     _liveStateLabel.numberOfLines = 2;
     [_liveOutputCard addSubview:_liveStateLabel];
 
@@ -696,7 +696,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
     }
 
     self.headerLabel.text = @"\u062c\u0627\u0631\u064d \u0627\u0644\u062a\u062b\u0628\u064a\u062a...";
-    self.headerLabel.textColor = [UIColor whiteColor];
+    self.headerLabel.textColor = [IPTheme textPrimaryColor];
     self.appNameLabel.text = [self.ipaPath lastPathComponent] ?: @"";
     [self.progressView setProgress:0.0 animated:NO];
 
@@ -814,7 +814,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
 
     UIView *divider = [[UIView alloc] init];
     divider.translatesAutoresizingMaskIntoConstraints = NO;
-    divider.backgroundColor = [UIColor colorWithWhite:0.2 alpha:1.0];
+    divider.backgroundColor = [IPTheme textPrimaryColor];
     [divider.heightAnchor constraintEqualToConstant:1].active = YES;
     [stack addArrangedSubview:divider];
 
@@ -891,7 +891,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
         [retryBtn setTitle:@"إعادة المحاولة" forState:UIControlStateNormal];
         retryBtn.titleLabel.font = [UIFont systemFontOfSize:16 weight:UIFontWeightSemibold];
         retryBtn.backgroundColor = [IPTheme accentColor];
-        [retryBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+        [retryBtn setTitleColor:[IPTheme textPrimaryColor] forState:UIControlStateNormal];
         retryBtn.layer.cornerRadius = 12;
         [retryBtn addTarget:self action:@selector(retryTapped:) forControlEvents:UIControlEventTouchUpInside];
         [retryBtn.heightAnchor constraintEqualToConstant:46].active = YES;
@@ -909,7 +909,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
     doneBtn.backgroundColor = success
         ? [UIColor colorWithRed:0.2 green:0.5 blue:0.9 alpha:1.0]
         : [UIColor colorWithRed:0.6 green:0.2 blue:0.2 alpha:1.0];
-    [doneBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    [doneBtn setTitleColor:[IPTheme textPrimaryColor] forState:UIControlStateNormal];
     doneBtn.layer.cornerRadius = 12;
     [doneBtn addTarget:self action:@selector(doneTapped:) forControlEvents:UIControlEventTouchUpInside];
     [doneBtn.heightAnchor constraintEqualToConstant:48].active = YES;
@@ -943,7 +943,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
 - (void)addSectionTitle:(NSString *)title toStack:(UIStackView *)stack {
     UILabel *label = [[UILabel alloc] init];
     label.font = [UIFont systemFontOfSize:12 weight:UIFontWeightBold];
-    label.textColor = [UIColor colorWithWhite:0.55 alpha:1.0];
+    label.textColor = [IPTheme textSecondaryColor];
     label.text = title;
     [stack addArrangedSubview:label];
 }
@@ -951,7 +951,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
 - (void)addItem:(NSString *)text toStack:(UIStackView *)stack {
     UILabel *label = [[UILabel alloc] init];
     label.font = [UIFont systemFontOfSize:13 weight:UIFontWeightRegular];
-    label.textColor = [UIColor colorWithWhite:0.85 alpha:1.0];
+    label.textColor = [IPTheme textPrimaryColor];
     label.text = text;
     label.numberOfLines = 0;
     [stack addArrangedSubview:label];
