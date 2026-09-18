@@ -5,6 +5,7 @@
 #import "Core/Logger.h"
 #import "GlassIPACell.h"
 #import "RuntimeEnvironment.h"
+#import "IPTheme.h"
 
 @interface MainViewController () <UIDocumentPickerDelegate>
 @property (nonatomic, strong) UIView *toastView;
@@ -24,7 +25,7 @@
     [super viewDidLoad];
     self.title = @"";
     self.navigationItem.title = @"";
-    self.view.backgroundColor = [UIColor colorWithRed:0.025 green:0.026 blue:0.030 alpha:1.0];
+    self.view.backgroundColor = [IPTheme backgroundColor];
     self.ipaFiles = [NSMutableArray array];
     self.isLoading = NO;
     self.ipaMetadataCache = [NSMutableDictionary dictionary];
@@ -91,7 +92,7 @@
     [self.view addSubview:self.tableView];
 
     self.refreshControl = [[UIRefreshControl alloc] init];
-    self.refreshControl.tintColor = [UIColor colorWithWhite:0.5 alpha:1.0];
+    self.refreshControl.tintColor = [IPTheme textSecondaryColor];
     [self.refreshControl addTarget:self action:@selector(refreshPulled:) forControlEvents:UIControlEventValueChanged];
     self.tableView.refreshControl = self.refreshControl;
 }
@@ -103,11 +104,11 @@
     UILabel *title = [[UILabel alloc] initWithFrame:CGRectMake(8, 27, width - 16, 40)];
     NSMutableAttributedString *styledTitle = [[NSMutableAttributedString alloc] initWithString:@"ملفات IPA" attributes:@{NSFontAttributeName:[UIFont systemFontOfSize:27 weight:UIFontWeightBold], NSForegroundColorAttributeName:UIColor.whiteColor}];
     [styledTitle addAttribute:NSForegroundColorAttributeName value:[UIColor colorWithRed:1.0 green:0.22 blue:0.18 alpha:1.0] range:NSMakeRange(6, 3)]; title.attributedText = styledTitle; title.textAlignment = NSTextAlignmentCenter; title.autoresizingMask = UIViewAutoresizingFlexibleWidth; [self.dashboardHeader addSubview:title];
-    UIButton *add = [UIButton buttonWithType:UIButtonTypeSystem]; add.frame = CGRectMake(width - 64, 34, 44, 44); add.layer.cornerRadius = 15; add.layer.borderWidth = 0.7; add.layer.borderColor = [UIColor colorWithWhite:1 alpha:.16].CGColor; add.backgroundColor = [UIColor colorWithWhite:1 alpha:.025]; [add setImage:[UIImage systemImageNamed:@"plus"] forState:UIControlStateNormal]; add.tintColor = [UIColor colorWithRed:1 green:.20 blue:.16 alpha:1]; [add addTarget:self action:@selector(addIPATapped:) forControlEvents:UIControlEventTouchUpInside]; [self.dashboardHeader addSubview:add];
-    UIButton *viewMode = [UIButton buttonWithType:UIButtonTypeSystem]; viewMode.frame = CGRectMake(24, 34, 48, 48); viewMode.layer.cornerRadius = 17; viewMode.layer.borderWidth = 1; viewMode.layer.borderColor = [UIColor colorWithWhite:1 alpha:.14].CGColor; [viewMode setImage:[UIImage systemImageNamed:@"list.bullet"] forState:UIControlStateNormal]; viewMode.tintColor = [UIColor colorWithRed:1 green:.20 blue:.16 alpha:1]; [viewMode addTarget:self action:@selector(toggleViewMode:) forControlEvents:UIControlEventTouchUpInside]; [self.dashboardHeader addSubview:viewMode];
+    UIButton *add = [UIButton buttonWithType:UIButtonTypeSystem]; add.frame = CGRectMake(width - 64, 34, 44, 44); add.layer.cornerRadius = 15; add.layer.borderWidth = 0.7; add.layer.borderColor = [IPTheme separatorStrongColor].CGColor; add.backgroundColor = [IPTheme selectionColor]; [add setImage:[UIImage systemImageNamed:@"plus"] forState:UIControlStateNormal]; add.tintColor = [UIColor colorWithRed:1 green:.20 blue:.16 alpha:1]; [add addTarget:self action:@selector(addIPATapped:) forControlEvents:UIControlEventTouchUpInside]; [self.dashboardHeader addSubview:add];
+    UIButton *viewMode = [UIButton buttonWithType:UIButtonTypeSystem]; viewMode.frame = CGRectMake(24, 34, 48, 48); viewMode.layer.cornerRadius = 17; viewMode.layer.borderWidth = 1; viewMode.layer.borderColor = [IPTheme separatorStrongColor].CGColor; [viewMode setImage:[UIImage systemImageNamed:@"list.bullet"] forState:UIControlStateNormal]; viewMode.tintColor = [UIColor colorWithRed:1 green:.20 blue:.16 alpha:1]; [viewMode addTarget:self action:@selector(toggleViewMode:) forControlEvents:UIControlEventTouchUpInside]; [self.dashboardHeader addSubview:viewMode];
     UIView *stats = [[UIView alloc] initWithFrame:CGRectMake(8, 139, MAX(width - 16, 1), 74)]; stats.autoresizingMask = UIViewAutoresizingFlexibleWidth; stats.backgroundColor = [UIColor colorWithRed:.065 green:.066 blue:.075 alpha:1]; stats.layer.cornerRadius = 17; stats.layer.borderWidth = 1; stats.layer.borderColor = [UIColor colorWithRed:.42 green:.08 blue:.09 alpha:.65].CGColor; [self.dashboardHeader addSubview:stats];
     NSArray *icons = @[@"cube", @"chart.pie", @"shield", @"arrow.down.circle"]; NSArray *labels = @[@"التطبيقات", @"إجمالي الحجم", @"موثوقة", @"تم التثبيت"]; NSMutableArray *values = [NSMutableArray array];
-    for (NSInteger i = 0; i < 4; i++) { CGFloat x = stats.bounds.size.width / 4.0 * i; if (i) { UIView *d = [[UIView alloc] initWithFrame:CGRectMake(x, 14, 1, 46)]; d.backgroundColor = [UIColor colorWithWhite:1 alpha:.08]; [stats addSubview:d]; } UIImageView *iv = [[UIImageView alloc] initWithFrame:CGRectMake(x + (stats.bounds.size.width / 4.0 - 22) / 2.0, 7, 22, 22)]; iv.image = [UIImage systemImageNamed:icons[i]]; iv.tintColor = [UIColor colorWithRed:1 green:.22 blue:.18 alpha:1]; iv.contentMode = UIViewContentModeScaleAspectFit; [stats addSubview:iv]; UILabel *v = [[UILabel alloc] initWithFrame:CGRectMake(x + 3, 30, stats.bounds.size.width / 4.0 - 6, 22)]; v.textAlignment = NSTextAlignmentCenter; v.font = [UIFont systemFontOfSize:17 weight:UIFontWeightBold]; v.textColor = UIColor.whiteColor; [stats addSubview:v]; [values addObject:v]; UILabel *c = [[UILabel alloc] initWithFrame:CGRectMake(x + 1, 54, stats.bounds.size.width / 4.0 - 2, 16)]; c.text = labels[i]; c.textAlignment = NSTextAlignmentCenter; c.font = [UIFont systemFontOfSize:10 weight:UIFontWeightMedium]; c.textColor = [UIColor colorWithWhite:.68 alpha:1]; [stats addSubview:c]; }
+    for (NSInteger i = 0; i < 4; i++) { CGFloat x = stats.bounds.size.width / 4.0 * i; if (i) { UIView *d = [[UIView alloc] initWithFrame:CGRectMake(x, 14, 1, 46)]; d.backgroundColor = [IPTheme separatorColor]; [stats addSubview:d]; } UIImageView *iv = [[UIImageView alloc] initWithFrame:CGRectMake(x + (stats.bounds.size.width / 4.0 - 22) / 2.0, 7, 22, 22)]; iv.image = [UIImage systemImageNamed:icons[i]]; iv.tintColor = [UIColor colorWithRed:1 green:.22 blue:.18 alpha:1]; iv.contentMode = UIViewContentModeScaleAspectFit; [stats addSubview:iv]; UILabel *v = [[UILabel alloc] initWithFrame:CGRectMake(x + 3, 30, stats.bounds.size.width / 4.0 - 6, 22)]; v.textAlignment = NSTextAlignmentCenter; v.font = [UIFont systemFontOfSize:17 weight:UIFontWeightBold]; v.textColor = UIColor.whiteColor; [stats addSubview:v]; [values addObject:v]; UILabel *c = [[UILabel alloc] initWithFrame:CGRectMake(x + 1, 54, stats.bounds.size.width / 4.0 - 2, 16)]; c.text = labels[i]; c.textAlignment = NSTextAlignmentCenter; c.font = [UIFont systemFontOfSize:10 weight:UIFontWeightMedium]; c.textColor = [IPTheme textSecondaryColor]; [stats addSubview:c]; }
     self.appsCountLabel = values[0]; self.totalSizeLabel = values[1]; self.trustedCountLabel = values[2]; self.installedCountLabel = values[3];
     self.totalSizeLabel.adjustsFontSizeToFitWidth = YES; self.totalSizeLabel.minimumScaleFactor = 0.45; self.totalSizeLabel.numberOfLines = 1;
     self.tableView.tableHeaderView = self.dashboardHeader;
@@ -122,7 +123,7 @@
 - (void)setupEmptyState {
     self.emptyLabel = [[UILabel alloc] init];
     self.emptyLabel.text = @"لا توجد ملفات IPA\nاضغط + لإضافة ملف";
-    self.emptyLabel.textColor = [UIColor colorWithWhite:0.3 alpha:1.0];
+    self.emptyLabel.textColor = [IPTheme textTertiaryColor];
     self.emptyLabel.font = [UIFont systemFontOfSize:16 weight:UIFontWeightMedium];
     self.emptyLabel.textAlignment = NSTextAlignmentCenter;
     self.emptyLabel.numberOfLines = 0;
@@ -147,7 +148,7 @@
     [self.view addSubview:self.toastView];
 
     self.toastLabel = [[UILabel alloc] initWithFrame:CGRectMake(16, 0, self.toastView.bounds.size.width - 32, 50)];
-    self.toastLabel.textColor = [UIColor whiteColor];
+    self.toastLabel.textColor = [IPTheme textPrimaryColor];
     self.toastLabel.font = [UIFont systemFontOfSize:14 weight:UIFontWeightMedium];
     self.toastLabel.textAlignment = NSTextAlignmentCenter;
     [self.toastView addSubview:self.toastLabel];
@@ -155,7 +156,7 @@
 
 - (void)setupLoadingIndicator {
     self.loadingIndicator = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleLarge];
-    self.loadingIndicator.color = [UIColor colorWithWhite:0.5 alpha:1.0];
+    self.loadingIndicator.color = [IPTheme textSecondaryColor];
     self.loadingIndicator.center = CGPointMake(self.view.bounds.size.width / 2, self.view.bounds.size.height / 2 - 40);
     self.loadingIndicator.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin;
     self.loadingIndicator.hidden = YES;
@@ -187,7 +188,7 @@
     self.importLabel = [[UILabel alloc] initWithFrame:CGRectMake(10, 64, 200, 40)];
     self.importLabel.textAlignment = NSTextAlignmentCenter;
     self.importLabel.font = [UIFont systemFontOfSize:13 weight:UIFontWeightMedium];
-    self.importLabel.textColor = [UIColor colorWithWhite:0.75 alpha:1.0];
+    self.importLabel.textColor = [IPTheme textPrimaryColor];
     self.importLabel.text = @"جارٍ استيراد الملفات...";
     [card addSubview:self.importLabel];
 }
