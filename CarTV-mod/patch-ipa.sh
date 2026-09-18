@@ -1,19 +1,21 @@
 #!/bin/bash
 # ============================================================
-# CarTV-Plus — Parallel Identity Patcher (v1.2)
+# CarTV-Plus — Parallel Identity Patcher (v1.3)
 # يُنشئ نسخة موازية من CarTV بهوية جديدة (Bundle ID + اسم)
-# + شاشة إقلاع تحمل رصيد المعدّل (تُعرض عند فتح التطبيق)
+# + شاشة إقلاع خاصة برصيد المعدّل (ZainCredit — اسم جديد يكسر كاش iOS)
 # الاستخدام:
 #   ./patch-ipa.sh CarTV.ipa
 #   ./patch-ipa.sh CarTV.ipa --name "CarTV+" --bundle app.zain.cartvplus
 #   ./patch-ipa.sh CarTV.ipa --signer "Apple Development: you@mail.com"
-#   ./patch-ipa.sh CarTV.ipa --no-credit          (تعطيل رسالة الفتح)
+#   ./patch-ipa.sh CarTV.ipa --no-credit
 #   ./patch-ipa.sh CarTV.ipa --credit "سطر 1" --credit-sub "سطر 2"
 #
 # وضع التوقيع الافتراضي: ldid (لأجهزة الجيلبريك)
 # وضع --signer: codesign (للتثبيت الجانبي)
 #
-# v1.2: حقن شاشة الإقليد برسالة "معدّلة بواسطة Zain" (مستوى الموارد فقط)
+# v1.3: شاشة ZainCredit.storyboard مستقلة (تجاوز كاش الإقليد + إزالة UILaunchScreen
+#       المنافس + طباعة تحقق بالتعديلات قبل الضغط)
+# v1.2: حقن رسالة الفتح (مستوى موارد فقط)
 # v1.1: كشف Mach-O عبر od+case (BSD/iOS)، وبنية IPA قياسية (Payload/)
 # ============================================================
 set -e
@@ -43,12 +45,11 @@ if [ -z "$SIGNER" ]; then
   command -v ldid >/dev/null || { echo "[!] ldid مطلوب (أو استخدم --signer)"; exit 1; }
 fi
 
-# ---------- كشف Mach-O متوافق مع BSD (iOS) ----------
 is_macho() {
   local magic
   magic="$(head -c 4 "$1" | od -An -tx1 -N4 | tr -d ' \n')"
   case "$magic" in
-    cffaedfe|cefaedfe|cafebabe|cafebabf) return 0 ;;  # arm64/armv7/fat/fat64
+    cffaedfe|cefaedfe|cafebabe|cafebabf) return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -70,7 +71,7 @@ PLIST="$APP/Info.plist"
 plutil -replace CFBundleIdentifier -string "$BUNDLE" "$PLIST"
 plutil -replace CFBundleDisplayName -string "$NAME" "$PLIST"
 plutil -replace CFBundleName -string "$NAME" "$PLIST"
-plutil -remove UISupportedDevices "$PLIST" 2>/dev/null || true   # دعم أوسع للأجهزة
+plutil -remove UISupportedDevices "$PLIST" 2>/dev/null || true
 echo "    [√] الهوية الرئيسية"
 
 # ---------- 2) إضافات (PlugIns) ----------
@@ -85,67 +86,56 @@ find "$APP/PlugIns" -name "*.appex" -type d 2>/dev/null | while read -r APPEX; d
   echo "    [√] $AP → $EXTID"
 done
 
-# ---------- 3) شاشة الإقليد: رصيد المعدّل (موارد فقط — بدون لمس الثنائي) ----------
+# ---------- 3) شاشة الإقليد: ZainCredit (اسم جديد — يتجاوز كاش iOS) ----------
 if [ "$CREDIT" = "1" ]; then
-  STORY="$APP/LaunchScreen.storyboard"
-  if [ ! -f "$STORY" ]; then
-    cat > "$STORY" <<'XEOF'
+  # أزل الإعدادات المنافسة إن وُجدت
+  plutil -remove UILaunchScreen "$PLIST" 2>/dev/null || true
+  plutil -replace UILaunchStoryboardName -string ZainCredit "$PLIST"
+
+  cat > "$APP/ZainCredit.storyboard" <<XEOF
 <?xml version="1.0" encoding="UTF-8"?>
 <document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="17150" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" launchScreen="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="Zain01">
     <device id="retina6_1" orientation="portrait" appearance="light"/>
     <dependencies><deployment identifier="iOS"/><plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="17125"/></dependencies>
-    <scenes><scene sceneID="Zain01"><objects><viewController id="Zain01" sceneMemberID="viewController"><view key="view" contentMode="scaleToFill" id="Zain02"><rect key="frame" x="0.0" y="0.0" width="414" height="896"/><autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/><subviews>__ZAIN_LABELS__</subviews><color key="backgroundColor" white="0.0" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/></view></viewController></objects></scene></scenes>
+    <scenes>
+        <scene sceneID="Zain01">
+            <objects>
+                <viewController id="Zain01" sceneMemberID="viewController">
+                    <view key="view" contentMode="scaleToFill" id="Zain02">
+                        <rect key="frame" x="0.0" y="0.0" width="414" height="896"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="$CREDIT_TITLE" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="zainCreditTitle">
+                                <rect key="frame" x="16" y="596" width="343" height="24"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                <fontDescription key="fontDescription" type="boldSystem" pointSize="15"/>
+                                <color key="textColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                                <nil key="highlightedColor"/>
+                            </label>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="$CREDIT_SUB" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="zainCreditSub">
+                                <rect key="frame" x="16" y="624" width="343" height="24"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="14"/>
+                                <color key="textColor" red="1" green="0.4" blue="0.5" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                <nil key="highlightedColor"/>
+                            </label>
+                        </subviews>
+                        <color key="backgroundColor" white="0.0" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                    </view>
+                </viewController>
+            </objects>
+            <point key="canvasLocation" x="52.173913043478265" y="375"/>
+        </scene>
+    </scenes>
 </document>
 XEOF
-    plutil -replace UILaunchStoryboardName -string LaunchScreen "$PLIST"
-  fi
 
-  LABELS="$(mktemp)"
-  cat > "$LABELS" <<XEOF
-<label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="$CREDIT_TITLE" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="zainCreditTitle">
-    <rect key="frame" x="16" y="596" width="343" height="24"/>
-    <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
-    <fontDescription key="fontDescription" type="boldSystem" pointSize="15"/>
-    <color key="textColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
-    <nil key="highlightedColor"/>
-</label>
-<label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="$CREDIT_SUB" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="zainCreditSub">
-    <rect key="frame" x="16" y="624" width="343" height="24"/>
-    <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
-    <fontDescription key="fontDescription" type="system" pointSize="14"/>
-    <color key="textColor" red="1" green="0.4" blue="0.5" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
-    <nil key="highlightedColor"/>
-</label>
-XEOF
-
-  if grep -q "__ZAIN_LABELS__" "$STORY"; then
-    # ملف جديد أنشأناه للتو: ضع الليبلات مكان العلامة
-    LABELS_ALL="$(mktemp)"
-    { printf '<subviews>'; cat "$LABELS"; printf '</subviews>'; } > "$LABELS_ALL"
-    sed "/__ZAIN_LABELS__/r $LABELS_ALL" "$STORY" | sed "/__ZAIN_LABELS__/d" > "$STORY.tmp"
-    mv "$STORY.tmp" "$STORY"
-    rm -f "$LABELS_ALL"
-  elif grep -q "</subviews>" "$STORY"; then
-    # storyboard موجود: أضف الليبلات داخل subviews
-    sed '/<\/subviews>/r '"$LABELS" "$STORY" > "$STORY.tmp"
-    mv "$STORY.tmp" "$STORY"
-  elif grep -q "</view>" "$STORY"; then
-    # لا يوجد subviews: أنشئه
-    LABELS_ALL="$(mktemp)"
-    { printf '<subviews>'; cat "$LABELS"; printf '</subviews>'; } > "$LABELS_ALL"
-    sed '/<\/view>/r '"$LABELS_ALL" "$STORY" > "$STORY.tmp"
-    mv "$STORY.tmp" "$STORY"
-    rm -f "$LABELS_ALL"
+  if plutil -lint "$APP/ZainCredit.storyboard" >/dev/null 2>&1; then
+    echo "    [√] ZainCredit.storyboard صالحة"
   else
-    echo "    [!] تعذر حقن شاشة الإقليد — بنية غير متوقعة"
+    echo "    [!] ZainCredit.storyboard فشل فحص plutil"
   fi
-  rm -f "$LABELS"
-
-  if plutil -lint "$STORY" >/dev/null 2>&1; then
-    echo "    [√] رسالة الفتح: \"$CREDIT_TITLE / $CREDIT_SUB\""
-  else
-    echo "    [!] تحذير: فحص storyboard فشل — قد لا تظهر الرسالة"
-  fi
+  echo "    [√] رسالة الفتح: \"$CREDIT_TITLE / $CREDIT_SUB\""
 fi
 
 # ---------- 4) تنظيف توقيع App Store ----------
@@ -170,7 +160,6 @@ resign_ldid() {
 
 echo "[*] إعادة توقيع الثنائيات:"
 if [ -z "$SIGNER" ]; then
-  # وضع الجيلبريك: حافظ على entitlements الأصلية (تشمل CarPlay إن وُجدت)
   find "$APP" -type f | while read -r f; do
     if is_macho "$f"; then
       resign_ldid "$f"
@@ -190,7 +179,6 @@ else
   done
 fi
 
-# توقيع الحاويات الخارجية (appex ثم app)
 if [ -n "$SIGNER" ]; then
   find "$APP/PlugIns" -name "*.appex" -type d 2>/dev/null | while read -r a; do
     codesign -fs "$SIGNER" "$a"
@@ -198,7 +186,12 @@ if [ -n "$SIGNER" ]; then
   codesign -fs "$SIGNER" "$APP"
 fi
 
-# ---------- 6) إعادة الضغط (بنية IPA قياسية: Payload/…) ----------
+# ---------- 6) تحقق نهائي: اطبع القيم الفعلية داخل الـ IPA ----------
+echo "[*] التحقق من التعديلات داخل الحزمة:"
+plutil -p "$PLIST" | grep -E 'CFBundleIdentifier|CFBundleDisplayName|UILaunchStoryboardName' | sed 's/^/    /'
+[ -f "$APP/ZainCredit.storyboard" ] && echo "    ZainCredit.storyboard: موجود" || true
+
+# ---------- 7) إعادة الضغط ----------
 echo "[*] بناء: $OUT"
 (cd "$WORK" && zip -qr "$OLDPWD/$OUT" Payload)
 rm -rf "$WORK"
@@ -208,7 +201,7 @@ echo "════════════════════════�
 echo " تم! الملف: $OUT"
 echo " الهوية: $BUNDLE ($NAME)"
 if [ "$CREDIT" = "1" ]; then
-echo " رسالة الفتح: مفعّلة"
+echo " رسالة الفتح: ZainCredit (مفعّلة)"
 fi
 echo "════════════════════════════════════════"
 echo ""
