@@ -47,7 +47,7 @@
     // TextView
     self.textView = [[UITextView alloc] initWithFrame:CGRectMake(8, safeTop + 48, w - 16, h - safeTop - 100)];
     self.textView.backgroundColor = [IPTheme cardColor]; self.textView.layer.cornerRadius = 16; self.textView.layer.borderWidth = 0.7; self.textView.layer.borderColor = [IPTheme subtleBorderColor].CGColor;
-    self.textView.textColor = [UIColor colorWithWhite:0.85 alpha:1.0];
+    self.textView.textColor = [IPTheme textPrimaryColor];
     self.textView.font = [UIFont fontWithName:@"Menlo" size:10] ?: [UIFont systemFontOfSize:10];
     self.textView.editable = NO;
     self.textView.selectable = YES;
