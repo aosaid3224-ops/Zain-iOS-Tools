@@ -207,7 +207,7 @@ static NSString * const kIPAExtractorPersistedItemsKey = @"IPAExtractor.Persiste
     self.searchBar.translatesAutoresizingMaskIntoConstraints = NO;
     self.searchBar.placeholder = @"ابحث في حزم IPA...";
     self.searchBar.searchBarStyle = UISearchBarStyleMinimal;
-    self.searchBar.tintColor = [UIColor colorWithRed:1 green:.22 blue:.18 alpha:1];
+    self.searchBar.tintColor = [IPTheme errorColor];
     self.searchBar.semanticContentAttribute = UISemanticContentAttributeForceRightToLeft;
     self.searchBar.delegate = self;
     self.searchBar.showsCancelButton = NO;
@@ -233,14 +233,14 @@ static NSString * const kIPAExtractorPersistedItemsKey = @"IPAExtractor.Persiste
     self.sectionTitleLabel = [[UILabel alloc] init];
     self.sectionTitleLabel.translatesAutoresizingMaskIntoConstraints = NO;
     self.sectionTitleLabel.text = @"ملفاتي";
-    self.sectionTitleLabel.textColor = [UIColor whiteColor];
+    self.sectionTitleLabel.textColor = [IPTheme textPrimaryColor];
     self.sectionTitleLabel.font = [UIFont systemFontOfSize:18 weight:UIFontWeightBold];
     self.sectionTitleLabel.textAlignment = NSTextAlignmentRight;
     [self.sectionHeaderView addSubview:self.sectionTitleLabel];
 
     self.sectionCountLabel = [[UILabel alloc] init];
     self.sectionCountLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    self.sectionCountLabel.textColor = [UIColor colorWithWhite:0.5 alpha:1.0];
+    self.sectionCountLabel.textColor = [IPTheme textSecondaryColor];
     self.sectionCountLabel.font = [UIFont systemFontOfSize:14 weight:UIFontWeightMedium];
     self.sectionCountLabel.textAlignment = NSTextAlignmentLeft;
     [self.sectionHeaderView addSubview:self.sectionCountLabel];
@@ -696,7 +696,7 @@ static NSString * const kIPAExtractorPersistedItemsKey = @"IPAExtractor.Persiste
         // White page icon
         CGRect pageRect = CGRectMake(16, 10, 20, 26);
         UIBezierPath *pagePath = [UIBezierPath bezierPathWithRoundedRect:pageRect cornerRadius:3];
-        [[UIColor whiteColor] setFill];
+        [[IPTheme textPrimaryColor] setFill];
         [pagePath fill];
         // Green badge
         CGRect badgeRect = CGRectMake(10, 32, 32, 14);
