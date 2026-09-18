@@ -129,9 +129,9 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
                 break;
             case PhaseVisualStateFailed:
                 self.iconLabel.text = @"\u2717";
-                self.iconLabel.textColor = [UIColor colorWithRed:0.9 green:0.3 blue:0.3 alpha:1.0];
-                self.titleLabel.textColor = [UIColor colorWithRed:0.9 green:0.3 blue:0.3 alpha:1.0];
-                self.subtitleLabel.textColor = [UIColor colorWithRed:0.7 green:0.3 blue:0.3 alpha:1.0];
+                self.iconLabel.textColor = [IPTheme errorColor];
+                self.titleLabel.textColor = [IPTheme errorColor];
+                self.subtitleLabel.textColor = [IPTheme errorColor];
                 self.pulsingDot.hidden = YES;
                 break;
         }
@@ -260,7 +260,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
         UIButton *copyLogBtn = [UIButton buttonWithType:UIButtonTypeSystem];
         copyLogBtn.translatesAutoresizingMaskIntoConstraints = NO;
         [copyLogBtn setTitle:@"نسخ الكل" forState:UIControlStateNormal];
-        [copyLogBtn setTitleColor:[UIColor colorWithRed:0.35 green:0.75 blue:1.0 alpha:1.0] forState:UIControlStateNormal];
+        [copyLogBtn setTitleColor:[IPTheme accentColor] forState:UIControlStateNormal];
         copyLogBtn.titleLabel.font = [UIFont systemFontOfSize:13 weight:UIFontWeightSemibold];
         [copyLogBtn addTarget:self action:@selector(copyRawLog:) forControlEvents:UIControlEventTouchUpInside];
         [self.logContainer addSubview:copyLogBtn];
@@ -268,7 +268,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
         UIButton *closeBtn = [UIButton buttonWithType:UIButtonTypeSystem];
         closeBtn.translatesAutoresizingMaskIntoConstraints = NO;
         [closeBtn setTitle:@"\u0625\u063a\u0644\u0627\u0642" forState:UIControlStateNormal];
-        [closeBtn setTitleColor:[UIColor colorWithRed:0.9 green:0.3 blue:0.3 alpha:1.0] forState:UIControlStateNormal];
+        [closeBtn setTitleColor:[IPTheme errorColor] forState:UIControlStateNormal];
         [closeBtn addTarget:self action:@selector(hideRawLog) forControlEvents:UIControlEventTouchUpInside];
         [self.logContainer addSubview:closeBtn];
 
@@ -440,7 +440,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
                        rendered, (unsigned long)event.sequence, event.stage ?: @"UNKNOWN", event.status ?: @"PENDING",
                        event.message ?: @"", created, rendered, event.renderLagMs, event.target.length ? event.target : @"-", event.exitStatus, note ?: @""];
     UIColor *color = [event.status isEqualToString:@"FAILED"] ? [IPTheme errorColor] :
-                     ([event.status isEqualToString:@"SUCCESS"] ? [UIColor colorWithRed:0.35 green:0.95 blue:0.6 alpha:1.0] : [UIColor colorWithRed:0.45 green:0.78 blue:1.0 alpha:1.0]);
+                     ([event.status isEqualToString:@"SUCCESS"] ? [IPTheme successColor] : [IPTheme accentColor]);
     NSDictionary *attributes = @{NSFontAttributeName: self.liveOutputView.font ?: [UIFont systemFontOfSize:10], NSForegroundColorAttributeName: color};
     [self.liveOutputView.textStorage appendAttributedString:[[NSAttributedString alloc] initWithString:line attributes:attributes]];
     NSUInteger maxLength = 120000;
@@ -585,7 +585,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
     _liveOutputView = [[UITextView alloc] init];
     _liveOutputView.translatesAutoresizingMaskIntoConstraints = NO;
     _liveOutputView.backgroundColor = [IPTheme secondaryCardColor];
-    _liveOutputView.textColor = [UIColor colorWithRed:0.45 green:0.95 blue:0.6 alpha:1.0];
+    _liveOutputView.textColor = [IPTheme successColor];
     _liveOutputView.font = [UIFont fontWithName:@"Menlo" size:10] ?: [UIFont systemFontOfSize:10];
     _liveOutputView.editable = NO;
     _liveOutputView.selectable = YES;
@@ -719,7 +719,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
     self.lastRenderedLiveSequence = 0;
     self.liveOutputView.text = @"";
     self.liveStateLabel.text = @"الحالة الحية: BEGIN — انتظار أول حدث";
-    self.liveStateLabel.textColor = [UIColor colorWithRed:0.35 green:0.75 blue:1.0 alpha:1.0];
+    self.liveStateLabel.textColor = [IPTheme accentColor];
     self.liveStream = [[LiveOperationStream alloc] init];
     __weak typeof(self) weakLiveSelf = self;
     [self.liveStream startForTransactionID:self.currentTxnID handler:^(LiveOperationEvent *event) {
@@ -778,7 +778,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
             [self.phaseViews[failIdx] setState:PhaseVisualStateFailed animated:YES];
         }
         self.headerLabel.text = @"\u0641\u0634\u0644 \u0627\u0644\u062a\u062b\u0628\u064a\u062a \u2717";
-        self.headerLabel.textColor = [UIColor colorWithRed:0.9 green:0.3 blue:0.3 alpha:1.0];
+        self.headerLabel.textColor = [IPTheme errorColor];
         [self showReportCard:result success:NO];
     });
 }
@@ -809,7 +809,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
     statusLabel.text = success ? @"\u2713 \u062a\u0645 \u0627\u0644\u062a\u062b\u0628\u064a\u062a \u0628\u0646\u062c\u0627\u062d" : @"\u2717 \u0641\u0634\u0644 \u0627\u0644\u062a\u062b\u0628\u064a\u062a";
     statusLabel.textColor = success
         ? [IPTheme successColor]
-        : [UIColor colorWithRed:0.9 green:0.3 blue:0.3 alpha:1.0];
+        : [IPTheme errorColor];
     [stack addArrangedSubview:statusLabel];
 
     UIView *divider = [[UIView alloc] init];
@@ -846,7 +846,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
         [self addSectionTitle:@"\u062a\u0641\u0627\u0635\u064a\u0644 \u0627\u0644\u062e\u0637\u0623" toStack:stack];
         UILabel *errLabel = [[UILabel alloc] init];
         errLabel.font = [UIFont systemFontOfSize:12 weight:UIFontWeightRegular];
-        errLabel.textColor = [UIColor colorWithRed:0.8 green:0.4 blue:0.4 alpha:1.0];
+        errLabel.textColor = [IPTheme errorColor];
         errLabel.text = result.message;
         errLabel.numberOfLines = 0;
         errLabel.textAlignment = NSTextAlignmentNatural;
@@ -856,7 +856,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
         copyErrorButton.translatesAutoresizingMaskIntoConstraints = NO;
         [copyErrorButton setTitle:@"نسخ تفاصيل الخطأ" forState:UIControlStateNormal];
         copyErrorButton.titleLabel.font = [UIFont systemFontOfSize:14 weight:UIFontWeightSemibold];
-        [copyErrorButton setTitleColor:[UIColor colorWithRed:0.35 green:0.75 blue:1.0 alpha:1.0] forState:UIControlStateNormal];
+        [copyErrorButton setTitleColor:[IPTheme accentColor] forState:UIControlStateNormal];
         copyErrorButton.backgroundColor = [IPTheme secondaryCardColor];
         copyErrorButton.layer.cornerRadius = 8;
         [copyErrorButton addTarget:self action:@selector(copyFailureDetails:) forControlEvents:UIControlEventTouchUpInside];
@@ -908,7 +908,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
     doneBtn.titleLabel.font = [UIFont systemFontOfSize:17 weight:UIFontWeightSemibold];
     doneBtn.backgroundColor = success
         ? [IPTheme accentColor]
-        : [UIColor colorWithRed:0.6 green:0.2 blue:0.2 alpha:1.0];
+        : [IPTheme errorColor];
     [doneBtn setTitleColor:[IPTheme textPrimaryColor] forState:UIControlStateNormal];
     doneBtn.layer.cornerRadius = 12;
     [doneBtn addTarget:self action:@selector(doneTapped:) forControlEvents:UIControlEventTouchUpInside];
@@ -961,7 +961,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
     self.headerLabel.text = message;
     self.headerLabel.textColor = success
         ? [IPTheme successColor]
-        : [UIColor colorWithRed:0.9 green:0.3 blue:0.3 alpha:1.0];
+        : [IPTheme errorColor];
 }
 
 #pragma mark - Actions
