@@ -36,10 +36,10 @@
 
 - (void)setupNavigationBar {
     self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"إلغاء" style:UIBarButtonItemStylePlain target:self action:@selector(cancelTapped:)];
-    self.navigationItem.leftBarButtonItem.tintColor = [UIColor whiteColor];
+    self.navigationItem.leftBarButtonItem.tintColor = [IPTheme textPrimaryColor];
 
     self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"تحديد" style:UIBarButtonItemStylePlain target:self action:@selector(selectTapped:)];
-    self.navigationItem.rightBarButtonItem.tintColor = [UIColor whiteColor];
+    self.navigationItem.rightBarButtonItem.tintColor = [IPTheme textPrimaryColor];
 }
 
 - (void)setupToolbar {
@@ -95,7 +95,7 @@
     self.searchController.obscuresBackgroundDuringPresentation = NO;
     self.searchController.searchBar.placeholder = @"بحث في المجلد...";
     self.searchController.searchBar.tintColor = [IPTheme accentColor];
-    self.searchController.searchBar.searchTextField.textColor = [UIColor whiteColor];
+    self.searchController.searchBar.searchTextField.textColor = [IPTheme textPrimaryColor];
     self.searchController.searchBar.searchTextField.backgroundColor = [IPTheme cardColor];
     self.navigationItem.searchController = self.searchController;
     self.navigationItem.hidesSearchBarWhenScrolling = NO;
@@ -272,7 +272,7 @@
         cell.layer.borderWidth = 0.7; cell.layer.borderColor = [IPTheme subtleBorderColor].CGColor;
         cell.layer.borderColor = [UIColor colorWithWhite:1.0 alpha:0.12].CGColor;
         cell.layer.masksToBounds = YES;
-        cell.textLabel.textColor = [UIColor whiteColor];
+        cell.textLabel.textColor = [IPTheme textPrimaryColor];
         cell.textLabel.font = [UIFont systemFontOfSize:15 weight:UIFontWeightMedium];
         cell.detailTextLabel.textColor = [UIColor colorWithWhite:0.45 alpha:1.0];
         cell.detailTextLabel.font = [UIFont systemFontOfSize:12 weight:UIFontWeightRegular];
@@ -294,7 +294,7 @@
         if ([ext isEqualToString:@"ipa"]) {
             cell.imageView.image = [[UIImage systemImageNamed:@"doc.zipper"] imageWithTintColor:[UIColor colorWithRed:0.3 green:0.7 blue:0.5 alpha:1.0]];
         } else {
-            cell.imageView.image = [[UIImage systemImageNamed:@"doc"] imageWithTintColor:[UIColor colorWithWhite:0.5 alpha:1.0]];
+            cell.imageView.image = [[UIImage systemImageNamed:@"doc"] imageWithTintColor:[IPTheme textSecondaryColor]];
         }
         cell.accessoryType = UITableViewCellAccessoryNone;
         cell.detailTextLabel.text = [NSString stringWithFormat:@"%@ • %@", [self formatSize:size], [self formatDate:date]];
