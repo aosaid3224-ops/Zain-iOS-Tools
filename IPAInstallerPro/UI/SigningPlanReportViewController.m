@@ -36,8 +36,8 @@
     self.segmentControl.backgroundColor = [IPTheme cardColor]; self.segmentControl.layer.cornerRadius = 12; self.segmentControl.layer.masksToBounds = YES;
     if (@available(iOS 13.0, *)) {
         self.segmentControl.selectedSegmentTintColor = [IPTheme accentColor];
-        [self.segmentControl setTitleTextAttributes:@{NSForegroundColorAttributeName: [UIColor whiteColor]} forState:UIControlStateNormal];
-        [self.segmentControl setTitleTextAttributes:@{NSForegroundColorAttributeName: [UIColor whiteColor]} forState:UIControlStateSelected];
+        [self.segmentControl setTitleTextAttributes:@{NSForegroundColorAttributeName: [IPTheme textPrimaryColor]} forState:UIControlStateNormal];
+        [self.segmentControl setTitleTextAttributes:@{NSForegroundColorAttributeName: [IPTheme textPrimaryColor]} forState:UIControlStateSelected];
     } else {
         self.segmentControl.tintColor = [IPTheme accentColor];
     }
@@ -59,7 +59,7 @@
     closeBtn.frame = CGRectMake(16, h - 44, w - 32, 36);
     closeBtn.backgroundColor = [IPTheme secondaryCardColor]; closeBtn.layer.borderWidth = 0.7; closeBtn.layer.borderColor = [IPTheme subtleBorderColor].CGColor;
     [closeBtn setTitle:@"❌ إغلاق" forState:UIControlStateNormal];
-    [closeBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    [closeBtn setTitleColor:[IPTheme textPrimaryColor] forState:UIControlStateNormal];
     closeBtn.titleLabel.font = [UIFont systemFontOfSize:14 weight:UIFontWeightBold];
     closeBtn.layer.cornerRadius = 16;
     closeBtn.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleTopMargin;
