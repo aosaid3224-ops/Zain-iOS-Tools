@@ -81,13 +81,13 @@
     if (icon) {
         self.iconView.image = icon;
     } else {
-        self.iconView.image = [[UIImage systemImageNamed:@"doc.zipper"] imageWithTintColor:[UIColor colorWithWhite:0.3 alpha:1.0]];
+        self.iconView.image = [[UIImage systemImageNamed:@"doc.zipper"] imageWithTintColor:[IPTheme textTertiaryColor]];
     }
     [self.contentView addSubview:self.iconView];
 
     self.nameLabel = [[UILabel alloc] initWithFrame:CGRectZero];
     self.nameLabel.text = self.ipaInfo.displayName ?: self.ipaInfo.name;
-    self.nameLabel.textColor = [UIColor whiteColor];
+    self.nameLabel.textColor = [IPTheme textPrimaryColor];
     self.nameLabel.font = [UIFont systemFontOfSize:24 weight:UIFontWeightBold];
     self.nameLabel.textAlignment = NSTextAlignmentCenter;
     self.nameLabel.adjustsFontSizeToFitWidth = YES;
@@ -95,13 +95,13 @@
     [self.contentView addSubview:self.nameLabel];
 
     self.validationSpinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleMedium];
-    self.validationSpinner.color = [UIColor colorWithWhite:0.5 alpha:1.0];
+    self.validationSpinner.color = [IPTheme textSecondaryColor];
     [self.validationSpinner startAnimating];
     [self.contentView addSubview:self.validationSpinner];
 
     self.validationLabel = [[UILabel alloc] initWithFrame:CGRectZero];
     self.validationLabel.text = @"جاري التحقق...";
-    self.validationLabel.textColor = [UIColor colorWithWhite:0.5 alpha:1.0];
+    self.validationLabel.textColor = [IPTheme textSecondaryColor];
     self.validationLabel.font = [UIFont systemFontOfSize:14 weight:UIFontWeightMedium];
     self.validationLabel.textAlignment = NSTextAlignmentCenter;
     [self.contentView addSubview:self.validationLabel];
@@ -130,7 +130,7 @@
 
         UILabel *valueLabel = [[UILabel alloc] initWithFrame:CGRectZero];
         valueLabel.text = detail[@"value"];
-        valueLabel.textColor = [UIColor whiteColor];
+        valueLabel.textColor = [IPTheme textPrimaryColor];
         valueLabel.font = [UIFont systemFontOfSize:13 weight:UIFontWeightSemibold];
         valueLabel.textAlignment = NSTextAlignmentRight;
         valueLabel.adjustsFontSizeToFitWidth = YES;
@@ -165,7 +165,7 @@
 
     self.installButton = [UIButton buttonWithType:UIButtonTypeSystem];
     [self.installButton setTitle:@"تثبيت التطبيق" forState:UIControlStateNormal];
-    [self.installButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    [self.installButton setTitleColor:[IPTheme textPrimaryColor] forState:UIControlStateNormal];
     self.installButton.titleLabel.font = [UIFont systemFontOfSize:17 weight:UIFontWeightSemibold];
     self.installButton.backgroundColor = [IPTheme accentColor];
     self.installButton.layer.cornerRadius = 17;
