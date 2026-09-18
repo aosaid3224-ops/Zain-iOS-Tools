@@ -54,7 +54,7 @@
     _subtitleLabel = [[UILabel alloc] init];
     _subtitleLabel.translatesAutoresizingMaskIntoConstraints = NO;
     _subtitleLabel.font = [UIFont systemFontOfSize:13.0 weight:UIFontWeightRegular];
-    _subtitleLabel.textColor = [UIColor colorWithWhite:0.72 alpha:1.0];
+    _subtitleLabel.textColor = [IPTheme textSecondaryColor];
     _subtitleLabel.textAlignment = NSTextAlignmentNatural;
     _subtitleLabel.semanticContentAttribute = UISemanticContentAttributeForceLeftToRight;
     _subtitleLabel.numberOfLines = 1;
@@ -64,7 +64,7 @@
     _metaLabel = [[UILabel alloc] init];
     _metaLabel.translatesAutoresizingMaskIntoConstraints = NO;
     _metaLabel.font = [UIFont systemFontOfSize:12.0 weight:UIFontWeightMedium];
-    _metaLabel.textColor = [UIColor colorWithWhite:0.58 alpha:1.0];
+    _metaLabel.textColor = [IPTheme textSecondaryColor];
     _metaLabel.textAlignment = NSTextAlignmentNatural;
     _metaLabel.semanticContentAttribute = UISemanticContentAttributeForceRightToLeft;
     _metaLabel.numberOfLines = 1;
@@ -80,7 +80,7 @@
     _moreButton.translatesAutoresizingMaskIntoConstraints = NO;
     [_moreButton setTitle:@"•••" forState:UIControlStateNormal];
     _moreButton.titleLabel.font = [UIFont systemFontOfSize:19.0 weight:UIFontWeightBold];
-    _moreButton.tintColor = [UIColor colorWithWhite:0.9 alpha:1.0];
+    _moreButton.tintColor = [IPTheme textPrimaryColor];
     _moreButton.accessibilityLabel = @"إجراءات العنصر";
     _moreButton.accessibilityHint = @"فتح قائمة الإجراءات";
     _moreButton.accessibilityTraits = UIAccessibilityTraitButton;
@@ -141,7 +141,7 @@
 - (void)setSelected:(BOOL)selected animated:(BOOL)animated {
     [super setSelected:selected animated:animated];
     [UIView animateWithDuration:0.12 animations:^{
-        self.cardView.backgroundColor = selected ? [UIColor colorWithRed:.12 green:.07 blue:.075 alpha:1] : (self.showsChildIndent ? [IPTheme secondaryCardColor] : [IPTheme cardColor]);
+        self.cardView.backgroundColor = selected ? [IPTheme errorColor] : (self.showsChildIndent ? [IPTheme secondaryCardColor] : [IPTheme cardColor]);
     }];
 }
 
