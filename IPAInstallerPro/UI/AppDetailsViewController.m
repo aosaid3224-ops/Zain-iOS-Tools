@@ -151,7 +151,7 @@
         [self.deleteButton setTitle:@"حذف التطبيق" forState:UIControlStateNormal];
         [self.deleteButton setTitleColor:[IPTheme textPrimaryColor] forState:UIControlStateNormal];
         self.deleteButton.titleLabel.font = [UIFont systemFontOfSize:17 weight:UIFontWeightSemibold];
-        self.deleteButton.backgroundColor = [UIColor colorWithRed:0.8 green:0.25 blue:0.25 alpha:1.0];
+        self.deleteButton.backgroundColor = [IPTheme errorColor];
         self.deleteButton.layer.cornerRadius = 17;
         [self.deleteButton addTarget:self action:@selector(deleteTapped:) forControlEvents:UIControlEventTouchUpInside];
         [self.contentView addSubview:self.deleteButton];
