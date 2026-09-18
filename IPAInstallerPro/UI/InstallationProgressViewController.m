@@ -115,14 +115,14 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
                 break;
             case PhaseVisualStateActive:
                 self.iconLabel.text = @"\u25c9";
-                self.iconLabel.textColor = [UIColor colorWithRed:0.2 green:0.6 blue:1.0 alpha:1.0];
+                self.iconLabel.textColor = [IPTheme accentColor];
                 self.titleLabel.textColor = [IPTheme textPrimaryColor];
                 self.subtitleLabel.textColor = [IPTheme textSecondaryColor];
                 self.pulsingDot.hidden = NO;
                 break;
             case PhaseVisualStateSuccess:
                 self.iconLabel.text = @"\u2713";
-                self.iconLabel.textColor = [UIColor colorWithRed:0.3 green:0.85 blue:0.4 alpha:1.0];
+                self.iconLabel.textColor = [IPTheme successColor];
                 self.titleLabel.textColor = [IPTheme textPrimaryColor];
                 self.subtitleLabel.textColor = [IPTheme textSecondaryColor];
                 self.pulsingDot.hidden = YES;
@@ -275,7 +275,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
         self.logTextView = [[UITextView alloc] init];
         self.logTextView.translatesAutoresizingMaskIntoConstraints = NO;
         self.logTextView.backgroundColor = [IPTheme secondaryCardColor];
-        self.logTextView.textColor = [UIColor colorWithRed:0.3 green:0.9 blue:0.4 alpha:1.0];
+        self.logTextView.textColor = [IPTheme successColor];
         self.logTextView.font = [UIFont fontWithName:@"Courier" size:10] ?: [UIFont systemFontOfSize:10];
         self.logTextView.editable = NO;
         self.logTextView.selectable = YES;
@@ -553,7 +553,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
 
     _progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
     _progressView.translatesAutoresizingMaskIntoConstraints = NO;
-    _progressView.progressTintColor = [UIColor colorWithRed:0.2 green:0.6 blue:1.0 alpha:1.0];
+    _progressView.progressTintColor = [IPTheme accentColor];
     _progressView.trackTintColor = [IPTheme textPrimaryColor];
     _progressView.layer.cornerRadius = 2;
     _progressView.clipsToBounds = YES;
@@ -808,7 +808,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
     statusLabel.textAlignment = NSTextAlignmentCenter;
     statusLabel.text = success ? @"\u2713 \u062a\u0645 \u0627\u0644\u062a\u062b\u0628\u064a\u062a \u0628\u0646\u062c\u0627\u062d" : @"\u2717 \u0641\u0634\u0644 \u0627\u0644\u062a\u062b\u0628\u064a\u062a";
     statusLabel.textColor = success
-        ? [UIColor colorWithRed:0.3 green:0.85 blue:0.4 alpha:1.0]
+        ? [IPTheme successColor]
         : [UIColor colorWithRed:0.9 green:0.3 blue:0.3 alpha:1.0];
     [stack addArrangedSubview:statusLabel];
 
@@ -907,7 +907,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
     [doneBtn setTitle:@"\u062a\u0645" forState:UIControlStateNormal];
     doneBtn.titleLabel.font = [UIFont systemFontOfSize:17 weight:UIFontWeightSemibold];
     doneBtn.backgroundColor = success
-        ? [UIColor colorWithRed:0.2 green:0.5 blue:0.9 alpha:1.0]
+        ? [IPTheme accentColor]
         : [UIColor colorWithRed:0.6 green:0.2 blue:0.2 alpha:1.0];
     [doneBtn setTitleColor:[IPTheme textPrimaryColor] forState:UIControlStateNormal];
     doneBtn.layer.cornerRadius = 12;
@@ -960,7 +960,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
 - (void)showFinalState:(BOOL)success message:(NSString *)message {
     self.headerLabel.text = message;
     self.headerLabel.textColor = success
-        ? [UIColor colorWithRed:0.3 green:0.85 blue:0.4 alpha:1.0]
+        ? [IPTheme successColor]
         : [UIColor colorWithRed:0.9 green:0.3 blue:0.3 alpha:1.0];
 }
 
@@ -988,7 +988,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
     NSRange full = NSMakeRange(0, text.length);
     UIFont *font = [UIFont fontWithName:@"Courier" size:10] ?: [UIFont systemFontOfSize:10];
     [attr addAttribute:NSFontAttributeName value:font range:full];
-    [attr addAttribute:NSForegroundColorAttributeName value:[UIColor colorWithRed:0.3 green:0.9 blue:0.4 alpha:1.0] range:full];
+    [attr addAttribute:NSForegroundColorAttributeName value:[IPTheme successColor] range:full];
 
     NSArray *redKeywords = @[@"❌", @"MISSING", @"FAILED", @"FALLBACK", @"ERROR", @"CRASH", @"incomplete", @"application-identifier MISSING", @"team-identifier MISSING", @"Deep copy MISSING", @"hasAppID=NO", @"hasTeamID=NO"];
     for (NSString *word in redKeywords) {
