@@ -13,7 +13,7 @@
 set -e
 
 IN="${1:?usage: patch-ipa.sh <input.ipa> [options]}"
-NAME="CarTV+"
+NAME="CarTV Zain"
 BUNDLE="app.zain.cartvplus"
 SIGNER=""
 
