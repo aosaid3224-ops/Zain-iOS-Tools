@@ -34,3 +34,9 @@ An IPA normally contains compiled Mach-O code, not Objective-C/Swift source. A c
 - `SHA256SUMS`: integrity hashes for this analysis package.
 
 Generated from the supplied IPA on 2026-09-18.
+
+## Advanced static analysis
+
+The `advanced/` directory adds LLVM Mach-O private-header and section reports, Mach-O summaries, binary hashes, class-like and selector-like string candidates, filtered Objective-C/Swift-related strings, and normalized plist summaries for the main application, both extensions, and `MobileVLCKit`. The main executable exposes Objective-C and Swift metadata sections such as `__objc_classname`, `__objc_methname`, `__swift5_types`, and `__swift5_typeref`; these are observable compiled metadata, not original source code.
+
+The analysis intentionally remains non-invasive. It does not decrypt FairPlay content, remove code signatures, execute the target application, recover credentials, or claim that string candidates are verified source-level classes or selectors.
