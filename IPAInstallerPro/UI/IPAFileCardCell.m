@@ -1,5 +1,6 @@
 #import "IPAFileCardCell.h"
 #import "IPTheme.h"
+#import "IPComponents.h"
 
 @interface IPAFileCardCell ()
 @property (nonatomic, strong, readwrite) UIImageView *ipaIconView;
@@ -26,14 +27,22 @@
 
     _cardView = [[UIView alloc] init];
     _cardView.translatesAutoresizingMaskIntoConstraints = NO;
-    _cardView.layer.cornerRadius = 18.0; _cardView.layer.borderWidth = 0.7; _cardView.layer.borderColor = [IPTheme subtleBorderColor].CGColor;
-    _cardView.layer.masksToBounds = YES;
+    _cardView.backgroundColor = UIColor.clearColor;
     [self.contentView addSubview:_cardView];
 
     _childRail = [[UIView alloc] init];
     _childRail.translatesAutoresizingMaskIntoConstraints = NO;
     _childRail.layer.cornerRadius = 2.0;
     [_cardView addSubview:_childRail];
+
+    IPHairlineView *sep = [[IPHairlineView alloc] initWithMargins:UIEdgeInsetsMake(0, 76, 0, 0)];
+    sep.translatesAutoresizingMaskIntoConstraints = NO;
+    [_cardView addSubview:sep];
+    [NSLayoutConstraint activateConstraints:@[
+        [sep.leadingAnchor constraintEqualToAnchor:_cardView.leadingAnchor],
+        [sep.trailingAnchor constraintEqualToAnchor:_cardView.trailingAnchor],
+        [sep.bottomAnchor constraintEqualToAnchor:_cardView.bottomAnchor],
+    ]];
 
     _ipaIconView = [[UIImageView alloc] init];
     _ipaIconView.translatesAutoresizingMaskIntoConstraints = NO;
@@ -44,7 +53,7 @@
     _titleLabel = [[UILabel alloc] init];
     _titleLabel.translatesAutoresizingMaskIntoConstraints = NO;
     _titleLabel.font = [UIFont systemFontOfSize:17.0 weight:UIFontWeightSemibold];
-    _titleLabel.textColor = UIColor.whiteColor;
+    _titleLabel.textColor = [IPTheme textPrimaryColor];
     _titleLabel.textAlignment = NSTextAlignmentNatural;
     _titleLabel.semanticContentAttribute = UISemanticContentAttributeForceRightToLeft;
     _titleLabel.numberOfLines = 1;
