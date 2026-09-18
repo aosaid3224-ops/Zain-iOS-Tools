@@ -48,7 +48,7 @@
 
     tabBarController.viewControllers = @[mainNav, installedNav, unpackNav, settingsNav];
     UIColor *glassTint = [IPTheme accentColor];
-    UIColor *glassBackground = [UIColor colorWithRed:0.045 green:0.045 blue:0.052 alpha:0.86];
+    UIColor *glassBackground = [IPTheme backgroundColor];
 
     UITabBarAppearance *tabAppearance = [[UITabBarAppearance alloc] init];
     [tabAppearance configureWithDefaultBackground];
@@ -56,7 +56,7 @@
     tabAppearance.backgroundColor = glassBackground;
     tabAppearance.shadowColor = [IPTheme separatorColor];
     tabAppearance.stackedLayoutAppearance.normal.iconColor = [IPTheme separatorStrongColor];
-    tabAppearance.stackedLayoutAppearance.normal.titleTextAttributes = @{NSForegroundColorAttributeName: [UIColor colorWithWhite:1.0 alpha:0.48], NSFontAttributeName: [UIFont systemFontOfSize:11 weight:UIFontWeightMedium]};
+    tabAppearance.stackedLayoutAppearance.normal.titleTextAttributes = @{NSForegroundColorAttributeName: [[IPTheme textPrimaryColor] colorWithAlphaComponent:0.48], NSFontAttributeName: [UIFont systemFontOfSize:11 weight:UIFontWeightMedium]};
     tabAppearance.stackedLayoutAppearance.selected.iconColor = glassTint;
     tabAppearance.stackedLayoutAppearance.selected.titleTextAttributes = @{NSForegroundColorAttributeName: glassTint, NSFontAttributeName: [UIFont systemFontOfSize:11 weight:UIFontWeightSemibold]};
     tabBarController.tabBar.standardAppearance = tabAppearance;
@@ -72,7 +72,7 @@
         UINavigationBarAppearance *navAppearance = [[UINavigationBarAppearance alloc] init];
         [navAppearance configureWithTransparentBackground];
         navAppearance.backgroundEffect = [UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemChromeMaterialDark];
-        navAppearance.backgroundColor = [UIColor colorWithRed:0.025 green:0.028 blue:0.035 alpha:0.72];
+        navAppearance.backgroundColor = [IPTheme backgroundColor];
         navAppearance.shadowColor = [UIColor colorWithRed:0.72 green:0.08 blue:0.11 alpha:0.22];
         navAppearance.titleTextAttributes = @{NSForegroundColorAttributeName: UIColor.whiteColor, NSFontAttributeName: [UIFont systemFontOfSize:17 weight:UIFontWeightSemibold]};
         navAppearance.largeTitleTextAttributes = @{NSForegroundColorAttributeName: [UIColor colorWithRed:0.96 green:0.96 blue:1.0 alpha:1.0], NSFontAttributeName: [UIFont systemFontOfSize:34 weight:UIFontWeightBold]};
