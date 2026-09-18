@@ -1,4 +1,5 @@
 #import "IPAExportProgressView.h"
+#import "IPTheme.h"
 
 @interface IPAExportProgressView ()
 @property (nonatomic, strong, readwrite) UILabel *stageLabel;
@@ -39,7 +40,7 @@
     // Card
     self.cardView = [[UIView alloc] init];
     self.cardView.translatesAutoresizingMaskIntoConstraints = NO;
-    self.cardView.backgroundColor = [UIColor colorWithRed:0.08 green:0.08 blue:0.10 alpha:1.0];
+    self.cardView.backgroundColor = [IPTheme surfaceColor];
     self.cardView.layer.cornerRadius = 24;
     self.cardView.layer.borderWidth = 1;
     self.cardView.layer.borderColor = [UIColor colorWithWhite:1 alpha:0.08].CGColor;
