@@ -73,9 +73,9 @@
         [navAppearance configureWithTransparentBackground];
         navAppearance.backgroundEffect = [UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemChromeMaterialDark];
         navAppearance.backgroundColor = [IPTheme backgroundColor];
-        navAppearance.shadowColor = [UIColor colorWithRed:0.72 green:0.08 blue:0.11 alpha:0.22];
+        navAppearance.shadowColor = [[IPTheme errorColor] colorWithAlphaComponent:0.22];
         navAppearance.titleTextAttributes = @{NSForegroundColorAttributeName: UIColor.whiteColor, NSFontAttributeName: [UIFont systemFontOfSize:17 weight:UIFontWeightSemibold]};
-        navAppearance.largeTitleTextAttributes = @{NSForegroundColorAttributeName: [UIColor colorWithRed:0.96 green:0.96 blue:1.0 alpha:1.0], NSFontAttributeName: [UIFont systemFontOfSize:34 weight:UIFontWeightBold]};
+        navAppearance.largeTitleTextAttributes = @{NSForegroundColorAttributeName: [IPTheme textPrimaryColor], NSFontAttributeName: [UIFont systemFontOfSize:34 weight:UIFontWeightBold]};
         nav.navigationBar.standardAppearance = navAppearance;
         nav.navigationBar.scrollEdgeAppearance = navAppearance;
         nav.navigationBar.compactAppearance = navAppearance;
