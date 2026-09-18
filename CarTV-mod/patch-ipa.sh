@@ -1,18 +1,20 @@
 #!/bin/bash
 # ============================================================
-# CarTV-Plus — Parallel Identity Patcher (v1.1)
+# CarTV-Plus — Parallel Identity Patcher (v1.2)
 # يُنشئ نسخة موازية من CarTV بهوية جديدة (Bundle ID + اسم)
+# + شاشة إقلاع تحمل رصيد المعدّل (تُعرض عند فتح التطبيق)
 # الاستخدام:
 #   ./patch-ipa.sh CarTV.ipa
 #   ./patch-ipa.sh CarTV.ipa --name "CarTV+" --bundle app.zain.cartvplus
 #   ./patch-ipa.sh CarTV.ipa --signer "Apple Development: you@mail.com"
+#   ./patch-ipa.sh CarTV.ipa --no-credit          (تعطيل رسالة الفتح)
+#   ./patch-ipa.sh CarTV.ipa --credit "سطر 1" --credit-sub "سطر 2"
 #
 # وضع التوقيع الافتراضي: ldid (لأجهزة الجيلبريك)
-# وضع --signer: codesign (للتثبيت الجانبي AltStore/TrollStore/سيديا)
+# وضع --signer: codesign (للتثبيت الجانبي)
 #
-# v1.1: إصلاحان جراحيان لبيئة iOS:
-#   1) كشف Mach-O عبر od+case بدل grep \|\| (BSD grep على iOS لا يدعم alternation — كان سيتخطى إعادة توقيع كل الثنائيات)
-#   2) إعادة الضغط تشمل مجلد Payload/ نفسه (البنية السابقة كانت تنتج IPA غير قياسي)
+# v1.2: حقن شاشة الإقليد برسالة "معدّلة بواسطة Zain" (مستوى الموارد فقط)
+# v1.1: كشف Mach-O عبر od+case (BSD/iOS)، وبنية IPA قياسية (Payload/)
 # ============================================================
 set -e
 
@@ -20,12 +22,18 @@ IN="${1:?usage: patch-ipa.sh <input.ipa> [options]}"
 NAME="CarTV Zain"
 BUNDLE="app.zain.cartvplus"
 SIGNER=""
+CREDIT=1
+CREDIT_TITLE="هذه النسخة معدلة وتمت بواسطة المطور Zain"
+CREDIT_SUB="لا تنسَ تدعمنا ❤️"
 
 while [ $# -gt 1 ]; do
   case "$2" in
-    --name)   NAME="$3";   shift 2;;
-    --bundle) BUNDLE="$3"; shift 2;;
-    --signer) SIGNER="$3"; shift 2;;
+    --name)        NAME="$3";        shift 2;;
+    --bundle)      BUNDLE="$3";      shift 2;;
+    --signer)      SIGNER="$3";      shift 2;;
+    --no-credit)   CREDIT=0;         shift 1;;
+    --credit)      CREDIT_TITLE="$3"; shift 2;;
+    --credit-sub)  CREDIT_SUB="$3";   shift 2;;
     *) echo "unknown option: $2"; exit 1;;
   esac
 done
@@ -77,13 +85,76 @@ find "$APP/PlugIns" -name "*.appex" -type d 2>/dev/null | while read -r APPEX; d
   echo "    [√] $AP → $EXTID"
 done
 
-# ---------- 3) تنظيف توقيع App Store ----------
+# ---------- 3) شاشة الإقليد: رصيد المعدّل (موارد فقط — بدون لمس الثنائي) ----------
+if [ "$CREDIT" = "1" ]; then
+  STORY="$APP/LaunchScreen.storyboard"
+  if [ ! -f "$STORY" ]; then
+    cat > "$STORY" <<'XEOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="17150" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" launchScreen="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="Zain01">
+    <device id="retina6_1" orientation="portrait" appearance="light"/>
+    <dependencies><deployment identifier="iOS"/><plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="17125"/></dependencies>
+    <scenes><scene sceneID="Zain01"><objects><viewController id="Zain01" sceneMemberID="viewController"><view key="view" contentMode="scaleToFill" id="Zain02"><rect key="frame" x="0.0" y="0.0" width="414" height="896"/><autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/><subviews>__ZAIN_LABELS__</subviews><color key="backgroundColor" white="0.0" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/></view></viewController></objects></scene></scenes>
+</document>
+XEOF
+    plutil -replace UILaunchStoryboardName -string LaunchScreen "$PLIST"
+  fi
+
+  LABELS="$(mktemp)"
+  cat > "$LABELS" <<XEOF
+<label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="$CREDIT_TITLE" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="zainCreditTitle">
+    <rect key="frame" x="16" y="596" width="343" height="24"/>
+    <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+    <fontDescription key="fontDescription" type="boldSystem" pointSize="15"/>
+    <color key="textColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+    <nil key="highlightedColor"/>
+</label>
+<label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="$CREDIT_SUB" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="zainCreditSub">
+    <rect key="frame" x="16" y="624" width="343" height="24"/>
+    <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+    <fontDescription key="fontDescription" type="system" pointSize="14"/>
+    <color key="textColor" red="1" green="0.4" blue="0.5" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+    <nil key="highlightedColor"/>
+</label>
+XEOF
+
+  if grep -q "__ZAIN_LABELS__" "$STORY"; then
+    # ملف جديد أنشأناه للتو: ضع الليبلات مكان العلامة
+    LABELS_ALL="$(mktemp)"
+    { printf '<subviews>'; cat "$LABELS"; printf '</subviews>'; } > "$LABELS_ALL"
+    sed "/__ZAIN_LABELS__/r $LABELS_ALL" "$STORY" | sed "/__ZAIN_LABELS__/d" > "$STORY.tmp"
+    mv "$STORY.tmp" "$STORY"
+    rm -f "$LABELS_ALL"
+  elif grep -q "</subviews>" "$STORY"; then
+    # storyboard موجود: أضف الليبلات داخل subviews
+    sed '/<\/subviews>/r '"$LABELS" "$STORY" > "$STORY.tmp"
+    mv "$STORY.tmp" "$STORY"
+  elif grep -q "</view>" "$STORY"; then
+    # لا يوجد subviews: أنشئه
+    LABELS_ALL="$(mktemp)"
+    { printf '<subviews>'; cat "$LABELS"; printf '</subviews>'; } > "$LABELS_ALL"
+    sed '/<\/view>/r '"$LABELS_ALL" "$STORY" > "$STORY.tmp"
+    mv "$STORY.tmp" "$STORY"
+    rm -f "$LABELS_ALL"
+  else
+    echo "    [!] تعذر حقن شاشة الإقليد — بنية غير متوقعة"
+  fi
+  rm -f "$LABELS"
+
+  if plutil -lint "$STORY" >/dev/null 2>&1; then
+    echo "    [√] رسالة الفتح: \"$CREDIT_TITLE / $CREDIT_SUB\""
+  else
+    echo "    [!] تحذير: فحص storyboard فشل — قد لا تظهر الرسالة"
+  fi
+fi
+
+# ---------- 4) تنظيف توقيع App Store ----------
 rm -f "$APP/embedded.mobileprovision"
 rm -f "$APP/iTunesMetadata.plist"
 find "$APP" -name ".DS_Store" -delete 2>/dev/null || true
 echo "    [√] تنظيف بقايا التوقيع القديم"
 
-# ---------- 4) إعادة التوقيع ----------
+# ---------- 5) إعادة التوقيع ----------
 resign_ldid() {
   local bin="$1"
   local ent
@@ -127,7 +198,7 @@ if [ -n "$SIGNER" ]; then
   codesign -fs "$SIGNER" "$APP"
 fi
 
-# ---------- 5) إعادة الضغط (بنية IPA قياسية: Payload/…) ----------
+# ---------- 6) إعادة الضغط (بنية IPA قياسية: Payload/…) ----------
 echo "[*] بناء: $OUT"
 (cd "$WORK" && zip -qr "$OLDPWD/$OUT" Payload)
 rm -rf "$WORK"
@@ -136,6 +207,9 @@ echo ""
 echo "════════════════════════════════════════"
 echo " تم! الملف: $OUT"
 echo " الهوية: $BUNDLE ($NAME)"
+if [ "$CREDIT" = "1" ]; then
+echo " رسالة الفتح: مفعّلة"
+fi
 echo "════════════════════════════════════════"
 echo ""
 if [ -z "$SIGNER" ]; then
