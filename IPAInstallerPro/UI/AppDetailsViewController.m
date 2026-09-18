@@ -100,7 +100,7 @@
     for (NSDictionary *d in details) {
         UILabel *tl = [[UILabel alloc] initWithFrame:CGRectZero];
         tl.text = d[@"title"];
-        tl.textColor = [UIColor colorWithWhite:0.4 alpha:1.0];
+        tl.textColor = [IPTheme textTertiaryColor];
         tl.font = [UIFont systemFontOfSize:13 weight:UIFontWeightMedium];
         [self.card addSubview:tl];
 
