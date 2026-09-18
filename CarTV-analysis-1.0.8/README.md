@@ -40,3 +40,9 @@ Generated from the supplied IPA on 2026-09-18.
 The `advanced/` directory adds LLVM Mach-O private-header and section reports, Mach-O summaries, binary hashes, class-like and selector-like string candidates, filtered Objective-C/Swift-related strings, and normalized plist summaries for the main application, both extensions, and `MobileVLCKit`. The main executable exposes Objective-C and Swift metadata sections such as `__objc_classname`, `__objc_methname`, `__swift5_types`, and `__swift5_typeref`; these are observable compiled metadata, not original source code.
 
 The analysis intentionally remains non-invasive. It does not decrypt FairPlay content, remove code signatures, execute the target application, recover credentials, or claim that string candidates are verified source-level classes or selectors.
+
+## Deep binary metadata and focused disassembly
+
+The latest pass adds LIEF-based Mach-O reports for the main executable and both extensions, including section tables, linked system/framework libraries, exported and local symbol records where present, Objective-C string-section candidates, Swift mangled-name candidates, and hashes. It also adds focused beginning/end disassembly excerpts for reviewability rather than publishing an unbounded multi-megabyte instruction dump.
+
+For the main `CarTV` executable, the pass recorded 45 sections, 1,727 symbol records, 1,000 Swift-mangled candidates, 269 Objective-C class-name candidates, and 3,696 Objective-C method-name candidates. The linked libraries include AVFoundation, CarPlay, CoreMedia, ReplayKit, WebKit, MobileVLCKit, Swift runtime libraries, and other system frameworks. These observations describe compiled metadata and linkage; they are not equivalent to the original source and have not been used to bypass encryption, signing, or access controls.
