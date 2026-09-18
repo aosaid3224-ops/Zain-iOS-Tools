@@ -148,7 +148,7 @@
     cell.textLabel.textColor = UIColor.whiteColor;
     cell.textLabel.font = [UIFont systemFontOfSize:15 weight:UIFontWeightMedium];
     cell.detailTextLabel.text = directory ? @"مجلد" : [NSString stringWithFormat:@"%@ بايت", item[@"size"]];
-    cell.imageView.image = [[UIImage systemImageNamed:directory ? @"folder.fill" : @"doc"] imageWithTintColor:directory ? [UIColor colorWithRed:0.4 green:0.5 blue:0.9 alpha:1.0] : [UIColor colorWithWhite:0.55 alpha:1.0]];
+    cell.imageView.image = [[UIImage systemImageNamed:directory ? @"folder.fill" : @"doc"] imageWithTintColor:directory ? [IPTheme accentColor] : [IPTheme textSecondaryColor]];
     cell.accessoryType = directory ? UITableViewCellAccessoryDisclosureIndicator : UITableViewCellAccessoryNone;
     return cell;
 }
