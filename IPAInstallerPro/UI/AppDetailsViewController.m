@@ -71,13 +71,13 @@
     if (self.appInfo.icon) {
         self.iconView.image = self.appInfo.icon;
     } else {
-        self.iconView.image = [[UIImage systemImageNamed:@"app"] imageWithTintColor:[UIColor colorWithWhite:0.3 alpha:1.0]];
+        self.iconView.image = [[UIImage systemImageNamed:@"app"] imageWithTintColor:[IPTheme textTertiaryColor]];
     }
     [self.contentView addSubview:self.iconView];
 
     self.nameLabel = [[UILabel alloc] initWithFrame:CGRectZero];
     self.nameLabel.text = self.appInfo.name;
-    self.nameLabel.textColor = [UIColor whiteColor];
+    self.nameLabel.textColor = [IPTheme textPrimaryColor];
     self.nameLabel.font = [UIFont systemFontOfSize:22 weight:UIFontWeightBold];
     self.nameLabel.textAlignment = NSTextAlignmentCenter;
     self.nameLabel.adjustsFontSizeToFitWidth = YES;
@@ -106,7 +106,7 @@
 
         UILabel *vl = [[UILabel alloc] initWithFrame:CGRectZero];
         vl.text = d[@"value"];
-        vl.textColor = [UIColor whiteColor];
+        vl.textColor = [IPTheme textPrimaryColor];
         vl.font = [UIFont systemFontOfSize:13 weight:UIFontWeightSemibold];
         vl.textAlignment = NSTextAlignmentRight;
         vl.adjustsFontSizeToFitWidth = YES;
@@ -117,7 +117,7 @@
 
     self.openButton = [UIButton buttonWithType:UIButtonTypeSystem];
     [self.openButton setTitle:@"فتح التطبيق" forState:UIControlStateNormal];
-    [self.openButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    [self.openButton setTitleColor:[IPTheme textPrimaryColor] forState:UIControlStateNormal];
     self.openButton.titleLabel.font = [UIFont systemFontOfSize:17 weight:UIFontWeightSemibold];
     self.openButton.backgroundColor = [IPTheme accentColor];
     self.openButton.layer.cornerRadius = 17;
@@ -126,7 +126,7 @@
 
     self.exportButton = [UIButton buttonWithType:UIButtonTypeSystem];
     [self.exportButton setTitle:@"استخراج IPA" forState:UIControlStateNormal];
-    [self.exportButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    [self.exportButton setTitleColor:[IPTheme textPrimaryColor] forState:UIControlStateNormal];
     self.exportButton.titleLabel.font = [UIFont systemFontOfSize:17 weight:UIFontWeightSemibold];
     self.exportButton.backgroundColor = [IPTheme secondaryCardColor];
     self.exportButton.layer.borderWidth = 0.7;
@@ -137,7 +137,7 @@
 
     self.cloneButton = [UIButton buttonWithType:UIButtonTypeSystem];
     [self.cloneButton setTitle:@"تكرار التطبيق" forState:UIControlStateNormal];
-    [self.cloneButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    [self.cloneButton setTitleColor:[IPTheme textPrimaryColor] forState:UIControlStateNormal];
     self.cloneButton.titleLabel.font = [UIFont systemFontOfSize:17 weight:UIFontWeightSemibold];
     self.cloneButton.backgroundColor = [IPTheme secondaryCardColor];
     self.cloneButton.layer.borderWidth = 0.7;
@@ -149,7 +149,7 @@
     if (!self.appInfo.isProtected) {
         self.deleteButton = [UIButton buttonWithType:UIButtonTypeSystem];
         [self.deleteButton setTitle:@"حذف التطبيق" forState:UIControlStateNormal];
-        [self.deleteButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+        [self.deleteButton setTitleColor:[IPTheme textPrimaryColor] forState:UIControlStateNormal];
         self.deleteButton.titleLabel.font = [UIFont systemFontOfSize:17 weight:UIFontWeightSemibold];
         self.deleteButton.backgroundColor = [UIColor colorWithRed:0.8 green:0.25 blue:0.25 alpha:1.0];
         self.deleteButton.layer.cornerRadius = 17;
