@@ -119,7 +119,7 @@
         return;
     }
     UIViewController *viewer = [[UIViewController alloc] init];
-    viewer.view.backgroundColor = [UIColor colorWithRed:0.02 green:0.02 blue:0.04 alpha:1.0];
+    viewer.view.backgroundColor = [IPTheme backgroundColor];
     viewer.title = title;
     UITextView *textView = [[UITextView alloc] initWithFrame:viewer.view.bounds];
     textView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
