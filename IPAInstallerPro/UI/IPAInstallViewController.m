@@ -124,7 +124,7 @@
     for (NSDictionary *detail in details) {
         UILabel *titleLabel = [[UILabel alloc] initWithFrame:CGRectZero];
         titleLabel.text = detail[@"title"];
-        titleLabel.textColor = [UIColor colorWithWhite:0.4 alpha:1.0];
+        titleLabel.textColor = [IPTheme textTertiaryColor];
         titleLabel.font = [UIFont systemFontOfSize:13 weight:UIFontWeightMedium];
         [self.detailsContainer addSubview:titleLabel];
 
@@ -233,7 +233,7 @@
                 if (missingLibs.count > 0) {
                     NSString *libsList = [missingLibs componentsJoinedByString:@", "];
                     self.validationLabel.text = [NSString stringWithFormat:@"⚠️ جاهز لكن ينقص: %@", libsList];
-                    self.validationLabel.textColor = [UIColor colorWithRed:1.0 green:0.6 blue:0.0 alpha:1.0];
+                    self.validationLabel.textColor = [IPTheme warningColor];
                     self.installButton.enabled = YES;
                     self.installButton.alpha = 1.0;
                     UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"مكتبات مفقودة"
@@ -247,17 +247,17 @@
                     [self presentViewController:alert animated:YES completion:nil];
                 } else {
                     self.validationLabel.text = @"جاهز للتثبيت ✓";
-                    self.validationLabel.textColor = [UIColor colorWithRed:0.3 green:0.7 blue:0.5 alpha:1.0];
+                    self.validationLabel.textColor = [IPTheme successColor];
                     self.installButton.enabled = YES;
                     self.installButton.alpha = 1.0;
                 }
             } else {
                 self.validationLabel.text = result.statusMessage;
-                self.validationLabel.textColor = [UIColor colorWithRed:0.9 green:0.4 blue:0.3 alpha:1.0];
+                self.validationLabel.textColor = [IPTheme errorColor];
                 self.installButton.enabled = NO;
                 self.installButton.alpha = 0.5;
                 [self.installButton setTitle:@"لا يمكن التثبيت" forState:UIControlStateNormal];
-                self.installButton.backgroundColor = [UIColor colorWithWhite:0.15 alpha:1.0];
+                self.installButton.backgroundColor = [IPTheme textPrimaryColor];
             }
         });
     });
