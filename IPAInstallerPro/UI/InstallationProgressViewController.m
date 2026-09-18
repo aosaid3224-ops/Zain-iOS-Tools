@@ -439,7 +439,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
     NSString *line = [NSString stringWithFormat:@"%@ #%03lu %@ %@ | %@ | created:%@ rendered:%@ lag:%.1fms | target:%@ | exit:%d%@\n",
                        rendered, (unsigned long)event.sequence, event.stage ?: @"UNKNOWN", event.status ?: @"PENDING",
                        event.message ?: @"", created, rendered, event.renderLagMs, event.target.length ? event.target : @"-", event.exitStatus, note ?: @""];
-    UIColor *color = [event.status isEqualToString:@"FAILED"] ? [UIColor colorWithRed:1.0 green:0.3 blue:0.3 alpha:1.0] :
+    UIColor *color = [event.status isEqualToString:@"FAILED"] ? [IPTheme errorColor] :
                      ([event.status isEqualToString:@"SUCCESS"] ? [UIColor colorWithRed:0.35 green:0.95 blue:0.6 alpha:1.0] : [UIColor colorWithRed:0.45 green:0.78 blue:1.0 alpha:1.0]);
     NSDictionary *attributes = @{NSFontAttributeName: self.liveOutputView.font ?: [UIFont systemFontOfSize:10], NSForegroundColorAttributeName: color};
     [self.liveOutputView.textStorage appendAttributedString:[[NSAttributedString alloc] initWithString:line attributes:attributes]];
@@ -467,7 +467,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
         if (self.liveFinalRendered) { self.lateLiveEventCount += 1; continue; }
         [self appendRenderedLiveLineForEvent:event note:nil];
         self.lastRenderedLiveSequence = event.sequence;
-        UIColor *color = [event.status isEqualToString:@"FAILED"] ? [UIColor colorWithRed:1.0 green:0.3 blue:0.3 alpha:1.0] : [UIColor colorWithRed:0.35 green:0.9 blue:0.55 alpha:1.0];
+        UIColor *color = [event.status isEqualToString:@"FAILED"] ? [IPTheme errorColor] : [IPTheme successColor];
         self.liveStateLabel.textColor = color;
         self.liveStateLabel.text = event.finalEvent ? [NSString stringWithFormat:@"الحالة النهائية: %@ #%03lu — انتهى البث", event.status ?: @"FINAL", (unsigned long)event.sequence] : [NSString stringWithFormat:@"الحالة الحية: %@ — %@ #%03lu", event.stage ?: @"UNKNOWN", event.status ?: @"PENDING", (unsigned long)event.sequence];
         if (event.finalEvent) self.liveFinalRendered = YES;
@@ -873,7 +873,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
     logBtn.translatesAutoresizingMaskIntoConstraints = NO;
     [logBtn setTitle:@"\u0639\u0631\u0636 \u0627\u0644\u0644\u0648\u063a \u0627\u0644\u062e\u0627\u0645 (Raw Log)" forState:UIControlStateNormal];
     logBtn.titleLabel.font = [UIFont systemFontOfSize:14 weight:UIFontWeightMedium];
-    [logBtn setTitleColor:[UIColor colorWithRed:0.5 green:0.7 blue:1.0 alpha:1.0] forState:UIControlStateNormal];
+    [logBtn setTitleColor:[IPTheme accentColor] forState:UIControlStateNormal];
     logBtn.backgroundColor = [IPTheme secondaryCardColor];
     logBtn.layer.cornerRadius = 8;
     [logBtn addTarget:self action:@selector(showRawLog) forControlEvents:UIControlEventTouchUpInside];
@@ -995,7 +995,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
         NSRange searchRange = NSMakeRange(0, text.length);
         NSRange found = [text rangeOfString:word options:0 range:searchRange];
         while (found.location != NSNotFound) {
-            [attr addAttribute:NSForegroundColorAttributeName value:[UIColor colorWithRed:1.0 green:0.15 blue:0.15 alpha:1.0] range:found];
+            [attr addAttribute:NSForegroundColorAttributeName value:[IPTheme errorColor] range:found];
             searchRange = NSMakeRange(found.location + found.length, text.length - found.location - found.length);
             found = [text rangeOfString:word options:0 range:searchRange];
         }
@@ -1006,7 +1006,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
         NSRange searchRange = NSMakeRange(0, text.length);
         NSRange found = [text rangeOfString:word options:0 range:searchRange];
         while (found.location != NSNotFound) {
-            [attr addAttribute:NSForegroundColorAttributeName value:[UIColor colorWithRed:1.0 green:0.8 blue:0.1 alpha:1.0] range:found];
+            [attr addAttribute:NSForegroundColorAttributeName value:[IPTheme warningColor] range:found];
             searchRange = NSMakeRange(found.location + found.length, text.length - found.location - found.length);
             found = [text rangeOfString:word options:0 range:searchRange];
         }
