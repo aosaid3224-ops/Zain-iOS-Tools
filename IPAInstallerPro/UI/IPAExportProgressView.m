@@ -33,7 +33,7 @@
     // Backdrop
     self.backdropView = [[UIView alloc] init];
     self.backdropView.translatesAutoresizingMaskIntoConstraints = NO;
-    self.backdropView.backgroundColor = [UIColor colorWithRed:0.0 green:0.0 blue:0.0 alpha:0.65];
+    self.backdropView.backgroundColor = [IPTheme backgroundColor];
     self.backdropView.alpha = 0;
     [self addSubview:self.backdropView];
 
@@ -43,7 +43,7 @@
     self.cardView.backgroundColor = [IPTheme surfaceColor];
     self.cardView.layer.cornerRadius = 24;
     self.cardView.layer.borderWidth = 1;
-    self.cardView.layer.borderColor = [UIColor colorWithWhite:1 alpha:0.08].CGColor;
+    self.cardView.layer.borderColor = [[IPTheme textPrimaryColor] colorWithAlphaComponent:0.08].CGColor;
     self.cardView.layer.shadowColor = [UIColor blackColor].CGColor;
     self.cardView.layer.shadowOffset = CGSizeMake(0, 12);
     self.cardView.layer.shadowRadius = 24;
@@ -254,9 +254,9 @@
         self.statsTimer = nil;
         [self.spinner stopAnimating];
         self.stageLabel.text = success ? @"تم الاستخراج بنجاح" : @"فشل الاستخراج";
-        self.stageLabel.textColor = success ? [UIColor colorWithRed:0.25 green:0.82 blue:0.55 alpha:1.0] : [UIColor colorWithRed:0.95 green:0.35 blue:0.3 alpha:1.0];
+        self.stageLabel.textColor = success ? [IPTheme successColor] : [IPTheme errorColor];
         self.detailLabel.text = message ?: @"";
-        self.progressBar.progressTintColor = success ? [UIColor colorWithRed:0.25 green:0.82 blue:0.55 alpha:1.0] : [UIColor colorWithRed:0.95 green:0.35 blue:0.3 alpha:1.0];
+        self.progressBar.progressTintColor = success ? [IPTheme successColor] : [IPTheme errorColor];
         [self.progressBar setProgress:1.0 animated:YES];
         self.closeButton.hidden = NO;
     });
