@@ -7,6 +7,7 @@
 //
 
 #import "JBHideViewController.h"
+#import "IPTheme.h"
 #import "../Core/JBHide/SpiderManagedAppsRegistry.h"
 #import "../Core/JBHide/SpiderJBHideEngine.h"
 #import "../Core/JBHide/SpiderJBHideStateStore.h"
