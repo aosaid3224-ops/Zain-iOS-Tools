@@ -1,4 +1,5 @@
 #import "GlassIPACell.h"
+#import "IPTheme.h"
 #import "Core/IPAExtractor.h"
 
 @interface GlassIPACell ()
@@ -22,7 +23,7 @@
 - (void)buildGlassLayout {
     self.glassView = [[UIView alloc] init]; self.glassView.translatesAutoresizingMaskIntoConstraints = NO; self.glassView.backgroundColor = [UIColor colorWithRed:.058 green:.059 blue:.064 alpha:1]; self.glassView.layer.cornerRadius = 18; self.glassView.layer.borderWidth = 0.7; self.glassView.layer.borderColor = [UIColor colorWithWhite:.20 alpha:.58].CGColor; self.glassView.layer.masksToBounds = YES; [self.contentView addSubview:self.glassView];
     self.accentView = [[UIView alloc] init]; self.accentView.translatesAutoresizingMaskIntoConstraints = NO; self.accentView.backgroundColor = [UIColor colorWithRed:1 green:.16 blue:.14 alpha:.95]; [self.glassView addSubview:self.accentView];
-    self.ipaIconView = [[UIImageView alloc] init]; self.ipaIconView.translatesAutoresizingMaskIntoConstraints = NO; self.ipaIconView.contentMode = UIViewContentModeScaleAspectFill; self.ipaIconView.clipsToBounds = YES; self.ipaIconView.layer.cornerRadius = 12; self.ipaIconView.backgroundColor = [UIColor colorWithWhite:1 alpha:.08]; [self.glassView addSubview:self.ipaIconView];
+    self.ipaIconView = [[UIImageView alloc] init]; self.ipaIconView.translatesAutoresizingMaskIntoConstraints = NO; self.ipaIconView.contentMode = UIViewContentModeScaleAspectFill; self.ipaIconView.clipsToBounds = YES; self.ipaIconView.layer.cornerRadius = 12; self.ipaIconView.backgroundColor = [IPTheme separatorColor]; [self.glassView addSubview:self.ipaIconView];
     self.titleLabel = [[UILabel alloc] init]; self.titleLabel.translatesAutoresizingMaskIntoConstraints = NO; self.titleLabel.font = [UIFont systemFontOfSize:17 weight:UIFontWeightSemibold]; self.titleLabel.textColor = UIColor.whiteColor; self.titleLabel.textAlignment = NSTextAlignmentRight; self.titleLabel.adjustsFontSizeToFitWidth = YES; self.titleLabel.minimumScaleFactor = .78; [self.glassView addSubview:self.titleLabel];
     self.metadataLabel = [[UILabel alloc] init]; self.metadataLabel.translatesAutoresizingMaskIntoConstraints = NO; self.metadataLabel.font = [UIFont systemFontOfSize:12 weight:UIFontWeightMedium]; self.metadataLabel.textColor = [UIColor colorWithWhite:.70 alpha:1]; self.metadataLabel.textAlignment = NSTextAlignmentRight; self.metadataLabel.numberOfLines = 2; [self.glassView addSubview:self.metadataLabel];
     self.chevronView = [[UIImageView alloc] initWithImage:[UIImage systemImageNamed:@"chevron.left"]]; self.chevronView.translatesAutoresizingMaskIntoConstraints = NO; self.chevronView.tintColor = [UIColor colorWithRed:1 green:.20 blue:.17 alpha:1]; self.chevronView.contentMode = UIViewContentModeScaleAspectFit; [self.glassView addSubview:self.chevronView];
