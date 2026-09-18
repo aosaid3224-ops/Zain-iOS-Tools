@@ -100,18 +100,84 @@
 
 - (void)setupDashboardHeader {
     CGFloat width = self.view.bounds.size.width;
-    self.dashboardHeader = [[UIView alloc] initWithFrame:CGRectMake(0, 0, width, 220.0)];
-    self.dashboardHeader.backgroundColor = UIColor.clearColor; self.dashboardHeader.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-    UILabel *title = [[UILabel alloc] initWithFrame:CGRectMake(8, 27, width - 16, 40)];
-    NSMutableAttributedString *styledTitle = [[NSMutableAttributedString alloc] initWithString:@"ملفات IPA" attributes:@{NSFontAttributeName:[UIFont systemFontOfSize:27 weight:UIFontWeightBold], NSForegroundColorAttributeName:UIColor.whiteColor}];
-    [styledTitle addAttribute:NSForegroundColorAttributeName value:[IPTheme errorColor] range:NSMakeRange(6, 3)]; title.attributedText = styledTitle; title.textAlignment = NSTextAlignmentCenter; title.autoresizingMask = UIViewAutoresizingFlexibleWidth; [self.dashboardHeader addSubview:title];
-    UIButton *add = [UIButton buttonWithType:UIButtonTypeSystem]; add.frame = CGRectMake(width - 64, 34, 44, 44); add.layer.cornerRadius = 15; add.layer.borderWidth = 0.7; add.layer.borderColor = [IPTheme separatorStrongColor].CGColor; add.backgroundColor = [IPTheme selectionColor]; [add setImage:[UIImage systemImageNamed:@"plus"] forState:UIControlStateNormal]; add.tintColor = [IPTheme errorColor]; [add addTarget:self action:@selector(addIPATapped:) forControlEvents:UIControlEventTouchUpInside]; [self.dashboardHeader addSubview:add];
-    UIButton *viewMode = [UIButton buttonWithType:UIButtonTypeSystem]; viewMode.frame = CGRectMake(24, 34, 48, 48); viewMode.layer.cornerRadius = 17; viewMode.layer.borderWidth = 1; viewMode.layer.borderColor = [IPTheme separatorStrongColor].CGColor; [viewMode setImage:[UIImage systemImageNamed:@"list.bullet"] forState:UIControlStateNormal]; viewMode.tintColor = [IPTheme errorColor]; [viewMode addTarget:self action:@selector(toggleViewMode:) forControlEvents:UIControlEventTouchUpInside]; [self.dashboardHeader addSubview:viewMode];
-    UIView *stats = [[UIView alloc] initWithFrame:CGRectMake(8, 139, MAX(width - 16, 1), 74)]; stats.autoresizingMask = UIViewAutoresizingFlexibleWidth; stats.backgroundColor = [IPTheme backgroundColor]; stats.layer.cornerRadius = 17; stats.layer.borderWidth = 1; stats.layer.borderColor = [[IPTheme errorColor] colorWithAlphaComponent:0.65].CGColor; [self.dashboardHeader addSubview:stats];
-    NSArray *icons = @[@"cube", @"chart.pie", @"shield", @"arrow.down.circle"]; NSArray *labels = @[@"التطبيقات", @"إجمالي الحجم", @"موثوقة", @"تم التثبيت"]; NSMutableArray *values = [NSMutableArray array];
-    for (NSInteger i = 0; i < 4; i++) { CGFloat x = stats.bounds.size.width / 4.0 * i; if (i) { UIView *d = [[UIView alloc] initWithFrame:CGRectMake(x, 14, 1, 46)]; d.backgroundColor = [IPTheme separatorColor]; [stats addSubview:d]; } UIImageView *iv = [[UIImageView alloc] initWithFrame:CGRectMake(x + (stats.bounds.size.width / 4.0 - 22) / 2.0, 7, 22, 22)]; iv.image = [UIImage systemImageNamed:icons[i]]; iv.tintColor = [IPTheme errorColor]; iv.contentMode = UIViewContentModeScaleAspectFit; [stats addSubview:iv]; UILabel *v = [[UILabel alloc] initWithFrame:CGRectMake(x + 3, 30, stats.bounds.size.width / 4.0 - 6, 22)]; v.textAlignment = NSTextAlignmentCenter; v.font = [UIFont systemFontOfSize:17 weight:UIFontWeightBold]; v.textColor = UIColor.whiteColor; [stats addSubview:v]; [values addObject:v]; UILabel *c = [[UILabel alloc] initWithFrame:CGRectMake(x + 1, 54, stats.bounds.size.width / 4.0 - 2, 16)]; c.text = labels[i]; c.textAlignment = NSTextAlignmentCenter; c.font = [UIFont systemFontOfSize:10 weight:UIFontWeightMedium]; c.textColor = [IPTheme textSecondaryColor]; [stats addSubview:c]; }
-    self.appsCountLabel = values[0]; self.totalSizeLabel = values[1]; self.trustedCountLabel = values[2]; self.installedCountLabel = values[3];
-    self.totalSizeLabel.adjustsFontSizeToFitWidth = YES; self.totalSizeLabel.minimumScaleFactor = 0.45; self.totalSizeLabel.numberOfLines = 1;
+    self.dashboardHeader = [[UIView alloc] initWithFrame:CGRectMake(0, 0, width, 200.0)];
+    self.dashboardHeader.backgroundColor = UIColor.clearColor;
+    self.dashboardHeader.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+
+    // Quiet title — one weight, one color. The canvas carries the screen.
+    UILabel *title = [[UILabel alloc] initWithFrame:CGRectMake(8, 24, width - 16, 38)];
+    title.text = @"ملفات IPA";
+    title.font = [UIFont systemFontOfSize:26 weight:UIFontWeightBold];
+    title.textColor = [IPTheme textPrimaryColor];
+    title.textAlignment = NSTextAlignmentCenter;
+    title.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+    [self.dashboardHeader addSubview:title];
+
+    // Primary action — a single, calm accent circle.
+    UIButton *add = [UIButton buttonWithType:UIButtonTypeSystem];
+    add.frame = CGRectMake(width - 62, 30, 42, 42);
+    add.layer.cornerRadius = 21;
+    add.backgroundColor = [IPTheme accentColor];
+    [add setImage:[UIImage systemImageNamed:@"plus"] forState:UIControlStateNormal];
+    add.tintColor = [UIColor blackColor];
+    [add addTarget:self action:@selector(addIPATapped:) forControlEvents:UIControlEventTouchUpInside];
+    [self.dashboardHeader addSubview:add];
+
+    // View-mode toggle — quiet, secondary.
+    UIButton *viewMode = [UIButton buttonWithType:UIButtonTypeSystem];
+    viewMode.frame = CGRectMake(20, 30, 42, 42);
+    viewMode.layer.cornerRadius = 21;
+    viewMode.backgroundColor = [IPTheme surfaceSubtleColor];
+    [viewMode setImage:[UIImage systemImageNamed:@"list.bullet"] forState:UIControlStateNormal];
+    viewMode.tintColor = [IPTheme textSecondaryColor];
+    [viewMode addTarget:self action:@selector(toggleViewMode:) forControlEvents:UIControlEventTouchUpInside];
+    [self.dashboardHeader addSubview:viewMode];
+
+    // Stats — one quiet surface, hairline separators, no heavy border.
+    UIView *stats = [[UIView alloc] initWithFrame:CGRectMake(16, 118, MAX(width - 32, 1), 68)];
+    stats.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+    stats.backgroundColor = [IPTheme surfaceColor];
+    stats.layer.cornerRadius = [IPTheme radiusMedium];
+    [self.dashboardHeader addSubview:stats];
+
+    NSArray *icons = @[@"cube", @"chart.pie", @"shield", @"arrow.down.circle"];
+    NSArray *labels = @[@"التطبيقات", @"إجمالي الحجم", @"موثوقة", @"تم التثبيت"];
+    NSMutableArray *values = [NSMutableArray array];
+    CGFloat seg = stats.bounds.size.width / 4.0;
+    for (NSInteger i = 0; i < 4; i++) {
+        CGFloat x = seg * i;
+        if (i) {
+            UIView *d = [[UIView alloc] initWithFrame:CGRectMake(x, 14, 0.5, 40)];
+            d.backgroundColor = [IPTheme separatorColor];
+            [stats addSubview:d];
+        }
+        UIImageView *iv = [[UIImageView alloc] initWithFrame:CGRectMake(x + (seg - 18) / 2.0, 10, 18, 18)];
+        iv.image = [UIImage systemImageNamed:icons[i]];
+        iv.tintColor = [IPTheme textQuaternaryColor];
+        iv.contentMode = UIViewContentModeScaleAspectFit;
+        [stats addSubview:iv];
+
+        UILabel *v = [[UILabel alloc] initWithFrame:CGRectMake(x + 3, 28, seg - 6, 20)];
+        v.textAlignment = NSTextAlignmentCenter;
+        v.font = [UIFont monospacedSystemFontOfSize:15 weight:UIFontWeightSemibold];
+        v.textColor = [IPTheme textPrimaryColor];
+        [stats addSubview:v];
+        [values addObject:v];
+
+        UILabel *c = [[UILabel alloc] initWithFrame:CGRectMake(x + 1, 48, seg - 2, 14)];
+        c.text = labels[i];
+        c.textAlignment = NSTextAlignmentCenter;
+        c.font = [UIFont systemFontOfSize:10 weight:UIFontWeightMedium];
+        c.textColor = [IPTheme textTertiaryColor];
+        [stats addSubview:c];
+    }
+    self.appsCountLabel = values[0];
+    self.totalSizeLabel = values[1];
+    self.trustedCountLabel = values[2];
+    self.installedCountLabel = values[3];
+    self.totalSizeLabel.adjustsFontSizeToFitWidth = YES;
+    self.totalSizeLabel.minimumScaleFactor = 0.45;
+    self.totalSizeLabel.numberOfLines = 1;
     self.tableView.tableHeaderView = self.dashboardHeader;
 }
 
@@ -124,8 +190,8 @@
 - (void)setupEmptyState {
     self.emptyLabel = [[UILabel alloc] init];
     self.emptyLabel.text = @"لا توجد ملفات IPA\nاضغط + لإضافة ملف";
-    self.emptyLabel.textColor = [IPTheme textTertiaryColor];
-    self.emptyLabel.font = [UIFont systemFontOfSize:16 weight:UIFontWeightMedium];
+    self.emptyLabel.textColor = [IPTheme textQuaternaryColor];
+    self.emptyLabel.font = [UIFont systemFontOfSize:15 weight:UIFontWeightRegular];
     self.emptyLabel.textAlignment = NSTextAlignmentCenter;
     self.emptyLabel.numberOfLines = 0;
     self.emptyLabel.hidden = YES;
@@ -136,21 +202,22 @@
     UIBarButtonItem *addBtn = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAdd
                                                                               target:self
                                                                               action:@selector(addIPATapped:)];
-    addBtn.tintColor = [IPTheme errorColor];
+    addBtn.tintColor = [IPTheme accentColor];
     self.navigationItem.rightBarButtonItem = addBtn;
 }
 
 - (void)setupToast {
-    self.toastView = [[UIView alloc] initWithFrame:CGRectMake(20, -60, self.view.bounds.size.width - 40, 50)];
-    self.toastView.backgroundColor = [IPTheme surfaceSubtleColor];
-    self.toastView.layer.cornerRadius = 12;
-    self.toastView.layer.masksToBounds = YES;
+    self.toastView = [[UIView alloc] initWithFrame:CGRectMake(20, -60, self.view.bounds.size.width - 40, 48)];
+    self.toastView.backgroundColor = [IPTheme surfaceColor];
+    self.toastView.layer.cornerRadius = [IPTheme radiusMedium];
+    self.toastView.layer.borderWidth = 0.5;
+    self.toastView.layer.borderColor = [IPTheme separatorStrongColor].CGColor;
     self.toastView.alpha = 0;
     [self.view addSubview:self.toastView];
 
-    self.toastLabel = [[UILabel alloc] initWithFrame:CGRectMake(16, 0, self.toastView.bounds.size.width - 32, 50)];
+    self.toastLabel = [[UILabel alloc] initWithFrame:CGRectMake(16, 0, self.toastView.bounds.size.width - 32, 48)];
     self.toastLabel.textColor = [IPTheme textPrimaryColor];
-    self.toastLabel.font = [UIFont systemFontOfSize:14 weight:UIFontWeightMedium];
+    self.toastLabel.font = [UIFont systemFontOfSize:13 weight:UIFontWeightMedium];
     self.toastLabel.textAlignment = NSTextAlignmentCenter;
     [self.toastView addSubview:self.toastLabel];
 }
@@ -217,17 +284,21 @@
     dispatch_async(dispatch_get_main_queue(), ^{
         self.toastLabel.text = message;
         self.toastView.backgroundColor = isError
-            ? [IPTheme errorColor]
-            : [IPTheme surfaceSubtleColor];
+            ? [[IPTheme errorColor] colorWithAlphaComponent:0.16]
+            : [IPTheme surfaceColor];
+        self.toastLabel.textColor = isError ? [IPTheme errorColor] : [IPTheme textPrimaryColor];
+        self.toastView.layer.borderColor = (isError
+            ? [[IPTheme errorColor] colorWithAlphaComponent:0.5]
+            : [IPTheme separatorStrongColor]).CGColor;
 
-        [UIView animateWithDuration:0.3 animations:^{
+        [UIView animateWithDuration:[IPTheme durationStandard] animations:^{
             self.toastView.alpha = 1;
-            self.toastView.frame = CGRectMake(20, 60, self.view.bounds.size.width - 40, 50);
+            self.toastView.frame = CGRectMake(20, 58, self.view.bounds.size.width - 40, 48);
         } completion:^(BOOL finished) {
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                [UIView animateWithDuration:0.3 animations:^{
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.4 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                [UIView animateWithDuration:[IPTheme durationStandard] animations:^{
                     self.toastView.alpha = 0;
-                    self.toastView.frame = CGRectMake(20, -60, self.view.bounds.size.width - 40, 50);
+                    self.toastView.frame = CGRectMake(20, -60, self.view.bounds.size.width - 40, 48);
                 }];
             });
         }];
