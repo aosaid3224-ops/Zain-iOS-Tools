@@ -691,7 +691,7 @@ static NSString * const kIPAExtractorPersistedItemsKey = @"IPAExtractor.Persiste
         // Background rounded rect
         CGRect bgRect = CGRectMake(2, 2, 48, 48);
         UIBezierPath *bgPath = [UIBezierPath bezierPathWithRoundedRect:bgRect cornerRadius:10];
-        [[UIColor colorWithRed:0.15 green:0.25 blue:0.40 alpha:1.0] setFill];
+        [[IPTheme accentColor] setFill];
         [bgPath fill];
         // White page icon
         CGRect pageRect = CGRectMake(16, 10, 20, 26);
@@ -844,7 +844,7 @@ static NSString * const kIPAExtractorPersistedItemsKey = @"IPAExtractor.Persiste
         subtitle = [NSString stringWithFormat:@"↳ %@ — Extracted", sourceTitle];
         meta = outputAvailable ? [NSString stringWithFormat:@"%@ • %@", outputSize, [self formattedDate:attrs[NSFileModificationDate]]] : @"الناتج غير متاح";
         icon = [[UIImage systemImageNamed:@"folder.fill"] imageWithTintColor:[IPTheme accentColor]];
-        statusColor = outputAvailable ? [IPTheme successColor] : [UIColor colorWithRed:0.95 green:0.63 blue:0.25 alpha:1.0];
+        statusColor = outputAvailable ? [IPTheme successColor] : [IPTheme errorColor];
     } else {
         BOOL extracting = [item[@"extracting"] boolValue];
         BOOL unavailable = [item[@"unavailable"] boolValue];
@@ -856,7 +856,7 @@ static NSString * const kIPAExtractorPersistedItemsKey = @"IPAExtractor.Persiste
         else if (unavailable) meta = [NSString stringWithFormat:@"غير متاح • %@", sizeText];
         else meta = [NSString stringWithFormat:@"%@ • %@ • IPA", sizeText, status];
         icon = [self ipaFileIcon];
-        statusColor = extracting ? [IPTheme accentColor] : (unavailable ? [UIColor colorWithRed:0.95 green:0.63 blue:0.25 alpha:1.0] : [IPTheme successColor]);
+        statusColor = extracting ? [IPTheme accentColor] : (unavailable ? [IPTheme errorColor] : [IPTheme successColor]);
     }
     [cell configureWithTitle:title subtitle:subtitle meta:meta icon:icon statusColor:statusColor isChild:output];
     cell.moreButton.tag = indexPath.row;
