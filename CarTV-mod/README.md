@@ -7,7 +7,7 @@
 | العنصر | الأصلي | الجديد |
 |---|---|---|
 | Bundle ID | `com.lyntra.player` | `app.zain.cartvplus` (افتراضي) |
-| اسم العرض | CarTV | CarTV+ |
+| اسم العرض | CarTV | CarTV Zain |
 | ScreenRelay | `com.lyntra.player.ScreenRelay` | `…cartvplus.ScreenRelay` |
 | CastWidget | `com.lyntra.player.CastWidget` | `…cartvplus.CastWidget` |
 | UISupportedDevices | قائمة مقيدة (iPhone11+) | **محذوفة** — دعم أوسع |
@@ -25,7 +25,7 @@
 ./patch-ipa.sh CarTV.ipa
 
 # تخصيص الهوية
-./patch-ipa.sh CarTV.ipa --name "CarTV Zain" --bundle app.zain.mytv
+./patch-ipa.sh CarTV.ipa --name "CarTV Pro" --bundle app.zain.mytv
 
 # وضع التثبيت الجانبي (macOS + شهادة مطور)
 ./patch-ipa.sh CarTV.ipa --signer "Apple Development: you@example.com"
