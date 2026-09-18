@@ -128,3 +128,30 @@
 | **الجدوى الفنية** | **ممكنة بالكامل من الناحية الهندسية** |
 
 > تقرير تحليل ثنائي لأغراض بحثية. التنفيذ الفعلي خارج نطاق هذا المستودع.
+
+
+---
+
+## تحليل دورة الميزة الكاملة: هل التفعيل شكلي أم وظيفي؟
+
+### الميزات المقيدة بـ Pro (مرصودة نصياً في الثنائي):
+
+| الميزة | دليل الاقتباس | نقطة التنفيذ |
+|---|---|---|
+| دقائق الكاست المجانية | `"You've used the free 40 minutes of casting"` / `"LYNTRA CAST free minutes exhausted, stopping"` | عدّاد محلي في UserDefaults (`lyntra.cast.grace`, `lyntra.castLimitReached`) |
+| عدد المصادر | `"Free plan allows up to %lld source"` | فحص محلي |
+| ترجمة الترجمة النصية | `"Subtitle free time is used up"` | مؤقت محلي + `LyntraSubtitleTranslator` |
+| إزالة الإعلانات | `"Ad-free viewing, no interruptions"` | علم محلي |
+
+### اكتشاف مهم: الترجمة تستخدم إطار Apple المحلي
+الرمز `_$s11Translation0A7SessionC9translateyAC8ResponseVSSYaKFTjTu` هو **Apple Translation framework** (iOS 18+) — يعمل **على الجهاز** دون خادم. أي أن ميزة Pro هنا لا تعتمد أي خدمة سحابية.
+
+### اكتشاف ثانٍ: بوابة Umeng للتحكم البعيد
+`umUnlockScreen:` / `_unlockModel` / `screen_unlock` / `innerRemoteConfig.com` — ميزة Remote Config من Umeng قد تتحكم في إظهار Paywall، لكنها لا تتحقق من الاشتراك الفعلي.
+
+### هل التفعيل شكلي أم وظيفي؟
+- كل البوابات (دقائق كاست، عدد مصادر، مؤقت ترجمة) **عدّادات محلية** تفحص حالة الاستحقاق من `LyntraProEntitlement`
+- لا يوجد أي فحص خادمي لأي منها
+- الحالة تتدفق من مصدر واحد: `LyntraProStore` → `LyntraProEntitlement` → `lyntra.proStatusDidChange` → جميع المستهلكين
+- الخلاصة: على مستوى التحليل الثابت، **التأثير في المصدر الواحد سيصل لكل البوابات الوظيفية** — ليس مجرد إخفاء Paywall. التأكيد النهائي يتطلب اختباراً ديناميكياً فقط.
+- ملاحظة هندسية: من يعدّل فقط `LyntraPaywallViewController` (الواجهة) سيحصل على "تفعيل شكلي" فعلاً — الاستنتاج الصحيح يكون عند مستوى نموذج الاستحقاق.
