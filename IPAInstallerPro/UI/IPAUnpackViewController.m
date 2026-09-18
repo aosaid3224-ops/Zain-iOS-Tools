@@ -41,7 +41,7 @@ static NSString * const kIPAExtractorPersistedItemsKey = @"IPAExtractor.Persiste
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    self.view.backgroundColor = [UIColor colorWithRed:0.025 green:0.026 blue:0.030 alpha:1.0];
+    self.view.backgroundColor = [IPTheme backgroundColor];
     self.title = @"";
     self.navigationItem.title = @"";
     self.searchText = @"";
@@ -172,7 +172,7 @@ static NSString * const kIPAExtractorPersistedItemsKey = @"IPAExtractor.Persiste
     UIButton *settingsBtn = [UIButton buttonWithType:UIButtonTypeSystem];
     settingsBtn.translatesAutoresizingMaskIntoConstraints = NO;
     [settingsBtn setImage:[UIImage systemImageNamed:@"gear"] forState:UIControlStateNormal];
-    settingsBtn.tintColor = [UIColor colorWithWhite:0.7 alpha:1.0];
+    settingsBtn.tintColor = [IPTheme textSecondaryColor];
     [settingsBtn addTarget:self action:@selector(settingsTapped:) forControlEvents:UIControlEventTouchUpInside];
     [self.customHeader addSubview:settingsBtn];
 
@@ -211,7 +211,7 @@ static NSString * const kIPAExtractorPersistedItemsKey = @"IPAExtractor.Persiste
     self.searchBar.semanticContentAttribute = UISemanticContentAttributeForceRightToLeft;
     self.searchBar.delegate = self;
     self.searchBar.showsCancelButton = NO;
-    self.searchBar.backgroundColor = [UIColor colorWithWhite:0.08 alpha:1.0];
+    self.searchBar.backgroundColor = [IPTheme textQuaternaryColor];
     self.searchBar.layer.cornerRadius = 14;
     self.searchBar.layer.masksToBounds = YES;
     [self.view addSubview:self.searchBar];
@@ -292,7 +292,7 @@ static NSString * const kIPAExtractorPersistedItemsKey = @"IPAExtractor.Persiste
     self.emptyLabel = [[UILabel alloc] init];
     self.emptyLabel.translatesAutoresizingMaskIntoConstraints = NO;
     self.emptyLabel.text = @"لا توجد حزم IPA مضافة\nاضغط + لاختيار ملف خارجي";
-    self.emptyLabel.textColor = [UIColor colorWithWhite:0.46 alpha:1.0];
+    self.emptyLabel.textColor = [IPTheme textTertiaryColor];
     self.emptyLabel.font = [UIFont systemFontOfSize:16.0 weight:UIFontWeightMedium];
     self.emptyLabel.textAlignment = NSTextAlignmentCenter;
     self.emptyLabel.semanticContentAttribute = UISemanticContentAttributeForceRightToLeft;
@@ -312,7 +312,7 @@ static NSString * const kIPAExtractorPersistedItemsKey = @"IPAExtractor.Persiste
     CGFloat size = 56;
     self.fabButton = [UIButton buttonWithType:UIButtonTypeSystem];
     self.fabButton.translatesAutoresizingMaskIntoConstraints = NO;
-    self.fabButton.backgroundColor = [UIColor colorWithRed:0.25 green:0.55 blue:1.0 alpha:1.0];
+    self.fabButton.backgroundColor = [IPTheme accentColor];
     self.fabButton.tintColor = UIColor.whiteColor;
     self.fabButton.layer.cornerRadius = size / 2.0;
     self.fabButton.layer.shadowColor = [UIColor blackColor].CGColor;
@@ -701,7 +701,7 @@ static NSString * const kIPAExtractorPersistedItemsKey = @"IPAExtractor.Persiste
         // Green badge
         CGRect badgeRect = CGRectMake(10, 32, 32, 14);
         UIBezierPath *badgePath = [UIBezierPath bezierPathWithRoundedRect:badgeRect cornerRadius:4];
-        [[UIColor colorWithRed:0.22 green:0.75 blue:0.48 alpha:1.0] setFill];
+        [[IPTheme successColor] setFill];
         [badgePath fill];
         // IPA text
         NSDictionary *attrs = @{ NSFontAttributeName: [UIFont systemFontOfSize:8 weight:UIFontWeightBold], NSForegroundColorAttributeName: UIColor.whiteColor };
@@ -843,8 +843,8 @@ static NSString * const kIPAExtractorPersistedItemsKey = @"IPAExtractor.Persiste
         title = @"المجلد المستخرج";
         subtitle = [NSString stringWithFormat:@"↳ %@ — Extracted", sourceTitle];
         meta = outputAvailable ? [NSString stringWithFormat:@"%@ • %@", outputSize, [self formattedDate:attrs[NSFileModificationDate]]] : @"الناتج غير متاح";
-        icon = [[UIImage systemImageNamed:@"folder.fill"] imageWithTintColor:[UIColor colorWithRed:0.35 green:0.58 blue:0.98 alpha:1.0]];
-        statusColor = outputAvailable ? [UIColor colorWithRed:0.25 green:0.82 blue:0.55 alpha:1.0] : [UIColor colorWithRed:0.95 green:0.63 blue:0.25 alpha:1.0];
+        icon = [[UIImage systemImageNamed:@"folder.fill"] imageWithTintColor:[IPTheme accentColor]];
+        statusColor = outputAvailable ? [IPTheme successColor] : [UIColor colorWithRed:0.95 green:0.63 blue:0.25 alpha:1.0];
     } else {
         BOOL extracting = [item[@"extracting"] boolValue];
         BOOL unavailable = [item[@"unavailable"] boolValue];
@@ -856,7 +856,7 @@ static NSString * const kIPAExtractorPersistedItemsKey = @"IPAExtractor.Persiste
         else if (unavailable) meta = [NSString stringWithFormat:@"غير متاح • %@", sizeText];
         else meta = [NSString stringWithFormat:@"%@ • %@ • IPA", sizeText, status];
         icon = [self ipaFileIcon];
-        statusColor = extracting ? [UIColor colorWithRed:0.28 green:0.68 blue:1.0 alpha:1.0] : (unavailable ? [UIColor colorWithRed:0.95 green:0.63 blue:0.25 alpha:1.0] : [UIColor colorWithRed:0.28 green:0.82 blue:0.56 alpha:1.0]);
+        statusColor = extracting ? [IPTheme accentColor] : (unavailable ? [UIColor colorWithRed:0.95 green:0.63 blue:0.25 alpha:1.0] : [IPTheme successColor]);
     }
     [cell configureWithTitle:title subtitle:subtitle meta:meta icon:icon statusColor:statusColor isChild:output];
     cell.moreButton.tag = indexPath.row;
