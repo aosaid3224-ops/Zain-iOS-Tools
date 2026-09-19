@@ -22,6 +22,7 @@
 @property (nonatomic, strong) IPEmptyStateView *emptyView;
 @property (nonatomic, strong) IPNoticeView *errorView;
 @property (nonatomic, strong) UIView *loadingState;
+@property (nonatomic, strong) UIStackView *skeletonStack;
 @end
 
 @implementation InstalledAppsViewController
@@ -60,8 +61,11 @@
     _segmentControl = [[UISegmentedControl alloc] initWithItems:@[@"الكل", @"مستخدم", @"نظام"]];
     _segmentControl.translatesAutoresizingMaskIntoConstraints = NO;
     _segmentControl.selectedSegmentIndex = 0;
-    _segmentControl.backgroundColor = [IPTheme surfaceColor];
-    _segmentControl.selectedSegmentTintColor = [IPTheme accentColor];
+    _segmentControl.backgroundColor = [IPTheme surfaceSubtleColor];
+    _segmentControl.selectedSegmentTintColor = [IPTheme surfaceColor];
+    _segmentControl.layer.cornerRadius = 8;
+    [_segmentControl setTitleTextAttributes:@{NSForegroundColorAttributeName: [IPTheme textTertiaryColor]} forState:UIControlStateNormal];
+    [_segmentControl setTitleTextAttributes:@{NSForegroundColorAttributeName: [IPTheme textPrimaryColor]} forState:UIControlStateSelected];
     [_segmentControl setTitleTextAttributes:@{
         NSFontAttributeName: [UIFont systemFontOfSize:13 weight:UIFontWeightMedium]
     } forState:UIControlStateNormal];
@@ -117,6 +121,25 @@
 }
 
 - (void)setupLoadingAndEmpty {
+    // Skeleton rows — progressive, never a bare spinner.
+    _skeletonStack = [[UIStackView alloc] init];
+    _skeletonStack.translatesAutoresizingMaskIntoConstraints = NO;
+    _skeletonStack.axis = UILayoutConstraintAxisVertical;
+    _skeletonStack.spacing = 0;
+    [self.view addSubview:_skeletonStack];
+    for (NSInteger i = 0; i < 7; i++) {
+        IPSkeletonView *sk = [[IPSkeletonView alloc] initWithFrame:CGRectZero];
+        sk.translatesAutoresizingMaskIntoConstraints = NO;
+        [_skeletonStack addArrangedSubview:sk];
+        [sk.heightAnchor constraintEqualToConstant:64].active = YES;
+    }
+    _skeletonStack.hidden = YES;
+    [NSLayoutConstraint activateConstraints:@[
+        [_skeletonStack.topAnchor constraintEqualToAnchor:_searchBar.bottomAnchor constant:8],
+        [_skeletonStack.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:[IPTheme pageMargin]],
+        [_skeletonStack.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor constant:-[IPTheme pageMargin]],
+    ]];
+
     _activityIndicator = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleMedium];
     _activityIndicator.translatesAutoresizingMaskIntoConstraints = NO;
     _activityIndicator.color = [IPTheme textTertiaryColor];
@@ -131,7 +154,8 @@
 #pragma mark - Data Loading
 
 - (void)loadApps {
-    [self.activityIndicator startAnimating];
+    [self.activityIndicator stopAnimating];
+    self.skeletonStack.hidden = NO;
     self.tableView.hidden = YES;
     [self.errorView removeFromSuperview];
     [self.emptyView removeFromSuperview];
@@ -146,7 +170,7 @@
         }
 
         dispatch_async(dispatch_get_main_queue(), ^{
-            [self.activityIndicator stopAnimating];
+            self.skeletonStack.hidden = YES;
 
             if (errorMsg) {
                 self.errorView = [[IPNoticeView alloc] initWithMessage:errorMsg kind:@"error"];
