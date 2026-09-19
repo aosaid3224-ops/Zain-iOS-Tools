@@ -25,25 +25,25 @@
     MainViewController *mainVC = [[MainViewController alloc] init];
     UINavigationController *mainNav = [[UINavigationController alloc] initWithRootViewController:mainVC];
     mainNav.tabBarItem = [[UITabBarItem alloc] initWithTitle:@"ملفات IPA"
-                                                         image:[UIImage systemImageNamed:@"doc.zipper"]
-                                                 selectedImage:[UIImage systemImageNamed:@"doc.zipper"]];
+                                                         image:[UIImage systemImageNamed:@"arrow.down.doc"]
+                                                 selectedImage:[UIImage systemImageNamed:@"arrow.down.doc.fill"]];
 
     InstalledAppsViewController *installedVC = [[InstalledAppsViewController alloc] init];
     UINavigationController *installedNav = [[UINavigationController alloc] initWithRootViewController:installedVC];
     installedNav.tabBarItem = [[UITabBarItem alloc] initWithTitle:@"التطبيقات المثبتة"
-                                                            image:[UIImage systemImageNamed:@"apps.iphone"]
-                                                    selectedImage:[UIImage systemImageNamed:@"apps.iphone"]];
+                                                            image:[UIImage systemImageNamed:@"square.grid.2x2"]
+                                                    selectedImage:[UIImage systemImageNamed:@"square.grid.2x2.fill"]];
 
     IPAUnpackViewController *unpackVC = [[IPAUnpackViewController alloc] init];
     UINavigationController *unpackNav = [[UINavigationController alloc] initWithRootViewController:unpackVC];
     unpackNav.tabBarItem = [[UITabBarItem alloc] initWithTitle:@"فك الحزمة"
-                                                         image:[UIImage systemImageNamed:@"archivebox"]
-                                                 selectedImage:[UIImage systemImageNamed:@"archivebox.fill"]];
+                                                         image:[UIImage systemImageNamed:@"shippingbox"]
+                                                 selectedImage:[UIImage systemImageNamed:@"shippingbox.fill"]];
 
     SettingsViewController *settingsVC = [[SettingsViewController alloc] init];
     UINavigationController *settingsNav = [[UINavigationController alloc] initWithRootViewController:settingsVC];
     settingsNav.tabBarItem = [[UITabBarItem alloc] initWithTitle:@"الإعدادات"
-                                                           image:[UIImage systemImageNamed:@"gearshape"]
+                                                           image:[UIImage systemImageNamed:@"slider.horizontal.3"]
                                                    selectedImage:[UIImage systemImageNamed:@"gearshape.fill"]];
 
     tabBarController.viewControllers = @[mainNav, installedNav, unpackNav, settingsNav];
