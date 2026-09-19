@@ -72,7 +72,9 @@ static NSString *const kDylibBaseName = @"libspiderjbhide";
 - (NSString *)markerPathForBundleID:(NSString *)bundleID {
     NSString *home = nil;
     Class proxyClass = NSClassFromString(@"LSApplicationProxy");
-    id proxy = proxyClass ? [proxyClass applicationProxyForIdentifier:bundleID] : nil;
+    id proxy = (proxyClass && [proxyClass respondsToSelector:@selector(applicationProxyForIdentifier:)])
+        ? [proxyClass performSelector:@selector(applicationProxyForIdentifier:) withObject:bundleID]
+        : nil;
     NSURL *container = proxy ? [proxy valueForKey:@"dataContainerURL"] : nil;
     if (container.path.length) home = container.path;
     if (!home.length) home = NSHomeDirectory();
@@ -99,7 +101,7 @@ static NSString *const kDylibBaseName = @"libspiderjbhide";
     NSMutableString *s = [NSMutableString string];
     for (NSUInteger i = 0; i < bundleID.length; i++) {
         unichar c = [bundleID characterAtIndex:i];
-        [s appendFormat:@"%C", (isalnum(c) || c == '_') ? c : (unichar)'_'];
+        [s appendFormat:@"%C", (unichar)((isalnum(c) || c == '_') ? c : '_')];
     }
     return [NSString stringWithFormat:@"SpiderJBHide_%@", s];
 }
