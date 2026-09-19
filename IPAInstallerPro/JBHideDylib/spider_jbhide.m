@@ -206,7 +206,6 @@ static FILE *spider_popen(const char *cmd, const char *type) { (void)cmd; (void)
 
 SPIDER_INTERPOSE(spider_getenv, getenv);
 SPIDER_INTERPOSE(spider_fork, fork);
-SPIDER_INTERPOSE(spider_system, system);
 SPIDER_INTERPOSE(spider_popen, popen);
 
 #pragma mark - dyld image enumeration filter
