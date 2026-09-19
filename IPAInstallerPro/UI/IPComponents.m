@@ -4,6 +4,7 @@
 
 #import "IPComponents.h"
 #import "IPTheme.h"
+#import <objc/runtime.h>
 
 #pragma mark - Hairline
 
@@ -173,6 +174,7 @@
 @implementation IPListRow {
     UIView *_accessory;
     IPHairlineView *_separator;
+    NSLayoutConstraint *_metadataTrailingConstraint;
 }
 
 - (instancetype)initWithFrame:(CGRect)frame {
@@ -229,7 +231,7 @@
         [_subtitleLabel.topAnchor constraintEqualToAnchor:_titleLabel.bottomAnchor constant:3],
         [_subtitleLabel.trailingAnchor constraintEqualToAnchor:_metadataLabel.leadingAnchor constant:-8],
 
-        [_metadataLabel.trailingAnchor constraintEqualToAnchor:_disclosureView.leadingAnchor constant:-8],
+        (_metadataTrailingConstraint = [_metadataLabel.trailingAnchor constraintEqualToAnchor:_disclosureView.leadingAnchor constant:-8]),
         [_metadataLabel.centerYAnchor constraintEqualToAnchor:self.centerYAnchor],
 
         [_disclosureView.trailingAnchor constraintEqualToAnchor:self.trailingAnchor],
@@ -259,8 +261,10 @@
         [accessory.trailingAnchor constraintEqualToAnchor:self.trailingAnchor],
         [accessory.centerYAnchor constraintEqualToAnchor:self.centerYAnchor],
     ]];
-    _metadataLabel.trailingAnchor.active = NO;
-    [_metadataLabel.trailingAnchor constraintEqualToAnchor:accessory.leadingAnchor constant:-8].active = YES;
+    [NSLayoutConstraint deactivateConstraints:@[_metadataTrailingConstraint]];
+    [NSLayoutConstraint activateConstraints:@[
+        [self.metadataLabel.trailingAnchor constraintEqualToAnchor:accessory.leadingAnchor constant:-8]
+    ]];
 }
 
 - (void)setShowsSeparator:(BOOL)showsSeparator {
