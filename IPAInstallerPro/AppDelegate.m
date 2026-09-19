@@ -1,5 +1,4 @@
 #import "AppDelegate.h"
-#import "IPTheme.h"
 #import "UI/MainViewController.h"
 #import "UI/IPAUnpackViewController.h"
 #import "UI/InstalledAppsViewController.h"
