@@ -367,7 +367,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
 - (void)operationRecordAdded:(NSNotification *)note {
     OperationRecord *record = note.object;
     if (![record isKindOfClass:[OperationRecord class]]) return;
-    if (![record.transactionID isEqualToString:self.transactionID]) return;
+    if (![record.transactionID isEqualToString:self.currentTxnID]) return;
 
     NSInteger uiPhase = [self uiPhaseIndexForOperationPhase:record.phase];
     if (uiPhase < 0 || uiPhase >= (NSInteger)self.phaseViews.count) return;
@@ -483,7 +483,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
 - (void)operationRecordUpdated:(NSNotification *)note {
     OperationRecord *record = note.object;
     if (![record isKindOfClass:[OperationRecord class]]) return;
-    if (![record.transactionID isEqualToString:self.transactionID]) return;
+    if (![record.transactionID isEqualToString:self.currentTxnID]) return;
 
     NSInteger uiPhase = [self uiPhaseIndexForOperationPhase:record.phase];
     if (uiPhase < 0 || uiPhase >= (NSInteger)self.phaseViews.count) return;
