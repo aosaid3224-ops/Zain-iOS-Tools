@@ -12,6 +12,11 @@
 
 #import <UIKit/UIKit.h>
 
+#pragma mark - Theme Type
+
+@interface IPTheme : NSObject
+@end
+
 #pragma mark - Color Tokens
 
 @interface IPTheme (Colors)
