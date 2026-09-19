@@ -5,6 +5,9 @@
 
 #import "IPTheme.h"
 
+@implementation IPTheme
+@end
+
 @implementation IPTheme (Colors)
 
 + (UIColor *)backgroundColor {
