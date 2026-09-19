@@ -55,16 +55,16 @@
     tabAppearance.backgroundEffect = [UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemChromeMaterialDark];
     tabAppearance.backgroundColor = glassBackground;
     tabAppearance.shadowColor = [IPTheme separatorColor];
-    tabAppearance.stackedLayoutAppearance.normal.iconColor = [IPTheme separatorStrongColor];
-    tabAppearance.stackedLayoutAppearance.normal.titleTextAttributes = @{NSForegroundColorAttributeName: [[IPTheme textPrimaryColor] colorWithAlphaComponent:0.48], NSFontAttributeName: [UIFont systemFontOfSize:11 weight:UIFontWeightMedium]};
+    tabAppearance.stackedLayoutAppearance.normal.iconColor = [IPTheme textQuaternaryColor];
+    tabAppearance.stackedLayoutAppearance.normal.titleTextAttributes = @{NSForegroundColorAttributeName: [IPTheme textTertiaryColor], NSFontAttributeName: [UIFont systemFontOfSize:10 weight:UIFontWeightMedium]};
     tabAppearance.stackedLayoutAppearance.selected.iconColor = glassTint;
-    tabAppearance.stackedLayoutAppearance.selected.titleTextAttributes = @{NSForegroundColorAttributeName: glassTint, NSFontAttributeName: [UIFont systemFontOfSize:11 weight:UIFontWeightSemibold]};
+    tabAppearance.stackedLayoutAppearance.selected.titleTextAttributes = @{NSForegroundColorAttributeName: glassTint, NSFontAttributeName: [UIFont systemFontOfSize:10 weight:UIFontWeightSemibold]};
     tabBarController.tabBar.standardAppearance = tabAppearance;
     if (@available(iOS 15.0, *)) {
         tabBarController.tabBar.scrollEdgeAppearance = tabAppearance;
     }
     tabBarController.tabBar.tintColor = glassTint;
-    tabBarController.tabBar.unselectedItemTintColor = [IPTheme separatorStrongColor];
+    tabBarController.tabBar.unselectedItemTintColor = [IPTheme textQuaternaryColor];
     tabBarController.tabBar.translucent = YES;
 
     for (UINavigationController *nav in tabBarController.viewControllers) {
@@ -73,8 +73,8 @@
         [navAppearance configureWithTransparentBackground];
         navAppearance.backgroundEffect = [UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemChromeMaterialDark];
         navAppearance.backgroundColor = [IPTheme backgroundColor];
-        navAppearance.shadowColor = [[IPTheme errorColor] colorWithAlphaComponent:0.22];
-        navAppearance.titleTextAttributes = @{NSForegroundColorAttributeName: UIColor.whiteColor, NSFontAttributeName: [UIFont systemFontOfSize:17 weight:UIFontWeightSemibold]};
+        navAppearance.shadowColor = [IPTheme separatorColor];
+        navAppearance.titleTextAttributes = @{NSForegroundColorAttributeName: [IPTheme textPrimaryColor], NSFontAttributeName: [UIFont systemFontOfSize:17 weight:UIFontWeightSemibold]};
         navAppearance.largeTitleTextAttributes = @{NSForegroundColorAttributeName: [IPTheme textPrimaryColor], NSFontAttributeName: [UIFont systemFontOfSize:34 weight:UIFontWeightBold]};
         nav.navigationBar.standardAppearance = navAppearance;
         nav.navigationBar.scrollEdgeAppearance = navAppearance;
