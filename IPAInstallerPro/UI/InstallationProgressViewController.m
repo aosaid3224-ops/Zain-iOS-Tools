@@ -962,6 +962,87 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
     self.headerLabel.textColor = success
         ? [IPTheme successColor]
         : [IPTheme errorColor];
+
+    if (success) {
+        [self presentCompletionMoment];
+    } else {
+        // Failure — quiet, no gimmicks. The header color carries the meaning.
+        [UIView animateWithDuration:[IPTheme durationStandard] animations:^{
+            self.progressView.progressTintColor = [IPTheme errorColor];
+            [self.progressView setProgress:1.0 animated:YES];
+        }];
+    }
+}
+
+// Zebra-precision completion: the progress fills, a checkmark ring draws
+// itself, and a single soft pulse confirms. No confetti, no noise.
+- (void)presentCompletionMoment {
+    [self.progressView setProgress:1.0 animated:YES];
+
+    CGFloat size = 88.0;
+    UIView *overlay = [[UIView alloc] initWithFrame:CGRectMake(0, 0, size, size)];
+    overlay.translatesAutoresizingMaskIntoConstraints = NO;
+    overlay.backgroundColor = UIColor.clearColor;
+    [self.containerView addSubview:overlay];
+
+    CAShapeLayer *ring = [CAShapeLayer layer];
+    CGFloat inset = 6.0;
+    ring.path = [UIBezierPath bezierPathWithOvalInRect:CGRectMake(inset, inset, size - inset * 2, size - inset * 2)].CGPath;
+    ring.fillColor = UIColor.clearColor;
+    ring.strokeColor = [IPTheme successColor].CGColor;
+    ring.lineWidth = 3.5;
+    ring.lineCap = kCALineCapRound;
+    [overlay.layer addSublayer:ring];
+
+    CAShapeLayer *check = [CAShapeLayer layer];
+    UIBezierPath *cp = [UIBezierPath bezierPath];
+    [cp moveToPoint:CGPointMake(size * 0.32, size * 0.52)];
+    [cp addLineToPoint:CGPointMake(size * 0.45, size * 0.65)];
+    [cp addLineToPoint:CGPointMake(size * 0.70, size * 0.38)];
+    check.path = cp.CGPath;
+    check.fillColor = UIColor.clearColor;
+    check.strokeColor = [IPTheme successColor].CGColor;
+    check.lineWidth = 4.0;
+    check.lineCap = kCALineCapRound;
+    check.lineJoin = kCALineJoinRound;
+    [overlay.layer addSublayer:check];
+
+    [NSLayoutConstraint activateConstraints:@[
+        [overlay.centerXAnchor constraintEqualToAnchor:self.containerView.centerXAnchor],
+        [overlay.topAnchor constraintEqualToAnchor:self.appNameLabel.bottomAnchor constant:24],
+        [overlay.widthAnchor constraintEqualToConstant:size],
+        [overlay.heightAnchor constraintEqualToConstant:size],
+    ]];
+
+    // Animate ring stroke draw
+    CABasicAnimation *ringDraw = [CABasicAnimation animationWithKeyPath:@"strokeEnd"];
+    ringDraw.fromValue = @0.0; ringDraw.toValue = @1.0;
+    ringDraw.duration = [IPTheme durationEmphasis];
+    ringDraw.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseOut];
+    ring.strokeEnd = 1.0;
+    [ring addAnimation:ringDraw forKey:@"ring"];
+
+    // Animate check draw (slightly delayed)
+    check.strokeEnd = 0.0;
+    CABasicAnimation *checkDraw = [CABasicAnimation animationWithKeyPath:@"strokeEnd"];
+    checkDraw.fromValue = @0.0; checkDraw.toValue = @1.0;
+    checkDraw.beginTime = CACurrentMediaTime() + 0.28;
+    checkDraw.duration = 0.3;
+    checkDraw.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseOut];
+    check.strokeEnd = 1.0;
+    [check addAnimation:checkDraw forKey:@"check"];
+
+    // Single soft pulse on the whole overlay
+    overlay.transform = CGAffineTransformMakeScale(0.82, 0.82);
+    overlay.alpha = 0;
+    [UIView animateWithDuration:0.22 delay:0.0 options:[IPTheme easing] animations:^{
+        overlay.alpha = 1;
+        overlay.transform = CGAffineTransformMakeScale(1.04, 1.04);
+    } completion:^(BOOL done) {
+        [UIView animateWithDuration:0.14 delay:0.0 options:[IPTheme easing] animations:^{
+            overlay.transform = CGAffineTransformIdentity;
+        } completion:nil];
+    }];
 }
 
 #pragma mark - Actions
