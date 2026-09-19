@@ -44,7 +44,7 @@
     UINavigationController *settingsNav = [[UINavigationController alloc] initWithRootViewController:settingsVC];
     settingsNav.tabBarItem = [[UITabBarItem alloc] initWithTitle:@"الإعدادات"
                                                            image:[UIImage systemImageNamed:@"slider.horizontal.3"]
-                                                   selectedImage:[UIImage systemImageNamed:@"gearshape.fill"]];
+                                                   selectedImage:[UIImage systemImageNamed:@"slider.horizontal.3"]];
 
     tabBarController.viewControllers = @[mainNav, installedNav, unpackNav, settingsNav];
     UIColor *glassTint = [IPTheme accentColor];
