@@ -365,45 +365,29 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
 }
 
 - (void)operationRecordAdded:(NSNotification *)note {
-    if (self.isDone) return;
     OperationRecord *record = note.object;
-    if (!record || ![record.transactionID isEqualToString:self.currentTxnID]) return;
-
-    [self appendLog:[NSString stringWithFormat:@"[BEGIN] %@ | %@ | target:%@ | input:%@",
-                     record.recordID, record.operation, record.target, record.input ?: @"-"]];
+    if (![record isKindOfClass:[OperationRecord class]]) return;
+    if (![record.transactionID isEqualToString:self.transactionID]) return;
 
     NSInteger uiPhase = [self uiPhaseIndexForOperationPhase:record.phase];
-    if (uiPhase < 0) return;
+    if (uiPhase < 0 || uiPhase >= (NSInteger)self.phaseViews.count) return;
 
     dispatch_async(dispatch_get_main_queue(), ^{
-        // Strict sequential sync with the live log: the incoming phase may only
-        // become Active if it is the immediate next Pending phase. This prevents
-        // the UI from racing ahead of the log — each phase lights up exactly when
-        // its log record begins.
-        if (uiPhase < 0 || uiPhase >= (NSInteger)self.phaseViews.count) return;
-
-        // Activate only the immediate next phase after the current phase, and
-        // only when every earlier phase has already reached Success/Active.
-        // Otherwise leave it pending until the log advances in order.
-        NSInteger nextExpected = self.currentPhaseIndex + 1;
-        if (uiPhase != nextExpected) return;
-        BOOL earlierAllDone = YES;
+        // Progressive in-order: the log has moved past every earlier phase, so
+        // mark them success and activate exactly this one. Live, beat-by-beat.
         for (NSInteger i = 0; i < uiPhase; i++) {
-            PhaseVisualState st = self.phaseViews[i].phaseState;
-            if (st == PhaseVisualStatePending) { earlierAllDone = NO; break; }
+            if (self.phaseViews[i].phaseState == PhaseVisualStatePending) {
+                [self.phaseViews[i] setState:PhaseVisualStateSuccess animated:YES];
+            }
         }
-        if (!earlierAllDone) return;
-
         if (self.phaseViews[uiPhase].phaseState == PhaseVisualStatePending) {
             [self.phaseViews[uiPhase] setState:PhaseVisualStateActive animated:YES];
         }
-        if (uiPhase > self.currentPhaseIndex) self.currentPhaseIndex = uiPhase;
-
-        float progress = (float)(self.currentPhaseIndex + 1) / (float)self.phaseViews.count;
+        self.currentPhaseIndex = uiPhase;
+        float progress = (float)(uiPhase + 1) / (float)self.phaseViews.count;
         [self.progressView setProgress:progress animated:YES];
     });
 }
-
 - (BOOL)isCriticalLiveEvent:(LiveOperationEvent *)event {
     if (event.finalEvent) return YES;
     NSString *stage = event.stage.uppercaseString ?: @"";
@@ -497,66 +481,34 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
 }
 
 - (void)operationRecordUpdated:(NSNotification *)note {
-    if (self.isDone) return;
     OperationRecord *record = note.object;
-    if (!record || ![record.transactionID isEqualToString:self.currentTxnID]) return;
-
-    NSString *logLine = [NSString stringWithFormat:@"[END] %@ | result:%d | exit:%d | verified:%@ | out:%@ | err:%@",
-                         record.recordID,
-                         (int)record.result,
-                         record.exitCode,
-                         record.verified ? @"YES" : @"NO",
-                         record.rawOutput.length > 0 ? @"(see below)" : @"-",
-                         record.rawError ?: @"-"];
-    [self appendLog:logLine];
-
-    // Show diagnostics report / rawOutput clearly in raw log
-    if (record.rawOutput.length > 0) {
-        [self appendLog:@"═══════════════════════════════════════════════════════════════"];
-        [self appendLog:record.rawOutput];
-        [self appendLog:@"═══════════════════════════════════════════════════════════════"];
-    }
-    if (record.context.count > 0) {
-        NSArray *keys = [[record.context allKeys] sortedArrayUsingSelector:@selector(compare:)];
-        NSMutableString *contextText = [NSMutableString stringWithString:@"[CONTEXT]"];
-        for (NSString *key in keys) {
-            [contextText appendFormat:@" %@=%@;", key, record.context[key]];
-        }
-        [self appendLog:contextText];
-    }
+    if (![record isKindOfClass:[OperationRecord class]]) return;
+    if (![record.transactionID isEqualToString:self.transactionID]) return;
 
     NSInteger uiPhase = [self uiPhaseIndexForOperationPhase:record.phase];
-    if (uiPhase < 0) return;
+    if (uiPhase < 0 || uiPhase >= (NSInteger)self.phaseViews.count) return;
 
     dispatch_async(dispatch_get_main_queue(), ^{
         if (record.result == OperationResultSuccess ||
             record.result == OperationResultPartial ||
             record.result == OperationResultSkipped) {
-            // Mark this phase success only when it is currently Active (its own
-            // log record ended). Then advance exactly one step: activate the next
-            // Pending phase so the sequence follows the log line-by-line.
-            if (uiPhase >= 0 && uiPhase < (NSInteger)self.phaseViews.count) {
-                if (self.phaseViews[uiPhase].phaseState == PhaseVisualStateActive) {
-                    [self.phaseViews[uiPhase] setState:PhaseVisualStateSuccess animated:YES];
-                    NSInteger next = uiPhase + 1;
-                    if (next < (NSInteger)self.phaseViews.count &&
-                        self.phaseViews[next].phaseState == PhaseVisualStatePending) {
-                        [self.phaseViews[next] setState:PhaseVisualStateActive animated:YES];
-                        self.currentPhaseIndex = next;
-                    }
-                }
-                float progress = (float)(self.currentPhaseIndex + 1) / (float)self.phaseViews.count;
-                [self.progressView setProgress:progress animated:YES];
+            if (self.phaseViews[uiPhase].phaseState != PhaseVisualStateSuccess) {
+                [self.phaseViews[uiPhase] setState:PhaseVisualStateSuccess animated:YES];
             }
+            NSInteger next = uiPhase + 1;
+            if (next < (NSInteger)self.phaseViews.count &&
+                self.phaseViews[next].phaseState == PhaseVisualStatePending) {
+                [self.phaseViews[next] setState:PhaseVisualStateActive animated:YES];
+                self.currentPhaseIndex = next;
+            }
+            float progress = (float)(self.currentPhaseIndex + 1) / (float)self.phaseViews.count;
+            [self.progressView setProgress:progress animated:YES];
         } else if (record.result == OperationResultFailed) {
             [self.phaseViews[uiPhase] setState:PhaseVisualStateFailed animated:YES];
             self.hasFailed = YES;
         }
     });
 }
-
-#pragma mark - UI Setup
-
 - (void)setupUI {
     _scrollView = [[UIScrollView alloc] init];
     _scrollView.translatesAutoresizingMaskIntoConstraints = NO;
