@@ -319,7 +319,6 @@
 
     if (actionTitle.length) {
         _action = [IPButton primaryWithTitle:actionTitle];
-        __weak typeof(self) weak = self;
         [_action addTarget:self action:@selector(runHandler:) forControlEvents:UIControlEventTouchUpInside];
         objc_setAssociatedObject(self, "handler", handler, OBJC_ASSOCIATION_COPY_NONATOMIC);
         _action.translatesAutoresizingMaskIntoConstraints = NO;
