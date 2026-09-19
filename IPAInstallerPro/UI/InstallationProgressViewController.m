@@ -774,14 +774,33 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
     }];
 }
 
+// Sequential, staggered success — each phase lights up a beat after the one
+// before it, so completion reads as ordered progress (Zebra precision), never
+// a simultaneous wall of checkmarks.
+- (void)cascadePhasesToSuccessWithCompletion:(void (^)(void))done {
+    NSMutableArray<InstallPhaseView *> *remaining = [NSMutableArray array];
+    for (InstallPhaseView *pv in self.phaseViews) {
+        if (pv.phaseState == PhaseVisualStateActive || pv.phaseState == PhaseVisualStatePending) {
+            [remaining addObject:pv];
+        }
+    }
+    NSTimeInterval step = 0.16;
+    [remaining enumerateObjectsUsingBlock:^(InstallPhaseView *pv, NSUInteger idx, BOOL *stop) {
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(idx * step * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            [pv setState:PhaseVisualStateSuccess animated:YES];
+            float progress = (float)([self.phaseViews indexOfObject:pv] + 1) / (float)self.phaseViews.count;
+            [self.progressView setProgress:progress animated:YES];
+            if (idx == remaining.count - 1 && done) {
+                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.2 * NSEC_PER_SEC)), dispatch_get_main_queue(), done);
+            }
+        });
+    }];
+    if (remaining.count == 0 && done) done();
+}
+
 - (void)handleCompletionSuccess:(InstallationResult *)result {
     dispatch_async(dispatch_get_main_queue(), ^{
-        for (InstallPhaseView *pv in self.phaseViews) {
-            if (pv.phaseState == PhaseVisualStateActive || pv.phaseState == PhaseVisualStatePending) {
-                [pv setState:PhaseVisualStateSuccess animated:YES];
-            }
-        }
-        [self.progressView setProgress:1.0 animated:YES];
+        [self cascadePhasesToSuccessWithCompletion:^{}];
         self.headerLabel.text = @"\u0627\u0643\u062a\u0645\u0644 \u0627\u0644\u062a\u062b\u0628\u064a\u062a \u2713";
         if (self.dismissOnDuplicateSuccess) {
             // Duplicate owns this progress modal. Close the passive stream and
