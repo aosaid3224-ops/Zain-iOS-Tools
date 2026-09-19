@@ -1019,7 +1019,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
     CAShapeLayer *ring = [CAShapeLayer layer];
     CGFloat inset = 6.0;
     ring.path = [UIBezierPath bezierPathWithOvalInRect:CGRectMake(inset, inset, size - inset * 2, size - inset * 2)].CGPath;
-    ring.fillColor = UIColor.clearColor;
+    ring.fillColor = UIColor.clearColor.CGColor;
     ring.strokeColor = [IPTheme successColor].CGColor;
     ring.lineWidth = 3.5;
     ring.lineCap = kCALineCapRound;
@@ -1031,7 +1031,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
     [cp addLineToPoint:CGPointMake(size * 0.45, size * 0.65)];
     [cp addLineToPoint:CGPointMake(size * 0.70, size * 0.38)];
     check.path = cp.CGPath;
-    check.fillColor = UIColor.clearColor;
+    check.fillColor = UIColor.clearColor.CGColor;
     check.strokeColor = [IPTheme successColor].CGColor;
     check.lineWidth = 4.0;
     check.lineCap = kCALineCapRound;
