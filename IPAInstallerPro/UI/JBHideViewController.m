@@ -121,7 +121,7 @@
     cell.detailTextLabel.text = [NSString stringWithFormat:@"%@%@\n%@", presence, app.bundleID, [self statusTextForBundleID:app.bundleID]];
     cell.detailTextLabel.numberOfLines = 3;
     cell.imageView.image = app.icon;
-    cell.toggle.on = [SpiderJBHideStateStore sharedStore].stateForBundleID(app.bundleID).enabled;
+    cell.toggle.on = [[SpiderJBHideStateStore sharedStore] stateForBundleID:app.bundleID].enabled;
     cell.toggle.enabled = app.currentlyInstalled;
     cell.toggle.tag = indexPath.row;
     cell.tag = indexPath.row;
