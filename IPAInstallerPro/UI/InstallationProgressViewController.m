@@ -382,9 +382,11 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
         // its log record begins.
         if (uiPhase < 0 || uiPhase >= (NSInteger)self.phaseViews.count) return;
 
-        // Activate only if this phase is currently Pending and every earlier
-        // phase has already reached Success/Active. Otherwise leave it — its
-        // recordUpdated (or a later record) will catch it up in order.
+        // Activate only the immediate next phase after the current phase, and
+        // only when every earlier phase has already reached Success/Active.
+        // Otherwise leave it pending until the log advances in order.
+        NSInteger nextExpected = self.currentPhaseIndex + 1;
+        if (uiPhase != nextExpected) return;
         BOOL earlierAllDone = YES;
         for (NSInteger i = 0; i < uiPhase; i++) {
             PhaseVisualState st = self.phaseViews[i].phaseState;
@@ -534,15 +536,14 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
             // log record ended). Then advance exactly one step: activate the next
             // Pending phase so the sequence follows the log line-by-line.
             if (uiPhase >= 0 && uiPhase < (NSInteger)self.phaseViews.count) {
-                if (self.phaseViews[uiPhase].phaseState == PhaseVisualStateActive ||
-                    self.phaseViews[uiPhase].phaseState == PhaseVisualStatePending) {
+                if (self.phaseViews[uiPhase].phaseState == PhaseVisualStateActive) {
                     [self.phaseViews[uiPhase] setState:PhaseVisualStateSuccess animated:YES];
-                }
-                NSInteger next = uiPhase + 1;
-                if (next < (NSInteger)self.phaseViews.count &&
-                    self.phaseViews[next].phaseState == PhaseVisualStatePending) {
-                    [self.phaseViews[next] setState:PhaseVisualStateActive animated:YES];
-                    self.currentPhaseIndex = next;
+                    NSInteger next = uiPhase + 1;
+                    if (next < (NSInteger)self.phaseViews.count &&
+                        self.phaseViews[next].phaseState == PhaseVisualStatePending) {
+                        [self.phaseViews[next] setState:PhaseVisualStateActive animated:YES];
+                        self.currentPhaseIndex = next;
+                    }
                 }
                 float progress = (float)(self.currentPhaseIndex + 1) / (float)self.phaseViews.count;
                 [self.progressView setProgress:progress animated:YES];
