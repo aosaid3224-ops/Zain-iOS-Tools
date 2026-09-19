@@ -376,14 +376,28 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
     if (uiPhase < 0) return;
 
     dispatch_async(dispatch_get_main_queue(), ^{
+        // Strict sequential sync with the live log: the incoming phase may only
+        // become Active if it is the immediate next Pending phase. This prevents
+        // the UI from racing ahead of the log — each phase lights up exactly when
+        // its log record begins.
+        if (uiPhase < 0 || uiPhase >= (NSInteger)self.phaseViews.count) return;
+
+        // Activate only if this phase is currently Pending and every earlier
+        // phase has already reached Success/Active. Otherwise leave it — its
+        // recordUpdated (or a later record) will catch it up in order.
+        BOOL earlierAllDone = YES;
         for (NSInteger i = 0; i < uiPhase; i++) {
-            if (self.phaseViews[i].phaseState == PhaseVisualStatePending) {
-                [self.phaseViews[i] setState:PhaseVisualStateSuccess animated:YES];
-            }
+            PhaseVisualState st = self.phaseViews[i].phaseState;
+            if (st == PhaseVisualStatePending) { earlierAllDone = NO; break; }
         }
-        [self.phaseViews[uiPhase] setState:PhaseVisualStateActive animated:YES];
-        self.currentPhaseIndex = uiPhase;
-        float progress = (float)(uiPhase + 1) / (float)self.phaseViews.count;
+        if (!earlierAllDone) return;
+
+        if (self.phaseViews[uiPhase].phaseState == PhaseVisualStatePending) {
+            [self.phaseViews[uiPhase] setState:PhaseVisualStateActive animated:YES];
+        }
+        if (uiPhase > self.currentPhaseIndex) self.currentPhaseIndex = uiPhase;
+
+        float progress = (float)(self.currentPhaseIndex + 1) / (float)self.phaseViews.count;
         [self.progressView setProgress:progress animated:YES];
     });
 }
@@ -516,7 +530,23 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
         if (record.result == OperationResultSuccess ||
             record.result == OperationResultPartial ||
             record.result == OperationResultSkipped) {
-            [self.phaseViews[uiPhase] setState:PhaseVisualStateSuccess animated:YES];
+            // Mark this phase success only when it is currently Active (its own
+            // log record ended). Then advance exactly one step: activate the next
+            // Pending phase so the sequence follows the log line-by-line.
+            if (uiPhase >= 0 && uiPhase < (NSInteger)self.phaseViews.count) {
+                if (self.phaseViews[uiPhase].phaseState == PhaseVisualStateActive ||
+                    self.phaseViews[uiPhase].phaseState == PhaseVisualStatePending) {
+                    [self.phaseViews[uiPhase] setState:PhaseVisualStateSuccess animated:YES];
+                }
+                NSInteger next = uiPhase + 1;
+                if (next < (NSInteger)self.phaseViews.count &&
+                    self.phaseViews[next].phaseState == PhaseVisualStatePending) {
+                    [self.phaseViews[next] setState:PhaseVisualStateActive animated:YES];
+                    self.currentPhaseIndex = next;
+                }
+                float progress = (float)(self.currentPhaseIndex + 1) / (float)self.phaseViews.count;
+                [self.progressView setProgress:progress animated:YES];
+            }
         } else if (record.result == OperationResultFailed) {
             [self.phaseViews[uiPhase] setState:PhaseVisualStateFailed animated:YES];
             self.hasFailed = YES;
