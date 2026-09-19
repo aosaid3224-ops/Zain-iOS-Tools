@@ -6,6 +6,7 @@
 #import "GlassIPACell.h"
 #import "RuntimeEnvironment.h"
 #import "IPTheme.h"
+#import "IPComponents.h"
 
 @interface MainViewController () <UIDocumentPickerDelegate>
 @property (nonatomic, strong) UIView *toastView;
@@ -231,6 +232,25 @@
     [self.view addSubview:self.loadingIndicator];
 }
 
+    // Skeleton — progressive, never a bare spinner.
+    self.skeletonStack = [[UIStackView alloc] init];
+    self.skeletonStack.translatesAutoresizingMaskIntoConstraints = NO;
+    self.skeletonStack.axis = UILayoutConstraintAxisVertical;
+    self.skeletonStack.spacing = 0;
+    [self.view addSubview:self.skeletonStack];
+    for (NSInteger k = 0; k < 6; k++) {
+        IPSkeletonView *sk = [[IPSkeletonView alloc] initWithFrame:CGRectZero];
+        sk.translatesAutoresizingMaskIntoConstraints = NO;
+        [self.skeletonStack addArrangedSubview:sk];
+        [sk.heightAnchor constraintEqualToConstant:76].active = YES;
+    }
+    self.skeletonStack.hidden = YES;
+    [NSLayoutConstraint activateConstraints:@[
+        [self.skeletonStack.topAnchor constraintEqualToAnchor:self.tableView.topAnchor constant:8],
+        [self.skeletonStack.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:[IPTheme pageMargin]],
+        [self.skeletonStack.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor constant:-[IPTheme pageMargin]],
+    ]];
+
 - (void)setupImportOverlay {
     self.importOverlayView = [[UIView alloc] initWithFrame:self.view.bounds];
     self.importOverlayView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
@@ -433,7 +453,9 @@ static NSString * const kPersistentCacheKey = @"IPAInstallerPro.PersistentMetada
 
     dispatch_async(dispatch_get_main_queue(), ^{
         self.loadingIndicator.hidden = NO;
-        [self.loadingIndicator startAnimating];
+        self.skeletonStack.hidden = YES;
+    [self.loadingIndicator stopAnimating];
+    self.skeletonStack.hidden = NO;
         self.emptyLabel.hidden = YES;
     });
 
@@ -510,7 +532,8 @@ static NSString * const kPersistentCacheKey = @"IPAInstallerPro.PersistentMetada
             self.emptyLabel.hidden = (self.ipaFiles.count > 0);
             self.emptyLabel.frame = CGRectMake(20, self.view.bounds.size.height / 2 - 40, self.view.bounds.size.width - 40, 80);
             [self.refreshControl endRefreshing];
-            [self.loadingIndicator stopAnimating];
+            self.skeletonStack.hidden = YES;
+    [self.loadingIndicator stopAnimating];
             self.loadingIndicator.hidden = YES;
             self.isLoading = NO;
         });
