@@ -18,6 +18,7 @@
 @property (nonatomic, strong) UIView *importOverlayView;
 @property (nonatomic, strong) UIActivityIndicatorView *importSpinner;
 @property (nonatomic, strong) UILabel *importLabel;
+@property (nonatomic, strong) UIStackView *skeletonStack;
 @end
 
 @implementation MainViewController
@@ -230,7 +231,6 @@
     self.loadingIndicator.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin;
     self.loadingIndicator.hidden = YES;
     [self.view addSubview:self.loadingIndicator];
-}
 
     // Skeleton — progressive, never a bare spinner.
     self.skeletonStack = [[UIStackView alloc] init];
@@ -250,6 +250,7 @@
         [self.skeletonStack.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:[IPTheme pageMargin]],
         [self.skeletonStack.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor constant:-[IPTheme pageMargin]],
     ]];
+}
 
 - (void)setupImportOverlay {
     self.importOverlayView = [[UIView alloc] initWithFrame:self.view.bounds];
