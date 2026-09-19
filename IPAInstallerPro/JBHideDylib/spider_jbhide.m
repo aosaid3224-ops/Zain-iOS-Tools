@@ -201,7 +201,6 @@ static char *spider_getenv(const char *name) {
     return getenv(name);
 }
 static pid_t spider_fork(void) { errno = EPERM; return (pid_t)-1; }
-static int spider_system(const char *cmd) { (void)cmd; errno = ENOENT; return -1; }
 static FILE *spider_popen(const char *cmd, const char *type) { (void)cmd; (void)type; errno = ENOENT; return NULL; }
 
 SPIDER_INTERPOSE(spider_getenv, getenv);
