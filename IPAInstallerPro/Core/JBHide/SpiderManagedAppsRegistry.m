@@ -116,7 +116,9 @@
     app.currentlyInstalled = YES;
 
     Class proxyClass = NSClassFromString(@"LSApplicationProxy");
-    id proxy = proxyClass ? [proxyClass applicationProxyForIdentifier:bid] : nil;
+    id proxy = (proxyClass && [proxyClass respondsToSelector:@selector(applicationProxyForIdentifier:)])
+        ? [proxyClass performSelector:@selector(applicationProxyForIdentifier:) withObject:bid]
+        : nil;
     NSURL *bundleURL = proxy ? [proxy valueForKey:@"bundleURL"] : nil;
 
     NSString *path = bundleURL.path ?: entry[@"path"];
