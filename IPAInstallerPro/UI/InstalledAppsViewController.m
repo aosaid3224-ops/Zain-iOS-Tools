@@ -30,7 +30,9 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.view.backgroundColor = [IPTheme backgroundColor];
-    self.title = @"التطبيقات";
+    // navigationItem.title يظهر في شريط التنقل فقط؛ أما self.title فينسخه UIKit إلى tabBarItem
+    // ويحوّل عنوان التبويب من "التطبيقات المثبتة" إلى "التطبيقات"
+    self.navigationItem.title = @"التطبيقات";
     self.searchText = @"";
 
     [self setupSegmentControl];
