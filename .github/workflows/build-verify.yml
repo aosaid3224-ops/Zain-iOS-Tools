@@ -40,6 +40,6 @@ jobs:
       - name: Upload verified package
         uses: actions/upload-artifact@v4
         with:
-          name: ipainstallerpro-3.3.4
+          name: ipainstallerpro-3.3.5
           path: IPAInstallerPro/packages/*.deb
           if-no-files-found: error
