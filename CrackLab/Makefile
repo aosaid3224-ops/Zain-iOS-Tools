@@ -21,7 +21,7 @@ CrackLab_FILES = main.m \
 
 CrackLab_FRAMEWORKS = UIKit Foundation
 CrackLab_INSTALL_PATH = /Applications
-CrackLab_CFLAGS = -fobjc-arc -I. -IUI -ICore
+CrackLab_CFLAGS = -fobjc-arc -Wno-deprecated-declarations -I. -IUI -ICore
 CrackLab_CODESIGN_FLAGS = -SCrackLab.entitlements
 
 include $(THEOS)/makefiles/common.mk
