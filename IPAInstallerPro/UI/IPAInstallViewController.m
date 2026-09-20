@@ -86,7 +86,11 @@
     [self.contentView addSubview:self.iconView];
 
     self.nameLabel = [[UILabel alloc] initWithFrame:CGRectZero];
-    self.nameLabel.text = self.ipaInfo.displayName ?: self.ipaInfo.name;
+    NSString *fallbackName = [self.ipaInfo.filePath.lastPathComponent stringByDeletingPathExtension];
+    if (fallbackName.length == 0) fallbackName = @"ملف IPA";
+    self.nameLabel.text = self.ipaInfo.displayName.length ? self.ipaInfo.displayName
+                        : (self.ipaInfo.name.length ? self.ipaInfo.name : fallbackName);
+    self.nameLabel.minimumScaleFactor = 0.55;
     self.nameLabel.textColor = [IPTheme textPrimaryColor];
     self.nameLabel.font = [UIFont systemFontOfSize:24 weight:UIFontWeightBold];
     self.nameLabel.textAlignment = NSTextAlignmentCenter;
