@@ -36,10 +36,10 @@
 
 - (void)setupNavigationBar {
     self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"إلغاء" style:UIBarButtonItemStylePlain target:self action:@selector(cancelTapped:)];
-    self.navigationItem.leftBarButtonItem.tintColor = [UIColor whiteColor];
+    self.navigationItem.leftBarButtonItem.tintColor = [IPTheme textPrimaryColor];
 
     self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"تحديد" style:UIBarButtonItemStylePlain target:self action:@selector(selectTapped:)];
-    self.navigationItem.rightBarButtonItem.tintColor = [UIColor whiteColor];
+    self.navigationItem.rightBarButtonItem.tintColor = [IPTheme textPrimaryColor];
 }
 
 - (void)setupToolbar {
@@ -50,7 +50,7 @@
     self.toolbar.barTintColor = [IPTheme cardColor];
     self.toolbar.tintColor = [IPTheme accentColor];
     self.toolbar.layer.borderWidth = 0.6;
-    self.toolbar.layer.borderColor = [UIColor colorWithWhite:1.0 alpha:0.12].CGColor;
+    self.toolbar.layer.borderColor = [IPTheme separatorColor].CGColor;
     [self.view addSubview:self.toolbar];
 
     UIBarButtonItem *backBtn = [[UIBarButtonItem alloc] initWithImage:[UIImage systemImageNamed:@"chevron.backward"] style:UIBarButtonItemStylePlain target:self action:@selector(goBack:)];
@@ -95,7 +95,7 @@
     self.searchController.obscuresBackgroundDuringPresentation = NO;
     self.searchController.searchBar.placeholder = @"بحث في المجلد...";
     self.searchController.searchBar.tintColor = [IPTheme accentColor];
-    self.searchController.searchBar.searchTextField.textColor = [UIColor whiteColor];
+    self.searchController.searchBar.searchTextField.textColor = [IPTheme textPrimaryColor];
     self.searchController.searchBar.searchTextField.backgroundColor = [IPTheme cardColor];
     self.navigationItem.searchController = self.searchController;
     self.navigationItem.hidesSearchBarWhenScrolling = NO;
@@ -270,11 +270,11 @@
         cell.backgroundColor = [IPTheme cardColor];
         cell.layer.cornerRadius = 16.0;
         cell.layer.borderWidth = 0.7; cell.layer.borderColor = [IPTheme subtleBorderColor].CGColor;
-        cell.layer.borderColor = [UIColor colorWithWhite:1.0 alpha:0.12].CGColor;
+        cell.layer.borderColor = [IPTheme separatorColor].CGColor;
         cell.layer.masksToBounds = YES;
-        cell.textLabel.textColor = [UIColor whiteColor];
+        cell.textLabel.textColor = [IPTheme textPrimaryColor];
         cell.textLabel.font = [UIFont systemFontOfSize:15 weight:UIFontWeightMedium];
-        cell.detailTextLabel.textColor = [UIColor colorWithWhite:0.45 alpha:1.0];
+        cell.detailTextLabel.textColor = [IPTheme textSecondaryColor];
         cell.detailTextLabel.font = [UIFont systemFontOfSize:12 weight:UIFontWeightRegular];
         cell.detailTextLabel.numberOfLines = 1;
     }
@@ -286,15 +286,15 @@
 
     cell.textLabel.text = item[@"name"];
     if (isDir) {
-        cell.imageView.image = [[UIImage systemImageNamed:@"folder.fill"] imageWithTintColor:[UIColor colorWithRed:0.4 green:0.5 blue:0.9 alpha:1.0]];
+        cell.imageView.image = [[UIImage systemImageNamed:@"folder.fill"] imageWithTintColor:[IPTheme accentColor]];
         cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
         cell.detailTextLabel.text = [NSString stringWithFormat:@"%@", [self formatDate:date]];
     } else {
         NSString *ext = [item[@"name"] pathExtension].lowercaseString;
         if ([ext isEqualToString:@"ipa"]) {
-            cell.imageView.image = [[UIImage systemImageNamed:@"doc.zipper"] imageWithTintColor:[UIColor colorWithRed:0.3 green:0.7 blue:0.5 alpha:1.0]];
+            cell.imageView.image = [[UIImage systemImageNamed:@"doc.zipper"] imageWithTintColor:[IPTheme successColor]];
         } else {
-            cell.imageView.image = [[UIImage systemImageNamed:@"doc"] imageWithTintColor:[UIColor colorWithWhite:0.5 alpha:1.0]];
+            cell.imageView.image = [[UIImage systemImageNamed:@"doc"] imageWithTintColor:[IPTheme textSecondaryColor]];
         }
         cell.accessoryType = UITableViewCellAccessoryNone;
         cell.detailTextLabel.text = [NSString stringWithFormat:@"%@ • %@", [self formatSize:size], [self formatDate:date]];

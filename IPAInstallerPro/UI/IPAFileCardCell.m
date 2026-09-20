@@ -1,5 +1,6 @@
 #import "IPAFileCardCell.h"
 #import "IPTheme.h"
+#import "IPComponents.h"
 
 @interface IPAFileCardCell ()
 @property (nonatomic, strong, readwrite) UIImageView *ipaIconView;
@@ -19,21 +20,29 @@
     if (!self) return nil;
     self.backgroundColor = UIColor.clearColor;
     self.contentView.backgroundColor = UIColor.clearColor;
-    self.selectionStyle = UITableViewCellSelectionStyleDefault;
+    self.selectionStyle = UITableViewCellSelectionStyleNone; // بلا غطاء افتراضي — التمييز عبر setHighlighted فقط
     self.semanticContentAttribute = UISemanticContentAttributeForceRightToLeft;
     self.contentView.semanticContentAttribute = UISemanticContentAttributeForceRightToLeft;
     self.contentView.layoutMargins = UIEdgeInsetsMake(3.0, 4.0, 3.0, 4.0);
 
     _cardView = [[UIView alloc] init];
     _cardView.translatesAutoresizingMaskIntoConstraints = NO;
-    _cardView.layer.cornerRadius = 18.0; _cardView.layer.borderWidth = 0.7; _cardView.layer.borderColor = [IPTheme subtleBorderColor].CGColor;
-    _cardView.layer.masksToBounds = YES;
+    _cardView.backgroundColor = UIColor.clearColor;
     [self.contentView addSubview:_cardView];
 
     _childRail = [[UIView alloc] init];
     _childRail.translatesAutoresizingMaskIntoConstraints = NO;
     _childRail.layer.cornerRadius = 2.0;
     [_cardView addSubview:_childRail];
+
+    IPHairlineView *sep = [[IPHairlineView alloc] initWithMargins:UIEdgeInsetsMake(0, 76, 0, 0)];
+    sep.translatesAutoresizingMaskIntoConstraints = NO;
+    [_cardView addSubview:sep];
+    [NSLayoutConstraint activateConstraints:@[
+        [sep.leadingAnchor constraintEqualToAnchor:_cardView.leadingAnchor],
+        [sep.trailingAnchor constraintEqualToAnchor:_cardView.trailingAnchor],
+        [sep.bottomAnchor constraintEqualToAnchor:_cardView.bottomAnchor],
+    ]];
 
     _ipaIconView = [[UIImageView alloc] init];
     _ipaIconView.translatesAutoresizingMaskIntoConstraints = NO;
@@ -44,7 +53,7 @@
     _titleLabel = [[UILabel alloc] init];
     _titleLabel.translatesAutoresizingMaskIntoConstraints = NO;
     _titleLabel.font = [UIFont systemFontOfSize:17.0 weight:UIFontWeightSemibold];
-    _titleLabel.textColor = UIColor.whiteColor;
+    _titleLabel.textColor = [IPTheme textPrimaryColor];
     _titleLabel.textAlignment = NSTextAlignmentNatural;
     _titleLabel.semanticContentAttribute = UISemanticContentAttributeForceRightToLeft;
     _titleLabel.numberOfLines = 1;
@@ -54,7 +63,7 @@
     _subtitleLabel = [[UILabel alloc] init];
     _subtitleLabel.translatesAutoresizingMaskIntoConstraints = NO;
     _subtitleLabel.font = [UIFont systemFontOfSize:13.0 weight:UIFontWeightRegular];
-    _subtitleLabel.textColor = [UIColor colorWithWhite:0.72 alpha:1.0];
+    _subtitleLabel.textColor = [IPTheme textSecondaryColor];
     _subtitleLabel.textAlignment = NSTextAlignmentNatural;
     _subtitleLabel.semanticContentAttribute = UISemanticContentAttributeForceLeftToRight;
     _subtitleLabel.numberOfLines = 1;
@@ -64,7 +73,7 @@
     _metaLabel = [[UILabel alloc] init];
     _metaLabel.translatesAutoresizingMaskIntoConstraints = NO;
     _metaLabel.font = [UIFont systemFontOfSize:12.0 weight:UIFontWeightMedium];
-    _metaLabel.textColor = [UIColor colorWithWhite:0.58 alpha:1.0];
+    _metaLabel.textColor = [IPTheme textSecondaryColor];
     _metaLabel.textAlignment = NSTextAlignmentNatural;
     _metaLabel.semanticContentAttribute = UISemanticContentAttributeForceRightToLeft;
     _metaLabel.numberOfLines = 1;
@@ -80,7 +89,7 @@
     _moreButton.translatesAutoresizingMaskIntoConstraints = NO;
     [_moreButton setTitle:@"•••" forState:UIControlStateNormal];
     _moreButton.titleLabel.font = [UIFont systemFontOfSize:19.0 weight:UIFontWeightBold];
-    _moreButton.tintColor = [UIColor colorWithWhite:0.9 alpha:1.0];
+    _moreButton.tintColor = [IPTheme textPrimaryColor];
     _moreButton.accessibilityLabel = @"إجراءات العنصر";
     _moreButton.accessibilityHint = @"فتح قائمة الإجراءات";
     _moreButton.accessibilityTraits = UIAccessibilityTraitButton;
@@ -141,7 +150,15 @@
 - (void)setSelected:(BOOL)selected animated:(BOOL)animated {
     [super setSelected:selected animated:animated];
     [UIView animateWithDuration:0.12 animations:^{
-        self.cardView.backgroundColor = selected ? [UIColor colorWithRed:.12 green:.07 blue:.075 alpha:1] : (self.showsChildIndent ? [IPTheme secondaryCardColor] : [IPTheme cardColor]);
+        self.cardView.backgroundColor = selected ? [IPTheme selectionColor] : (self.showsChildIndent ? [IPTheme secondaryCardColor] : [IPTheme cardColor]);
+    }];
+}
+
+- (void)setHighlighted:(BOOL)highlighted animated:(BOOL)animated {
+    [super setHighlighted:highlighted animated:animated];
+    // تغذية راجعة لمس فقط — النصوص تبقى ظاهرة دائماً
+    [UIView animateWithDuration:0.1 animations:^{
+        self.cardView.backgroundColor = highlighted ? [IPTheme selectionColor] : (self.showsChildIndent ? [IPTheme secondaryCardColor] : [IPTheme cardColor]);
     }];
 }
 

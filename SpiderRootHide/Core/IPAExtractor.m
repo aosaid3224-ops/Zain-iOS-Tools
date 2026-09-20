@@ -19,12 +19,15 @@
 #import "RootlessManager.h"
 #import "ProcessRunner.h"
 #import "CommandResult.h"
+#import "RuntimeEnvironment.h"
+#import "../rootless.h"
 
 extern char **environ;
 
 @interface IPAExtractor ()
 @property (nonatomic, strong) NSCache<NSString *, UIImage *> *iconCache;
 - (NSString *)runUnzipListingForIPA:(NSString *)ipaPath;
+- (NSString *)resolvedUnzipPath;
 - (UIImage *)extractTraditionalIconFromIPA:(NSString *)ipaPath;
 - (UIImage *)extractIconViaNSBundleFromIPA:(NSString *)ipaPath appRoot:(NSString *)appRoot infoPlist:(NSDictionary *)plist;
 - (UIImage *)extractIconViaCoreUIFromIPA:(NSString *)ipaPath appRoot:(NSString *)appRoot infoPlist:(NSDictionary *)plist;
@@ -35,6 +38,29 @@ extern char **environ;
 @end
 
 @implementation IPAExtractor
+
+- (NSString *)resolvedUnzipPath {
+    NSFileManager *fm = [NSFileManager defaultManager];
+    RuntimeEnvironment *rt = [RuntimeEnvironment sharedEnvironment];
+    NSMutableArray<NSString *> *candidates = [NSMutableArray array];
+    NSString *resolved = [[RootlessManager sharedManager] resolvePath:@"/usr/bin/unzip"];
+    if (resolved.length) [candidates addObject:resolved];
+    NSString *libroot = SPJBRRootPath(@"/usr/bin/unzip");
+    if (libroot.length) [candidates addObject:libroot];
+    if (rt.bootstrapPath.length && [rt.bootstrapPath containsString:@".jbroot-"]) {
+        [candidates addObject:[rt.bootstrapPath stringByAppendingPathComponent:@"var/jb/usr/bin/unzip"]];
+        [candidates addObject:[rt.bootstrapPath stringByAppendingPathComponent:@"var/jb/bin/unzip"]];
+        [candidates addObject:[rt.bootstrapPath stringByAppendingPathComponent:@"usr/bin/unzip"]];
+    }
+    [candidates addObjectsFromArray:@[@"/var/jb/usr/bin/unzip", @"/var/jb/bin/unzip", @"/opt/procursus/bin/unzip", @"/usr/bin/unzip"]];
+    NSMutableSet<NSString *> *seen = [NSMutableSet set];
+    for (NSString *candidate in candidates) {
+        if (!candidate.length || [seen containsObject:candidate]) continue;
+        [seen addObject:candidate];
+        if (access(candidate.fileSystemRepresentation, X_OK) == 0 && [fm isExecutableFileAtPath:candidate]) return candidate;
+    }
+    return nil;
+}
 
 + (instancetype)sharedExtractor {
     static IPAExtractor *shared = nil;
@@ -57,9 +83,8 @@ extern char **environ;
 - (NSData *)runUnzipDataForIPA:(NSString *)ipaPath entry:(NSString *)entry {
     if (ipaPath.length == 0 || entry.length == 0) return nil;
 
-    NSString *unzipPath = [[RootlessManager sharedManager] resolvePath:@"/usr/bin/unzip"];
-    if (![[NSFileManager defaultManager] fileExistsAtPath:unzipPath]) unzipPath = @"/usr/bin/unzip";
-    if (![[NSFileManager defaultManager] fileExistsAtPath:unzipPath]) return nil;
+    NSString *unzipPath = [self resolvedUnzipPath];
+    if (!unzipPath.length) return nil;
 
     int pipefd[2];
     if (pipe(pipefd) != 0) return nil;
@@ -104,9 +129,8 @@ extern char **environ;
 
 - (NSString *)runUnzipListingForIPA:(NSString *)ipaPath {
     if (ipaPath.length == 0) return nil;
-    NSString *unzipPath = [[RootlessManager sharedManager] resolvePath:@"/usr/bin/unzip"];
-    if (![[NSFileManager defaultManager] isExecutableFileAtPath:unzipPath]) unzipPath = @"/usr/bin/unzip";
-    if (![[NSFileManager defaultManager] isExecutableFileAtPath:unzipPath]) return nil;
+    NSString *unzipPath = [self resolvedUnzipPath];
+    if (!unzipPath.length) return nil;
     CommandResult *result = [[ProcessRunner sharedRunner] runCommand:unzipPath arguments:@[@"-Z1", ipaPath] timeout:30.0];
     if (!result.success || result.stdoutText.length == 0) return nil;
     return result.stdoutText;
@@ -329,8 +353,8 @@ extern char **environ;
     NSFileManager *fm = [NSFileManager defaultManager];
     [fm createDirectoryAtPath:tempDir withIntermediateDirectories:YES attributes:nil error:nil];
 
-    NSString *unzipPath = [[RootlessManager sharedManager] resolvePath:@"/usr/bin/unzip"];
-    if (![fm isExecutableFileAtPath:unzipPath]) unzipPath = @"/usr/bin/unzip";
+    NSString *unzipPath = [self resolvedUnzipPath];
+    if (!unzipPath.length) { [fm removeItemAtPath:tempDir error:nil]; return nil; }
 
     NSString *assetsEntry = [appRoot stringByAppendingPathComponent:@"Assets.car"];
     NSString *plistEntry  = [appRoot stringByAppendingPathComponent:@"Info.plist"];
@@ -534,8 +558,8 @@ extern char **environ;
     NSFileManager *fm = [NSFileManager defaultManager];
     [fm createDirectoryAtPath:tempDir withIntermediateDirectories:YES attributes:nil error:nil];
 
-    NSString *unzipPath = [[RootlessManager sharedManager] resolvePath:@"/usr/bin/unzip"];
-    if (![fm isExecutableFileAtPath:unzipPath]) unzipPath = @"/usr/bin/unzip";
+    NSString *unzipPath = [self resolvedUnzipPath];
+    if (!unzipPath.length) { [fm removeItemAtPath:tempDir error:nil]; return nil; }
 
     CommandResult *extractResult = [[ProcessRunner sharedRunner] runCommand:unzipPath
                                                                    arguments:@[@"-q", @"-o", ipaPath, @"-d", tempDir]

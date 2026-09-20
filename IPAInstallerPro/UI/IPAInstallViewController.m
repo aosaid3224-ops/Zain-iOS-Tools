@@ -81,13 +81,17 @@
     if (icon) {
         self.iconView.image = icon;
     } else {
-        self.iconView.image = [[UIImage systemImageNamed:@"doc.zipper"] imageWithTintColor:[UIColor colorWithWhite:0.3 alpha:1.0]];
+        self.iconView.image = [[UIImage systemImageNamed:@"doc.zipper"] imageWithTintColor:[IPTheme textTertiaryColor]];
     }
     [self.contentView addSubview:self.iconView];
 
     self.nameLabel = [[UILabel alloc] initWithFrame:CGRectZero];
-    self.nameLabel.text = self.ipaInfo.displayName ?: self.ipaInfo.name;
-    self.nameLabel.textColor = [UIColor whiteColor];
+    NSString *fallbackName = [self.ipaInfo.filePath.lastPathComponent stringByDeletingPathExtension];
+    if (fallbackName.length == 0) fallbackName = @"ملف IPA";
+    self.nameLabel.text = self.ipaInfo.displayName.length ? self.ipaInfo.displayName
+                        : (self.ipaInfo.name.length ? self.ipaInfo.name : fallbackName);
+    self.nameLabel.minimumScaleFactor = 0.55;
+    self.nameLabel.textColor = [IPTheme textPrimaryColor];
     self.nameLabel.font = [UIFont systemFontOfSize:24 weight:UIFontWeightBold];
     self.nameLabel.textAlignment = NSTextAlignmentCenter;
     self.nameLabel.adjustsFontSizeToFitWidth = YES;
@@ -95,13 +99,13 @@
     [self.contentView addSubview:self.nameLabel];
 
     self.validationSpinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleMedium];
-    self.validationSpinner.color = [UIColor colorWithWhite:0.5 alpha:1.0];
+    self.validationSpinner.color = [IPTheme textSecondaryColor];
     [self.validationSpinner startAnimating];
     [self.contentView addSubview:self.validationSpinner];
 
     self.validationLabel = [[UILabel alloc] initWithFrame:CGRectZero];
     self.validationLabel.text = @"جاري التحقق...";
-    self.validationLabel.textColor = [UIColor colorWithWhite:0.5 alpha:1.0];
+    self.validationLabel.textColor = [IPTheme textSecondaryColor];
     self.validationLabel.font = [UIFont systemFontOfSize:14 weight:UIFontWeightMedium];
     self.validationLabel.textAlignment = NSTextAlignmentCenter;
     [self.contentView addSubview:self.validationLabel];
@@ -124,13 +128,13 @@
     for (NSDictionary *detail in details) {
         UILabel *titleLabel = [[UILabel alloc] initWithFrame:CGRectZero];
         titleLabel.text = detail[@"title"];
-        titleLabel.textColor = [UIColor colorWithWhite:0.4 alpha:1.0];
+        titleLabel.textColor = [IPTheme textTertiaryColor];
         titleLabel.font = [UIFont systemFontOfSize:13 weight:UIFontWeightMedium];
         [self.detailsContainer addSubview:titleLabel];
 
         UILabel *valueLabel = [[UILabel alloc] initWithFrame:CGRectZero];
         valueLabel.text = detail[@"value"];
-        valueLabel.textColor = [UIColor whiteColor];
+        valueLabel.textColor = [IPTheme textPrimaryColor];
         valueLabel.font = [UIFont systemFontOfSize:13 weight:UIFontWeightSemibold];
         valueLabel.textAlignment = NSTextAlignmentRight;
         valueLabel.adjustsFontSizeToFitWidth = YES;
@@ -165,7 +169,7 @@
 
     self.installButton = [UIButton buttonWithType:UIButtonTypeSystem];
     [self.installButton setTitle:@"تثبيت التطبيق" forState:UIControlStateNormal];
-    [self.installButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    [self.installButton setTitleColor:[IPTheme textPrimaryColor] forState:UIControlStateNormal];
     self.installButton.titleLabel.font = [UIFont systemFontOfSize:17 weight:UIFontWeightSemibold];
     self.installButton.backgroundColor = [IPTheme accentColor];
     self.installButton.layer.cornerRadius = 17;
@@ -233,7 +237,7 @@
                 if (missingLibs.count > 0) {
                     NSString *libsList = [missingLibs componentsJoinedByString:@", "];
                     self.validationLabel.text = [NSString stringWithFormat:@"⚠️ جاهز لكن ينقص: %@", libsList];
-                    self.validationLabel.textColor = [UIColor colorWithRed:1.0 green:0.6 blue:0.0 alpha:1.0];
+                    self.validationLabel.textColor = [IPTheme warningColor];
                     self.installButton.enabled = YES;
                     self.installButton.alpha = 1.0;
                     UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"مكتبات مفقودة"
@@ -247,17 +251,17 @@
                     [self presentViewController:alert animated:YES completion:nil];
                 } else {
                     self.validationLabel.text = @"جاهز للتثبيت ✓";
-                    self.validationLabel.textColor = [UIColor colorWithRed:0.3 green:0.7 blue:0.5 alpha:1.0];
+                    self.validationLabel.textColor = [IPTheme successColor];
                     self.installButton.enabled = YES;
                     self.installButton.alpha = 1.0;
                 }
             } else {
                 self.validationLabel.text = result.statusMessage;
-                self.validationLabel.textColor = [UIColor colorWithRed:0.9 green:0.4 blue:0.3 alpha:1.0];
+                self.validationLabel.textColor = [IPTheme errorColor];
                 self.installButton.enabled = NO;
                 self.installButton.alpha = 0.5;
                 [self.installButton setTitle:@"لا يمكن التثبيت" forState:UIControlStateNormal];
-                self.installButton.backgroundColor = [UIColor colorWithWhite:0.15 alpha:1.0];
+                self.installButton.backgroundColor = [IPTheme textPrimaryColor];
             }
         });
     });

@@ -1,0 +1,2590 @@
+{
+  "path": "PlugIns/ScreenRelay.appex/ScreenRelay",
+  "size": 159808,
+  "sha256": "e71425cfb9b3a16c57fd6061458dd7a3cac0a957b513e56fb767be6236ea7625",
+  "architectures": [
+    {
+      "header": {
+        "entrypoint": "4295023424",
+        "imagebase": "4294967296",
+        "has_main": false
+      },
+      "sections": [
+        {
+          "name": "__text",
+          "size": 38412,
+          "offset": 16384,
+          "virtual_address": 4294983680
+        },
+        {
+          "name": "__stubs",
+          "size": 2304,
+          "offset": 54796,
+          "virtual_address": 4295022092
+        },
+        {
+          "name": "__objc_stubs",
+          "size": 160,
+          "offset": 57120,
+          "virtual_address": 4295024416
+        },
+        {
+          "name": "__objc_methlist",
+          "size": 92,
+          "offset": 57280,
+          "virtual_address": 4295024576
+        },
+        {
+          "name": "__const",
+          "size": 2344,
+          "offset": 57376,
+          "virtual_address": 4295024672
+        },
+        {
+          "name": "__constg_swiftt",
+          "size": 900,
+          "offset": 59720,
+          "virtual_address": 4295027016
+        },
+        {
+          "name": "__swift5_typeref",
+          "size": 896,
+          "offset": 60620,
+          "virtual_address": 4295027916
+        },
+        {
+          "name": "__swift5_builtin",
+          "size": 20,
+          "offset": 61516,
+          "virtual_address": 4295028812
+        },
+        {
+          "name": "__swift5_reflstr",
+          "size": 410,
+          "offset": 61536,
+          "virtual_address": 4295028832
+        },
+        {
+          "name": "__swift5_fieldmd",
+          "size": 876,
+          "offset": 61948,
+          "virtual_address": 4295029244
+        },
+        {
+          "name": "__swift5_proto",
+          "size": 84,
+          "offset": 62824,
+          "virtual_address": 4295030120
+        },
+        {
+          "name": "__swift5_types",
+          "size": 80,
+          "offset": 62908,
+          "virtual_address": 4295030204
+        },
+        {
+          "name": "__objc_classname",
+          "size": 180,
+          "offset": 62992,
+          "virtual_address": 4295030288
+        },
+        {
+          "name": "__objc_methname",
+          "size": 500,
+          "offset": 63172,
+          "virtual_address": 4295030468
+        },
+        {
+          "name": "__objc_methtype",
+          "size": 134,
+          "offset": 63680,
+          "virtual_address": 4295030976
+        },
+        {
+          "name": "__cstring",
+          "size": 614,
+          "offset": 63824,
+          "virtual_address": 4295031120
+        },
+        {
+          "name": "__swift5_capture",
+          "size": 412,
+          "offset": 64440,
+          "virtual_address": 4295031736
+        },
+        {
+          "name": "__unwind_info",
+          "size": 776,
+          "offset": 64852,
+          "virtual_address": 4295032148
+        },
+        {
+          "name": "__eh_frame",
+          "size": 392,
+          "offset": 65632,
+          "virtual_address": 4295032928
+        },
+        {
+          "name": "__got",
+          "size": 2360,
+          "offset": 81920,
+          "virtual_address": 4295049216
+        },
+        {
+          "name": "__const",
+          "size": 2640,
+          "offset": 84280,
+          "virtual_address": 4295051576
+        },
+        {
+          "name": "__objc_classlist",
+          "size": 32,
+          "offset": 86920,
+          "virtual_address": 4295054216
+        },
+        {
+          "name": "__objc_imageinfo",
+          "size": 8,
+          "offset": 86952,
+          "virtual_address": 4295054248
+        },
+        {
+          "name": "__objc_const",
+          "size": 1592,
+          "offset": 98304,
+          "virtual_address": 4295065600
+        },
+        {
+          "name": "__objc_selrefs",
+          "size": 104,
+          "offset": 99896,
+          "virtual_address": 4295067192
+        },
+        {
+          "name": "__objc_data",
+          "size": 240,
+          "offset": 100000,
+          "virtual_address": 4295067296
+        },
+        {
+          "name": "__data",
+          "size": 1344,
+          "offset": 100240,
+          "virtual_address": 4295067536
+        },
+        {
+          "name": "__bss",
+          "size": 2688,
+          "offset": 0,
+          "virtual_address": 4295068880
+        },
+        {
+          "name": "__common",
+          "size": 8,
+          "offset": 0,
+          "virtual_address": 4295071568
+        }
+      ],
+      "symbols": [
+        {
+          "name": "radr://5614542",
+          "value": 90260802,
+          "size": 0,
+          "type": "TYPE.PREBOUND"
+        },
+        {
+          "name": "__mh_execute_header",
+          "value": 4294967296,
+          "size": 0,
+          "type": "TYPE.SECTION"
+        },
+        {
+          "name": "_CFAbsoluteTimeGetCurrent",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_CMBlockBufferCopyDataBytes",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_CMBlockBufferGetDataLength",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_CMGetAttachment",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_CMSampleBufferGetDataBuffer",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_CMSampleBufferGetFormatDescription",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_CMSampleBufferGetImageBuffer",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_CMSampleBufferGetPresentationTimeStamp",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_CMSampleBufferGetSampleAttachmentsArray",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_CMVideoFormatDescriptionGetH264ParameterSetAtIndex",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_CVPixelBufferGetHeight",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_CVPixelBufferGetWidth",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_CVPixelBufferPoolCreate",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_CVPixelBufferPoolCreatePixelBuffer",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_NSExtensionMain",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_NSLocalizedDescriptionKey",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_NSLocalizedFailureReasonErrorKey",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_OBJC_CLASS_$_NSArray",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_OBJC_CLASS_$_NSError",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_OBJC_CLASS_$_NSNumber",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_OBJC_CLASS_$_NSObject",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_OBJC_CLASS_$_OS_dispatch_queue",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_OBJC_CLASS_$_RPBroadcastSampleHandler",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_OBJC_CLASS_$_UIScreen",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_OBJC_CLASS_$__TtCs12_SwiftObject",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_OBJC_METACLASS_$_NSObject",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_OBJC_METACLASS_$_RPBroadcastSampleHandler",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_OBJC_METACLASS_$__TtCs12_SwiftObject",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_RPVideoSampleOrientationKey",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_VTCompressionSessionCompleteFrames",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_VTCompressionSessionCreate",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_VTCompressionSessionEncodeFrameWithOutputHandler",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_VTCompressionSessionInvalidate",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_VTCompressionSessionPrepareToEncodeFrames",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_VTPixelTransferSessionCreate",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_VTPixelTransferSessionInvalidate",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_VTPixelTransferSessionTransferImage",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_VTSessionSetProperties",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_VTSessionSetProperty",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__Block_copy",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__Block_release",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__NSConcreteStackBlock",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "___chkstk_darwin",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "___stack_chk_fail",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "___stack_chk_guard",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__objc_empty_cache",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__swiftEmptyArrayStorage",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__swiftEmptyDictionarySingleton",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__swift_FORCE_LOAD_$_swiftAVFoundation",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__swift_FORCE_LOAD_$_swiftCoreAudio",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__swift_FORCE_LOAD_$_swiftCoreFoundation",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__swift_FORCE_LOAD_$_swiftCoreImage",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__swift_FORCE_LOAD_$_swiftCoreMIDI",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__swift_FORCE_LOAD_$_swiftCoreMedia",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__swift_FORCE_LOAD_$_swiftDispatch",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__swift_FORCE_LOAD_$_swiftFoundation",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__swift_FORCE_LOAD_$_swiftMetal",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__swift_FORCE_LOAD_$_swiftOSLog",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__swift_FORCE_LOAD_$_swiftObjectiveC",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__swift_FORCE_LOAD_$_swiftQuartzCore",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__swift_FORCE_LOAD_$_swiftSpatial",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__swift_FORCE_LOAD_$_swiftUIKit",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__swift_FORCE_LOAD_$_swiftUniformTypeIdentifiers",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__swift_FORCE_LOAD_$_swiftVideoToolbox",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__swift_FORCE_LOAD_$_swiftXPC",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__swift_FORCE_LOAD_$_swift_Builtin_float",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__swift_FORCE_LOAD_$_swiftos",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__swift_FORCE_LOAD_$_swiftsimd",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_dispatch_sync",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_kCFBooleanTrue",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_kCMSampleAttachmentKey_NotSync",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_kCMTimeInvalid",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_kCVPixelBufferHeightKey",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_kCVPixelBufferIOSurfacePropertiesKey",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_kCVPixelBufferPixelFormatTypeKey",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_kCVPixelBufferPoolMinimumBufferCountKey",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_kCVPixelBufferWidthKey",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_kVTCompressionPropertyKey_AllowFrameReordering",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_kVTCompressionPropertyKey_AverageBitRate",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_kVTCompressionPropertyKey_DataRateLimits",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_kVTCompressionPropertyKey_ExpectedFrameRate",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_kVTCompressionPropertyKey_H264EntropyMode",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_kVTCompressionPropertyKey_MaxFrameDelayCount",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_kVTCompressionPropertyKey_MaxKeyFrameInterval",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_kVTCompressionPropertyKey_MaxKeyFrameIntervalDuration",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_kVTCompressionPropertyKey_ProfileLevel",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_kVTCompressionPropertyKey_RealTime",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_kVTDownsamplingMode_Average",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_kVTEncodeFrameOptionKey_ForceKeyFrame",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_kVTH264EntropyMode_CABAC",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_kVTPixelTransferPropertyKey_DownsamplingMode",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_kVTPixelTransferPropertyKey_ScalingMode",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_kVTProfileLevel_H264_High_AutoLevel",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_kVTScalingMode_Letterbox",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_mach_task_self_",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_malloc_size",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_memcpy",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_memmove",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_objc_allocWithZone",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_objc_msgSend",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_objc_msgSendSuper2",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_objc_opt_self",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_objc_release",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_objc_release_x19",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_objc_release_x20",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_objc_release_x21",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_objc_release_x22",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_objc_release_x23",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_objc_release_x24",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_objc_release_x25",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_objc_release_x26",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_objc_release_x28",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_objc_release_x8",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_objc_retain",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_objc_retainAutoreleasedReturnValue",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_objc_retain_x1",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_objc_retain_x19",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_objc_retain_x2",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_objc_retain_x20",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_objc_retain_x21",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_objc_retain_x22",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_objc_retain_x23",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_objc_retain_x24",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_objc_retain_x25",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_objc_retain_x28",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_objc_retain_x8",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_allocObject",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_arrayDestroy",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_arrayInitWithCopy",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_beginAccess",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_bridgeObjectRelease",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_bridgeObjectRelease_n",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_bridgeObjectRetain",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_bridgeObjectRetain_n",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_deallocClassInstance",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_deallocObject",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_deletedMethodError",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_dynamicCast",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_dynamicCastObjCClass",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_endAccess",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_errorRelease",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_getForeignTypeMetadata",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_getObjCClassMetadata",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_getObjectType",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_getTypeByMangledNameInContext2",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_getTypeByMangledNameInContextInMetadataState2",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_getWitnessTable",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_initStackObject",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_isEscapingClosureAtFileLocation",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_isUniquelyReferenced_nonNull_native",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_once",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_release",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_release_n",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_retain",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_setDeallocating",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_unknownObjectRelease",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_unknownObjectWeakDestroy",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_unknownObjectWeakInit",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_unknownObjectWeakLoadStrong",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_weakDestroy",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_weakInit",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_weakLoadStrong",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_task_info",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s10Foundation11JSONDecoderC6decode_4fromxxm_AA4DataVtKSeRzlFTj",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s10Foundation11JSONDecoderCACycfc",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s10Foundation11JSONDecoderCMa",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s10Foundation11JSONEncoderC6encodeyAA4DataVxKSERzlFTj",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s10Foundation11JSONEncoderCACycfc",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s10Foundation11JSONEncoderCMa",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s10Foundation13__DataStorageC5bytes6length4copy11deallocator6offsetACSvSg_SiSbySv_SitcSgSitcfc",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s10Foundation13__DataStorageC5bytes6lengthACSVSg_Sitcfc",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s10Foundation13__DataStorageC6_bytesSvSgvg",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s10Foundation13__DataStorageC6lengthACSi_tcfc",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s10Foundation13__DataStorageC7_lengthSivg",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s10Foundation13__DataStorageC7_offsetSivg",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s10Foundation13__DataStorageC8capacityACSi_tcfc",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s10Foundation13__DataStorageCMa",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s10Foundation22_convertErrorToNSErrorySo0E0Cs0C0_pF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s10Foundation4DataV10LargeSliceV21ensureUniqueReferenceyyF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s10Foundation4DataV14RangeReferenceCMa",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s10Foundation4DataV15_RepresentationO15replaceSubrange_4with5countySnySiG_SVSgSitF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s10Foundation4DataV15_RepresentationOyACSnySiGcig",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s10Foundation4DataV15_RepresentationOys5UInt8VSicig",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s10Foundation4DataV6appendyyACF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s10Foundation4DataVAA15ContiguousBytesAAWP",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s10Foundation4DataVMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s10Foundation4DataVN",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s10Foundation5NSLogyySS_s7CVarArg_pdtF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s10Foundation6LocaleV7currentACvgZ",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s10Foundation6LocaleVMa",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSD10FoundationE19_bridgeToObjectiveCSo12NSDictionaryCyF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSD10FoundationE36_unconditionallyBridgeFromObjectiveCySDyxq_GSo12NSDictionaryCSgFZ",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSS10FoundationE17LocalizationValueV13stringLiteralACSS_tcfC",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSS10FoundationE17LocalizationValueVMa",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSS10FoundationE19_bridgeToObjectiveCSo8NSStringCyF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSS10FoundationE36_unconditionallyBridgeFromObjectiveCySSSo8NSStringCSgFZ",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSS10FoundationE6format_S2Sh_s7CVarArg_pdtcfC",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSS10FoundationE9localized5table6bundle6locale7commentS2SAAE17LocalizationValueV_SSSgSo8NSBundleCSgAA6LocaleVs12StaticStringVSgtcfC",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSSs7CVarArg10FoundationMc",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSW10Foundation15ContiguousBytesAAWP",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSa10FoundationE19_bridgeToObjectiveCSo7NSArrayCyF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSa10FoundationE34_conditionallyBridgeFromObjectiveC_6resultSbSo7NSArrayC_SayxGSgztFZ",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSayxG10Foundation15ContiguousBytesABs5UInt8VRszlMc",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss15CollectionOfOneVyxG10Foundation15ContiguousBytesADs5UInt8VRszlMc",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7Network10NWEndpointO4HostO13stringLiteralAESS_tcfC",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7Network10NWEndpointO4HostOMa",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7Network10NWEndpointO4PortV8rawValueAESgs6UInt16V_tcfC",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7Network10NWEndpointO4PortVMa",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7Network10NWEndpointO4PortVMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7Network11NWInterfaceV13InterfaceTypeO8loopbackyA2EmFWC",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7Network11NWInterfaceV13InterfaceTypeOMa",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7Network12NWConnectionC14ContentContextC14defaultMessageAEvgZ",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7Network12NWConnectionC14ContentContextCMa",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7Network12NWConnectionC14SendCompletionO16contentProcessedyAEyAA7NWErrorOSgccAEmFWC",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7Network12NWConnectionC14SendCompletionOMa",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7Network12NWConnectionC18stateUpdateHandleryAC5StateOcSgvs",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7Network12NWConnectionC4host4port5usingAcA10NWEndpointO4HostO_AH4PortVAA12NWParametersCtcfC",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7Network12NWConnectionC4send7content0D7Context10isComplete10completiony10Foundation4DataVSg_AC07ContentE0CSbAC14SendCompletionOtF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7Network12NWConnectionC5StateO2eeoiySbAE_AEtFZ",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7Network12NWConnectionC5StateO5readyyA2EmFWC",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7Network12NWConnectionC5StateO6failedyAeA7NWErrorOcAEmFWC",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7Network12NWConnectionC5StateO7waitingyAeA7NWErrorOcAEmFWC",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7Network12NWConnectionC5StateO9cancelledyA2EmFWC",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7Network12NWConnectionC5StateOMa",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7Network12NWConnectionC5start5queueySo012OS_dispatch_D0C_tF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7Network12NWConnectionC5stateAC5StateOvg",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7Network12NWConnectionC6cancelyyF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7Network12NWConnectionC7receive23minimumIncompleteLength07maximumF010completionySi_Siy10Foundation4DataVSg_AC14ContentContextCSgSbAA7NWErrorOSgtctF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7Network12NWConnectionCMa",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7Network12NWConnectionCMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7Network12NWParametersC21requiredInterfaceTypeAA11NWInterfaceV0dE0Ovs",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7Network12NWParametersC3tcpACvgZ",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7Network12NWParametersCMa",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7Network7NWErrorOMa",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7Network7NWErrorOMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7Network7NWErrorOSQAAMc",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSDyxq_GSEsSERzSER_rlMc",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSQ2eeoiySbx_xtFZTj",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSS4hash4intoys6HasherVz_tF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSS6appendyySSF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSSN",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSSSEsWP",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSSSHsWP",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSWN",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSayxGSTsMc",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSbN",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSdN",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSds7CVarArgsWP",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSiN",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSis23CustomStringConvertiblesWP",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSis7CVarArgsWP",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss10SetAlgebraPyxqd__ncSTRd__7ElementQyd__ACRtzlufCTj",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss11AnyHashableV13_rawHashValue4seedS2i_tF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss11AnyHashableV2eeoiySbAB_ABtFZ",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss11AnyHashableVMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss11AnyHashableVN",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss11AnyHashableVSHsWP",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss11_StringGutsV4growyySiF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss15CollectionOfOneVMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss18_DictionaryStorageC8allocate8capacityAByxq_GSi_tFZ",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss18_DictionaryStorageCMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss22KeyedDecodingContainerV6decode_6forKeyS2Sm_xtKF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss22KeyedDecodingContainerV6decode_6forKeyS2im_xtKF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss22KeyedDecodingContainerVMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss22KeyedEncodingContainerV6encode_6forKeyySS_xtKF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss22KeyedEncodingContainerV6encode_6forKeyySi_xtKF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss22KeyedEncodingContainerVMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss23CustomStringConvertibleP11descriptionSSvgTj",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss23_ContiguousArrayStorageCMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss27_stringCompareWithSmolCheck__9expectingSbs11_StringGutsV_ADs01_G16ComparisonResultOtF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss5Int32VN",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss5Int32Vs7CVarArgsWP",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss5Int64VMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss5UInt8VMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss6HasherV5_seedABSi_tcfC",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss6HasherV8_combineyySuF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss6HasherV9_finalizeSiyF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss6UInt16VMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss6UInt16VN",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss6UInt16Vs7CVarArgsWP",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss6UInt32VN",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss7CVarArgMp",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss7DecoderP9container7keyedBys22KeyedDecodingContainerVyqd__Gqd__m_tKs9CodingKeyRd__lFTj",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss7EncoderP9container7keyedBys22KeyedEncodingContainerVyqd__Gqd__m_ts9CodingKeyRd__lFTj",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss9CodingKeyPsE11descriptionSSvg",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss9CodingKeyPsE16debugDescriptionSSvg",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sypN",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s12CoreGraphics7CGFloatVMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s14CoreFoundation9_CFObjectPAAE2eeoiySbx_xtFZ",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s14CoreFoundation9_CFObjectPAAE4hash4intoys6HasherVz_tF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s14CoreFoundation9_CFObjectPAAE9hashValueSivg",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSo6CMTimea9CoreMediaE7secondsSdvg",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s8Dispatch0A13WorkItemFlagsVMa",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s8Dispatch0A13WorkItemFlagsVMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s8Dispatch0A13WorkItemFlagsVs10SetAlgebraAAMc",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s8Dispatch0A3QoSV11unspecifiedACvgZ",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s8Dispatch0A3QoSV15userInteractiveACvgZ",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s8Dispatch0A3QoSVMa",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s8Dispatch0A4TimeV3nowACyFZ",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s8Dispatch0A4TimeVMa",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s8Dispatch0A8WorkItemC5flags5blockAcA0abC5FlagsV_yyXBtcfc",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s8Dispatch0A8WorkItemC6cancelyyFTj",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s8Dispatch0A8WorkItemCMa",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s8Dispatch0A8WorkItemCMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s8Dispatch1poiyAA0A4TimeVAD_SdtF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSo17OS_dispatch_queueC8DispatchE10AttributesVMa",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSo17OS_dispatch_queueC8DispatchE10AttributesVMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSo17OS_dispatch_queueC8DispatchE10AttributesVs10SetAlgebraACMc",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSo17OS_dispatch_queueC8DispatchE10asyncAfter8deadline3qos5flags7executeyAC0D4TimeV_AC0D3QoSVAC0D13WorkItemFlagsVyyXBtF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSo17OS_dispatch_queueC8DispatchE10asyncAfter8deadline7executeyAC0D4TimeV_AC0D8WorkItemCtF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSo17OS_dispatch_queueC8DispatchE20AutoreleaseFrequencyO7inherityA2EmFWC",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSo17OS_dispatch_queueC8DispatchE20AutoreleaseFrequencyOMa",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSo17OS_dispatch_queueC8DispatchE5async5group3qos5flags7executeySo0a1_b1_F0CSg_AC0D3QoSVAC0D13WorkItemFlagsVyyXBtF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSo17OS_dispatch_queueC8DispatchE5label3qos10attributes20autoreleaseFrequency6targetABSS_AC0D3QoSVAbCE10AttributesVAbCE011AutoreleaseI0OABSgtcfC",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sBOWV",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSQMp",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSQ2eeoiySbx_xtFZTq",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSHMp",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSHSQTb",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSH9hashValueSivgTq",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSH4hash4intoys6HasherVz_tFTq",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSH13_rawHashValue4seedS2i_tFTq",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s14CoreFoundation9_CFObjectMp",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s14CoreFoundation9_CFObjectPSHTb",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sytWV",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSEMp",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSE6encode2toys7Encoder_p_tKFTq",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSeMp",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSe4fromxs7Decoder_p_tKcfCTq",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss23CustomStringConvertibleMp",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss23CustomStringConvertibleP11descriptionSSvgTq",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss28CustomDebugStringConvertibleMp",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss28CustomDebugStringConvertibleP16debugDescriptionSSvgTq",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss9CodingKeyMp",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss9CodingKeyPs28CustomDebugStringConvertibleTb",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss9CodingKeyPs23CustomStringConvertibleTb",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss9CodingKeyP11stringValueSSvgTq",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss9CodingKeyP11stringValuexSgSS_tcfCTq",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss9CodingKeyP8intValueSiSgvgTq",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss9CodingKeyP8intValuexSgSi_tcfCTq",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sBoWV",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        }
+      ],
+      "libraries": [
+        "/System/Library/Frameworks/Foundation.framework/Foundation",
+        "/usr/lib/libobjc.A.dylib",
+        "/usr/lib/libSystem.B.dylib",
+        "/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation",
+        "/System/Library/Frameworks/CoreMedia.framework/CoreMedia",
+        "/System/Library/Frameworks/CoreVideo.framework/CoreVideo",
+        "/System/Library/Frameworks/Network.framework/Network",
+        "/System/Library/Frameworks/ReplayKit.framework/ReplayKit",
+        "/System/Library/Frameworks/UIKit.framework/UIKit",
+        "/System/Library/Frameworks/VideoToolbox.framework/VideoToolbox",
+        "/usr/lib/swift/libswiftAVFoundation.dylib",
+        "/usr/lib/swift/libswiftCore.dylib",
+        "/usr/lib/swift/libswiftCoreAudio.dylib",
+        "/usr/lib/swift/libswiftCoreFoundation.dylib",
+        "/usr/lib/swift/libswiftCoreImage.dylib",
+        "/usr/lib/swift/libswiftCoreMIDI.dylib",
+        "/usr/lib/swift/libswiftCoreMedia.dylib",
+        "/usr/lib/swift/libswiftDispatch.dylib",
+        "/usr/lib/swift/libswiftMetal.dylib",
+        "/usr/lib/swift/libswiftOSLog.dylib",
+        "/usr/lib/swift/libswiftObjectiveC.dylib",
+        "/usr/lib/swift/libswiftQuartzCore.dylib",
+        "/usr/lib/swift/libswiftSpatial.dylib",
+        "/usr/lib/swift/libswiftUniformTypeIdentifiers.dylib",
+        "/usr/lib/swift/libswiftVideoToolbox.dylib",
+        "/usr/lib/swift/libswiftXPC.dylib",
+        "/usr/lib/swift/libswift_Builtin_float.dylib",
+        "/usr/lib/swift/libswiftos.dylib",
+        "/usr/lib/swift/libswiftsimd.dylib"
+      ],
+      "objc_sections": {
+        "__swift5_reflstr": [
+          "width",
+          "height",
+          "maxEdge",
+          "ptsMicros",
+          "orientation",
+          "width",
+          "height",
+          "keyframe",
+          "token",
+          "screenW",
+          "screenH",
+          "lane",
+          "uplink",
+          "scaler",
+          "packer",
+          "setup",
+          "closed",
+          "nextDue",
+          "tally",
+          "onSetup",
+          "onHalt",
+          "onLost",
+          "onUnreachable",
+          "isLinked",
+          "backlogBytes",
+          "connection",
+          "inbox",
+          "probeIndex",
+          "probeTimeout",
+          "closing",
+          "maxEdge",
+          "outputWidth",
+          "outputHeight",
+          "inputSize",
+          "session",
+          "pool",
+          "onPacket",
+          "width",
+          "height",
+          "bitrate",
+          "wantKeyframe",
+          "captured",
+          "accepted",
+          "sent",
+          "dropped",
+          "bytes",
+          "lifetimeSent",
+          "since"
+        ],
+        "__objc_classname": [
+          "_TtC11ScreenRelay24LyntraScreenRelayHandler",
+          "_TtC11ScreenRelay17LyntraRelayUplink",
+          "_TtC11ScreenRelay17LyntraFrameScaler",
+          "_TtC11ScreenRelay16LyntraH264Packer"
+        ],
+        "__objc_methname": [
+          "bitrate",
+          "backlogBytes",
+          "closing",
+          "broadcastResumed",
+          "closed",
+          "nextDue",
+          "finishBroadcastWithError:",
+          "session",
+          ".cxx_destruct",
+          "broadcastPaused",
+          "broadcastFinished",
+          "dealloc",
+          "broadcastStartedWithSetupInfo:",
+          "maxEdge",
+          "connection",
+          "onSetup",
+          "height",
+          "inbox",
+          "init",
+          "initWithDomain:code:userInfo:",
+          "inputSize",
+          "isLinked",
+          "lane",
+          "mainScreen",
+          "nativeBounds",
+          "onHalt",
+          "onLost",
+          "onPacket",
+          "onUnreachable",
+          "outputHeight",
+          "outputWidth",
+          "packer",
+          "pool",
+          "probeIndex",
+          "probeTimeout",
+          "processSampleBuffer:withType:",
+          "scaler",
+          "setup",
+          "tally",
+          "unsignedCharValue",
+          "uplink",
+          "wantKeyframe",
+          "width"
+        ],
+        "__objc_methtype": [
+          "v24@0:8@16",
+          "v16@0:8",
+          "v32@0:8^{opaqueCMSampleBuffer=}16q24",
+          "@16@0:8",
+          "v8@?0",
+          "v24@?0i8I12^{opaqueCMSampleBuffer=}16"
+        ],
+        "__cstring": [
+          "com.lyntra.cartv.screenrelay",
+          "cap=%.1f acc=%.1f sent=%.1f drop=%d rate=%.1fMbps %@",
+          "backlog=%dKB %@ mem=%.1fMB",
+          "LYNTRA relay: encoder create failed %d",
+          "LYNTRA relay: %@ fps=%d",
+          "LYNTRA relay: scaler %dx%d ",
+          " %dx%d",
+          "LYNTRA relay: broadcast finished, frames sent=%d",
+          "LYNTRA relay: broadcast started",
+          "cartv-screen-relay/1",
+          "LYNTRA relay: linked on port %d",
+          "Open CarTV on the car display, then start mirroring.",
+          "LYNTRA relay: terminate ",
+          "CarTV is no longer reachable.",
+          "Mirroring ended.",
+          "LYNTRA relay: setup maxEdge=%d fps=%d"
+        ]
+      },
+      "swift_mangled": [
+        "_$s10Foundation11JSONDecoderC6decode_4fromxxm_AA4DataVtKSeRzlFTj",
+        "_$s10Foundation11JSONDecoderCACycfc",
+        "_$s10Foundation11JSONDecoderCMa",
+        "_$s10Foundation11JSONEncoderC6encodeyAA4DataVxKSERzlFTj",
+        "_$s10Foundation11JSONEncoderCACycfc",
+        "_$s10Foundation11JSONEncoderCMa",
+        "_$s10Foundation13__DataStorageC5bytes6length4copy11deallocator6offsetACSvSg_SiSbySv_SitcSgSitcfc",
+        "_$s10Foundation13__DataStorageC5bytes6lengthACSVSg_Sitcfc",
+        "_$s10Foundation13__DataStorageC6_bytesSvSgvg",
+        "_$s10Foundation13__DataStorageC6lengthACSi_tcfc",
+        "_$s10Foundation13__DataStorageC7_lengthSivg",
+        "_$s10Foundation13__DataStorageC7_offsetSivg",
+        "_$s10Foundation13__DataStorageC8capacityACSi_tcfc",
+        "_$s10Foundation13__DataStorageCMa",
+        "_$s10Foundation22_convertErrorToNSErrorySo0E0Cs0C0_pF",
+        "_$s10Foundation4DataV10LargeSliceV21ensureUniqueReferenceyyF",
+        "_$s10Foundation4DataV14RangeReferenceCMa",
+        "_$s10Foundation4DataV15_RepresentationO15replaceSubrange_4with5countySnySiG_SVSgSitF",
+        "_$s10Foundation4DataV15_RepresentationOyACSnySiGcig",
+        "_$s10Foundation4DataV15_RepresentationOys5UInt8VSicig",
+        "_$s10Foundation4DataV6appendyyACF",
+        "_$s10Foundation4DataVAA15ContiguousBytesAAWP",
+        "_$s10Foundation4DataVMn",
+        "_$s10Foundation4DataVN",
+        "_$s10Foundation5NSLogyySS_s7CVarArg_pdtF",
+        "_$s10Foundation6LocaleV7currentACvgZ",
+        "_$s10Foundation6LocaleVMa",
+        "_$sSD10FoundationE19_bridgeToObjectiveCSo12NSDictionaryCyF",
+        "_$sSD10FoundationE36_unconditionallyBridgeFromObjectiveCySDyxq_GSo12NSDictionaryCSgFZ",
+        "_$sSS10FoundationE17LocalizationValueV13stringLiteralACSS_tcfC",
+        "_$sSS10FoundationE17LocalizationValueVMa",
+        "_$sSS10FoundationE19_bridgeToObjectiveCSo8NSStringCyF",
+        "_$sSS10FoundationE36_unconditionallyBridgeFromObjectiveCySSSo8NSStringCSgFZ",
+        "_$sSS10FoundationE6format_S2Sh_s7CVarArg_pdtcfC",
+        "_$sSS10FoundationE9localized5table6bundle6locale7commentS2SAAE17LocalizationValueV_SSSgSo8NSBundleCSgAA6LocaleVs12StaticStringVSgtcfC",
+        "_$sSSs7CVarArg10FoundationMc",
+        "_$sSW10Foundation15ContiguousBytesAAWP",
+        "_$sSa10FoundationE19_bridgeToObjectiveCSo7NSArrayCyF",
+        "_$sSa10FoundationE34_conditionallyBridgeFromObjectiveC_6resultSbSo7NSArrayC_SayxGSgztFZ",
+        "_$sSayxG10Foundation15ContiguousBytesABs5UInt8VRszlMc",
+        "_$ss15CollectionOfOneVyxG10Foundation15ContiguousBytesADs5UInt8VRszlMc",
+        "_$s7Network10NWEndpointO4HostO13stringLiteralAESS_tcfC",
+        "_$s7Network10NWEndpointO4HostOMa",
+        "_$s7Network10NWEndpointO4PortV8rawValueAESgs6UInt16V_tcfC",
+        "_$s7Network10NWEndpointO4PortVMa",
+        "_$s7Network10NWEndpointO4PortVMn",
+        "_$s7Network11NWInterfaceV13InterfaceTypeO8loopbackyA2EmFWC",
+        "_$s7Network11NWInterfaceV13InterfaceTypeOMa",
+        "_$s7Network12NWConnectionC14ContentContextC14defaultMessageAEvgZ",
+        "_$s7Network12NWConnectionC14ContentContextCMa",
+        "_$s7Network12NWConnectionC14SendCompletionO16contentProcessedyAEyAA7NWErrorOSgccAEmFWC",
+        "_$s7Network12NWConnectionC14SendCompletionOMa",
+        "_$s7Network12NWConnectionC18stateUpdateHandleryAC5StateOcSgvs",
+        "_$s7Network12NWConnectionC4host4port5usingAcA10NWEndpointO4HostO_AH4PortVAA12NWParametersCtcfC",
+        "_$s7Network12NWConnectionC4send7content0D7Context10isComplete10completiony10Foundation4DataVSg_AC07ContentE0CSbAC14SendCompletionOtF",
+        "_$s7Network12NWConnectionC5StateO2eeoiySbAE_AEtFZ",
+        "_$s7Network12NWConnectionC5StateO5readyyA2EmFWC",
+        "_$s7Network12NWConnectionC5StateO6failedyAeA7NWErrorOcAEmFWC",
+        "_$s7Network12NWConnectionC5StateO7waitingyAeA7NWErrorOcAEmFWC",
+        "_$s7Network12NWConnectionC5StateO9cancelledyA2EmFWC",
+        "_$s7Network12NWConnectionC5StateOMa",
+        "_$s7Network12NWConnectionC5start5queueySo012OS_dispatch_D0C_tF",
+        "_$s7Network12NWConnectionC5stateAC5StateOvg",
+        "_$s7Network12NWConnectionC6cancelyyF",
+        "_$s7Network12NWConnectionC7receive23minimumIncompleteLength07maximumF010completionySi_Siy10Foundation4DataVSg_AC14ContentContextCSgSbAA7NWErrorOSgtctF",
+        "_$s7Network12NWConnectionCMa",
+        "_$s7Network12NWConnectionCMn",
+        "_$s7Network12NWParametersC21requiredInterfaceTypeAA11NWInterfaceV0dE0Ovs",
+        "_$s7Network12NWParametersC3tcpACvgZ",
+        "_$s7Network12NWParametersCMa",
+        "_$s7Network7NWErrorOMa",
+        "_$s7Network7NWErrorOMn",
+        "_$s7Network7NWErrorOSQAAMc",
+        "_$sSDyxq_GSEsSERzSER_rlMc",
+        "_$sSQ2eeoiySbx_xtFZTj",
+        "_$sSS4hash4intoys6HasherVz_tF",
+        "_$sSS6appendyySSF",
+        "_$sSSN",
+        "_$sSSSEsWP",
+        "_$sSSSHsWP",
+        "_$sSWN",
+        "_$sSayxGSTsMc",
+        "_$sSbN",
+        "_$sSdN",
+        "_$sSds7CVarArgsWP",
+        "_$sSiN",
+        "_$sSis23CustomStringConvertiblesWP",
+        "_$sSis7CVarArgsWP",
+        "_$ss10SetAlgebraPyxqd__ncSTRd__7ElementQyd__ACRtzlufCTj",
+        "_$ss11AnyHashableV13_rawHashValue4seedS2i_tF",
+        "_$ss11AnyHashableV2eeoiySbAB_ABtFZ",
+        "_$ss11AnyHashableVMn",
+        "_$ss11AnyHashableVN",
+        "_$ss11AnyHashableVSHsWP",
+        "_$ss11_StringGutsV4growyySiF",
+        "_$ss15CollectionOfOneVMn",
+        "_$ss18_DictionaryStorageC8allocate8capacityAByxq_GSi_tFZ",
+        "_$ss18_DictionaryStorageCMn",
+        "_$ss22KeyedDecodingContainerV6decode_6forKeyS2Sm_xtKF",
+        "_$ss22KeyedDecodingContainerV6decode_6forKeyS2im_xtKF",
+        "_$ss22KeyedDecodingContainerVMn",
+        "_$ss22KeyedEncodingContainerV6encode_6forKeyySS_xtKF",
+        "_$ss22KeyedEncodingContainerV6encode_6forKeyySi_xtKF",
+        "_$ss22KeyedEncodingContainerVMn",
+        "_$ss23CustomStringConvertibleP11descriptionSSvgTj",
+        "_$ss23_ContiguousArrayStorageCMn",
+        "_$ss27_stringCompareWithSmolCheck__9expectingSbs11_StringGutsV_ADs01_G16ComparisonResultOtF",
+        "_$ss5Int32VN",
+        "_$ss5Int32Vs7CVarArgsWP",
+        "_$ss5Int64VMn",
+        "_$ss5UInt8VMn",
+        "_$ss6HasherV5_seedABSi_tcfC",
+        "_$ss6HasherV8_combineyySuF",
+        "_$ss6HasherV9_finalizeSiyF",
+        "_$ss6UInt16VMn",
+        "_$ss6UInt16VN",
+        "_$ss6UInt16Vs7CVarArgsWP",
+        "_$ss6UInt32VN",
+        "_$ss7CVarArgMp",
+        "_$ss7DecoderP9container7keyedBys22KeyedDecodingContainerVyqd__Gqd__m_tKs9CodingKeyRd__lFTj",
+        "_$ss7EncoderP9container7keyedBys22KeyedEncodingContainerVyqd__Gqd__m_ts9CodingKeyRd__lFTj",
+        "_$ss9CodingKeyPsE11descriptionSSvg",
+        "_$ss9CodingKeyPsE16debugDescriptionSSvg",
+        "_$sypN",
+        "_$s12CoreGraphics7CGFloatVMn",
+        "_$s14CoreFoundation9_CFObjectPAAE2eeoiySbx_xtFZ",
+        "_$s14CoreFoundation9_CFObjectPAAE4hash4intoys6HasherVz_tF",
+        "_$s14CoreFoundation9_CFObjectPAAE9hashValueSivg",
+        "_$sSo6CMTimea9CoreMediaE7secondsSdvg",
+        "_$s8Dispatch0A13WorkItemFlagsVMa",
+        "_$s8Dispatch0A13WorkItemFlagsVMn",
+        "_$s8Dispatch0A13WorkItemFlagsVs10SetAlgebraAAMc",
+        "_$s8Dispatch0A3QoSV11unspecifiedACvgZ",
+        "_$s8Dispatch0A3QoSV15userInteractiveACvgZ",
+        "_$s8Dispatch0A3QoSVMa",
+        "_$s8Dispatch0A4TimeV3nowACyFZ",
+        "_$s8Dispatch0A4TimeVMa",
+        "_$s8Dispatch0A8WorkItemC5flags5blockAcA0abC5FlagsV_yyXBtcfc",
+        "_$s8Dispatch0A8WorkItemC6cancelyyFTj",
+        "_$s8Dispatch0A8WorkItemCMa",
+        "_$s8Dispatch0A8WorkItemCMn",
+        "_$s8Dispatch1poiyAA0A4TimeVAD_SdtF",
+        "_$sSo17OS_dispatch_queueC8DispatchE10AttributesVMa",
+        "_$sSo17OS_dispatch_queueC8DispatchE10AttributesVMn",
+        "_$sSo17OS_dispatch_queueC8DispatchE10AttributesVs10SetAlgebraACMc",
+        "_$sSo17OS_dispatch_queueC8DispatchE10asyncAfter8deadline3qos5flags7executeyAC0D4TimeV_AC0D3QoSVAC0D13WorkItemFlagsVyyXBtF",
+        "_$sSo17OS_dispatch_queueC8DispatchE10asyncAfter8deadline7executeyAC0D4TimeV_AC0D8WorkItemCtF",
+        "_$sSo17OS_dispatch_queueC8DispatchE20AutoreleaseFrequencyO7inherityA2EmFWC",
+        "_$sSo17OS_dispatch_queueC8DispatchE20AutoreleaseFrequencyOMa",
+        "_$sSo17OS_dispatch_queueC8DispatchE5async5group3qos5flags7executeySo0a1_b1_F0CSg_AC0D3QoSVAC0D13WorkItemFlagsVyyXBtF",
+        "_$sSo17OS_dispatch_queueC8DispatchE5label3qos10attributes20autoreleaseFrequency6targetABSS_AC0D3QoSVAbCE10AttributesVAbCE011AutoreleaseI0OABSgtcfC",
+        "_$sBOWV",
+        "_$sSQMp",
+        "_$sSQ2eeoiySbx_xtFZTq",
+        "_$sSHMp",
+        "_$sSHSQTb",
+        "_$sSH9hashValueSivgTq",
+        "_$sSH4hash4intoys6HasherVz_tFTq",
+        "_$sSH13_rawHashValue4seedS2i_tFTq",
+        "_$s14CoreFoundation9_CFObjectMp",
+        "_$s14CoreFoundation9_CFObjectPSHTb",
+        "_$sytWV",
+        "_$sSEMp",
+        "_$sSE6encode2toys7Encoder_p_tKFTq",
+        "_$sSeMp",
+        "_$sSe4fromxs7Decoder_p_tKcfCTq",
+        "_$ss23CustomStringConvertibleMp",
+        "_$ss23CustomStringConvertibleP11descriptionSSvgTq",
+        "_$ss28CustomDebugStringConvertibleMp",
+        "_$ss28CustomDebugStringConvertibleP16debugDescriptionSSvgTq",
+        "_$ss9CodingKeyMp",
+        "_$ss9CodingKeyPs28CustomDebugStringConvertibleTb",
+        "_$ss9CodingKeyPs23CustomStringConvertibleTb",
+        "_$ss9CodingKeyP11stringValueSSvgTq",
+        "_$ss9CodingKeyP11stringValuexSgSS_tcfCTq",
+        "_$ss9CodingKeyP8intValueSiSgvgTq",
+        "_$ss9CodingKeyP8intValuexSgSi_tcfCTq",
+        "_$sBoWV"
+      ]
+    }
+  ]
+}

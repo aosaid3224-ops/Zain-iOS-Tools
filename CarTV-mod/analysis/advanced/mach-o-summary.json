@@ -1,0 +1,66 @@
+[
+  {
+    "path": "CarTV",
+    "size": 3692336,
+    "sha256": "f56eedb03ab0b7e606507b8f4880b292e8d960abdde4d07bc62703505d9bfab7",
+    "mach_headers": [
+      {
+        "arch": "16777228",
+        "subarch": "0",
+        "filetype": "2",
+        "flags": "2162821"
+      }
+    ],
+    "linked_dylibs": [],
+    "loaders": [],
+    "segments": []
+  },
+  {
+    "path": "PlugIns/ScreenRelay.appex/ScreenRelay",
+    "size": 159808,
+    "sha256": "e71425cfb9b3a16c57fd6061458dd7a3cac0a957b513e56fb767be6236ea7625",
+    "mach_headers": [
+      {
+        "arch": "16777228",
+        "subarch": "0",
+        "filetype": "2",
+        "flags": "69206149"
+      }
+    ],
+    "linked_dylibs": [],
+    "loaders": [],
+    "segments": []
+  },
+  {
+    "path": "PlugIns/CastWidgetExtension.appex/CastWidgetExtension",
+    "size": 133568,
+    "sha256": "5d19bb94fd6961116a785b9aa6048f654601796395979d7e1712ce743b7e1b00",
+    "mach_headers": [
+      {
+        "arch": "16777228",
+        "subarch": "0",
+        "filetype": "2",
+        "flags": "69206149"
+      }
+    ],
+    "linked_dylibs": [],
+    "loaders": [],
+    "segments": []
+  },
+  {
+    "path": "Frameworks/MobileVLCKit.framework/MobileVLCKit",
+    "size": 36982176,
+    "sha256": "d3ba5773169ccba26eb3916abab17d7a9d56e76e9fbdd80c279db2b069b0148c",
+    "mach_headers": [
+      {
+        "arch": "16777228",
+        "subarch": "0",
+        "filetype": "6",
+        "flags": "9535621"
+      }
+    ],
+    "linked_dylibs": [],
+    "loaders": [],
+    "segments": []
+  }
+]

@@ -41,9 +41,8 @@ static NSString * const kIPAExtractorPersistedItemsKey = @"IPAExtractor.Persiste
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    self.view.backgroundColor = [UIColor colorWithRed:0.025 green:0.026 blue:0.030 alpha:1.0];
-    self.title = @"";
-    self.navigationItem.title = @"";
+    self.view.backgroundColor = [IPTheme backgroundColor];
+    // لا تضبط self.title: كان يمحو عنوان التبويب "فك الحزمة" بعد أول ضغطة عليه
     self.searchText = @"";
     self.items = [NSMutableArray array];
     [self restorePersistedItems];
@@ -172,7 +171,7 @@ static NSString * const kIPAExtractorPersistedItemsKey = @"IPAExtractor.Persiste
     UIButton *settingsBtn = [UIButton buttonWithType:UIButtonTypeSystem];
     settingsBtn.translatesAutoresizingMaskIntoConstraints = NO;
     [settingsBtn setImage:[UIImage systemImageNamed:@"gear"] forState:UIControlStateNormal];
-    settingsBtn.tintColor = [UIColor colorWithWhite:0.7 alpha:1.0];
+    settingsBtn.tintColor = [IPTheme textSecondaryColor];
     [settingsBtn addTarget:self action:@selector(settingsTapped:) forControlEvents:UIControlEventTouchUpInside];
     [self.customHeader addSubview:settingsBtn];
 
@@ -207,11 +206,11 @@ static NSString * const kIPAExtractorPersistedItemsKey = @"IPAExtractor.Persiste
     self.searchBar.translatesAutoresizingMaskIntoConstraints = NO;
     self.searchBar.placeholder = @"ابحث في حزم IPA...";
     self.searchBar.searchBarStyle = UISearchBarStyleMinimal;
-    self.searchBar.tintColor = [UIColor colorWithRed:1 green:.22 blue:.18 alpha:1];
+    self.searchBar.tintColor = [IPTheme errorColor];
     self.searchBar.semanticContentAttribute = UISemanticContentAttributeForceRightToLeft;
     self.searchBar.delegate = self;
     self.searchBar.showsCancelButton = NO;
-    self.searchBar.backgroundColor = [UIColor colorWithWhite:0.08 alpha:1.0];
+    self.searchBar.backgroundColor = [IPTheme textQuaternaryColor];
     self.searchBar.layer.cornerRadius = 14;
     self.searchBar.layer.masksToBounds = YES;
     [self.view addSubview:self.searchBar];
@@ -233,14 +232,14 @@ static NSString * const kIPAExtractorPersistedItemsKey = @"IPAExtractor.Persiste
     self.sectionTitleLabel = [[UILabel alloc] init];
     self.sectionTitleLabel.translatesAutoresizingMaskIntoConstraints = NO;
     self.sectionTitleLabel.text = @"ملفاتي";
-    self.sectionTitleLabel.textColor = [UIColor whiteColor];
+    self.sectionTitleLabel.textColor = [IPTheme textPrimaryColor];
     self.sectionTitleLabel.font = [UIFont systemFontOfSize:18 weight:UIFontWeightBold];
     self.sectionTitleLabel.textAlignment = NSTextAlignmentRight;
     [self.sectionHeaderView addSubview:self.sectionTitleLabel];
 
     self.sectionCountLabel = [[UILabel alloc] init];
     self.sectionCountLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    self.sectionCountLabel.textColor = [UIColor colorWithWhite:0.5 alpha:1.0];
+    self.sectionCountLabel.textColor = [IPTheme textSecondaryColor];
     self.sectionCountLabel.font = [UIFont systemFontOfSize:14 weight:UIFontWeightMedium];
     self.sectionCountLabel.textAlignment = NSTextAlignmentLeft;
     [self.sectionHeaderView addSubview:self.sectionCountLabel];
@@ -292,7 +291,7 @@ static NSString * const kIPAExtractorPersistedItemsKey = @"IPAExtractor.Persiste
     self.emptyLabel = [[UILabel alloc] init];
     self.emptyLabel.translatesAutoresizingMaskIntoConstraints = NO;
     self.emptyLabel.text = @"لا توجد حزم IPA مضافة\nاضغط + لاختيار ملف خارجي";
-    self.emptyLabel.textColor = [UIColor colorWithWhite:0.46 alpha:1.0];
+    self.emptyLabel.textColor = [IPTheme textTertiaryColor];
     self.emptyLabel.font = [UIFont systemFontOfSize:16.0 weight:UIFontWeightMedium];
     self.emptyLabel.textAlignment = NSTextAlignmentCenter;
     self.emptyLabel.semanticContentAttribute = UISemanticContentAttributeForceRightToLeft;
@@ -312,7 +311,7 @@ static NSString * const kIPAExtractorPersistedItemsKey = @"IPAExtractor.Persiste
     CGFloat size = 56;
     self.fabButton = [UIButton buttonWithType:UIButtonTypeSystem];
     self.fabButton.translatesAutoresizingMaskIntoConstraints = NO;
-    self.fabButton.backgroundColor = [UIColor colorWithRed:0.25 green:0.55 blue:1.0 alpha:1.0];
+    self.fabButton.backgroundColor = [IPTheme accentColor];
     self.fabButton.tintColor = UIColor.whiteColor;
     self.fabButton.layer.cornerRadius = size / 2.0;
     self.fabButton.layer.shadowColor = [UIColor blackColor].CGColor;
@@ -699,28 +698,111 @@ static NSString * const kIPAExtractorPersistedItemsKey = @"IPAExtractor.Persiste
     [self presentViewController:confirm animated:YES completion:nil];
 }
 
+// White document, folded top-right corner, blue "IPA" — matches the reference
+// asset style: light page, crisp fold shadow, centered type.
 - (UIImage *)ipaFileIcon {
     CGSize size = CGSizeMake(52, 52);
     UIGraphicsImageRenderer *renderer = [[UIGraphicsImageRenderer alloc] initWithSize:size];
     return [renderer imageWithActions:^(UIGraphicsImageRendererContext *context) {
-        // Background rounded rect
-        CGRect bgRect = CGRectMake(2, 2, 48, 48);
-        UIBezierPath *bgPath = [UIBezierPath bezierPathWithRoundedRect:bgRect cornerRadius:10];
-        [[UIColor colorWithRed:0.15 green:0.25 blue:0.40 alpha:1.0] setFill];
-        [bgPath fill];
-        // White page icon
-        CGRect pageRect = CGRectMake(16, 10, 20, 26);
-        UIBezierPath *pagePath = [UIBezierPath bezierPathWithRoundedRect:pageRect cornerRadius:3];
-        [[UIColor whiteColor] setFill];
-        [pagePath fill];
-        // Green badge
-        CGRect badgeRect = CGRectMake(10, 32, 32, 14);
-        UIBezierPath *badgePath = [UIBezierPath bezierPathWithRoundedRect:badgeRect cornerRadius:4];
-        [[UIColor colorWithRed:0.22 green:0.75 blue:0.48 alpha:1.0] setFill];
-        [badgePath fill];
-        // IPA text
-        NSDictionary *attrs = @{ NSFontAttributeName: [UIFont systemFontOfSize:8 weight:UIFontWeightBold], NSForegroundColorAttributeName: UIColor.whiteColor };
-        [@"IPA" drawInRect:CGRectMake(10, 34, 32, 10) withAttributes:attrs];
+        CGContextRef ctx = context.CGContext;
+
+        // Soft drop shadow under the page
+        CGContextSaveGState(ctx);
+        CGContextSetShadowWithColor(ctx, CGSizeMake(0, 1.5), 2.5, [[UIColor blackColor] colorWithAlphaComponent:0.25].CGColor);
+
+        // Page body
+        CGRect pageRect = CGRectMake(7, 3, 38, 46);
+        UIBezierPath *page = [UIBezierPath bezierPathWithRoundedRect:pageRect cornerRadius:4];
+        [[IPTheme textPrimaryColor] setFill];
+        [page fill];
+        CGContextRestoreGState(ctx);
+
+        // Folded corner (top-right) — folded-over triangle with subtle shading
+        CGPoint foldA = CGPointMake(37, 3);
+        CGPoint foldB = CGPointMake(45, 3);
+        CGPoint foldC = CGPointMake(45, 11);
+        UIBezierPath *fold = [UIBezierPath bezierPath];
+        [fold moveToPoint:foldA];
+        [fold addLineToPoint:foldB];
+        [fold addLineToPoint:foldC];
+        [fold closePath];
+        [[IPTheme accentMutedColor] setFill];
+        [fold fill];
+
+        // Fold crease line
+        UIBezierPath *crease = [UIBezierPath bezierPath];
+        [crease moveToPoint:foldA];
+        [crease addLineToPoint:foldC];
+        [[UIColor colorWithWhite:0.85 alpha:1.0] setStroke];
+        crease.lineWidth = 0.75;
+        [crease stroke];
+
+        // Blue "IPA" text
+        UIFont *font = [UIFont systemFontOfSize:15 weight:UIFontWeightBold];
+        NSDictionary *attrs = @{
+            NSFontAttributeName: font,
+            NSForegroundColorAttributeName: [UIColor colorWithRed:0.29 green:0.56 blue:0.78 alpha:1.0]
+        };
+        CGSize textSize = [@"IPA" sizeWithAttributes:attrs];
+        CGRect textRect = CGRectMake(CGRectGetMidX(pageRect) - textSize.width / 2.0,
+                                     CGRectGetMidY(pageRect) - textSize.height / 2.0 + 1,
+                                     textSize.width, textSize.height);
+        [@"IPA" drawInRect:textRect withAttributes:attrs];
+    }];
+}
+
+// Blue folder with 3×3 white grid + "IPA" — the extracted-output identity.
+- (UIImage *)extractedFolderIcon {
+    CGSize size = CGSizeMake(52, 52);
+    UIGraphicsImageRenderer *renderer = [[UIGraphicsImageRenderer alloc] initWithSize:size];
+    return [renderer imageWithActions:^(UIGraphicsImageRendererContext *context) {
+        CGContextRef ctx = context.CGContext;
+        UIColor *folderBlue = [UIColor colorWithRed:0.05 green:0.48 blue:0.95 alpha:1.0];
+
+        // Shadow
+        CGContextSaveGState(ctx);
+        CGContextSetShadowWithColor(ctx, CGSizeMake(0, 1.5), 2.5, [[UIColor blackColor] colorWithAlphaComponent:0.25].CGColor);
+
+        // Folder tab (top-left)
+        CGRect tabRect = CGRectMake(6, 7, 17, 8);
+        UIBezierPath *tab = [UIBezierPath bezierPathWithRoundedRect:tabRect
+                                                  byRoundingCorners:UIRectCornerTopLeft | UIRectCornerTopRight
+                                                        cornerRadii:CGSizeMake(3, 3)];
+        [folderBlue setFill];
+        [tab fill];
+
+        // Folder body
+        CGRect bodyRect = CGRectMake(4, 12, 44, 37);
+        UIBezierPath *body = [UIBezierPath bezierPathWithRoundedRect:bodyRect cornerRadius:5];
+        [folderBlue setFill];
+        [body fill];
+        CGContextRestoreGState(ctx);
+
+        // 3×3 grid of white rounded squares
+        CGFloat cell = 6.0, gap = 2.5;
+        CGFloat gridW = 3 * cell + 2 * gap;
+        CGFloat gridX = CGRectGetMidX(bodyRect) - gridW / 2.0;
+        CGFloat gridY = 19;
+        for (NSInteger row = 0; row < 3; row++) {
+            for (NSInteger col = 0; col < 3; col++) {
+                CGRect r = CGRectMake(gridX + col * (cell + gap), gridY + row * (cell + gap), cell, cell);
+                UIBezierPath *sq = [UIBezierPath bezierPathWithRoundedRect:r cornerRadius:1.6];
+                [[UIColor whiteColor] setFill];
+                [sq fill];
+            }
+        }
+
+        // White "IPA" under grid
+        UIFont *font = [UIFont systemFontOfSize:10 weight:UIFontWeightBold];
+        NSDictionary *attrs = @{
+            NSFontAttributeName: font,
+            NSForegroundColorAttributeName: UIColor.whiteColor
+        };
+        CGSize textSize = [@"IPA" sizeWithAttributes:attrs];
+        CGRect textRect = CGRectMake(CGRectGetMidX(bodyRect) - textSize.width / 2.0,
+                                     gridY + gridW + 3.5,
+                                     textSize.width, textSize.height);
+        [@"IPA" drawInRect:textRect withAttributes:attrs];
     }];
 }
 
@@ -858,8 +940,8 @@ static NSString * const kIPAExtractorPersistedItemsKey = @"IPAExtractor.Persiste
         title = @"المجلد المستخرج";
         subtitle = [NSString stringWithFormat:@"↳ %@ — Extracted", sourceTitle];
         meta = outputAvailable ? [NSString stringWithFormat:@"%@ • %@", outputSize, [self formattedDate:attrs[NSFileModificationDate]]] : @"الناتج غير متاح";
-        icon = [[UIImage systemImageNamed:@"folder.fill"] imageWithTintColor:[UIColor colorWithRed:0.35 green:0.58 blue:0.98 alpha:1.0]];
-        statusColor = outputAvailable ? [UIColor colorWithRed:0.25 green:0.82 blue:0.55 alpha:1.0] : [UIColor colorWithRed:0.95 green:0.63 blue:0.25 alpha:1.0];
+        icon = [self extractedFolderIcon];
+        statusColor = outputAvailable ? [IPTheme successColor] : [IPTheme errorColor];
     } else {
         BOOL extracting = [item[@"extracting"] boolValue];
         BOOL unavailable = [item[@"unavailable"] boolValue];
@@ -871,7 +953,7 @@ static NSString * const kIPAExtractorPersistedItemsKey = @"IPAExtractor.Persiste
         else if (unavailable) meta = [NSString stringWithFormat:@"غير متاح • %@", sizeText];
         else meta = [NSString stringWithFormat:@"%@ • %@ • IPA", sizeText, status];
         icon = [self ipaFileIcon];
-        statusColor = extracting ? [UIColor colorWithRed:0.28 green:0.68 blue:1.0 alpha:1.0] : (unavailable ? [UIColor colorWithRed:0.95 green:0.63 blue:0.25 alpha:1.0] : [UIColor colorWithRed:0.28 green:0.82 blue:0.56 alpha:1.0]);
+        statusColor = extracting ? [IPTheme accentColor] : (unavailable ? [IPTheme errorColor] : [IPTheme successColor]);
     }
     [cell configureWithTitle:title subtitle:subtitle meta:meta icon:icon statusColor:statusColor isChild:output];
     cell.moreButton.tag = indexPath.row;

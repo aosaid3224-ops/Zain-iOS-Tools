@@ -51,14 +51,14 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
         _titleLabel = [[UILabel alloc] init];
         _titleLabel.translatesAutoresizingMaskIntoConstraints = NO;
         _titleLabel.font = [UIFont systemFontOfSize:15 weight:UIFontWeightMedium];
-        _titleLabel.textColor = [UIColor whiteColor];
+        _titleLabel.textColor = [IPTheme textPrimaryColor];
         _titleLabel.text = title;
         [self addSubview:_titleLabel];
 
         _subtitleLabel = [[UILabel alloc] init];
         _subtitleLabel.translatesAutoresizingMaskIntoConstraints = NO;
         _subtitleLabel.font = [UIFont systemFontOfSize:12 weight:UIFontWeightRegular];
-        _subtitleLabel.textColor = [UIColor colorWithWhite:0.6 alpha:1.0];
+        _subtitleLabel.textColor = [IPTheme textSecondaryColor];
         _subtitleLabel.text = subtitle;
         [self addSubview:_subtitleLabel];
 
@@ -108,30 +108,30 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
         switch (self.phaseState) {
             case PhaseVisualStatePending:
                 self.iconLabel.text = @"\u25cb";
-                self.iconLabel.textColor = [UIColor colorWithWhite:0.4 alpha:1.0];
-                self.titleLabel.textColor = [UIColor colorWithWhite:0.5 alpha:1.0];
-                self.subtitleLabel.textColor = [UIColor colorWithWhite:0.35 alpha:1.0];
+                self.iconLabel.textColor = [IPTheme textTertiaryColor];
+                self.titleLabel.textColor = [IPTheme textSecondaryColor];
+                self.subtitleLabel.textColor = [IPTheme textTertiaryColor];
                 self.pulsingDot.hidden = YES;
                 break;
             case PhaseVisualStateActive:
                 self.iconLabel.text = @"\u25c9";
-                self.iconLabel.textColor = [UIColor colorWithRed:0.2 green:0.6 blue:1.0 alpha:1.0];
-                self.titleLabel.textColor = [UIColor whiteColor];
-                self.subtitleLabel.textColor = [UIColor colorWithWhite:0.7 alpha:1.0];
+                self.iconLabel.textColor = [IPTheme accentColor];
+                self.titleLabel.textColor = [IPTheme textPrimaryColor];
+                self.subtitleLabel.textColor = [IPTheme textSecondaryColor];
                 self.pulsingDot.hidden = NO;
                 break;
             case PhaseVisualStateSuccess:
                 self.iconLabel.text = @"\u2713";
-                self.iconLabel.textColor = [UIColor colorWithRed:0.3 green:0.85 blue:0.4 alpha:1.0];
-                self.titleLabel.textColor = [UIColor whiteColor];
-                self.subtitleLabel.textColor = [UIColor colorWithWhite:0.6 alpha:1.0];
+                self.iconLabel.textColor = [IPTheme successColor];
+                self.titleLabel.textColor = [IPTheme textPrimaryColor];
+                self.subtitleLabel.textColor = [IPTheme textSecondaryColor];
                 self.pulsingDot.hidden = YES;
                 break;
             case PhaseVisualStateFailed:
                 self.iconLabel.text = @"\u2717";
-                self.iconLabel.textColor = [UIColor colorWithRed:0.9 green:0.3 blue:0.3 alpha:1.0];
-                self.titleLabel.textColor = [UIColor colorWithRed:0.9 green:0.3 blue:0.3 alpha:1.0];
-                self.subtitleLabel.textColor = [UIColor colorWithRed:0.7 green:0.3 blue:0.3 alpha:1.0];
+                self.iconLabel.textColor = [IPTheme errorColor];
+                self.titleLabel.textColor = [IPTheme errorColor];
+                self.subtitleLabel.textColor = [IPTheme errorColor];
                 self.pulsingDot.hidden = YES;
                 break;
         }
@@ -254,13 +254,13 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
         logTitle.translatesAutoresizingMaskIntoConstraints = NO;
         logTitle.text = @"\u0627\u0644\u0644\u0648\u063a \u0627\u0644\u062e\u0627\u0645 (Raw Log)";
         logTitle.font = [UIFont systemFontOfSize:14 weight:UIFontWeightBold];
-        logTitle.textColor = [UIColor whiteColor];
+        logTitle.textColor = [IPTheme textPrimaryColor];
         [self.logContainer addSubview:logTitle];
 
         UIButton *copyLogBtn = [UIButton buttonWithType:UIButtonTypeSystem];
         copyLogBtn.translatesAutoresizingMaskIntoConstraints = NO;
         [copyLogBtn setTitle:@"نسخ الكل" forState:UIControlStateNormal];
-        [copyLogBtn setTitleColor:[UIColor colorWithRed:0.35 green:0.75 blue:1.0 alpha:1.0] forState:UIControlStateNormal];
+        [copyLogBtn setTitleColor:[IPTheme accentColor] forState:UIControlStateNormal];
         copyLogBtn.titleLabel.font = [UIFont systemFontOfSize:13 weight:UIFontWeightSemibold];
         [copyLogBtn addTarget:self action:@selector(copyRawLog:) forControlEvents:UIControlEventTouchUpInside];
         [self.logContainer addSubview:copyLogBtn];
@@ -268,14 +268,14 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
         UIButton *closeBtn = [UIButton buttonWithType:UIButtonTypeSystem];
         closeBtn.translatesAutoresizingMaskIntoConstraints = NO;
         [closeBtn setTitle:@"\u0625\u063a\u0644\u0627\u0642" forState:UIControlStateNormal];
-        [closeBtn setTitleColor:[UIColor colorWithRed:0.9 green:0.3 blue:0.3 alpha:1.0] forState:UIControlStateNormal];
+        [closeBtn setTitleColor:[IPTheme errorColor] forState:UIControlStateNormal];
         [closeBtn addTarget:self action:@selector(hideRawLog) forControlEvents:UIControlEventTouchUpInside];
         [self.logContainer addSubview:closeBtn];
 
         self.logTextView = [[UITextView alloc] init];
         self.logTextView.translatesAutoresizingMaskIntoConstraints = NO;
         self.logTextView.backgroundColor = [IPTheme secondaryCardColor];
-        self.logTextView.textColor = [UIColor colorWithRed:0.3 green:0.9 blue:0.4 alpha:1.0];
+        self.logTextView.textColor = [IPTheme successColor];
         self.logTextView.font = [UIFont fontWithName:@"Courier" size:10] ?: [UIFont systemFontOfSize:10];
         self.logTextView.editable = NO;
         self.logTextView.selectable = YES;
@@ -365,29 +365,29 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
 }
 
 - (void)operationRecordAdded:(NSNotification *)note {
-    if (self.isDone) return;
     OperationRecord *record = note.object;
-    if (!record || ![record.transactionID isEqualToString:self.currentTxnID]) return;
-
-    [self appendLog:[NSString stringWithFormat:@"[BEGIN] %@ | %@ | target:%@ | input:%@",
-                     record.recordID, record.operation, record.target, record.input ?: @"-"]];
+    if (![record isKindOfClass:[OperationRecord class]]) return;
+    if (![record.transactionID isEqualToString:self.currentTxnID]) return;
 
     NSInteger uiPhase = [self uiPhaseIndexForOperationPhase:record.phase];
-    if (uiPhase < 0) return;
+    if (uiPhase < 0 || uiPhase >= (NSInteger)self.phaseViews.count) return;
 
     dispatch_async(dispatch_get_main_queue(), ^{
+        // Progressive in-order: the log has moved past every earlier phase, so
+        // mark them success and activate exactly this one. Live, beat-by-beat.
         for (NSInteger i = 0; i < uiPhase; i++) {
             if (self.phaseViews[i].phaseState == PhaseVisualStatePending) {
                 [self.phaseViews[i] setState:PhaseVisualStateSuccess animated:YES];
             }
         }
-        [self.phaseViews[uiPhase] setState:PhaseVisualStateActive animated:YES];
+        if (self.phaseViews[uiPhase].phaseState == PhaseVisualStatePending) {
+            [self.phaseViews[uiPhase] setState:PhaseVisualStateActive animated:YES];
+        }
         self.currentPhaseIndex = uiPhase;
         float progress = (float)(uiPhase + 1) / (float)self.phaseViews.count;
         [self.progressView setProgress:progress animated:YES];
     });
 }
-
 - (BOOL)isCriticalLiveEvent:(LiveOperationEvent *)event {
     if (event.finalEvent) return YES;
     NSString *stage = event.stage.uppercaseString ?: @"";
@@ -439,8 +439,8 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
     NSString *line = [NSString stringWithFormat:@"%@ #%03lu %@ %@ | %@ | created:%@ rendered:%@ lag:%.1fms | target:%@ | exit:%d%@\n",
                        rendered, (unsigned long)event.sequence, event.stage ?: @"UNKNOWN", event.status ?: @"PENDING",
                        event.message ?: @"", created, rendered, event.renderLagMs, event.target.length ? event.target : @"-", event.exitStatus, note ?: @""];
-    UIColor *color = [event.status isEqualToString:@"FAILED"] ? [UIColor colorWithRed:1.0 green:0.3 blue:0.3 alpha:1.0] :
-                     ([event.status isEqualToString:@"SUCCESS"] ? [UIColor colorWithRed:0.35 green:0.95 blue:0.6 alpha:1.0] : [UIColor colorWithRed:0.45 green:0.78 blue:1.0 alpha:1.0]);
+    UIColor *color = [event.status isEqualToString:@"FAILED"] ? [IPTheme errorColor] :
+                     ([event.status isEqualToString:@"SUCCESS"] ? [IPTheme successColor] : [IPTheme accentColor]);
     NSDictionary *attributes = @{NSFontAttributeName: self.liveOutputView.font ?: [UIFont systemFontOfSize:10], NSForegroundColorAttributeName: color};
     [self.liveOutputView.textStorage appendAttributedString:[[NSAttributedString alloc] initWithString:line attributes:attributes]];
     NSUInteger maxLength = 120000;
@@ -467,7 +467,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
         if (self.liveFinalRendered) { self.lateLiveEventCount += 1; continue; }
         [self appendRenderedLiveLineForEvent:event note:nil];
         self.lastRenderedLiveSequence = event.sequence;
-        UIColor *color = [event.status isEqualToString:@"FAILED"] ? [UIColor colorWithRed:1.0 green:0.3 blue:0.3 alpha:1.0] : [UIColor colorWithRed:0.35 green:0.9 blue:0.55 alpha:1.0];
+        UIColor *color = [event.status isEqualToString:@"FAILED"] ? [IPTheme errorColor] : [IPTheme successColor];
         self.liveStateLabel.textColor = color;
         self.liveStateLabel.text = event.finalEvent ? [NSString stringWithFormat:@"الحالة النهائية: %@ #%03lu — انتهى البث", event.status ?: @"FINAL", (unsigned long)event.sequence] : [NSString stringWithFormat:@"الحالة الحية: %@ — %@ #%03lu", event.stage ?: @"UNKNOWN", event.status ?: @"PENDING", (unsigned long)event.sequence];
         if (event.finalEvent) self.liveFinalRendered = YES;
@@ -481,51 +481,34 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
 }
 
 - (void)operationRecordUpdated:(NSNotification *)note {
-    if (self.isDone) return;
     OperationRecord *record = note.object;
-    if (!record || ![record.transactionID isEqualToString:self.currentTxnID]) return;
-
-    NSString *logLine = [NSString stringWithFormat:@"[END] %@ | result:%d | exit:%d | verified:%@ | out:%@ | err:%@",
-                         record.recordID,
-                         (int)record.result,
-                         record.exitCode,
-                         record.verified ? @"YES" : @"NO",
-                         record.rawOutput.length > 0 ? @"(see below)" : @"-",
-                         record.rawError ?: @"-"];
-    [self appendLog:logLine];
-
-    // Show diagnostics report / rawOutput clearly in raw log
-    if (record.rawOutput.length > 0) {
-        [self appendLog:@"═══════════════════════════════════════════════════════════════"];
-        [self appendLog:record.rawOutput];
-        [self appendLog:@"═══════════════════════════════════════════════════════════════"];
-    }
-    if (record.context.count > 0) {
-        NSArray *keys = [[record.context allKeys] sortedArrayUsingSelector:@selector(compare:)];
-        NSMutableString *contextText = [NSMutableString stringWithString:@"[CONTEXT]"];
-        for (NSString *key in keys) {
-            [contextText appendFormat:@" %@=%@;", key, record.context[key]];
-        }
-        [self appendLog:contextText];
-    }
+    if (![record isKindOfClass:[OperationRecord class]]) return;
+    if (![record.transactionID isEqualToString:self.currentTxnID]) return;
 
     NSInteger uiPhase = [self uiPhaseIndexForOperationPhase:record.phase];
-    if (uiPhase < 0) return;
+    if (uiPhase < 0 || uiPhase >= (NSInteger)self.phaseViews.count) return;
 
     dispatch_async(dispatch_get_main_queue(), ^{
         if (record.result == OperationResultSuccess ||
             record.result == OperationResultPartial ||
             record.result == OperationResultSkipped) {
-            [self.phaseViews[uiPhase] setState:PhaseVisualStateSuccess animated:YES];
+            if (self.phaseViews[uiPhase].phaseState != PhaseVisualStateSuccess) {
+                [self.phaseViews[uiPhase] setState:PhaseVisualStateSuccess animated:YES];
+            }
+            NSInteger next = uiPhase + 1;
+            if (next < (NSInteger)self.phaseViews.count &&
+                self.phaseViews[next].phaseState == PhaseVisualStatePending) {
+                [self.phaseViews[next] setState:PhaseVisualStateActive animated:YES];
+                self.currentPhaseIndex = next;
+            }
+            float progress = (float)(self.currentPhaseIndex + 1) / (float)self.phaseViews.count;
+            [self.progressView setProgress:progress animated:YES];
         } else if (record.result == OperationResultFailed) {
             [self.phaseViews[uiPhase] setState:PhaseVisualStateFailed animated:YES];
             self.hasFailed = YES;
         }
     });
 }
-
-#pragma mark - UI Setup
-
 - (void)setupUI {
     _scrollView = [[UIScrollView alloc] init];
     _scrollView.translatesAutoresizingMaskIntoConstraints = NO;
@@ -538,7 +521,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
     _headerLabel = [[UILabel alloc] init];
     _headerLabel.translatesAutoresizingMaskIntoConstraints = NO;
     _headerLabel.font = [UIFont systemFontOfSize:22 weight:UIFontWeightBold];
-    _headerLabel.textColor = [UIColor whiteColor];
+    _headerLabel.textColor = [IPTheme textPrimaryColor];
     _headerLabel.textAlignment = NSTextAlignmentCenter;
     _headerLabel.text = @"\u062c\u0627\u0631\u064d \u0627\u0644\u062a\u062b\u0628\u064a\u062a...";
     [_containerView addSubview:_headerLabel];
@@ -546,15 +529,15 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
     _appNameLabel = [[UILabel alloc] init];
     _appNameLabel.translatesAutoresizingMaskIntoConstraints = NO;
     _appNameLabel.font = [UIFont systemFontOfSize:14 weight:UIFontWeightMedium];
-    _appNameLabel.textColor = [UIColor colorWithWhite:0.6 alpha:1.0];
+    _appNameLabel.textColor = [IPTheme textSecondaryColor];
     _appNameLabel.textAlignment = NSTextAlignmentCenter;
     _appNameLabel.text = [self.ipaPath lastPathComponent] ?: @"";
     [_containerView addSubview:_appNameLabel];
 
     _progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
     _progressView.translatesAutoresizingMaskIntoConstraints = NO;
-    _progressView.progressTintColor = [UIColor colorWithRed:0.2 green:0.6 blue:1.0 alpha:1.0];
-    _progressView.trackTintColor = [UIColor colorWithWhite:0.15 alpha:1.0];
+    _progressView.progressTintColor = [IPTheme accentColor];
+    _progressView.trackTintColor = [IPTheme textPrimaryColor];
     _progressView.layer.cornerRadius = 2;
     _progressView.clipsToBounds = YES;
     [_containerView addSubview:_progressView];
@@ -571,21 +554,21 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
     liveTitle.translatesAutoresizingMaskIntoConstraints = NO;
     liveTitle.text = @"الإخراج الحي للعملية";
     liveTitle.font = [UIFont systemFontOfSize:13 weight:UIFontWeightSemibold];
-    liveTitle.textColor = [UIColor colorWithWhite:0.75 alpha:1.0];
+    liveTitle.textColor = [IPTheme textSecondaryColor];
     [_liveOutputCard addSubview:liveTitle];
 
     _liveStateLabel = [[UILabel alloc] init];
     _liveStateLabel.translatesAutoresizingMaskIntoConstraints = NO;
     _liveStateLabel.text = @"الحالة الحية: بانتظار البدء";
     _liveStateLabel.font = [UIFont systemFontOfSize:12 weight:UIFontWeightMedium];
-    _liveStateLabel.textColor = [UIColor colorWithWhite:0.55 alpha:1.0];
+    _liveStateLabel.textColor = [IPTheme textSecondaryColor];
     _liveStateLabel.numberOfLines = 2;
     [_liveOutputCard addSubview:_liveStateLabel];
 
     _liveOutputView = [[UITextView alloc] init];
     _liveOutputView.translatesAutoresizingMaskIntoConstraints = NO;
     _liveOutputView.backgroundColor = [IPTheme secondaryCardColor];
-    _liveOutputView.textColor = [UIColor colorWithRed:0.45 green:0.95 blue:0.6 alpha:1.0];
+    _liveOutputView.textColor = [IPTheme successColor];
     _liveOutputView.font = [UIFont fontWithName:@"Menlo" size:10] ?: [UIFont systemFontOfSize:10];
     _liveOutputView.editable = NO;
     _liveOutputView.selectable = YES;
@@ -696,7 +679,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
     }
 
     self.headerLabel.text = @"\u062c\u0627\u0631\u064d \u0627\u0644\u062a\u062b\u0628\u064a\u062a...";
-    self.headerLabel.textColor = [UIColor whiteColor];
+    self.headerLabel.textColor = [IPTheme textPrimaryColor];
     self.appNameLabel.text = [self.ipaPath lastPathComponent] ?: @"";
     [self.progressView setProgress:0.0 animated:NO];
 
@@ -719,7 +702,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
     self.lastRenderedLiveSequence = 0;
     self.liveOutputView.text = @"";
     self.liveStateLabel.text = @"الحالة الحية: BEGIN — انتظار أول حدث";
-    self.liveStateLabel.textColor = [UIColor colorWithRed:0.35 green:0.75 blue:1.0 alpha:1.0];
+    self.liveStateLabel.textColor = [IPTheme accentColor];
     self.liveStream = [[LiveOperationStream alloc] init];
     __weak typeof(self) weakLiveSelf = self;
     [self.liveStream startForTransactionID:self.currentTxnID handler:^(LiveOperationEvent *event) {
@@ -743,14 +726,33 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
     }];
 }
 
+// Sequential, staggered success — each phase lights up a beat after the one
+// before it, so completion reads as ordered progress (Zebra precision), never
+// a simultaneous wall of checkmarks.
+- (void)cascadePhasesToSuccessWithCompletion:(void (^)(void))done {
+    NSMutableArray<InstallPhaseView *> *remaining = [NSMutableArray array];
+    for (InstallPhaseView *pv in self.phaseViews) {
+        if (pv.phaseState == PhaseVisualStateActive || pv.phaseState == PhaseVisualStatePending) {
+            [remaining addObject:pv];
+        }
+    }
+    NSTimeInterval step = 0.16;
+    [remaining enumerateObjectsUsingBlock:^(InstallPhaseView *pv, NSUInteger idx, BOOL *stop) {
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(idx * step * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            [pv setState:PhaseVisualStateSuccess animated:YES];
+            float progress = (float)([self.phaseViews indexOfObject:pv] + 1) / (float)self.phaseViews.count;
+            [self.progressView setProgress:progress animated:YES];
+            if (idx == remaining.count - 1 && done) {
+                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.2 * NSEC_PER_SEC)), dispatch_get_main_queue(), done);
+            }
+        });
+    }];
+    if (remaining.count == 0 && done) done();
+}
+
 - (void)handleCompletionSuccess:(InstallationResult *)result {
     dispatch_async(dispatch_get_main_queue(), ^{
-        for (InstallPhaseView *pv in self.phaseViews) {
-            if (pv.phaseState == PhaseVisualStateActive || pv.phaseState == PhaseVisualStatePending) {
-                [pv setState:PhaseVisualStateSuccess animated:YES];
-            }
-        }
-        [self.progressView setProgress:1.0 animated:YES];
+        [self cascadePhasesToSuccessWithCompletion:^{}];
         self.headerLabel.text = @"\u0627\u0643\u062a\u0645\u0644 \u0627\u0644\u062a\u062b\u0628\u064a\u062a \u2713";
         if (self.dismissOnDuplicateSuccess) {
             // Duplicate owns this progress modal. Close the passive stream and
@@ -778,7 +780,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
             [self.phaseViews[failIdx] setState:PhaseVisualStateFailed animated:YES];
         }
         self.headerLabel.text = @"\u0641\u0634\u0644 \u0627\u0644\u062a\u062b\u0628\u064a\u062a \u2717";
-        self.headerLabel.textColor = [UIColor colorWithRed:0.9 green:0.3 blue:0.3 alpha:1.0];
+        self.headerLabel.textColor = [IPTheme errorColor];
         [self showReportCard:result success:NO];
     });
 }
@@ -808,13 +810,13 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
     statusLabel.textAlignment = NSTextAlignmentCenter;
     statusLabel.text = success ? @"\u2713 \u062a\u0645 \u0627\u0644\u062a\u062b\u0628\u064a\u062a \u0628\u0646\u062c\u0627\u062d" : @"\u2717 \u0641\u0634\u0644 \u0627\u0644\u062a\u062b\u0628\u064a\u062a";
     statusLabel.textColor = success
-        ? [UIColor colorWithRed:0.3 green:0.85 blue:0.4 alpha:1.0]
-        : [UIColor colorWithRed:0.9 green:0.3 blue:0.3 alpha:1.0];
+        ? [IPTheme successColor]
+        : [IPTheme errorColor];
     [stack addArrangedSubview:statusLabel];
 
     UIView *divider = [[UIView alloc] init];
     divider.translatesAutoresizingMaskIntoConstraints = NO;
-    divider.backgroundColor = [UIColor colorWithWhite:0.2 alpha:1.0];
+    divider.backgroundColor = [IPTheme textPrimaryColor];
     [divider.heightAnchor constraintEqualToConstant:1].active = YES;
     [stack addArrangedSubview:divider];
 
@@ -846,7 +848,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
         [self addSectionTitle:@"\u062a\u0641\u0627\u0635\u064a\u0644 \u0627\u0644\u062e\u0637\u0623" toStack:stack];
         UILabel *errLabel = [[UILabel alloc] init];
         errLabel.font = [UIFont systemFontOfSize:12 weight:UIFontWeightRegular];
-        errLabel.textColor = [UIColor colorWithRed:0.8 green:0.4 blue:0.4 alpha:1.0];
+        errLabel.textColor = [IPTheme errorColor];
         errLabel.text = result.message;
         errLabel.numberOfLines = 0;
         errLabel.textAlignment = NSTextAlignmentNatural;
@@ -856,7 +858,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
         copyErrorButton.translatesAutoresizingMaskIntoConstraints = NO;
         [copyErrorButton setTitle:@"نسخ تفاصيل الخطأ" forState:UIControlStateNormal];
         copyErrorButton.titleLabel.font = [UIFont systemFontOfSize:14 weight:UIFontWeightSemibold];
-        [copyErrorButton setTitleColor:[UIColor colorWithRed:0.35 green:0.75 blue:1.0 alpha:1.0] forState:UIControlStateNormal];
+        [copyErrorButton setTitleColor:[IPTheme accentColor] forState:UIControlStateNormal];
         copyErrorButton.backgroundColor = [IPTheme secondaryCardColor];
         copyErrorButton.layer.cornerRadius = 8;
         [copyErrorButton addTarget:self action:@selector(copyFailureDetails:) forControlEvents:UIControlEventTouchUpInside];
@@ -873,7 +875,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
     logBtn.translatesAutoresizingMaskIntoConstraints = NO;
     [logBtn setTitle:@"\u0639\u0631\u0636 \u0627\u0644\u0644\u0648\u063a \u0627\u0644\u062e\u0627\u0645 (Raw Log)" forState:UIControlStateNormal];
     logBtn.titleLabel.font = [UIFont systemFontOfSize:14 weight:UIFontWeightMedium];
-    [logBtn setTitleColor:[UIColor colorWithRed:0.5 green:0.7 blue:1.0 alpha:1.0] forState:UIControlStateNormal];
+    [logBtn setTitleColor:[IPTheme accentColor] forState:UIControlStateNormal];
     logBtn.backgroundColor = [IPTheme secondaryCardColor];
     logBtn.layer.cornerRadius = 8;
     [logBtn addTarget:self action:@selector(showRawLog) forControlEvents:UIControlEventTouchUpInside];
@@ -891,7 +893,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
         [retryBtn setTitle:@"إعادة المحاولة" forState:UIControlStateNormal];
         retryBtn.titleLabel.font = [UIFont systemFontOfSize:16 weight:UIFontWeightSemibold];
         retryBtn.backgroundColor = [IPTheme accentColor];
-        [retryBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+        [retryBtn setTitleColor:[IPTheme textPrimaryColor] forState:UIControlStateNormal];
         retryBtn.layer.cornerRadius = 12;
         [retryBtn addTarget:self action:@selector(retryTapped:) forControlEvents:UIControlEventTouchUpInside];
         [retryBtn.heightAnchor constraintEqualToConstant:46].active = YES;
@@ -907,9 +909,9 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
     [doneBtn setTitle:@"\u062a\u0645" forState:UIControlStateNormal];
     doneBtn.titleLabel.font = [UIFont systemFontOfSize:17 weight:UIFontWeightSemibold];
     doneBtn.backgroundColor = success
-        ? [UIColor colorWithRed:0.2 green:0.5 blue:0.9 alpha:1.0]
-        : [UIColor colorWithRed:0.6 green:0.2 blue:0.2 alpha:1.0];
-    [doneBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+        ? [IPTheme accentColor]
+        : [IPTheme errorColor];
+    [doneBtn setTitleColor:[IPTheme textPrimaryColor] forState:UIControlStateNormal];
     doneBtn.layer.cornerRadius = 12;
     [doneBtn addTarget:self action:@selector(doneTapped:) forControlEvents:UIControlEventTouchUpInside];
     [doneBtn.heightAnchor constraintEqualToConstant:48].active = YES;
@@ -943,7 +945,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
 - (void)addSectionTitle:(NSString *)title toStack:(UIStackView *)stack {
     UILabel *label = [[UILabel alloc] init];
     label.font = [UIFont systemFontOfSize:12 weight:UIFontWeightBold];
-    label.textColor = [UIColor colorWithWhite:0.55 alpha:1.0];
+    label.textColor = [IPTheme textSecondaryColor];
     label.text = title;
     [stack addArrangedSubview:label];
 }
@@ -951,7 +953,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
 - (void)addItem:(NSString *)text toStack:(UIStackView *)stack {
     UILabel *label = [[UILabel alloc] init];
     label.font = [UIFont systemFontOfSize:13 weight:UIFontWeightRegular];
-    label.textColor = [UIColor colorWithWhite:0.85 alpha:1.0];
+    label.textColor = [IPTheme textPrimaryColor];
     label.text = text;
     label.numberOfLines = 0;
     [stack addArrangedSubview:label];
@@ -960,8 +962,89 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
 - (void)showFinalState:(BOOL)success message:(NSString *)message {
     self.headerLabel.text = message;
     self.headerLabel.textColor = success
-        ? [UIColor colorWithRed:0.3 green:0.85 blue:0.4 alpha:1.0]
-        : [UIColor colorWithRed:0.9 green:0.3 blue:0.3 alpha:1.0];
+        ? [IPTheme successColor]
+        : [IPTheme errorColor];
+
+    if (success) {
+        [self presentCompletionMoment];
+    } else {
+        // Failure — quiet, no gimmicks. The header color carries the meaning.
+        [UIView animateWithDuration:[IPTheme durationStandard] animations:^{
+            self.progressView.progressTintColor = [IPTheme errorColor];
+            [self.progressView setProgress:1.0 animated:YES];
+        }];
+    }
+}
+
+// Zebra-precision completion: the progress fills, a checkmark ring draws
+// itself, and a single soft pulse confirms. No confetti, no noise.
+- (void)presentCompletionMoment {
+    [self.progressView setProgress:1.0 animated:YES];
+
+    CGFloat size = 88.0;
+    UIView *overlay = [[UIView alloc] initWithFrame:CGRectMake(0, 0, size, size)];
+    overlay.translatesAutoresizingMaskIntoConstraints = NO;
+    overlay.backgroundColor = UIColor.clearColor;
+    [self.containerView addSubview:overlay];
+
+    CAShapeLayer *ring = [CAShapeLayer layer];
+    CGFloat inset = 6.0;
+    ring.path = [UIBezierPath bezierPathWithOvalInRect:CGRectMake(inset, inset, size - inset * 2, size - inset * 2)].CGPath;
+    ring.fillColor = UIColor.clearColor.CGColor;
+    ring.strokeColor = [IPTheme successColor].CGColor;
+    ring.lineWidth = 3.5;
+    ring.lineCap = kCALineCapRound;
+    [overlay.layer addSublayer:ring];
+
+    CAShapeLayer *check = [CAShapeLayer layer];
+    UIBezierPath *cp = [UIBezierPath bezierPath];
+    [cp moveToPoint:CGPointMake(size * 0.32, size * 0.52)];
+    [cp addLineToPoint:CGPointMake(size * 0.45, size * 0.65)];
+    [cp addLineToPoint:CGPointMake(size * 0.70, size * 0.38)];
+    check.path = cp.CGPath;
+    check.fillColor = UIColor.clearColor.CGColor;
+    check.strokeColor = [IPTheme successColor].CGColor;
+    check.lineWidth = 4.0;
+    check.lineCap = kCALineCapRound;
+    check.lineJoin = kCALineJoinRound;
+    [overlay.layer addSublayer:check];
+
+    [NSLayoutConstraint activateConstraints:@[
+        [overlay.centerXAnchor constraintEqualToAnchor:self.containerView.centerXAnchor],
+        [overlay.topAnchor constraintEqualToAnchor:self.appNameLabel.bottomAnchor constant:24],
+        [overlay.widthAnchor constraintEqualToConstant:size],
+        [overlay.heightAnchor constraintEqualToConstant:size],
+    ]];
+
+    // Animate ring stroke draw
+    CABasicAnimation *ringDraw = [CABasicAnimation animationWithKeyPath:@"strokeEnd"];
+    ringDraw.fromValue = @0.0; ringDraw.toValue = @1.0;
+    ringDraw.duration = [IPTheme durationEmphasis];
+    ringDraw.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseOut];
+    ring.strokeEnd = 1.0;
+    [ring addAnimation:ringDraw forKey:@"ring"];
+
+    // Animate check draw (slightly delayed)
+    check.strokeEnd = 0.0;
+    CABasicAnimation *checkDraw = [CABasicAnimation animationWithKeyPath:@"strokeEnd"];
+    checkDraw.fromValue = @0.0; checkDraw.toValue = @1.0;
+    checkDraw.beginTime = CACurrentMediaTime() + 0.28;
+    checkDraw.duration = 0.3;
+    checkDraw.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseOut];
+    check.strokeEnd = 1.0;
+    [check addAnimation:checkDraw forKey:@"check"];
+
+    // Single soft pulse on the whole overlay
+    overlay.transform = CGAffineTransformMakeScale(0.82, 0.82);
+    overlay.alpha = 0;
+    [UIView animateWithDuration:0.22 delay:0.0 options:[IPTheme easing] animations:^{
+        overlay.alpha = 1;
+        overlay.transform = CGAffineTransformMakeScale(1.04, 1.04);
+    } completion:^(BOOL done) {
+        [UIView animateWithDuration:0.14 delay:0.0 options:[IPTheme easing] animations:^{
+            overlay.transform = CGAffineTransformIdentity;
+        } completion:nil];
+    }];
 }
 
 #pragma mark - Actions
@@ -988,14 +1071,14 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
     NSRange full = NSMakeRange(0, text.length);
     UIFont *font = [UIFont fontWithName:@"Courier" size:10] ?: [UIFont systemFontOfSize:10];
     [attr addAttribute:NSFontAttributeName value:font range:full];
-    [attr addAttribute:NSForegroundColorAttributeName value:[UIColor colorWithRed:0.3 green:0.9 blue:0.4 alpha:1.0] range:full];
+    [attr addAttribute:NSForegroundColorAttributeName value:[IPTheme successColor] range:full];
 
     NSArray *redKeywords = @[@"❌", @"MISSING", @"FAILED", @"FALLBACK", @"ERROR", @"CRASH", @"incomplete", @"application-identifier MISSING", @"team-identifier MISSING", @"Deep copy MISSING", @"hasAppID=NO", @"hasTeamID=NO"];
     for (NSString *word in redKeywords) {
         NSRange searchRange = NSMakeRange(0, text.length);
         NSRange found = [text rangeOfString:word options:0 range:searchRange];
         while (found.location != NSNotFound) {
-            [attr addAttribute:NSForegroundColorAttributeName value:[UIColor colorWithRed:1.0 green:0.15 blue:0.15 alpha:1.0] range:found];
+            [attr addAttribute:NSForegroundColorAttributeName value:[IPTheme errorColor] range:found];
             searchRange = NSMakeRange(found.location + found.length, text.length - found.location - found.length);
             found = [text rangeOfString:word options:0 range:searchRange];
         }
@@ -1006,7 +1089,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
         NSRange searchRange = NSMakeRange(0, text.length);
         NSRange found = [text rangeOfString:word options:0 range:searchRange];
         while (found.location != NSNotFound) {
-            [attr addAttribute:NSForegroundColorAttributeName value:[UIColor colorWithRed:1.0 green:0.8 blue:0.1 alpha:1.0] range:found];
+            [attr addAttribute:NSForegroundColorAttributeName value:[IPTheme warningColor] range:found];
             searchRange = NSMakeRange(found.location + found.length, text.length - found.location - found.length);
             found = [text rangeOfString:word options:0 range:searchRange];
         }

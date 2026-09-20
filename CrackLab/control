@@ -1,0 +1,8 @@
+Package: com.cracklab.app
+Name: Crack Lab
+Version: 1.0.0
+Architecture: iphoneos-arm64
+Description: مختبر تعديل الألعاب — اكتشاف، تصنيف، وفحص
+Maintainer: Crack Lab
+Author: Crack Lab
+Section: Utilities

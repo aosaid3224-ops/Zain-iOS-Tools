@@ -1,0 +1,28 @@
+{
+  "BuildMachineOSBuild": "21H1320",
+  "CFBundleDevelopmentRegion": "en",
+  "CFBundleExecutable": "MobileVLCKit",
+  "CFBundleIdentifier": "org.videolan.mobilevlckit",
+  "CFBundleInfoDictionaryVersion": "6.0",
+  "CFBundleName": "MobileVLCKit",
+  "CFBundlePackageType": "FMWK",
+  "CFBundleShortVersionString": "1.0",
+  "CFBundleSignature": "????",
+  "CFBundleSupportedPlatforms": [
+    "iPhoneOS"
+  ],
+  "CFBundleVersion": "1",
+  "DTCompiler": "com.apple.compilers.llvm.clang.1_0",
+  "DTPlatformBuild": "19E239",
+  "DTPlatformName": "iphoneos",
+  "DTPlatformVersion": "15.4",
+  "DTSDKBuild": "19E239",
+  "DTSDKName": "iphoneos15.4",
+  "DTXcode": "1330",
+  "DTXcodeBuild": "13E113",
+  "MinimumOSVersion": "9.0",
+  "UIDeviceFamily": [
+    1,
+    2
+  ]
+}

@@ -1,0 +1,4 @@
+broadcastStartedWithSetupInfo:
+finishBroadcastWithError:
+initWithDomain:code:userInfo:
+processSampleBuffer:withType:

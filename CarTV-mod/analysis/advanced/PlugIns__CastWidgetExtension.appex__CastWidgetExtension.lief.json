@@ -1,0 +1,1757 @@
+{
+  "path": "PlugIns/CastWidgetExtension.appex/CastWidgetExtension",
+  "size": 133568,
+  "sha256": "5d19bb94fd6961116a785b9aa6048f654601796395979d7e1712ce743b7e1b00",
+  "architectures": [
+    {
+      "header": {
+        "entrypoint": "4295008236",
+        "imagebase": "4294967296",
+        "has_main": false
+      },
+      "sections": [
+        {
+          "name": "__text",
+          "size": 23620,
+          "offset": 16384,
+          "virtual_address": 4294983680
+        },
+        {
+          "name": "__stubs",
+          "size": 1140,
+          "offset": 40004,
+          "virtual_address": 4295007300
+        },
+        {
+          "name": "__const",
+          "size": 2228,
+          "offset": 41152,
+          "virtual_address": 4295008448
+        },
+        {
+          "name": "__constg_swiftt",
+          "size": 468,
+          "offset": 43380,
+          "virtual_address": 4295010676
+        },
+        {
+          "name": "__swift5_typeref",
+          "size": 3529,
+          "offset": 43848,
+          "virtual_address": 4295011144
+        },
+        {
+          "name": "__swift5_reflstr",
+          "size": 113,
+          "offset": 47377,
+          "virtual_address": 4295014673
+        },
+        {
+          "name": "__swift5_fieldmd",
+          "size": 336,
+          "offset": 47492,
+          "virtual_address": 4295014788
+        },
+        {
+          "name": "__swift5_assocty",
+          "size": 144,
+          "offset": 47828,
+          "virtual_address": 4295015124
+        },
+        {
+          "name": "__swift5_proto",
+          "size": 104,
+          "offset": 47972,
+          "virtual_address": 4295015268
+        },
+        {
+          "name": "__swift5_types",
+          "size": 36,
+          "offset": 48076,
+          "virtual_address": 4295015372
+        },
+        {
+          "name": "__swift5_capture",
+          "size": 32,
+          "offset": 48112,
+          "virtual_address": 4295015408
+        },
+        {
+          "name": "__swift5_entry",
+          "size": 8,
+          "offset": 48144,
+          "virtual_address": 4295015440
+        },
+        {
+          "name": "__unwind_info",
+          "size": 680,
+          "offset": 48152,
+          "virtual_address": 4295015448
+        },
+        {
+          "name": "__eh_frame",
+          "size": 376,
+          "offset": 48832,
+          "virtual_address": 4295016128
+        },
+        {
+          "name": "__got",
+          "size": 1256,
+          "offset": 65536,
+          "virtual_address": 4295032832
+        },
+        {
+          "name": "__const",
+          "size": 1560,
+          "offset": 66792,
+          "virtual_address": 4295034088
+        },
+        {
+          "name": "__objc_imageinfo",
+          "size": 8,
+          "offset": 68352,
+          "virtual_address": 4295035648
+        },
+        {
+          "name": "__data",
+          "size": 976,
+          "offset": 81920,
+          "virtual_address": 4295049216
+        },
+        {
+          "name": "__bss",
+          "size": 3360,
+          "offset": 0,
+          "virtual_address": 4295050192
+        }
+      ],
+      "symbols": [
+        {
+          "name": "radr://5614542",
+          "value": 90260802,
+          "size": 0,
+          "type": "TYPE.PREBOUND"
+        },
+        {
+          "name": "__mh_execute_header",
+          "value": 4294967296,
+          "size": 0,
+          "type": "TYPE.SECTION"
+        },
+        {
+          "name": "_main",
+          "value": 4295007028,
+          "size": 0,
+          "type": "TYPE.SECTION"
+        },
+        {
+          "name": "_NSExtensionMain",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "___chkstk_darwin",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__swift_FORCE_LOAD_$_swiftCoreFoundation",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__swift_FORCE_LOAD_$_swiftCoreImage",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__swift_FORCE_LOAD_$_swiftCoreLocation",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__swift_FORCE_LOAD_$_swiftDispatch",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__swift_FORCE_LOAD_$_swiftFoundation",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__swift_FORCE_LOAD_$_swiftIntents",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__swift_FORCE_LOAD_$_swiftMetal",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__swift_FORCE_LOAD_$_swiftOSLog",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__swift_FORCE_LOAD_$_swiftObjectiveC",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__swift_FORCE_LOAD_$_swiftQuartzCore",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__swift_FORCE_LOAD_$_swiftSpatial",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__swift_FORCE_LOAD_$_swiftUIKit",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__swift_FORCE_LOAD_$_swiftUniformTypeIdentifiers",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__swift_FORCE_LOAD_$_swiftXPC",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__swift_FORCE_LOAD_$_swift_Builtin_float",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__swift_FORCE_LOAD_$_swiftos",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "__swift_FORCE_LOAD_$_swiftsimd",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_allocObject",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_bridgeObjectRelease",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_bridgeObjectRetain",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_deallocObject",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_getEnumTagSinglePayloadGeneric",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_getKeyPath",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_getOpaqueTypeConformance2",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_getSingletonMetadata",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_getTypeByMangledNameInContext2",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_getTypeByMangledNameInContextInMetadataState2",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_getWitnessTable",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_initStructMetadata",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_once",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_release",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_retain",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_swift_storeEnumTagSinglePayloadGeneric",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI10EdgeInsetsV4_allAC12CoreGraphics7CGFloatV_tcfC",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI10_ShapeViewVMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI10_ShapeViewVyxq_GAA0D0AAMc",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI12ProgressViewV5value5totalACyAA05EmptyD0VAGGqd__Sg_qd__tcAGRszAGRs_SBRd__lufC",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI12ProgressViewVMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI12ProgressViewVyxq_GAA0D0AAMc",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI12_FrameLayoutV5width6height9alignmentAC12CoreGraphics7CGFloatVSg_AjA9AlignmentVtcfC",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI12_FrameLayoutVAA12ViewModifierAAWP",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI12_FrameLayoutVMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI13AnyShapeStyleVMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI13AnyShapeStyleVyACxcAA0dE0RzlufC",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI13_HStackLayoutVMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI13_VStackLayoutVMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI13_VariadicViewO4TreeVMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI14_PaddingLayoutVAA12ViewModifierAAWP",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI14_PaddingLayoutVMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI15ModifiedContentVMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI15ModifiedContentVyxq_GAA4ViewA2aERzAA0E8ModifierR_rlMc",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI16_FlexFrameLayoutV8minWidth05idealG003maxG00F6Height0hJ00iJ09alignmentAC12CoreGraphics7CGFloatVSg_A5nA9AlignmentVtcfC",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI16_FlexFrameLayoutVAA12ViewModifierAAWP",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI16_FlexFrameLayoutVMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI17EnvironmentValuesV4fontAA4FontVSgvg",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI17EnvironmentValuesV4fontAA4FontVSgvs",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI17EnvironmentValuesV4tintAA13AnyShapeStyleVSgvg",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI17EnvironmentValuesV4tintAA13AnyShapeStyleVSgvs",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI17EnvironmentValuesV9lineLimitSiSgvg",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI17EnvironmentValuesV9lineLimitSiSgvs",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI17EnvironmentValuesVMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI17VerticalAlignmentV6centerACvgZ",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI19HorizontalAlignmentV7leadingACvgZ",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI19WidgetBundleBuilderV10buildBlockyQrxAA0C0RzlFZ",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI19WidgetBundleBuilderV10buildBlockyQrxAA0C0RzlFZQOMQ",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI19_ConditionalContentVA2A4ViewRzAaDR_rlE7storageACyxq_GAC7StorageOyxq__G_tcfC",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI19_ConditionalContentVMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI19_ConditionalContentVyxq_GAA4ViewA2aERzAaER_rlMc",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI24_ForegroundStyleModifierVMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI24_ForegroundStyleModifierVyxGAA04ViewE0AAMc",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI30_EnvironmentKeyWritingModifierVMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI30_EnvironmentKeyWritingModifierVyxGAA04ViewF0AAMc",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI4EdgeO3SetV10horizontalAEvgZ",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI4EdgeO3SetV3allAEvgZ",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI4EdgeO3SetV7leadingAEvgZ",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI4EdgeO3SetV8trailingAEvgZ",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI4FontV11subheadlineACvgZ",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI4FontV6DesignOMa",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI4FontV6DesignOMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI4FontV6WeightV5lightAEvgZ",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI4FontV6system4size6weight6designAC12CoreGraphics7CGFloatV_AC6WeightVSgAC6DesignOSgtFZ",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI4FontV7captionACvgZ",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI4FontV8headlineACvgZ",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI4FontVMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI4TextV15foregroundStyleyACxAA05ShapeE0RzlF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI4TextV4fontyAcA4FontVSgF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI4TextVMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI4TextVyACxcSyRzlufC",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI4ViewPAAE05_makeC04view6inputsAA01_C7OutputsVAA11_GraphValueVyxG_AA01_C6InputsVtFZ",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI4ViewPAAE05_makeC4List4view6inputsAA01_cE7OutputsVAA11_GraphValueVyxG_AA01_cE6InputsVtFZ",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI4ViewPAAE14_viewListCount6inputsSiSgAA01_ceF6InputsV_tFZ",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI5ColorV13RGBColorSpaceO4sRGByA2EmFWC",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI5ColorV13RGBColorSpaceOMa",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI5ColorV5blackACvgZ",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI5ColorV5whiteACvgZ",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI5ColorV7opacityyACSdF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI5ColorVAA10ShapeStyleAAWP",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI5ColorVMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI5ColorVN",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI5ColorV_3red5green4blue7opacityA2C13RGBColorSpaceO_S4dtcfC",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI5ImageV10systemNameACSS_tcfC",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI5ImageVAA4ViewAAWP",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI5ImageVMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI6CircleVMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI6HStackVMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI6HStackVyxGAA4ViewAAMc",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI6SpacerVMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI6VStackVMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI6VStackVyxGAA4ViewAAMc",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI6ZStackVMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI6ZStackVyxGAA4ViewAAMc",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI9AlignmentV6centerACvgZ",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI9AlignmentV7leadingACvgZ",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI9EmptyViewVMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI9TupleViewVMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI9TupleViewVyxGAA0D0AAMc",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sxSg7SwiftUI4ViewA2bCRzlMc",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI12WidgetBundleP0C3KitE4mainyyFZ",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI4ViewP9WidgetKitE22activityBackgroundTintyQrAA5ColorVSgF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI4ViewP9WidgetKitE22activityBackgroundTintyQrAA5ColorVSgFQOMQ",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI4ViewP9WidgetKitE35activitySystemActionForegroundColoryQrAA0J0VSgF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI4ViewP9WidgetKitE35activitySystemActionForegroundColoryQrAA0J0VSgFQOMQ",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s9WidgetKit13DynamicIslandV11keylineTintyAC7SwiftUI5ColorVSgF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s9WidgetKit13DynamicIslandV8expanded14compactLeading0F8Trailing7minimalAcA0cD15ExpandedContentVyxGyc_q_ycq0_ycq1_yctc7SwiftUI4ViewRzAkLR_AkLR0_AkLR1_r2_lufC",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s9WidgetKit13DynamicIslandVMa",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s9WidgetKit19ActivityViewContextV5state12ContentStateQzvg",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s9WidgetKit19ActivityViewContextVMa",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s9WidgetKit19ActivityViewContextVMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s9WidgetKit21ActivityConfigurationV3for7content13dynamicIslandACyxGxm_qd__AA0C11ViewContextVyxGcAA07DynamicH0VAJctc7SwiftUI0I0Rd__lufC",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s9WidgetKit21ActivityConfigurationVMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s9WidgetKit21ActivityConfigurationVyxG7SwiftUI0aD0AAMc",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s9WidgetKit27DynamicIslandExpandedRegionV19_viewRepresentationQrvg",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s9WidgetKit27DynamicIslandExpandedRegionV19_viewRepresentationQrvpQOMQ",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s9WidgetKit27DynamicIslandExpandedRegionVMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s9WidgetKit27DynamicIslandExpandedRegionV_8priority7contentACyxGAA0cdeF8PositionV_SdxyXEtcfC",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s9WidgetKit28DynamicIslandExpandedContentV7contentACyxGxyXE_tcfC",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s9WidgetKit28DynamicIslandExpandedContentV7contentxvg",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s9WidgetKit28DynamicIslandExpandedContentVMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s9WidgetKit35DynamicIslandExpandedRegionPositionV6bottomACvgZ",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s9WidgetKit35DynamicIslandExpandedRegionPositionV6centerACvgZ",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s9WidgetKit35DynamicIslandExpandedRegionPositionV7leadingACvgZ",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s9WidgetKit35DynamicIslandExpandedRegionPositionV8trailingACvgZ",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s9WidgetKit35DynamicIslandExpandedRegionPositionVMa",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSS4hash4intoys6HasherVz_tF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSSN",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSSSysMc",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSYsSERzSi8RawValueSYRtzrlE6encode2toys7Encoder_p_tKF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSYsSeRzSi8RawValueSYRtzrlE4fromxs7Decoder_p_tKcfC",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSdN",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSdSBsMc",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss22KeyedDecodingContainerV15decodeIfPresent_6forKeySdSgSdm_xtKF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss22KeyedDecodingContainerV6decode_6forKeyS2Sm_xtKF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss22KeyedDecodingContainerV6decode_6forKeyS2bm_xtKF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss22KeyedDecodingContainerV6decode_6forKeyqd__qd__m_xtKSeRd__lF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss22KeyedDecodingContainerVMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss22KeyedEncodingContainerV15encodeIfPresent_6forKeyySdSg_xtKF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss22KeyedEncodingContainerV6encode_6forKeyySS_xtKF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss22KeyedEncodingContainerV6encode_6forKeyySb_xtKF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss22KeyedEncodingContainerV6encode_6forKeyyqd___xtKSERd__lF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss22KeyedEncodingContainerVMn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss27_stringCompareWithSmolCheck__9expectingSbs11_StringGutsV_ADs01_G16ComparisonResultOtF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss6HasherV5_seedABSi_tcfC",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss6HasherV8_combineyySuF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss6HasherV8_combineyys5UInt8VF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss6HasherV8_combineyys6UInt64VF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss6HasherV9_finalizeSiyF",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss7DecoderP9container7keyedBys22KeyedDecodingContainerVyqd__Gqd__m_tKs9CodingKeyRd__lFTj",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss7EncoderP9container7keyedBys22KeyedEncodingContainerVyqd__Gqd__m_ts9CodingKeyRd__lFTj",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss9CodingKeyPsE11descriptionSSvg",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss9CodingKeyPsE16debugDescriptionSSvg",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSEMp",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSE6encode2toys7Encoder_p_tKFTq",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sScMs11GlobalActorsMc",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSeMp",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSe4fromxs7Decoder_p_tKcfCTq",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSQMp",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSQ2eeoiySbx_xtFZTq",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSHMp",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSHSQTb",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSH9hashValueSivgTq",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSH4hash4intoys6HasherVz_tFTq",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSH13_rawHashValue4seedS2i_tFTq",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s11ActivityKit0A10AttributesMp",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s11ActivityKit0A10AttributesPSeTb",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s11ActivityKit0A10AttributesPSETb",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s11ActivityKit0A10AttributesP12ContentStateAC_SeTn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s11ActivityKit0A10AttributesP12ContentStateAC_SETn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s11ActivityKit0A10AttributesP12ContentStateAC_SHTn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s12ContentState11ActivityKit0C10AttributesPTl",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSYMp",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s8RawValueSYTl",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSY8rawValuexSg03RawB0Qz_tcfCTq",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sSY8rawValue03RawB0QzvgTq",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss23CustomStringConvertibleMp",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss23CustomStringConvertibleP11descriptionSSvgTq",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss28CustomDebugStringConvertibleMp",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss28CustomDebugStringConvertibleP16debugDescriptionSSvgTq",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss9CodingKeyMp",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss9CodingKeyPs28CustomDebugStringConvertibleTb",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss9CodingKeyPs23CustomStringConvertibleTb",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss9CodingKeyP11stringValueSSvgTq",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss9CodingKeyP11stringValuexSgSS_tcfCTq",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss9CodingKeyP8intValueSiSgvgTq",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$ss9CodingKeyP8intValuexSgSi_tcfCTq",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$sytWV",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI6WidgetMp",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI6WidgetP4BodyAC_AA0C13ConfigurationTn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s4Body7SwiftUI6WidgetPTl",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI6WidgetPxycfCTq",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI6WidgetP4body4BodyQzvgTq",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI17EnvironmentValuesV4tintAA13AnyShapeStyleVSgvpMV",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI17EnvironmentValuesV9lineLimitSiSgvpMV",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI19WidgetConfigurationMp",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI4ViewMp",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI4ViewP4BodyAC_AaBTn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s4Body7SwiftUI4ViewPTl",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI4ViewP05_makeC04view6inputsAA01_C7OutputsVAA11_GraphValueVyxG_AA01_C6InputsVtFZTq",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI4ViewP05_makeC4List4view6inputsAA01_cE7OutputsVAA11_GraphValueVyxG_AA01_cE6InputsVtFZTq",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI4ViewP14_viewListCount6inputsSiSgAA01_ceF6InputsV_tFZTq",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI4ViewP4body4BodyQzvgTq",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI17EnvironmentValuesV4fontAA4FontVSgvpMV",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI12WidgetBundleMp",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI12WidgetBundleP4BodyAC_AA0C0Tn",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s4Body7SwiftUI12WidgetBundlePTl",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI12WidgetBundlePxycfCTq",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        },
+        {
+          "name": "_$s7SwiftUI12WidgetBundleP4body4BodyQzvgTq",
+          "value": 0,
+          "size": 0,
+          "type": "TYPE.UNDEFINED"
+        }
+      ],
+      "libraries": [
+        "/System/Library/Frameworks/SwiftUI.framework/SwiftUI",
+        "/System/Library/Frameworks/WidgetKit.framework/WidgetKit",
+        "/System/Library/Frameworks/Foundation.framework/Foundation",
+        "/usr/lib/libobjc.A.dylib",
+        "/usr/lib/libSystem.B.dylib",
+        "/System/Library/Frameworks/ActivityKit.framework/ActivityKit",
+        "/System/Library/Frameworks/UIKit.framework/UIKit",
+        "/usr/lib/swift/libswiftCore.dylib",
+        "/usr/lib/swift/libswiftCoreFoundation.dylib",
+        "/usr/lib/swift/libswiftCoreImage.dylib",
+        "/usr/lib/swift/libswiftCoreLocation.dylib",
+        "/usr/lib/swift/libswiftDispatch.dylib",
+        "/usr/lib/swift/libswiftIntents.dylib",
+        "/usr/lib/swift/libswiftMetal.dylib",
+        "/usr/lib/swift/libswiftOSLog.dylib",
+        "/usr/lib/swift/libswiftObjectiveC.dylib",
+        "/usr/lib/swift/libswiftQuartzCore.dylib",
+        "/usr/lib/swift/libswiftSpatial.dylib",
+        "/usr/lib/swift/libswiftUniformTypeIdentifiers.dylib",
+        "/usr/lib/swift/libswiftXPC.dylib",
+        "/usr/lib/swift/libswift_Builtin_float.dylib",
+        "/usr/lib/swift/libswift_Concurrency.dylib",
+        "/usr/lib/swift/libswiftos.dylib",
+        "/usr/lib/swift/libswiftsimd.dylib"
+      ],
+      "objc_sections": {
+        "__swift5_reflstr": [
+          "phase",
+          "title",
+          "subtitle",
+          "isPlaying",
+          "progress",
+          "deviceName",
+          "ContentState",
+          "waiting",
+          "casting",
+          "RawValue",
+          "Body",
+          "context",
+          "phase",
+          "Body"
+        ]
+      },
+      "swift_mangled": [
+        "_$s7SwiftUI10EdgeInsetsV4_allAC12CoreGraphics7CGFloatV_tcfC",
+        "_$s7SwiftUI10_ShapeViewVMn",
+        "_$s7SwiftUI10_ShapeViewVyxq_GAA0D0AAMc",
+        "_$s7SwiftUI12ProgressViewV5value5totalACyAA05EmptyD0VAGGqd__Sg_qd__tcAGRszAGRs_SBRd__lufC",
+        "_$s7SwiftUI12ProgressViewVMn",
+        "_$s7SwiftUI12ProgressViewVyxq_GAA0D0AAMc",
+        "_$s7SwiftUI12_FrameLayoutV5width6height9alignmentAC12CoreGraphics7CGFloatVSg_AjA9AlignmentVtcfC",
+        "_$s7SwiftUI12_FrameLayoutVAA12ViewModifierAAWP",
+        "_$s7SwiftUI12_FrameLayoutVMn",
+        "_$s7SwiftUI13AnyShapeStyleVMn",
+        "_$s7SwiftUI13AnyShapeStyleVyACxcAA0dE0RzlufC",
+        "_$s7SwiftUI13_HStackLayoutVMn",
+        "_$s7SwiftUI13_VStackLayoutVMn",
+        "_$s7SwiftUI13_VariadicViewO4TreeVMn",
+        "_$s7SwiftUI14_PaddingLayoutVAA12ViewModifierAAWP",
+        "_$s7SwiftUI14_PaddingLayoutVMn",
+        "_$s7SwiftUI15ModifiedContentVMn",
+        "_$s7SwiftUI15ModifiedContentVyxq_GAA4ViewA2aERzAA0E8ModifierR_rlMc",
+        "_$s7SwiftUI16_FlexFrameLayoutV8minWidth05idealG003maxG00F6Height0hJ00iJ09alignmentAC12CoreGraphics7CGFloatVSg_A5nA9AlignmentVtcfC",
+        "_$s7SwiftUI16_FlexFrameLayoutVAA12ViewModifierAAWP",
+        "_$s7SwiftUI16_FlexFrameLayoutVMn",
+        "_$s7SwiftUI17EnvironmentValuesV4fontAA4FontVSgvg",
+        "_$s7SwiftUI17EnvironmentValuesV4fontAA4FontVSgvs",
+        "_$s7SwiftUI17EnvironmentValuesV4tintAA13AnyShapeStyleVSgvg",
+        "_$s7SwiftUI17EnvironmentValuesV4tintAA13AnyShapeStyleVSgvs",
+        "_$s7SwiftUI17EnvironmentValuesV9lineLimitSiSgvg",
+        "_$s7SwiftUI17EnvironmentValuesV9lineLimitSiSgvs",
+        "_$s7SwiftUI17EnvironmentValuesVMn",
+        "_$s7SwiftUI17VerticalAlignmentV6centerACvgZ",
+        "_$s7SwiftUI19HorizontalAlignmentV7leadingACvgZ",
+        "_$s7SwiftUI19WidgetBundleBuilderV10buildBlockyQrxAA0C0RzlFZ",
+        "_$s7SwiftUI19WidgetBundleBuilderV10buildBlockyQrxAA0C0RzlFZQOMQ",
+        "_$s7SwiftUI19_ConditionalContentVA2A4ViewRzAaDR_rlE7storageACyxq_GAC7StorageOyxq__G_tcfC",
+        "_$s7SwiftUI19_ConditionalContentVMn",
+        "_$s7SwiftUI19_ConditionalContentVyxq_GAA4ViewA2aERzAaER_rlMc",
+        "_$s7SwiftUI24_ForegroundStyleModifierVMn",
+        "_$s7SwiftUI24_ForegroundStyleModifierVyxGAA04ViewE0AAMc",
+        "_$s7SwiftUI30_EnvironmentKeyWritingModifierVMn",
+        "_$s7SwiftUI30_EnvironmentKeyWritingModifierVyxGAA04ViewF0AAMc",
+        "_$s7SwiftUI4EdgeO3SetV10horizontalAEvgZ",
+        "_$s7SwiftUI4EdgeO3SetV3allAEvgZ",
+        "_$s7SwiftUI4EdgeO3SetV7leadingAEvgZ",
+        "_$s7SwiftUI4EdgeO3SetV8trailingAEvgZ",
+        "_$s7SwiftUI4FontV11subheadlineACvgZ",
+        "_$s7SwiftUI4FontV6DesignOMa",
+        "_$s7SwiftUI4FontV6DesignOMn",
+        "_$s7SwiftUI4FontV6WeightV5lightAEvgZ",
+        "_$s7SwiftUI4FontV6system4size6weight6designAC12CoreGraphics7CGFloatV_AC6WeightVSgAC6DesignOSgtFZ",
+        "_$s7SwiftUI4FontV7captionACvgZ",
+        "_$s7SwiftUI4FontV8headlineACvgZ",
+        "_$s7SwiftUI4FontVMn",
+        "_$s7SwiftUI4TextV15foregroundStyleyACxAA05ShapeE0RzlF",
+        "_$s7SwiftUI4TextV4fontyAcA4FontVSgF",
+        "_$s7SwiftUI4TextVMn",
+        "_$s7SwiftUI4TextVyACxcSyRzlufC",
+        "_$s7SwiftUI4ViewPAAE05_makeC04view6inputsAA01_C7OutputsVAA11_GraphValueVyxG_AA01_C6InputsVtFZ",
+        "_$s7SwiftUI4ViewPAAE05_makeC4List4view6inputsAA01_cE7OutputsVAA11_GraphValueVyxG_AA01_cE6InputsVtFZ",
+        "_$s7SwiftUI4ViewPAAE14_viewListCount6inputsSiSgAA01_ceF6InputsV_tFZ",
+        "_$s7SwiftUI5ColorV13RGBColorSpaceO4sRGByA2EmFWC",
+        "_$s7SwiftUI5ColorV13RGBColorSpaceOMa",
+        "_$s7SwiftUI5ColorV5blackACvgZ",
+        "_$s7SwiftUI5ColorV5whiteACvgZ",
+        "_$s7SwiftUI5ColorV7opacityyACSdF",
+        "_$s7SwiftUI5ColorVAA10ShapeStyleAAWP",
+        "_$s7SwiftUI5ColorVMn",
+        "_$s7SwiftUI5ColorVN",
+        "_$s7SwiftUI5ColorV_3red5green4blue7opacityA2C13RGBColorSpaceO_S4dtcfC",
+        "_$s7SwiftUI5ImageV10systemNameACSS_tcfC",
+        "_$s7SwiftUI5ImageVAA4ViewAAWP",
+        "_$s7SwiftUI5ImageVMn",
+        "_$s7SwiftUI6CircleVMn",
+        "_$s7SwiftUI6HStackVMn",
+        "_$s7SwiftUI6HStackVyxGAA4ViewAAMc",
+        "_$s7SwiftUI6SpacerVMn",
+        "_$s7SwiftUI6VStackVMn",
+        "_$s7SwiftUI6VStackVyxGAA4ViewAAMc",
+        "_$s7SwiftUI6ZStackVMn",
+        "_$s7SwiftUI6ZStackVyxGAA4ViewAAMc",
+        "_$s7SwiftUI9AlignmentV6centerACvgZ",
+        "_$s7SwiftUI9AlignmentV7leadingACvgZ",
+        "_$s7SwiftUI9EmptyViewVMn",
+        "_$s7SwiftUI9TupleViewVMn",
+        "_$s7SwiftUI9TupleViewVyxGAA0D0AAMc",
+        "_$sxSg7SwiftUI4ViewA2bCRzlMc",
+        "_$s7SwiftUI12WidgetBundleP0C3KitE4mainyyFZ",
+        "_$s7SwiftUI4ViewP9WidgetKitE22activityBackgroundTintyQrAA5ColorVSgF",
+        "_$s7SwiftUI4ViewP9WidgetKitE22activityBackgroundTintyQrAA5ColorVSgFQOMQ",
+        "_$s7SwiftUI4ViewP9WidgetKitE35activitySystemActionForegroundColoryQrAA0J0VSgF",
+        "_$s7SwiftUI4ViewP9WidgetKitE35activitySystemActionForegroundColoryQrAA0J0VSgFQOMQ",
+        "_$s9WidgetKit13DynamicIslandV11keylineTintyAC7SwiftUI5ColorVSgF",
+        "_$s9WidgetKit13DynamicIslandV8expanded14compactLeading0F8Trailing7minimalAcA0cD15ExpandedContentVyxGyc_q_ycq0_ycq1_yctc7SwiftUI4ViewRzAkLR_AkLR0_AkLR1_r2_lufC",
+        "_$s9WidgetKit13DynamicIslandVMa",
+        "_$s9WidgetKit19ActivityViewContextV5state12ContentStateQzvg",
+        "_$s9WidgetKit19ActivityViewContextVMa",
+        "_$s9WidgetKit19ActivityViewContextVMn",
+        "_$s9WidgetKit21ActivityConfigurationV3for7content13dynamicIslandACyxGxm_qd__AA0C11ViewContextVyxGcAA07DynamicH0VAJctc7SwiftUI0I0Rd__lufC",
+        "_$s9WidgetKit21ActivityConfigurationVMn",
+        "_$s9WidgetKit21ActivityConfigurationVyxG7SwiftUI0aD0AAMc",
+        "_$s9WidgetKit27DynamicIslandExpandedRegionV19_viewRepresentationQrvg",
+        "_$s9WidgetKit27DynamicIslandExpandedRegionV19_viewRepresentationQrvpQOMQ",
+        "_$s9WidgetKit27DynamicIslandExpandedRegionVMn",
+        "_$s9WidgetKit27DynamicIslandExpandedRegionV_8priority7contentACyxGAA0cdeF8PositionV_SdxyXEtcfC",
+        "_$s9WidgetKit28DynamicIslandExpandedContentV7contentACyxGxyXE_tcfC",
+        "_$s9WidgetKit28DynamicIslandExpandedContentV7contentxvg",
+        "_$s9WidgetKit28DynamicIslandExpandedContentVMn",
+        "_$s9WidgetKit35DynamicIslandExpandedRegionPositionV6bottomACvgZ",
+        "_$s9WidgetKit35DynamicIslandExpandedRegionPositionV6centerACvgZ",
+        "_$s9WidgetKit35DynamicIslandExpandedRegionPositionV7leadingACvgZ",
+        "_$s9WidgetKit35DynamicIslandExpandedRegionPositionV8trailingACvgZ",
+        "_$s9WidgetKit35DynamicIslandExpandedRegionPositionVMa",
+        "_$sSS4hash4intoys6HasherVz_tF",
+        "_$sSSN",
+        "_$sSSSysMc",
+        "_$sSYsSERzSi8RawValueSYRtzrlE6encode2toys7Encoder_p_tKF",
+        "_$sSYsSeRzSi8RawValueSYRtzrlE4fromxs7Decoder_p_tKcfC",
+        "_$sSdN",
+        "_$sSdSBsMc",
+        "_$ss22KeyedDecodingContainerV15decodeIfPresent_6forKeySdSgSdm_xtKF",
+        "_$ss22KeyedDecodingContainerV6decode_6forKeyS2Sm_xtKF",
+        "_$ss22KeyedDecodingContainerV6decode_6forKeyS2bm_xtKF",
+        "_$ss22KeyedDecodingContainerV6decode_6forKeyqd__qd__m_xtKSeRd__lF",
+        "_$ss22KeyedDecodingContainerVMn",
+        "_$ss22KeyedEncodingContainerV15encodeIfPresent_6forKeyySdSg_xtKF",
+        "_$ss22KeyedEncodingContainerV6encode_6forKeyySS_xtKF",
+        "_$ss22KeyedEncodingContainerV6encode_6forKeyySb_xtKF",
+        "_$ss22KeyedEncodingContainerV6encode_6forKeyyqd___xtKSERd__lF",
+        "_$ss22KeyedEncodingContainerVMn",
+        "_$ss27_stringCompareWithSmolCheck__9expectingSbs11_StringGutsV_ADs01_G16ComparisonResultOtF",
+        "_$ss6HasherV5_seedABSi_tcfC",
+        "_$ss6HasherV8_combineyySuF",
+        "_$ss6HasherV8_combineyys5UInt8VF",
+        "_$ss6HasherV8_combineyys6UInt64VF",
+        "_$ss6HasherV9_finalizeSiyF",
+        "_$ss7DecoderP9container7keyedBys22KeyedDecodingContainerVyqd__Gqd__m_tKs9CodingKeyRd__lFTj",
+        "_$ss7EncoderP9container7keyedBys22KeyedEncodingContainerVyqd__Gqd__m_ts9CodingKeyRd__lFTj",
+        "_$ss9CodingKeyPsE11descriptionSSvg",
+        "_$ss9CodingKeyPsE16debugDescriptionSSvg",
+        "_$sSEMp",
+        "_$sSE6encode2toys7Encoder_p_tKFTq",
+        "_$sScMs11GlobalActorsMc",
+        "_$sSeMp",
+        "_$sSe4fromxs7Decoder_p_tKcfCTq",
+        "_$sSQMp",
+        "_$sSQ2eeoiySbx_xtFZTq",
+        "_$sSHMp",
+        "_$sSHSQTb",
+        "_$sSH9hashValueSivgTq",
+        "_$sSH4hash4intoys6HasherVz_tFTq",
+        "_$sSH13_rawHashValue4seedS2i_tFTq",
+        "_$s11ActivityKit0A10AttributesMp",
+        "_$s11ActivityKit0A10AttributesPSeTb",
+        "_$s11ActivityKit0A10AttributesPSETb",
+        "_$s11ActivityKit0A10AttributesP12ContentStateAC_SeTn",
+        "_$s11ActivityKit0A10AttributesP12ContentStateAC_SETn",
+        "_$s11ActivityKit0A10AttributesP12ContentStateAC_SHTn",
+        "_$s12ContentState11ActivityKit0C10AttributesPTl",
+        "_$sSYMp",
+        "_$s8RawValueSYTl",
+        "_$sSY8rawValuexSg03RawB0Qz_tcfCTq",
+        "_$sSY8rawValue03RawB0QzvgTq",
+        "_$ss23CustomStringConvertibleMp",
+        "_$ss23CustomStringConvertibleP11descriptionSSvgTq",
+        "_$ss28CustomDebugStringConvertibleMp",
+        "_$ss28CustomDebugStringConvertibleP16debugDescriptionSSvgTq",
+        "_$ss9CodingKeyMp",
+        "_$ss9CodingKeyPs28CustomDebugStringConvertibleTb",
+        "_$ss9CodingKeyPs23CustomStringConvertibleTb",
+        "_$ss9CodingKeyP11stringValueSSvgTq",
+        "_$ss9CodingKeyP11stringValuexSgSS_tcfCTq",
+        "_$ss9CodingKeyP8intValueSiSgvgTq",
+        "_$ss9CodingKeyP8intValuexSgSi_tcfCTq",
+        "_$sytWV",
+        "_$s7SwiftUI6WidgetMp",
+        "_$s7SwiftUI6WidgetP4BodyAC_AA0C13ConfigurationTn",
+        "_$s4Body7SwiftUI6WidgetPTl",
+        "_$s7SwiftUI6WidgetPxycfCTq",
+        "_$s7SwiftUI6WidgetP4body4BodyQzvgTq",
+        "_$s7SwiftUI17EnvironmentValuesV4tintAA13AnyShapeStyleVSgvpMV",
+        "_$s7SwiftUI17EnvironmentValuesV9lineLimitSiSgvpMV",
+        "_$s7SwiftUI19WidgetConfigurationMp",
+        "_$s7SwiftUI4ViewMp",
+        "_$s7SwiftUI4ViewP4BodyAC_AaBTn",
+        "_$s4Body7SwiftUI4ViewPTl",
+        "_$s7SwiftUI4ViewP05_makeC04view6inputsAA01_C7OutputsVAA11_GraphValueVyxG_AA01_C6InputsVtFZTq",
+        "_$s7SwiftUI4ViewP05_makeC4List4view6inputsAA01_cE7OutputsVAA11_GraphValueVyxG_AA01_cE6InputsVtFZTq",
+        "_$s7SwiftUI4ViewP14_viewListCount6inputsSiSgAA01_ceF6InputsV_tFZTq",
+        "_$s7SwiftUI4ViewP4body4BodyQzvgTq",
+        "_$s7SwiftUI17EnvironmentValuesV4fontAA4FontVSgvpMV",
+        "_$s7SwiftUI12WidgetBundleMp",
+        "_$s7SwiftUI12WidgetBundleP4BodyAC_AA0C0Tn",
+        "_$s4Body7SwiftUI12WidgetBundlePTl",
+        "_$s7SwiftUI12WidgetBundlePxycfCTq",
+        "_$s7SwiftUI12WidgetBundleP4body4BodyQzvgTq"
+      ]
+    }
+  ]
+}

@@ -14,7 +14,7 @@
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    self.title = @"التحديثات";
+    self.title = @"الجهاز";
     self.navigationController.navigationBar.prefersLargeTitles = YES;
     self.view.backgroundColor = [UIColor systemGroupedBackgroundColor];
 
@@ -65,9 +65,9 @@
     UIView *container = [[UIView alloc] init];
     container.translatesAutoresizingMaskIntoConstraints = NO;
 
-    UILabel *title = [self labelWithText:@"مركز التحديثات" font:[UIFont preferredFontForTextStyle:UIFontTextStyleTitle2] color:[UIColor labelColor]];
+    UILabel *title = [self labelWithText:@"اخر التحديثات" font:[UIFont preferredFontForTextStyle:UIFontTextStyleTitle2] color:[UIColor labelColor]];
     title.textAlignment = NSTextAlignmentRight;
-    UILabel *subtitle = [self labelWithText:@"تابع حالة جهازك وآخر المستجدات" font:[UIFont preferredFontForTextStyle:UIFontTextStyleSubheadline] color:[UIColor secondaryLabelColor]];
+    UILabel *subtitle = [self labelWithText:@"حاله التحديث الحالي" font:[UIFont preferredFontForTextStyle:UIFontTextStyleSubheadline] color:[UIColor secondaryLabelColor]];
     subtitle.textAlignment = NSTextAlignmentRight;
     [container addSubview:title];
     [container addSubview:subtitle];
@@ -87,7 +87,7 @@
 
 - (UIView *)makeStatusCard {
     UIView *card = [self cardView];
-    UILabel *title = [self labelWithText:@"حالة الجهاز" font:[UIFont preferredFontForTextStyle:UIFontTextStyleHeadline] color:[UIColor labelColor]];
+    UILabel *title = [self labelWithText:@"iphone xs" font:[UIFont preferredFontForTextStyle:UIFontTextStyleHeadline] color:[UIColor labelColor]];
     title.textAlignment = NSTextAlignmentRight;
 
     UIView *statusDot = [[UIView alloc] init];
@@ -126,18 +126,18 @@
 
 - (UIView *)makeUpdatesCard {
     UIView *card = [self cardView];
-    UILabel *title = [self labelWithText:@"آخر المستجدات" font:[UIFont preferredFontForTextStyle:UIFontTextStyleHeadline] color:[UIColor labelColor]];
+    UILabel *title = [self labelWithText:@"آخر المستجدات"  font:[UIFont preferredFontForTextStyle:UIFontTextStyleHeadline] color:[UIColor labelColor]];
     title.textAlignment = NSTextAlignmentRight;
 
     UIImageView *checkmark = [[UIImageView alloc] initWithImage:[UIImage systemImageNamed:@"checkmark.circle.fill"]];
     checkmark.tintColor = [UIColor systemGreenColor];
     checkmark.translatesAutoresizingMaskIntoConstraints = NO;
 
-    UILabel *message = [self labelWithText:@"لا توجد تحديثات جديدة" font:[UIFont preferredFontForTextStyle:UIFontTextStyleBody] color:[UIColor secondaryLabelColor]];
+    UILabel *message = [self labelWithText:@"اخر تحديث متاح  18.7.1" font:[UIFont preferredFontForTextStyle:UIFontTextStyleBody] color:[UIColor secondaryLabelColor]];
     message.textAlignment = NSTextAlignmentRight;
     message.numberOfLines = 0;
 
-    self.lastCheckLabel = [self labelWithText:@"آخر فحص: الآن" font:[UIFont preferredFontForTextStyle:UIFontTextStyleFootnote] color:[UIColor tertiaryLabelColor]];
+    self.lastCheckLabel = [self labelWithText:@"آخر فحص: تم" font:[UIFont preferredFontForTextStyle:UIFontTextStyleFootnote] color:[UIColor tertiaryLabelColor]];
     self.lastCheckLabel.textAlignment = NSTextAlignmentRight;
     self.lastCheckLabel.userInteractionEnabled = YES;
 
@@ -243,7 +243,7 @@
 }
 
 - (void)helpTapped:(id)sender {
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"المساعدة" message:@"يمكنك مراجعة الإعدادات أو إعادة فحص حالة الجهاز في أي وقت." preferredStyle:UIAlertControllerStyleAlert];
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"المساعدة" message:@"الادة مخصصة لاجهزة ios يمكنك متابعة التحديثات الجديده في اي وقت." preferredStyle:UIAlertControllerStyleAlert];
     [alert addAction:[UIAlertAction actionWithTitle:@"حسنًا" style:UIAlertActionStyleDefault handler:nil]];
     [self presentViewController:alert animated:YES completion:nil];
 }
@@ -252,7 +252,7 @@
     void (^update)(void) = ^{
         [self.activityIndicator stopAnimating];
         self.statusLabel.text = @"يعمل بشكل طبيعي";
-        self.lastCheckLabel.text = @"آخر فحص: الآن";
+        self.lastCheckLabel.text = @"آخر فحص: تم";
     };
     [self.activityIndicator startAnimating];
     if (animated) {

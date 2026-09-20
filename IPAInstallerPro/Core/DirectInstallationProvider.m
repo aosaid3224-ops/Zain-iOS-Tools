@@ -5,6 +5,7 @@
 //
 
 #import "DirectInstallationProvider.h"
+#import "JBHide/SpiderInstalledAppsStore.h"
 #import "RootlessManager.h"
 #import "OperationLog.h"
 #import "InstallationTransactionCoordinator.h"
@@ -1702,6 +1703,8 @@ extern char **environ;
 
  // SUCCESS
  NSLog(@"[IPAInstallerPro] === INSTALLATION SUCCESS: %@ ===", bundleID);
+ // Record in the authoritative Spider-installed-apps registry (Jailbreak Hiding reads this).
+ [SpiderInstalledAppsStore.sharedStore noteInstalledAppWithBundleID:bundleID path:destApp];
   // Emit diagnostics report before completing
   [self emitDiagnosticsReport:opLog txnID:txnID bundleID:bundleID];
  [opLog endTransaction:txnID finalResult:OperationResultSuccess];

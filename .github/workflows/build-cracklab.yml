@@ -1,0 +1,51 @@
+name: Build Crack Lab (Verify)
+
+permissions:
+  contents: read
+
+on:
+  push:
+    paths:
+      - 'CrackLab/**'
+      - '.github/workflows/build-cracklab.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup Theos
+        run: |
+          git clone --recursive https://github.com/theos/theos.git "$HOME/theos"
+          echo "THEOS=$HOME/theos" >> "$GITHUB_ENV"
+
+      - name: Setup dependencies
+        run: |
+          export HOMEBREW_NO_REQUIRE_TAP_TRUST=1
+          brew install dpkg ldid
+
+      - name: Build Crack Lab
+        run: |
+          cd CrackLab
+          make clean
+          make package
+
+      - name: Verify package
+        run: |
+          set -e
+          deb=$(find CrackLab/packages -maxdepth 1 -type f -name '*.deb' | head -1)
+          test -n "$deb"
+          dpkg-deb -I "$deb"
+          test "$(dpkg-deb -f "$deb" Package)" = "com.cracklab.app"
+          test "$(dpkg-deb -f "$deb" Version)" = "1.0.0"
+          test "$(dpkg-deb -f "$deb" Architecture)" = "iphoneos-arm64"
+
+      - name: Upload verified package
+        uses: actions/upload-artifact@v4
+        with:
+          name: cracklab-1.0.0
+          path: CrackLab/packages/*.deb
+          if-no-files-found: error

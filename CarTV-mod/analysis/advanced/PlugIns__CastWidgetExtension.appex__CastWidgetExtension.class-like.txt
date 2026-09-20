@@ -1,0 +1,5 @@
+CastLiveActivity
+CastWidgetBundle
+CastWidgetExtension
+LyntraCastActivityAttributes
+com.lyntra.player.CastWidget

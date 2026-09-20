@@ -1,0 +1,327 @@
+{
+  "Info.plist": {
+    "CFBundleDevelopmentRegion": "en",
+    "MinimumOSVersion": "18",
+    "NSAppTransportSecurity": {
+      "NSAllowsArbitraryLoads": true
+    },
+    "NSAccentColorName": "AccentColor",
+    "CFBundleIdentifier": "com.lyntra.player",
+    "NSLocalNetworkUsageDescription": "CarTV uses your local network to receive video casts from other apps and to connect to media servers (such as Jellyfin or Emby) that you add yourself.",
+    "DTXcodeBuild": "17F113",
+    "NSPhotoLibraryUsageDescription": "Used to import videos from your photo library.",
+    "LSRequiresIPhoneOS": true,
+    "CFBundleExecutable": "CarTV",
+    "BuildMachineOSBuild": "25F84",
+    "UIApplicationSupportsIndirectInputEvents": true,
+    "CFBundleIcons~ipad": {
+      "CFBundlePrimaryIcon": {
+        "CFBundleIconFiles": [
+          "AppIcon60x60",
+          "AppIcon76x76"
+        ]
+      }
+    },
+    "CFBundlePackageType": "APPL",
+    "LSApplicationQueriesSchemes": [
+      "smartdrive",
+      "baiduyun",
+      "quark",
+      "bilibili",
+      "tenvideo",
+      "iqiyi",
+      "youku",
+      "imgotv",
+      "miguvideo",
+      "xhsdiscover",
+      "mqq",
+      "tg",
+      "discord",
+      "reddit",
+      "weixin",
+      "line",
+      "whatsapp",
+      "youtube",
+      "snssdk1128",
+      "snssdk1233",
+      "kwai",
+      "snssdk32",
+      "sinaweibo",
+      "instagram",
+      "twitch",
+      "vimeo",
+      "dailymotion",
+      "plex",
+      "emby",
+      "infuse",
+      "vlc",
+      "nflx",
+      "disneyplus",
+      "hulu",
+      "aiv",
+      "hbomax",
+      "peacock",
+      "paramountplus",
+      "crunchyroll",
+      "viki",
+      "tubitv",
+      "plutotv"
+    ],
+    "UISupportedDevices": [
+      "iPhone11,2",
+      "iPhone11,4",
+      "iPhone11,6",
+      "iPhone12,3",
+      "iPhone12,5",
+      "iPhone13,1",
+      "iPhone13,2",
+      "iPhone13,3",
+      "iPhone13,4",
+      "iPhone14,2",
+      "iPhone14,3",
+      "iPhone14,4",
+      "iPhone14,5",
+      "iPhone14,7",
+      "iPhone14,8",
+      "iPhone15,2",
+      "iPhone15,3",
+      "iPhone15,4",
+      "iPhone15,5",
+      "iPhone16,1",
+      "iPhone16,2",
+      "iPhone17,1",
+      "iPhone17,2",
+      "iPhone17,3",
+      "iPhone17,4",
+      "iPhone17,5",
+      "iPhone18,1",
+      "iPhone18,2",
+      "iPhone18,3",
+      "iPhone18,4",
+      "iPhone18,5"
+    ],
+    "DTAppStoreToolsBuild": "17F106",
+    "NSSupportsLiveActivities": true,
+    "DTCompiler": "com.apple.compilers.llvm.clang.1_0",
+    "CFBundleName": "CarTV",
+    "CFBundleSupportedPlatforms": [
+      "iPhoneOS"
+    ],
+    "UIRequiredDeviceCapabilities": [
+      "arm64"
+    ],
+    "CFBundleDisplayName": "CarTV",
+    "NSCameraUsageDescription": "Used to scan QR codes so you can add a playlist quickly.",
+    "UISupportedInterfaceOrientations~ipad": [
+      "UIInterfaceOrientationLandscapeLeft",
+      "UIInterfaceOrientationLandscapeRight",
+      "UIInterfaceOrientationPortrait",
+      "UIInterfaceOrientationPortraitUpsideDown"
+    ],
+    "ITSDRMScheme": "v2",
+    "DTPlatformBuild": "23F81a",
+    "UIApplicationSceneManifest": {
+      "UISceneConfigurations": {
+        "UIWindowSceneSessionRoleCarPlay": [
+          {
+            "UISceneDelegateClassName": "CarTV.LyntraExternalDisplaySceneDelegate",
+            "UISceneConfigurationName": "CarPlay Window"
+          }
+        ],
+        "CPTemplateApplicationSceneSessionRoleApplication": [
+          {
+            "UISceneDelegateClassName": "CarTV.LyntraCarPlaySceneDelegate",
+            "UISceneConfigurationName": "CarPlay Configuration",
+            "UISceneClassName": "CPTemplateApplicationScene"
+          }
+        ],
+        "UIWindowSceneSessionRoleExternalDisplayNonInteractive": [
+          {
+            "UISceneDelegateClassName": "CarTV.LyntraExternalDisplaySceneDelegate",
+            "UISceneConfigurationName": "External Display"
+          }
+        ],
+        "UIWindowSceneSessionRoleApplication": [
+          {
+            "UISceneDelegateClassName": "CarTV.LyntraSceneDelegate",
+            "UISceneConfigurationName": "Default Configuration"
+          }
+        ],
+        "UIWindowSceneSessionRoleExternalDisplay": [
+          {
+            "UISceneDelegateClassName": "CarTV.LyntraExternalDisplaySceneDelegate",
+            "UISceneConfigurationName": "External Display"
+          }
+        ]
+      },
+      "UIApplicationSupportsMultipleScenes": true
+    },
+    "UISupportedInterfaceOrientations": [
+      "UIInterfaceOrientationPortrait"
+    ],
+    "CFBundleInfoDictionaryVersion": "6.0",
+    "DTSDKBuild": "23F81a",
+    "DTXcode": "2660",
+    "CFBundleVersion": "21",
+    "DTSDKName": "iphoneos26.5",
+    "UILaunchStoryboardName": "LaunchScreen",
+    "UIDeviceFamily": [
+      1
+    ],
+    "DTPlatformVersion": "26.5",
+    "CFBundleShortVersionString": "1.0.8",
+    "UIBackgroundModes": [
+      "audio"
+    ],
+    "CFBundleIcons": {
+      "CFBundlePrimaryIcon": {
+        "CFBundleIconName": "AppIcon",
+        "CFBundleIconFiles": [
+          "AppIcon60x60"
+        ]
+      }
+    },
+    "NSBonjourServices": [
+      "_lyntracast._tcp"
+    ],
+    "DTPlatformName": "iphoneos"
+  },
+  "PrivacyInfo.xcprivacy": {
+    "NSPrivacyAccessedAPITypes": [
+      {
+        "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+        "NSPrivacyAccessedAPITypeReasons": [
+          "CA92.1"
+        ]
+      },
+      {
+        "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryDiskSpace",
+        "NSPrivacyAccessedAPITypeReasons": [
+          "E174.1"
+        ]
+      },
+      {
+        "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryFileTimestamp",
+        "NSPrivacyAccessedAPITypeReasons": [
+          "C617.1"
+        ]
+      }
+    ],
+    "NSPrivacyCollectedDataTypes": [
+      {
+        "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeDeviceID",
+        "NSPrivacyCollectedDataTypeLinked": false,
+        "NSPrivacyCollectedDataTypePurposes": [
+          "NSPrivacyCollectedDataTypePurposeAnalytics"
+        ],
+        "NSPrivacyCollectedDataTypeTracking": false
+      },
+      {
+        "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeProductInteraction",
+        "NSPrivacyCollectedDataTypeLinked": false,
+        "NSPrivacyCollectedDataTypePurposes": [
+          "NSPrivacyCollectedDataTypePurposeAnalytics"
+        ],
+        "NSPrivacyCollectedDataTypeTracking": false
+      }
+    ],
+    "NSPrivacyTracking": false,
+    "NSPrivacyTrackingDomains": []
+  },
+  "PlugIns/ScreenRelay.appex/Info.plist": {
+    "CFBundleName": "ScreenRelay",
+    "DTSDKName": "iphoneos26.5",
+    "DTXcode": "2660",
+    "DTSDKBuild": "23F81a",
+    "CFBundleDevelopmentRegion": "en",
+    "CFBundleVersion": "21",
+    "BuildMachineOSBuild": "25F84",
+    "DTPlatformName": "iphoneos",
+    "CFBundlePackageType": "XPC!",
+    "CFBundleShortVersionString": "1.0.8",
+    "CFBundleSupportedPlatforms": [
+      "iPhoneOS"
+    ],
+    "CFBundleInfoDictionaryVersion": "6.0",
+    "CFBundleExecutable": "ScreenRelay",
+    "DTCompiler": "com.apple.compilers.llvm.clang.1_0",
+    "UIRequiredDeviceCapabilities": [
+      "arm64"
+    ],
+    "MinimumOSVersion": "18",
+    "CFBundleIdentifier": "com.lyntra.player.ScreenRelay",
+    "UIDeviceFamily": [
+      1
+    ],
+    "DTPlatformVersion": "26.5",
+    "DTXcodeBuild": "17F113",
+    "CFBundleDisplayName": "CarTV",
+    "DTPlatformBuild": "23F81a",
+    "NSExtension": {
+      "NSExtensionPointIdentifier": "com.apple.broadcast-services-upload",
+      "NSExtensionPrincipalClass": "ScreenRelay.LyntraScreenRelayHandler",
+      "RPBroadcastProcessMode": "RPBroadcastProcessModeSampleBuffer"
+    }
+  },
+  "PlugIns/CastWidgetExtension.appex/Info.plist": {
+    "CFBundleName": "CastWidgetExtension",
+    "DTSDKName": "iphoneos26.5",
+    "DTXcode": "2660",
+    "DTSDKBuild": "23F81a",
+    "CFBundleDevelopmentRegion": "en",
+    "CFBundleVersion": "21",
+    "BuildMachineOSBuild": "25F84",
+    "DTPlatformName": "iphoneos",
+    "CFBundlePackageType": "XPC!",
+    "CFBundleShortVersionString": "1.0.8",
+    "CFBundleSupportedPlatforms": [
+      "iPhoneOS"
+    ],
+    "CFBundleInfoDictionaryVersion": "6.0",
+    "CFBundleExecutable": "CastWidgetExtension",
+    "DTCompiler": "com.apple.compilers.llvm.clang.1_0",
+    "UIRequiredDeviceCapabilities": [
+      "arm64"
+    ],
+    "MinimumOSVersion": "18",
+    "CFBundleIdentifier": "com.lyntra.player.CastWidget",
+    "UIDeviceFamily": [
+      1
+    ],
+    "DTPlatformVersion": "26.5",
+    "DTXcodeBuild": "17F113",
+    "CFBundleDisplayName": "CarTV",
+    "DTPlatformBuild": "23F81a",
+    "NSExtension": {
+      "NSExtensionPointIdentifier": "com.apple.widgetkit-extension"
+    }
+  },
+  "Frameworks/MobileVLCKit.framework/Info.plist": {
+    "BuildMachineOSBuild": "21H1320",
+    "CFBundleDevelopmentRegion": "en",
+    "CFBundleExecutable": "MobileVLCKit",
+    "CFBundleIdentifier": "org.videolan.mobilevlckit",
+    "CFBundleInfoDictionaryVersion": "6.0",
+    "CFBundleName": "MobileVLCKit",
+    "CFBundlePackageType": "FMWK",
+    "CFBundleShortVersionString": "1.0",
+    "CFBundleSignature": "????",
+    "CFBundleSupportedPlatforms": [
+      "iPhoneOS"
+    ],
+    "CFBundleVersion": "1",
+    "DTCompiler": "com.apple.compilers.llvm.clang.1_0",
+    "DTPlatformBuild": "19E239",
+    "DTPlatformName": "iphoneos",
+    "DTPlatformVersion": "15.4",
+    "DTSDKBuild": "19E239",
+    "DTSDKName": "iphoneos15.4",
+    "DTXcode": "1330",
+    "DTXcodeBuild": "13E113",
+    "MinimumOSVersion": "9.0",
+    "UIDeviceFamily": [
+      1,
+      2
+    ]
+  }
+}

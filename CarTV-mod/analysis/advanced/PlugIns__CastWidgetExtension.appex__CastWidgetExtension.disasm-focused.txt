@@ -1,0 +1,1003 @@
+/tmp/cartv-analysis/unpacked/Payload/CarTV.app/PlugIns/CastWidgetExtension.appex/CastWidgetExtension:
+(__TEXT,__text) section
+100004000:	stp	x20, x19, [sp, #-0x20]!
+100004004:	stp	x29, x30, [sp, #0x10]
+100004008:	add	x29, sp, #0x10
+10000400c:	ldr	x19, [x1]
+100004010:	str	x19, [x0]
+100004014:	mov	x0, x19
+100004018:	bl	0x10000a0a0 ; symbol stub for: _swift_retain
+10000401c:	add	x0, x19, #0x10
+100004020:	ldp	x29, x30, [sp, #0x10]
+100004024:	ldp	x20, x19, [sp], #0x20
+100004028:	ret
+10000402c:	stp	x20, x19, [sp, #-0x20]!
+100004030:	stp	x29, x30, [sp, #0x10]
+100004034:	add	x29, sp, #0x10
+100004038:	mov	x19, x0
+10000403c:	ldr	x0, [x0, #0x10]
+100004040:	bl	0x10000a004 ; symbol stub for: _swift_bridgeObjectRelease
+100004044:	ldr	x0, [x19, #0x20]
+100004048:	ldp	x29, x30, [sp, #0x10]
+10000404c:	ldp	x20, x19, [sp], #0x20
+100004050:	b	0x10000a004 ; symbol stub for: _swift_bridgeObjectRelease
+100004054:	stp	x20, x19, [sp, #-0x20]!
+100004058:	stp	x29, x30, [sp, #0x10]
+10000405c:	add	x29, sp, #0x10
+100004060:	mov	x19, x0
+100004064:	ldrb	w8, [x1]
+100004068:	strb	w8, [x0]
+10000406c:	ldp	x8, x0, [x1, #0x8]
+100004070:	stp	x8, x0, [x19, #0x8]
+100004074:	ldp	x8, x20, [x1, #0x18]
+100004078:	stp	x8, x20, [x19, #0x18]
+10000407c:	ldrb	w8, [x1, #0x28]
+100004080:	strb	w8, [x19, #0x28]
+100004084:	ldr	x8, [x1, #0x30]
+100004088:	str	x8, [x19, #0x30]
+10000408c:	ldrb	w8, [x1, #0x38]
+100004090:	strb	w8, [x19, #0x38]
+100004094:	bl	0x10000a010 ; symbol stub for: _swift_bridgeObjectRetain
+100004098:	mov	x0, x20
+10000409c:	bl	0x10000a010 ; symbol stub for: _swift_bridgeObjectRetain
+1000040a0:	mov	x0, x19
+1000040a4:	ldp	x29, x30, [sp, #0x10]
+1000040a8:	ldp	x20, x19, [sp], #0x20
+1000040ac:	ret
+1000040b0:	stp	x22, x21, [sp, #-0x30]!
+1000040b4:	stp	x20, x19, [sp, #0x10]
+1000040b8:	stp	x29, x30, [sp, #0x20]
+1000040bc:	add	x29, sp, #0x20
+1000040c0:	mov	x19, x1
+1000040c4:	mov	x20, x0
+1000040c8:	ldrb	w8, [x1]
+1000040cc:	strb	w8, [x0]
+1000040d0:	ldr	x8, [x1, #0x8]
+1000040d4:	str	x8, [x0, #0x8]
+1000040d8:	ldr	x0, [x1, #0x10]
+1000040dc:	ldr	x21, [x20, #0x10]
+1000040e0:	str	x0, [x20, #0x10]
+1000040e4:	bl	0x10000a010 ; symbol stub for: _swift_bridgeObjectRetain
+1000040e8:	mov	x0, x21
+1000040ec:	bl	0x10000a004 ; symbol stub for: _swift_bridgeObjectRelease
+1000040f0:	ldr	x8, [x19, #0x18]
+1000040f4:	str	x8, [x20, #0x18]
+1000040f8:	ldr	x0, [x19, #0x20]
+1000040fc:	ldr	x21, [x20, #0x20]
+100004100:	str	x0, [x20, #0x20]
+100004104:	bl	0x10000a010 ; symbol stub for: _swift_bridgeObjectRetain
+100004108:	mov	x0, x21
+10000410c:	bl	0x10000a004 ; symbol stub for: _swift_bridgeObjectRelease
+100004110:	ldrb	w8, [x19, #0x28]
+100004114:	strb	w8, [x20, #0x28]
+100004118:	ldr	x8, [x19, #0x30]
+10000411c:	ldrb	w9, [x19, #0x38]
+100004120:	strb	w9, [x20, #0x38]
+100004124:	str	x8, [x20, #0x30]
+100004128:	mov	x0, x20
+10000412c:	ldp	x29, x30, [sp, #0x20]
+100004130:	ldp	x20, x19, [sp, #0x10]
+100004134:	ldp	x22, x21, [sp], #0x30
+100004138:	ret
+10000413c:	ldp	q0, q1, [x1]
+100004140:	ldr	q2, [x1, #0x20]
+100004144:	ldur	q3, [x1, #0x29]
+100004148:	stur	q3, [x0, #0x29]
+10000414c:	stp	q1, q2, [x0, #0x10]
+100004150:	str	q0, [x0]
+100004154:	ret
+100004158:	stp	x20, x19, [sp, #-0x20]!
+10000415c:	stp	x29, x30, [sp, #0x10]
+100004160:	add	x29, sp, #0x10
+100004164:	mov	x19, x1
+100004168:	mov	x20, x0
+10000416c:	ldrb	w8, [x1]
+100004170:	strb	w8, [x0]
+100004174:	ldp	x8, x9, [x1, #0x8]
+100004178:	ldr	x0, [x0, #0x10]
+10000417c:	stp	x8, x9, [x20, #0x8]
+100004180:	bl	0x10000a004 ; symbol stub for: _swift_bridgeObjectRelease
+100004184:	ldp	x8, x9, [x19, #0x18]
+100004188:	ldr	x0, [x20, #0x20]
+10000418c:	stp	x8, x9, [x20, #0x18]
+100004190:	bl	0x10000a004 ; symbol stub for: _swift_bridgeObjectRelease
+100004194:	ldrb	w8, [x19, #0x28]
+100004198:	strb	w8, [x20, #0x28]
+10000419c:	ldr	x8, [x19, #0x30]
+1000041a0:	str	x8, [x20, #0x30]
+1000041a4:	ldrb	w8, [x19, #0x38]
+1000041a8:	strb	w8, [x20, #0x38]
+1000041ac:	mov	x0, x20
+1000041b0:	ldp	x29, x30, [sp, #0x10]
+1000041b4:	ldp	x20, x19, [sp], #0x20
+1000041b8:	ret
+1000041bc:	cbz	w1, 0x1000041dc
+1000041c0:	tbnz	w1, #0x1f, 0x1000041e8
+1000041c4:	ldr	x8, [x0, #0x10]
+1000041c8:	mov	w9, #-0x1
+1000041cc:	cmp	x8, x9
+1000041d0:	csel	x8, x8, x9, lo
+1000041d4:	add	w0, w8, #0x1
+1000041d8:	ret
+1000041dc:	mov	w8, #-0x1
+1000041e0:	add	w0, w8, #0x1
+1000041e4:	ret
+1000041e8:	ldrb	w8, [x0, #0x39]
+1000041ec:	cbz	w8, 0x1000041c4
+1000041f0:	ldr	w8, [x0]
+1000041f4:	mov	w9, #0x7fffffff
+1000041f8:	add	w8, w8, w9
+1000041fc:	add	w0, w8, #0x1
+100004200:	ret
+100004204:	tbnz	w1, #0x1f, 0x100004214
+100004208:	tbnz	w2, #0x1f, 0x100004240
+10000420c:	cbnz	w1, 0x100004248
+100004210:	ret
+100004214:	movi.2d	v0, #0000000000000000
+100004218:	stur	q0, [x0, #0x28]
+10000421c:	and	w8, w1, #0x7fffffff
+100004220:	stur	q0, [x0, #0x18]
+100004224:	stur	q0, [x0, #0x8]
+100004228:	strb	wzr, [x0, #0x38]
+10000422c:	str	x8, [x0]
+100004230:	tbz	w2, #0x1f, 0x100004210
+100004234:	mov	w8, #0x1
+100004238:	strb	w8, [x0, #0x39]
+10000423c:	ret
+100004240:	strb	wzr, [x0, #0x39]
+100004244:	cbz	w1, 0x100004210
+100004248:	sub	w8, w1, #0x1
+10000424c:	str	x8, [x0, #0x10]
+100004250:	ret
+100004254:	adrp	x0, 12 ; 0x100010000
+100004258:	add	x0, x0, #0x5d8
+10000425c:	mov	x1, #0x0
+100004260:	ret
+100004264:	stp	x20, x19, [sp, #-0x20]!
+100004268:	stp	x29, x30, [sp, #0x10]
+10000426c:	add	x29, sp, #0x10
+100004270:	mov	x19, x0
+100004274:	ldp	x8, x0, [x1]
+100004278:	stp	x8, x0, [x19]
+10000427c:	bl	0x10000a010 ; symbol stub for: _swift_bridgeObjectRetain
+100004280:	mov	x0, x19
+100004284:	ldp	x29, x30, [sp, #0x10]
+100004288:	ldp	x20, x19, [sp], #0x20
+10000428c:	ret
+100004290:	ldr	x0, [x0, #0x8]
+100004294:	b	0x10000a004 ; symbol stub for: _swift_bridgeObjectRelease
+100004298:	stp	x20, x19, [sp, #-0x20]!
+10000429c:	stp	x29, x30, [sp, #0x10]
+1000042a0:	add	x29, sp, #0x10
+1000042a4:	mov	x19, x0
+1000042a8:	ldr	x8, [x1]
+1000042ac:	str	x8, [x0]
+1000042b0:	ldr	x0, [x1, #0x8]
+1000042b4:	ldr	x20, [x19, #0x8]
+1000042b8:	str	x0, [x19, #0x8]
+1000042bc:	bl	0x10000a010 ; symbol stub for: _swift_bridgeObjectRetain
+1000042c0:	mov	x0, x20
+1000042c4:	bl	0x10000a004 ; symbol stub for: _swift_bridgeObjectRelease
+1000042c8:	mov	x0, x19
+1000042cc:	ldp	x29, x30, [sp, #0x10]
+1000042d0:	ldp	x20, x19, [sp], #0x20
+1000042d4:	ret
+1000042d8:	ldr	q0, [x1]
+1000042dc:	str	q0, [x0]
+1000042e0:	ret
+1000042e4:	stp	x20, x19, [sp, #-0x20]!
+1000042e8:	stp	x29, x30, [sp, #0x10]
+1000042ec:	add	x29, sp, #0x10
+1000042f0:	mov	x19, x0
+1000042f4:	ldp	x8, x9, [x1]
+1000042f8:	ldr	x0, [x0, #0x8]
+1000042fc:	stp	x8, x9, [x19]
+100004300:	bl	0x10000a004 ; symbol stub for: _swift_bridgeObjectRelease
+100004304:	mov	x0, x19
+100004308:	ldp	x29, x30, [sp, #0x10]
+10000430c:	ldp	x20, x19, [sp], #0x20
+100004310:	ret
+100004314:	cbz	w1, 0x100004334
+100004318:	tbnz	w1, #0x1f, 0x100004340
+10000431c:	ldr	x8, [x0, #0x8]
+100004320:	mov	w9, #-0x1
+100004324:	cmp	x8, x9
+100004328:	csel	x8, x8, x9, lo
+10000432c:	add	w0, w8, #0x1
+100004330:	ret
+100004334:	mov	w8, #-0x1
+100004338:	add	w0, w8, #0x1
+10000433c:	ret
+100004340:	ldrb	w8, [x0, #0x10]
+100004344:	cbz	w8, 0x10000431c
+100004348:	ldr	w8, [x0]
+10000434c:	mov	w9, #0x7fffffff
+100004350:	add	w8, w8, w9
+100004354:	add	w0, w8, #0x1
+100004358:	ret
+10000435c:	tbnz	w1, #0x1f, 0x10000436c
+100004360:	tbnz	w2, #0x1f, 0x100004384
+100004364:	cbnz	w1, 0x10000438c
+100004368:	ret
+10000436c:	and	w8, w1, #0x7fffffff
+100004370:	stp	x8, xzr, [x0]
+100004374:	tbz	w2, #0x1f, 0x100004368
+100004378:	mov	w8, #0x1
+10000437c:	strb	w8, [x0, #0x10]
+100004380:	ret
+100004384:	strb	wzr, [x0, #0x10]
+100004388:	cbz	w1, 0x100004368
+10000438c:	sub	w8, w1, #0x1
+100004390:	str	x8, [x0, #0x8]
+100004394:	ret
+100004398:	adrp	x0, 12 ; 0x100010000
+10000439c:	add	x0, x0, #0x668
+1000043a0:	mov	x1, #0x0
+1000043a4:	ret
+1000043a8:	ldr	x9, [x0]
+1000043ac:	cmp	x9, #0x1
+1000043b0:	mov	w10, #0x1
+1000043b4:	cinc	w10, w10, ne
+1000043b8:	cmp	x9, #0x0
+1000043bc:	csel	w9, wzr, w10, eq
+1000043c0:	strb	w9, [x8]
+1000043c4:	ret
+1000043c8:	ldrb	w9, [x20]
+1000043cc:	str	x9, [x8]
+1000043d0:	ret
+1000043d4:	str	x25, [sp, #-0x40]!
+1000043d8:	stp	x24, x23, [sp, #0x10]
+1000043dc:	stp	x22, x19, [sp, #0x20]
+1000043e0:	stp	x29, x30, [sp, #0x30]
+1000043e4:	add	x29, sp, #0x30
+1000043e8:	mov	x19, x2
+1000043ec:	mov	x22, x1
+1000043f0:	mov	x23, x21
+1000043f4:	mov	x24, x0
+1000043f8:	mov	x25, x8
+1000043fc:	bl	0x100005d1c
+100004400:	mov	x3, x0
+100004404:	mov	x8, x25
+100004408:	mov	x0, x24
+10000440c:	mov	x1, x22
+100004410:	mov	x2, x19
+100004414:	mov	x21, x23
+100004418:	bl	0x100009f08
+10000441c:	ldp	x29, x30, [sp, #0x30]
+100004420:	ldp	x22, x19, [sp, #0x20]
+100004424:	ldp	x24, x23, [sp, #0x10]
+100004428:	ldr	x25, [sp], #0x40
+10000442c:	ret
+100004430:	stp	x24, x23, [sp, #-0x30]!
+100004434:	stp	x22, x19, [sp, #0x10]
+100004438:	stp	x29, x30, [sp, #0x20]
+10000443c:	add	x29, sp, #0x20
+100004440:	mov	x19, x2
+100004444:	mov	x22, x1
+100004448:	mov	x23, x21
+10000444c:	mov	x24, x0
+100004450:	bl	0x100005d1c
+100004454:	mov	x3, x0
+100004458:	mov	x0, x24
+10000445c:	mov	x1, x22
+100004460:	mov	x2, x19
+100004464:	mov	x21, x23
+100004468:	bl	0x100009efc
+10000446c:	ldp	x29, x30, [sp, #0x20]
+100004470:	ldp	x22, x19, [sp, #0x10]
+100004474:	ldp	x24, x23, [sp], #0x30
+100004478:	ret
+10000447c:	ldrb	w8, [x0]
+100004480:	ldrb	w9, [x1]
+100004484:	cmp	w8, w9
+100004488:	cset	w0, eq
+10000448c:	ret
+100004490:	b	0x100004494
+100004494:	sub	sp, sp, #0x70
+100004498:	stp	x20, x19, [sp, #0x50]
+10000449c:	stp	x29, x30, [sp, #0x60]
+1000044a0:	add	x29, sp, #0x60
+1000044a4:	ldrb	w19, [x20]
+1000044a8:	add	x8, sp, #0x8
+1000044ac:	mov	x0, #0x0
+1000044b0:	bl	0x100009f80
+1000044b4:	add	x20, sp, #0x8
+1000044b8:	mov	x0, x19
+1000044bc:	bl	0x100009f8c
+1000044c0:	add	x20, sp, #0x8
+1000044c4:	bl	0x100009fb0
+1000044c8:	ldp	x29, x30, [sp, #0x60]
+1000044cc:	ldp	x20, x19, [sp, #0x50]
+1000044d0:	add	sp, sp, #0x70
+1000044d4:	ret
+1000044d8:	stp	x20, x19, [sp, #-0x20]!
+1000044dc:	stp	x29, x30, [sp, #0x10]
+1000044e0:	add	x29, sp, #0x10
+1000044e4:	mov	x8, x0
+1000044e8:	ldrb	w0, [x20]
+1000044ec:	mov	x20, x8
+1000044f0:	bl	0x100009f8c
+1000044f4:	ldp	x29, x30, [sp, #0x10]
+1000044f8:	ldp	x20, x19, [sp], #0x20
+1000044fc:	ret
+100004500:	b	0x100004504
+100004504:	sub	sp, sp, #0x70
+100004508:	stp	x20, x19, [sp, #0x50]
+10000450c:	stp	x29, x30, [sp, #0x60]
+100004510:	add	x29, sp, #0x60
+100004514:	ldrb	w19, [x20]
+100004518:	add	x8, sp, #0x8
+10000451c:	bl	0x100009f80
+100004520:	add	x20, sp, #0x8
+100004524:	mov	x0, x19
+100004528:	bl	0x100009f8c
+10000452c:	add	x20, sp, #0x8
+100004530:	bl	0x100009fb0
+100004534:	ldp	x29, x30, [sp, #0x60]
+100004538:	ldp	x20, x19, [sp, #0x50]
+10000453c:	add	sp, sp, #0x70
+100004540:	ret
+100004544:	mov	x8, #-0x1b00000000000000
+100004548:	ldrb	w9, [x20]
+10000454c:	mov	x10, #0x6870
+100004550:	movk	x10, #0x7361, lsl #16
+100004554:	movk	x10, #0x65, lsl #32
+100004558:	mov	x11, #-0x1800000000000000
+10000455c:	mov	x12, #0x7573
+100004560:	movk	x12, #0x7462, lsl #16
+100004564:	movk	x12, #0x7469, lsl #32
+100004568:	movk	x12, #0x656c, lsl #48
+10000456c:	cmp	w9, #0x3
+100004570:	mov	x13, #0x67
+100004574:	movk	x13, #0xe900, lsl #48
+100004578:	mov	x14, #0x7369
+10000457c:	movk	x14, #0x6c50, lsl #16
+100004580:	movk	x14, #0x7961, lsl #32
+100004584:	movk	x14, #0x6e69, lsl #48
+100004588:	mov	x15, #-0x1800000000000000
+10000458c:	mov	x16, #0x7270
+100004590:	movk	x16, #0x676f, lsl #16
+100004594:	movk	x16, #0x6572, lsl #32
+100004598:	movk	x16, #0x7373, lsl #48
+10000459c:	csel	x14, x14, x16, eq
+1000045a0:	csel	x13, x13, x15, eq
+1000045a4:	cmp	w9, #0x2
+1000045a8:	csel	x12, x12, x14, eq
+1000045ac:	csel	x11, x11, x13, eq
+1000045b0:	mov	x13, #-0x1b00000000000000
+1000045b4:	mov	x14, #0x6974
+1000045b8:	movk	x14, #0x6c74, lsl #16
+1000045bc:	movk	x14, #0x65, lsl #32
+1000045c0:	cmp	w9, #0x0
+1000045c4:	csel	x10, x10, x14, eq
+1000045c8:	csel	x8, x8, x13, eq
+1000045cc:	cmp	w9, #0x1
+1000045d0:	csel	x0, x12, x10, gt
+1000045d4:	csel	x1, x11, x8, gt
+1000045d8:	ret
+1000045dc:	stp	x20, x19, [sp, #-0x20]!
+1000045e0:	stp	x29, x30, [sp, #0x10]
+1000045e4:	add	x29, sp, #0x10
+1000045e8:	mov	x19, x8
+1000045ec:	bl	0x100005064
+1000045f0:	strb	w0, [x19]
+1000045f4:	ldp	x29, x30, [sp, #0x10]
+1000045f8:	ldp	x20, x19, [sp], #0x20
+1000045fc:	ret
+100004600:	mov	x0, #0x0
+100004604:	mov	w1, #0x1
+100004608:	ret
+10000460c:	mov	w9, #0x5
+100004610:	strb	w9, [x8]
+100004614:	ret
+100004618:	stp	x20, x19, [sp, #-0x20]!
+10000461c:	stp	x29, x30, [sp, #0x10]
+100004620:	add	x29, sp, #0x10
+100004624:	mov	x19, x0
+100004628:	bl	0x100005610
+10000462c:	mov	x1, x0
+100004630:	mov	x0, x19
+100004634:	ldp	x29, x30, [sp, #0x10]
+100004638:	ldp	x20, x19, [sp], #0x20
+10000463c:	b	0x100009fe0
+100004640:	stp	x20, x19, [sp, #-0x20]!
+100004644:	stp	x29, x30, [sp, #0x10]
+100004648:	add	x29, sp, #0x10
+10000464c:	mov	x19, x0
+100004650:	bl	0x100005610
+100004654:	mov	x1, x0
+100004658:	mov	x0, x19
+10000465c:	ldp	x29, x30, [sp, #0x10]
+100004660:	ldp	x20, x19, [sp], #0x20
+100004664:	b	0x100009fd4
+100004668:	stp	x27, x26, [sp, #-0x50]!
+10000466c:	stp	x25, x24, [sp, #0x10]
+100004670:	stp	x23, x22, [sp, #0x20]
+100004674:	stp	x20, x19, [sp, #0x30]
+100004678:	stp	x29, x30, [sp, #0x40]
+10000467c:	add	x29, sp, #0x40
+100004680:	sub	sp, sp, #0x10
+100004684:	mov	x24, x21
+100004688:	mov	x23, x20
+10000468c:	mov	x20, x0
+100004690:	adrp	x0, 16 ; 0x100014000
+100004694:	add	x0, x0, #0x48
+100004698:	adrp	x1, 6 ; 0x10000a000
+10000469c:	add	x1, x1, #0x2a8
+1000046a0:	bl	0x10000559c
+1000046a4:	mov	x19, x0
+1000046a8:	ldur	x27, [x0, #-0x8]
+1000046ac:	ldr	x9, [x27, #0x40]
+1000046b0:	add	x8, x9, #0xf
+1000046b4:	and	x8, x8, #0xfffffffffffffff0
+1000046b8:	adrp	x16, 12 ; 0x100010000
+1000046bc:	ldr	x16, [x16, #0x388] ; literal pool symbol address: ___chkstk_darwin
+1000046c0:	blr	x16
+1000046c4:	mov	x9, sp
+1000046c8:	sub	x22, x9, x8
+1000046cc:	mov	sp, x22
+1000046d0:	ldp	x25, x26, [x20, #0x18]
+1000046d4:	mov	x0, x20
+1000046d8:	mov	x1, x25
+1000046dc:	bl	0x1000055ec
+1000046e0:	mov	x20, x0
+1000046e4:	bl	0x100005610
+1000046e8:	mov	x2, x0
+1000046ec:	adrp	x0, 12 ; 0x100010000
+1000046f0:	add	x0, x0, #0x790
+1000046f4:	mov	x8, x22
+1000046f8:	mov	x1, x0
+1000046fc:	mov	x3, x25
+100004700:	mov	x4, x26
+100004704:	bl	0x100009fc8
+100004708:	ldrb	w8, [x23]
+10000470c:	sturb	w8, [x29, #-0x41]
+100004710:	sturb	wzr, [x29, #-0x42]
+100004714:	bl	0x100005714
+100004718:	mov	x4, x0
+10000471c:	adrp	x3, 12 ; 0x100010000
+100004720:	add	x3, x3, #0x820
+100004724:	sub	x0, x29, #0x41
+100004728:	sub	x1, x29, #0x42
+10000472c:	mov	x2, x19
+100004730:	mov	x20, x22
+100004734:	mov	x21, x24
+100004738:	bl	0x100009f68
+10000473c:	cbnz	x21, 0x1000047a0
+100004740:	ldp	x0, x1, [x23, #0x8]
+100004744:	mov	w8, #0x1
+100004748:	sturb	w8, [x29, #-0x43]
+10000474c:	sub	x2, x29, #0x43
+100004750:	mov	x3, x19
+100004754:	mov	x20, x22
+100004758:	bl	0x100009f50
+10000475c:	cbnz	x21, 0x1000047a0
+100004760:	ldp	x0, x1, [x23, #0x18]
+100004764:	mov	w8, #0x2
+100004768:	sturb	w8, [x29, #-0x44]
+10000476c:	sub	x2, x29, #0x44
+100004770:	mov	x3, x19
+100004774:	mov	x20, x22
+100004778:	bl	0x100009f50
+10000477c:	cbnz	x21, 0x1000047a0
+100004780:	ldrb	w0, [x23, #0x28]
+100004784:	mov	w8, #0x3
+100004788:	sturb	w8, [x29, #-0x45]
+10000478c:	sub	x1, x29, #0x45
+100004790:	mov	x2, x19
+100004794:	mov	x20, x22
+100004798:	bl	0x100009f5c
+10000479c:	cbz	x21, 0x1000047d4
+1000047a0:	ldr	x8, [x27, #0x8]
+1000047a4:	mov	x0, x22
+1000047a8:	mov	x1, x19
+1000047ac:	mov	x19, x21
+1000047b0:	blr	x8
+1000047b4:	mov	x21, x19
+1000047b8:	sub	sp, x29, #0x40
+1000047bc:	ldp	x29, x30, [sp, #0x40]
+1000047c0:	ldp	x20, x19, [sp, #0x30]
+1000047c4:	ldp	x23, x22, [sp, #0x20]
+
+; ... middle omitted for reviewability ...
+
+100009478:	adrp	x0, 7 ; 0x100010000
+10000947c:	ldr	x0, [x0, #0x3c0]
+100009480:	adrp	x1, 7 ; 0x100010000
+100009484:	ldr	x1, [x1, #0x3b8]
+100009488:	bl	0x10000a070 ; symbol stub for: _swift_getWitnessTable
+10000948c:	adrp	x8, 11 ; 0x100014000
+100009490:	add	x8, x8, #0x290
+100009494:	stlr	x0, [x8]
+100009498:	ldp	x29, x30, [sp], #0x10
+10000949c:	ret
+1000094a0:	stp	x20, x19, [sp, #-0x20]!
+1000094a4:	stp	x29, x30, [sp, #0x10]
+1000094a8:	add	x29, sp, #0x10
+1000094ac:	mov	x19, x8
+1000094b0:	mov	x20, x0
+1000094b4:	bl	0x100009ca4
+1000094b8:	str	x0, [x19]
+1000094bc:	ldp	x29, x30, [sp, #0x10]
+1000094c0:	ldp	x20, x19, [sp], #0x20
+1000094c4:	ret
+1000094c8:	stp	x20, x19, [sp, #-0x20]!
+1000094cc:	stp	x29, x30, [sp, #0x10]
+1000094d0:	add	x29, sp, #0x10
+1000094d4:	mov	x20, x1
+1000094d8:	ldr	x0, [x0]
+1000094dc:	bl	0x10000a0a0 ; symbol stub for: _swift_retain
+1000094e0:	bl	0x100009cb0
+1000094e4:	ldp	x29, x30, [sp, #0x10]
+1000094e8:	ldp	x20, x19, [sp], #0x20
+1000094ec:	ret
+1000094f0:	adrp	x8, 11 ; 0x100014000
+1000094f4:	ldr	x0, [x8, #0x2a0]
+1000094f8:	cbz	x0, 0x100009500
+1000094fc:	ret
+100009500:	stp	x29, x30, [sp, #-0x10]!
+100009504:	mov	x29, sp
+100009508:	adrp	x0, 7 ; 0x100010000
+10000950c:	ldr	x0, [x0, #0x3a0]
+100009510:	adrp	x1, 7 ; 0x100010000
+100009514:	ldr	x1, [x1, #0x398]
+100009518:	bl	0x10000a070 ; symbol stub for: _swift_getWitnessTable
+10000951c:	adrp	x8, 11 ; 0x100014000
+100009520:	add	x8, x8, #0x2a0
+100009524:	stlr	x0, [x8]
+100009528:	ldp	x29, x30, [sp], #0x10
+10000952c:	ret
+100009530:	and	w8, w2, #0xff
+100009534:	cmp	w8, #0x1
+100009538:	b.ne	0x100009540
+10000953c:	b	0x10000a094 ; symbol stub for: _swift_release
+100009540:	mov	x0, x1
+100009544:	b	0x10000a004 ; symbol stub for: _swift_bridgeObjectRelease
+100009548:	stp	x20, x19, [sp, #-0x20]!
+10000954c:	stp	x29, x30, [sp, #0x10]
+100009550:	add	x29, sp, #0x10
+100009554:	mov	x19, x8
+100009558:	mov	x20, x0
+10000955c:	bl	0x100009cbc
+100009560:	str	x0, [x19]
+100009564:	strb	w1, [x19, #0x8]
+100009568:	ldp	x29, x30, [sp, #0x10]
+10000956c:	ldp	x20, x19, [sp], #0x20
+100009570:	ret
+100009574:	stp	x20, x19, [sp, #-0x20]!
+100009578:	stp	x29, x30, [sp, #0x10]
+10000957c:	add	x29, sp, #0x10
+100009580:	mov	x20, x1
+100009584:	ldr	x8, [x0]
+100009588:	ldrb	w1, [x0, #0x8]
+10000958c:	mov	x0, x8
+100009590:	bl	0x100009cc8
+100009594:	ldp	x29, x30, [sp, #0x10]
+100009598:	ldp	x20, x19, [sp], #0x20
+10000959c:	ret
+1000095a0:	and	w8, w2, #0xff
+1000095a4:	cmp	w8, #0x1
+1000095a8:	b.ne	0x1000095b0
+1000095ac:	b	0x10000a0a0 ; symbol stub for: _swift_retain
+1000095b0:	mov	x0, x1
+1000095b4:	b	0x10000a010 ; symbol stub for: _swift_bridgeObjectRetain
+1000095b8:	stp	x20, x19, [sp, #-0x20]!
+1000095bc:	stp	x29, x30, [sp, #0x10]
+1000095c0:	add	x29, sp, #0x10
+1000095c4:	mov	x19, x0
+1000095c8:	mov	x0, #0x0
+1000095cc:	bl	0x10000795c
+1000095d0:	mov	x1, x0
+1000095d4:	ldur	x8, [x0, #-0x8]
+1000095d8:	ldr	x8, [x8, #0x8]
+1000095dc:	mov	x0, x19
+1000095e0:	blr	x8
+1000095e4:	mov	x0, x19
+1000095e8:	ldp	x29, x30, [sp, #0x10]
+1000095ec:	ldp	x20, x19, [sp], #0x20
+1000095f0:	ret
+1000095f4:	adrp	x0, 7 ; 0x100010000
+1000095f8:	add	x0, x0, #0xa18
+1000095fc:	mov	x1, #0x0
+100009600:	ret
+100009604:	stp	x20, x19, [sp, #-0x20]!
+100009608:	stp	x29, x30, [sp, #0x10]
+10000960c:	add	x29, sp, #0x10
+100009610:	mov	x19, x1
+100009614:	mov	x20, x0
+100009618:	adrp	x0, 11 ; 0x100014000
+10000961c:	add	x0, x0, #0xd0
+100009620:	adrp	x1, 1 ; 0x10000a000
+100009624:	add	x1, x1, #0x658
+100009628:	bl	0x10000559c
+10000962c:	mov	x2, x0
+100009630:	ldur	x8, [x0, #-0x8]
+100009634:	ldr	x3, [x8]
+100009638:	mov	x0, x20
+10000963c:	mov	x1, x19
+100009640:	ldp	x29, x30, [sp, #0x10]
+100009644:	ldp	x20, x19, [sp], #0x20
+100009648:	br	x3
+10000964c:	stp	x20, x19, [sp, #-0x20]!
+100009650:	stp	x29, x30, [sp, #0x10]
+100009654:	add	x29, sp, #0x10
+100009658:	mov	x19, x0
+10000965c:	adrp	x0, 11 ; 0x100014000
+100009660:	add	x0, x0, #0xd0
+100009664:	adrp	x1, 1 ; 0x10000a000
+100009668:	add	x1, x1, #0x658
+10000966c:	bl	0x10000559c
+100009670:	mov	x1, x0
+100009674:	ldur	x8, [x0, #-0x8]
+100009678:	ldr	x2, [x8, #0x8]
+10000967c:	mov	x0, x19
+100009680:	ldp	x29, x30, [sp, #0x10]
+100009684:	ldp	x20, x19, [sp], #0x20
+100009688:	br	x2
+10000968c:	stp	x20, x19, [sp, #-0x20]!
+100009690:	stp	x29, x30, [sp, #0x10]
+100009694:	add	x29, sp, #0x10
+100009698:	mov	x19, x1
+10000969c:	mov	x20, x0
+1000096a0:	adrp	x0, 11 ; 0x100014000
+1000096a4:	add	x0, x0, #0xd0
+1000096a8:	adrp	x1, 1 ; 0x10000a000
+1000096ac:	add	x1, x1, #0x658
+1000096b0:	bl	0x10000559c
+1000096b4:	mov	x2, x0
+1000096b8:	ldur	x8, [x0, #-0x8]
+1000096bc:	ldr	x8, [x8, #0x10]
+1000096c0:	mov	x0, x20
+1000096c4:	mov	x1, x19
+1000096c8:	blr	x8
+1000096cc:	mov	x0, x20
+1000096d0:	ldp	x29, x30, [sp, #0x10]
+1000096d4:	ldp	x20, x19, [sp], #0x20
+1000096d8:	ret
+1000096dc:	stp	x20, x19, [sp, #-0x20]!
+1000096e0:	stp	x29, x30, [sp, #0x10]
+1000096e4:	add	x29, sp, #0x10
+1000096e8:	mov	x19, x1
+1000096ec:	mov	x20, x0
+1000096f0:	adrp	x0, 11 ; 0x100014000
+1000096f4:	add	x0, x0, #0xd0
+1000096f8:	adrp	x1, 1 ; 0x10000a000
+1000096fc:	add	x1, x1, #0x658
+100009700:	bl	0x10000559c
+100009704:	mov	x2, x0
+100009708:	ldur	x8, [x0, #-0x8]
+10000970c:	ldr	x8, [x8, #0x18]
+100009710:	mov	x0, x20
+100009714:	mov	x1, x19
+100009718:	blr	x8
+10000971c:	mov	x0, x20
+100009720:	ldp	x29, x30, [sp, #0x10]
+100009724:	ldp	x20, x19, [sp], #0x20
+100009728:	ret
+10000972c:	stp	x20, x19, [sp, #-0x20]!
+100009730:	stp	x29, x30, [sp, #0x10]
+100009734:	add	x29, sp, #0x10
+100009738:	mov	x19, x1
+10000973c:	mov	x20, x0
+100009740:	adrp	x0, 11 ; 0x100014000
+100009744:	add	x0, x0, #0xd0
+100009748:	adrp	x1, 1 ; 0x10000a000
+10000974c:	add	x1, x1, #0x658
+100009750:	bl	0x10000559c
+100009754:	mov	x2, x0
+100009758:	ldur	x8, [x0, #-0x8]
+10000975c:	ldr	x8, [x8, #0x20]
+100009760:	mov	x0, x20
+100009764:	mov	x1, x19
+100009768:	blr	x8
+10000976c:	mov	x0, x20
+100009770:	ldp	x29, x30, [sp, #0x10]
+100009774:	ldp	x20, x19, [sp], #0x20
+100009778:	ret
+10000977c:	stp	x20, x19, [sp, #-0x20]!
+100009780:	stp	x29, x30, [sp, #0x10]
+100009784:	add	x29, sp, #0x10
+100009788:	mov	x19, x1
+10000978c:	mov	x20, x0
+100009790:	adrp	x0, 11 ; 0x100014000
+100009794:	add	x0, x0, #0xd0
+100009798:	adrp	x1, 1 ; 0x10000a000
+10000979c:	add	x1, x1, #0x658
+1000097a0:	bl	0x10000559c
+1000097a4:	mov	x2, x0
+1000097a8:	ldur	x8, [x0, #-0x8]
+1000097ac:	ldr	x8, [x8, #0x28]
+1000097b0:	mov	x0, x20
+1000097b4:	mov	x1, x19
+1000097b8:	blr	x8
+1000097bc:	mov	x0, x20
+1000097c0:	ldp	x29, x30, [sp, #0x10]
+1000097c4:	ldp	x20, x19, [sp], #0x20
+1000097c8:	ret
+1000097cc:	adrp	x3, 0 ; 0x100009000
+1000097d0:	add	x3, x3, #0x7d8
+1000097d4:	b	0x10000a028 ; symbol stub for: _swift_getEnumTagSinglePayloadGeneric
+1000097d8:	stp	x20, x19, [sp, #-0x20]!
+1000097dc:	stp	x29, x30, [sp, #0x10]
+1000097e0:	add	x29, sp, #0x10
+1000097e4:	mov	x19, x1
+1000097e8:	mov	x20, x0
+1000097ec:	adrp	x0, 11 ; 0x100014000
+1000097f0:	add	x0, x0, #0xd0
+1000097f4:	adrp	x1, 1 ; 0x10000a000
+1000097f8:	add	x1, x1, #0x658
+1000097fc:	bl	0x10000559c
+100009800:	mov	x2, x0
+100009804:	ldur	x8, [x0, #-0x8]
+100009808:	ldr	x3, [x8, #0x30]
+10000980c:	mov	x0, x20
+100009810:	mov	x1, x19
+100009814:	ldp	x29, x30, [sp, #0x10]
+100009818:	ldp	x20, x19, [sp], #0x20
+10000981c:	br	x3
+100009820:	adrp	x4, 0 ; 0x100009000
+100009824:	add	x4, x4, #0x82c
+100009828:	b	0x10000a0ac ; symbol stub for: _swift_storeEnumTagSinglePayloadGeneric
+10000982c:	stp	x20, x19, [sp, #-0x20]!
+100009830:	stp	x29, x30, [sp, #0x10]
+100009834:	add	x29, sp, #0x10
+100009838:	mov	x19, x1
+10000983c:	mov	x20, x0
+100009840:	adrp	x0, 11 ; 0x100014000
+100009844:	add	x0, x0, #0xd0
+100009848:	adrp	x1, 1 ; 0x10000a000
+10000984c:	add	x1, x1, #0x658
+100009850:	bl	0x10000559c
+100009854:	mov	x3, x0
+100009858:	ldur	x8, [x0, #-0x8]
+10000985c:	ldr	x4, [x8, #0x38]
+100009860:	mov	x0, x20
+100009864:	mov	x1, x19
+100009868:	mov	x2, x19
+10000986c:	ldp	x29, x30, [sp, #0x10]
+100009870:	ldp	x20, x19, [sp], #0x20
+100009874:	br	x4
+100009878:	sub	sp, sp, #0x30
+10000987c:	stp	x20, x19, [sp, #0x10]
+100009880:	stp	x29, x30, [sp, #0x20]
+100009884:	add	x29, sp, #0x20
+100009888:	mov	x19, x0
+10000988c:	mov	w0, #0x13f
+100009890:	bl	0x1000098e0
+100009894:	cmp	x1, #0x3f
+100009898:	b.hi	0x1000098cc
+10000989c:	ldur	x8, [x0, #-0x8]
+1000098a0:	add	x8, x8, #0x40
+1000098a4:	str	x8, [sp, #0x8]
+1000098a8:	add	x3, sp, #0x8
+1000098ac:	add	x4, x19, #0x10
+1000098b0:	mov	x0, x19
+1000098b4:	mov	w1, #0x100
+1000098b8:	mov	w2, #0x1
+1000098bc:	bl	0x10000a07c ; symbol stub for: _swift_initStructMetadata
+1000098c0:	mov	x0, #0x0
+1000098c4:	mov	x1, #0x0
+1000098c8:	b	0x1000098d0
+1000098cc:	mov	w1, #0x3f
+1000098d0:	ldp	x29, x30, [sp, #0x20]
+1000098d4:	ldp	x20, x19, [sp, #0x10]
+1000098d8:	add	sp, sp, #0x30
+1000098dc:	ret
+1000098e0:	stp	x20, x19, [sp, #-0x20]!
+1000098e4:	stp	x29, x30, [sp, #0x10]
+1000098e8:	add	x29, sp, #0x10
+1000098ec:	mov	x19, x0
+1000098f0:	adrp	x8, 11 ; 0x100014000
+1000098f4:	ldr	x0, [x8, #0x310]
+1000098f8:	cbz	x0, 0x100009904
+1000098fc:	mov	x1, #0x0
+100009900:	b	0x10000992c
+100009904:	bl	0x1000078c8
+100009908:	mov	x2, x0
+10000990c:	adrp	x1, 7 ; 0x100010000
+100009910:	add	x1, x1, #0x668
+100009914:	mov	x0, x19
+100009918:	bl	0x100009e6c
+10000991c:	cbnz	x1, 0x10000992c
+100009920:	adrp	x8, 11 ; 0x100014000
+100009924:	add	x8, x8, #0x310
+100009928:	stlr	x0, [x8]
+10000992c:	ldp	x29, x30, [sp, #0x10]
+100009930:	ldp	x20, x19, [sp], #0x20
+100009934:	ret
+100009938:	stp	x29, x30, [sp, #-0x10]!
+10000993c:	mov	x29, sp
+100009940:	adrp	x0, 11 ; 0x100014000
+100009944:	add	x0, x0, #0x340
+100009948:	adrp	x1, 11 ; 0x100014000
+10000994c:	add	x1, x1, #0x348
+100009950:	adrp	x2, 1 ; 0x10000a000
+100009954:	add	x2, x2, #0x7e8
+100009958:	adrp	x3, 7 ; 0x100010000
+10000995c:	ldr	x3, [x3, #0x318]
+100009960:	bl	0x100009aac
+100009964:	ldp	x29, x30, [sp], #0x10
+100009968:	ret
+10000996c:	adrp	x1, 1 ; 0x10000a000
+100009970:	add	x1, x1, #0xadc
+100009974:	mov	w2, #0x1
+100009978:	b	0x10000a040 ; symbol stub for: _swift_getOpaqueTypeConformance2
+10000997c:	adrp	x1, 1 ; 0x10000a000
+100009980:	add	x1, x1, #0xab4
+100009984:	mov	w2, #0x1
+100009988:	b	0x10000a040 ; symbol stub for: _swift_getOpaqueTypeConformance2
+10000998c:	stp	x20, x19, [sp, #-0x20]!
+100009990:	stp	x29, x30, [sp, #0x10]
+100009994:	add	x29, sp, #0x10
+100009998:	mov	x19, x8
+10000999c:	mov	x20, x0
+1000099a0:	bl	0x100009c8c
+1000099a4:	str	x0, [x19]
+1000099a8:	ldp	x29, x30, [sp, #0x10]
+1000099ac:	ldp	x20, x19, [sp], #0x20
+1000099b0:	ret
+1000099b4:	stp	x20, x19, [sp, #-0x20]!
+1000099b8:	stp	x29, x30, [sp, #0x10]
+1000099bc:	add	x29, sp, #0x10
+1000099c0:	mov	x20, x1
+1000099c4:	ldr	x0, [x0]
+1000099c8:	bl	0x10000a0a0 ; symbol stub for: _swift_retain
+1000099cc:	bl	0x100009c98
+1000099d0:	ldp	x29, x30, [sp, #0x10]
+1000099d4:	ldp	x20, x19, [sp], #0x20
+1000099d8:	ret
+1000099dc:	b	0x1000099e0
+1000099e0:	adrp	x8, 11 ; 0x100014000
+1000099e4:	ldr	x0, [x8, #0x3a0]
+1000099e8:	cbz	x0, 0x1000099f0
+1000099ec:	ret
+1000099f0:	sub	sp, sp, #0x30
+1000099f4:	stp	x20, x19, [sp, #0x10]
+1000099f8:	stp	x29, x30, [sp, #0x20]
+1000099fc:	add	x29, sp, #0x20
+100009a00:	adrp	x0, 11 ; 0x100014000
+100009a04:	add	x0, x0, #0x358
+100009a08:	adrp	x1, 1 ; 0x10000a000
+100009a0c:	add	x1, x1, #0x898
+100009a10:	bl	0x100007908
+100009a14:	mov	x19, x0
+100009a18:	adrp	x0, 11 ; 0x100014000
+100009a1c:	add	x0, x0, #0x3a8
+100009a20:	adrp	x1, 11 ; 0x100014000
+100009a24:	add	x1, x1, #0x3b0
+100009a28:	adrp	x2, 1 ; 0x10000a000
+100009a2c:	add	x2, x2, #0x910
+100009a30:	adrp	x3, 7 ; 0x100010000
+100009a34:	ldr	x3, [x3, #0x250]
+100009a38:	bl	0x100009aac
+100009a3c:	adrp	x8, 7 ; 0x100010000
+100009a40:	ldr	x8, [x8, #0x80]
+100009a44:	stp	x0, x8, [sp]
+100009a48:	adrp	x0, 7 ; 0x100010000
+100009a4c:	ldr	x0, [x0, #0x98]
+100009a50:	mov	x2, sp
+100009a54:	mov	x1, x19
+100009a58:	bl	0x10000a070 ; symbol stub for: _swift_getWitnessTable
+100009a5c:	adrp	x8, 11 ; 0x100014000
+100009a60:	add	x8, x8, #0x3a0
+100009a64:	stlr	x0, [x8]
+100009a68:	ldp	x29, x30, [sp, #0x20]
+100009a6c:	ldp	x20, x19, [sp, #0x10]
+100009a70:	add	sp, sp, #0x30
+100009a74:	ret
+100009a78:	stp	x29, x30, [sp, #-0x10]!
+100009a7c:	mov	x29, sp
+100009a80:	adrp	x0, 11 ; 0x100014000
+100009a84:	add	x0, x0, #0x3b8
+100009a88:	adrp	x1, 11 ; 0x100014000
+100009a8c:	add	x1, x1, #0x390
+100009a90:	adrp	x2, 1 ; 0x10000a000
+100009a94:	add	x2, x2, #0x8d0
+100009a98:	adrp	x3, 7 ; 0x100010000
+100009a9c:	ldr	x3, [x3, #0x278]
+100009aa0:	bl	0x100009aac
+100009aa4:	ldp	x29, x30, [sp], #0x10
+100009aa8:	ret
+100009aac:	stp	x20, x19, [sp, #-0x20]!
+100009ab0:	stp	x29, x30, [sp, #0x10]
+100009ab4:	add	x29, sp, #0x10
+100009ab8:	mov	x19, x0
+100009abc:	ldr	x0, [x0]
+100009ac0:	cbnz	x0, 0x100009ae4
+100009ac4:	mov	x20, x3
+100009ac8:	mov	x0, x1
+100009acc:	mov	x1, x2
+100009ad0:	bl	0x100007908
+100009ad4:	mov	x1, x0
+100009ad8:	mov	x0, x20
+100009adc:	bl	0x10000a070 ; symbol stub for: _swift_getWitnessTable
+100009ae0:	stlr	x0, [x19]
+100009ae4:	ldp	x29, x30, [sp, #0x10]
+100009ae8:	ldp	x20, x19, [sp], #0x20
+100009aec:	ret
+100009af0:	b	0x100008d04
+100009af4:	b	0x100008d08
+100009af8:	b	0x100008d0c
+100009afc:	b	0x100007444
+100009b00:	b	0x1000079d8
+100009b04:	stp	x20, x19, [sp, #-0x20]!
+100009b08:	stp	x29, x30, [sp, #0x10]
+100009b0c:	add	x29, sp, #0x10
+100009b10:	mov	x19, x8
+100009b14:	bl	0x100009bc8
+100009b18:	adrp	x1, 7 ; 0x100010000
+100009b1c:	add	x1, x1, #0x950
+100009b20:	mov	x8, x19
+100009b24:	mov	x2, x0
+100009b28:	ldp	x29, x30, [sp, #0x10]
+100009b2c:	ldp	x20, x19, [sp], #0x20
+100009b30:	b	0x100009cec
+_main:
+100009b34:	stp	x20, x19, [sp, #-0x20]!
+100009b38:	stp	x29, x30, [sp, #0x10]
+100009b3c:	add	x29, sp, #0x10
+100009b40:	bl	0x100009b68
+100009b44:	mov	x1, x0
+100009b48:	adrp	x0, 7 ; 0x100010000
+100009b4c:	add	x0, x0, #0xac0
+100009b50:	mov	x20, x0
+100009b54:	bl	0x100009c5c
+100009b58:	mov	w0, #0x0
+100009b5c:	ldp	x29, x30, [sp, #0x10]
+100009b60:	ldp	x20, x19, [sp], #0x20
+100009b64:	ret
+100009b68:	adrp	x8, 11 ; 0x100014000
+100009b6c:	ldr	x0, [x8, #0x3c0]
+100009b70:	cbz	x0, 0x100009b78
+100009b74:	ret
+100009b78:	stp	x29, x30, [sp, #-0x10]!
+100009b7c:	mov	x29, sp
+100009b80:	adrp	x0, 1 ; 0x10000a000
+100009b84:	add	x0, x0, #0x934
+100009b88:	adrp	x1, 7 ; 0x100010000
+100009b8c:	add	x1, x1, #0xac0
+100009b90:	bl	0x10000a070 ; symbol stub for: _swift_getWitnessTable
+100009b94:	adrp	x8, 11 ; 0x100014000
+100009b98:	add	x8, x8, #0x3c0
+100009b9c:	stlr	x0, [x8]
+100009ba0:	ldp	x29, x30, [sp], #0x10
+100009ba4:	ret
+100009ba8:	adrp	x0, 7 ; 0x100010000
+100009bac:	add	x0, x0, #0xac0
+100009bb0:	mov	x1, #0x0
+100009bb4:	ret
+100009bb8:	adrp	x1, 1 ; 0x10000a000
+100009bbc:	add	x1, x1, #0xb20
+100009bc0:	mov	w2, #0x1
+100009bc4:	b	0x10000a040 ; symbol stub for: _swift_getOpaqueTypeConformance2
+100009bc8:	adrp	x8, 11 ; 0x100014000
+100009bcc:	ldr	x0, [x8, #0x3c8]
+100009bd0:	cbz	x0, 0x100009bd8
+100009bd4:	ret
+100009bd8:	stp	x29, x30, [sp, #-0x10]!
+100009bdc:	mov	x29, sp
+100009be0:	adrp	x0, 1 ; 0x10000a000
+100009be4:	add	x0, x0, #0x604
+100009be8:	adrp	x1, 7 ; 0x100010000
+100009bec:	add	x1, x1, #0x950
+100009bf0:	bl	0x10000a070 ; symbol stub for: _swift_getWitnessTable
+100009bf4:	adrp	x8, 11 ; 0x100014000
+100009bf8:	add	x8, x8, #0x3c8
+100009bfc:	stlr	x0, [x8]
+100009c00:	ldp	x29, x30, [sp], #0x10
+100009c04:	ret
+100009c08:	sub	sp, sp, #0x20
+100009c0c:	stp	x29, x30, [sp, #0x10]
+100009c10:	add	x29, sp, #0x10
+100009c14:	bl	0x100009bc8
+100009c18:	adrp	x8, 7 ; 0x100010000
+100009c1c:	add	x8, x8, #0x950
+100009c20:	stp	x8, x0, [sp]
+100009c24:	adrp	x1, 7 ; 0x100010000
+100009c28:	ldr	x1, [x1, #0x108]
+100009c2c:	mov	x0, sp
+100009c30:	mov	w2, #0x1
+100009c34:	bl	0x10000a040 ; symbol stub for: _swift_getOpaqueTypeConformance2
+100009c38:	ldp	x29, x30, [sp, #0x10]
+100009c3c:	add	sp, sp, #0x20
+100009c40:	ret

@@ -83,14 +83,14 @@
 
     if (indexPath.row == 0) {
         cell.textLabel.text = @"حالة الاتصال";
-        cell.detailTextLabel.text = @"متصل";
+        cell.detailTextLabel.text = @"يرجى التحقق من الاتصال";
         cell.imageView.image = [UIImage systemImageNamed:@"wifi"];
     } else if (indexPath.row == 1) {
         cell.textLabel.text = @"آخر مزامنة";
-        cell.detailTextLabel.text = @"اليوم";
+        cell.detailTextLabel.text = @"لم تتم المزامنة";
         cell.imageView.image = [UIImage systemImageNamed:@"arrow.clockwise"];
     } else {
-        cell.textLabel.text = @"التفاصيل";
+        cell.textLabel.text = @"ملخص الحالة";
         cell.textLabel.textColor = [UIColor secondaryLabelColor];
         cell.imageView.image = nil;
         cell.userInteractionEnabled = YES;

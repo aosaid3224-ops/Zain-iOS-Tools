@@ -1,0 +1,48 @@
+# CarTV 1.0.8 — Static Analysis Package
+
+This directory contains a **static, non-invasive analysis** of the supplied `CarTV.ipa`. It is intended for review and interoperability research. It does not include the original application binary, a decrypted payload, extracted credentials, or a reconstructed source tree.
+
+## Scope
+
+The analysis covers the application metadata, supported devices and OS, URL-scheme queries, privacy declarations, scene and extension registration, embedded framework inventory, binary hashes, file inventory, printable strings, and a domain-only network indicator list.
+
+## Identified components
+
+| Component | Identifier | Version | Notes |
+|---|---|---:|---|
+| Main app | `com.lyntra.player` | `1.0.8 (21)` | arm64; minimum iOS 18; portrait iPhone UI; CarPlay and external-display scenes |
+| ScreenRelay | `com.lyntra.player.ScreenRelay` | `1.0.8 (21)` | ReplayKit broadcast upload extension |
+| CastWidget | `com.lyntra.player.CastWidget` | `1.0.8 (21)` | WidgetKit extension |
+| MobileVLCKit | embedded framework | — | arm64 dynamic framework; media playback dependency |
+
+## Declared capabilities
+
+The metadata declares local-network access, camera access for QR scanning, photo-library access for importing videos, background audio, Bonjour service `_lyntracast._tcp`, and arbitrary App Transport Security loads. The app queries many third-party URL schemes, including media, social, messaging, and streaming applications; scheme queries do not prove that those services are contacted.
+
+## Important limitation
+
+An IPA normally contains compiled Mach-O code, not Objective-C/Swift source. A complete source-level reconstruction cannot be guaranteed without the developer's source, symbols, or explicit authorization and appropriate tooling. This package therefore records observable artifacts rather than claiming a nonexistent “full decompilation.” DRM, FairPlay encryption, code-signature bypass, credential extraction, and protected-data recovery were intentionally not attempted.
+
+## Files
+
+- `Info.plist.json` and extension plist JSON files: normalized metadata.
+- `PrivacyInfo.xcprivacy.json`: privacy manifest.
+- `file-inventory.tsv`: all app files and sizes.
+- `binary-summary.json`: binary sizes and SHA-256 hashes.
+- `strings/`: printable strings extracted from embedded binaries.
+- `network-domains.txt`: domains observed in printable strings, without URL paths or query values.
+- `SHA256SUMS`: integrity hashes for this analysis package.
+
+Generated from the supplied IPA on 2026-09-18.
+
+## Advanced static analysis
+
+The `advanced/` directory adds LLVM Mach-O private-header and section reports, Mach-O summaries, binary hashes, class-like and selector-like string candidates, filtered Objective-C/Swift-related strings, and normalized plist summaries for the main application, both extensions, and `MobileVLCKit`. The main executable exposes Objective-C and Swift metadata sections such as `__objc_classname`, `__objc_methname`, `__swift5_types`, and `__swift5_typeref`; these are observable compiled metadata, not original source code.
+
+The analysis intentionally remains non-invasive. It does not decrypt FairPlay content, remove code signatures, execute the target application, recover credentials, or claim that string candidates are verified source-level classes or selectors.
+
+## Deep binary metadata and focused disassembly
+
+The latest pass adds LIEF-based Mach-O reports for the main executable and both extensions, including section tables, linked system/framework libraries, exported and local symbol records where present, Objective-C string-section candidates, Swift mangled-name candidates, and hashes. It also adds focused beginning/end disassembly excerpts for reviewability rather than publishing an unbounded multi-megabyte instruction dump.
+
+For the main `CarTV` executable, the pass recorded 45 sections, 1,727 symbol records, 1,000 Swift-mangled candidates, 269 Objective-C class-name candidates, and 3,696 Objective-C method-name candidates. The linked libraries include AVFoundation, CarPlay, CoreMedia, ReplayKit, WebKit, MobileVLCKit, Swift runtime libraries, and other system frameworks. These observations describe compiled metadata and linkage; they are not equivalent to the original source and have not been used to bypass encryption, signing, or access controls.

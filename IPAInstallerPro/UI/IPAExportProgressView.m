@@ -1,4 +1,5 @@
 #import "IPAExportProgressView.h"
+#import "IPTheme.h"
 
 @interface IPAExportProgressView ()
 @property (nonatomic, strong, readwrite) UILabel *stageLabel;
@@ -33,17 +34,17 @@
     // Backdrop
     self.backdropView = [[UIView alloc] init];
     self.backdropView.translatesAutoresizingMaskIntoConstraints = NO;
-    self.backdropView.backgroundColor = [UIColor colorWithRed:0.0 green:0.0 blue:0.0 alpha:0.65];
+    self.backdropView.backgroundColor = [IPTheme backgroundColor];
     self.backdropView.alpha = 0;
     [self addSubview:self.backdropView];
 
     // Card
     self.cardView = [[UIView alloc] init];
     self.cardView.translatesAutoresizingMaskIntoConstraints = NO;
-    self.cardView.backgroundColor = [UIColor colorWithRed:0.08 green:0.08 blue:0.10 alpha:1.0];
+    self.cardView.backgroundColor = [IPTheme surfaceColor];
     self.cardView.layer.cornerRadius = 24;
     self.cardView.layer.borderWidth = 1;
-    self.cardView.layer.borderColor = [UIColor colorWithWhite:1 alpha:0.08].CGColor;
+    self.cardView.layer.borderColor = [[IPTheme textPrimaryColor] colorWithAlphaComponent:0.08].CGColor;
     self.cardView.layer.shadowColor = [UIColor blackColor].CGColor;
     self.cardView.layer.shadowOffset = CGSizeMake(0, 12);
     self.cardView.layer.shadowRadius = 24;
@@ -58,7 +59,7 @@
     self.appIconView.contentMode = UIViewContentModeScaleAspectFit;
     self.appIconView.layer.cornerRadius = 16;
     self.appIconView.clipsToBounds = YES;
-    self.appIconView.backgroundColor = [UIColor colorWithWhite:0.15 alpha:1.0];
+    self.appIconView.backgroundColor = [IPTheme textPrimaryColor];
     [self.cardView addSubview:self.appIconView];
 
     // App Name
@@ -74,7 +75,7 @@
     self.stageLabel = [[UILabel alloc] init];
     self.stageLabel.translatesAutoresizingMaskIntoConstraints = NO;
     self.stageLabel.font = [UIFont systemFontOfSize:15 weight:UIFontWeightBold];
-    self.stageLabel.textColor = [UIColor colorWithRed:1 green:0.22 blue:0.18 alpha:1.0];
+    self.stageLabel.textColor = [IPTheme errorColor];
     self.stageLabel.textAlignment = NSTextAlignmentCenter;
     self.stageLabel.text = @"جارٍ التحضير...";
     [self.cardView addSubview:self.stageLabel];
@@ -83,7 +84,7 @@
     self.detailLabel = [[UILabel alloc] init];
     self.detailLabel.translatesAutoresizingMaskIntoConstraints = NO;
     self.detailLabel.font = [UIFont systemFontOfSize:12 weight:UIFontWeightMedium];
-    self.detailLabel.textColor = [UIColor colorWithWhite:0.55 alpha:1.0];
+    self.detailLabel.textColor = [IPTheme textSecondaryColor];
     self.detailLabel.textAlignment = NSTextAlignmentCenter;
     self.detailLabel.numberOfLines = 2;
     [self.cardView addSubview:self.detailLabel];
@@ -91,8 +92,8 @@
     // Progress Bar
     self.progressBar = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
     self.progressBar.translatesAutoresizingMaskIntoConstraints = NO;
-    self.progressBar.progressTintColor = [UIColor colorWithRed:1 green:0.22 blue:0.18 alpha:1.0];
-    self.progressBar.trackTintColor = [UIColor colorWithWhite:0.15 alpha:1.0];
+    self.progressBar.progressTintColor = [IPTheme errorColor];
+    self.progressBar.trackTintColor = [IPTheme textPrimaryColor];
     self.progressBar.layer.cornerRadius = 3;
     self.progressBar.clipsToBounds = YES;
     self.progressBar.progress = 0.0;
@@ -102,7 +103,7 @@
     self.statsLabel = [[UILabel alloc] init];
     self.statsLabel.translatesAutoresizingMaskIntoConstraints = NO;
     self.statsLabel.font = [UIFont systemFontOfSize:11 weight:UIFontWeightMedium];
-    self.statsLabel.textColor = [UIColor colorWithWhite:0.4 alpha:1.0];
+    self.statsLabel.textColor = [IPTheme textTertiaryColor];
     self.statsLabel.textAlignment = NSTextAlignmentCenter;
     self.statsLabel.text = @"";
     [self.cardView addSubview:self.statsLabel];
@@ -110,7 +111,7 @@
     // Spinner
     self.spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleMedium];
     self.spinner.translatesAutoresizingMaskIntoConstraints = NO;
-    self.spinner.color = [UIColor colorWithRed:1 green:0.22 blue:0.18 alpha:1.0];
+    self.spinner.color = [IPTheme errorColor];
     self.spinner.hidesWhenStopped = YES;
     [self.cardView addSubview:self.spinner];
     [self.spinner startAnimating];
@@ -128,7 +129,7 @@
     // Close Button (hidden by default, shown on completion)
     self.closeButton = [UIButton buttonWithType:UIButtonTypeSystem];
     self.closeButton.translatesAutoresizingMaskIntoConstraints = NO;
-    self.closeButton.backgroundColor = [UIColor colorWithRed:1 green:0.22 blue:0.18 alpha:1.0];
+    self.closeButton.backgroundColor = [IPTheme errorColor];
     self.closeButton.tintColor = UIColor.whiteColor;
     self.closeButton.titleLabel.font = [UIFont systemFontOfSize:15 weight:UIFontWeightBold];
     [self.closeButton setTitle:@"إغلاق" forState:UIControlStateNormal];
@@ -269,9 +270,9 @@
         self.statsTimer = nil;
         [self.spinner stopAnimating];
         self.stageLabel.text = success ? @"تم الاستخراج بنجاح" : @"فشل الاستخراج";
-        self.stageLabel.textColor = success ? [UIColor colorWithRed:0.25 green:0.82 blue:0.55 alpha:1.0] : [UIColor colorWithRed:0.95 green:0.35 blue:0.3 alpha:1.0];
+        self.stageLabel.textColor = success ? [IPTheme successColor] : [IPTheme errorColor];
         self.detailLabel.text = message ?: @"";
-        self.progressBar.progressTintColor = success ? [UIColor colorWithRed:0.25 green:0.82 blue:0.55 alpha:1.0] : [UIColor colorWithRed:0.95 green:0.35 blue:0.3 alpha:1.0];
+        self.progressBar.progressTintColor = success ? [IPTheme successColor] : [IPTheme errorColor];
         [self.progressBar setProgress:1.0 animated:YES];
         if (success) {
             self.successMark.alpha = 1.0;

@@ -36,8 +36,8 @@
     self.segmentControl.backgroundColor = [IPTheme cardColor]; self.segmentControl.layer.cornerRadius = 12; self.segmentControl.layer.masksToBounds = YES;
     if (@available(iOS 13.0, *)) {
         self.segmentControl.selectedSegmentTintColor = [IPTheme accentColor];
-        [self.segmentControl setTitleTextAttributes:@{NSForegroundColorAttributeName: [UIColor whiteColor]} forState:UIControlStateNormal];
-        [self.segmentControl setTitleTextAttributes:@{NSForegroundColorAttributeName: [UIColor whiteColor]} forState:UIControlStateSelected];
+        [self.segmentControl setTitleTextAttributes:@{NSForegroundColorAttributeName: [IPTheme textPrimaryColor]} forState:UIControlStateNormal];
+        [self.segmentControl setTitleTextAttributes:@{NSForegroundColorAttributeName: [IPTheme textPrimaryColor]} forState:UIControlStateSelected];
     } else {
         self.segmentControl.tintColor = [IPTheme accentColor];
     }
@@ -47,7 +47,7 @@
     // TextView
     self.textView = [[UITextView alloc] initWithFrame:CGRectMake(8, safeTop + 48, w - 16, h - safeTop - 100)];
     self.textView.backgroundColor = [IPTheme cardColor]; self.textView.layer.cornerRadius = 16; self.textView.layer.borderWidth = 0.7; self.textView.layer.borderColor = [IPTheme subtleBorderColor].CGColor;
-    self.textView.textColor = [UIColor colorWithWhite:0.85 alpha:1.0];
+    self.textView.textColor = [IPTheme textPrimaryColor];
     self.textView.font = [UIFont fontWithName:@"Menlo" size:10] ?: [UIFont systemFontOfSize:10];
     self.textView.editable = NO;
     self.textView.selectable = YES;
@@ -59,7 +59,7 @@
     closeBtn.frame = CGRectMake(16, h - 44, w - 32, 36);
     closeBtn.backgroundColor = [IPTheme secondaryCardColor]; closeBtn.layer.borderWidth = 0.7; closeBtn.layer.borderColor = [IPTheme subtleBorderColor].CGColor;
     [closeBtn setTitle:@"❌ إغلاق" forState:UIControlStateNormal];
-    [closeBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    [closeBtn setTitleColor:[IPTheme textPrimaryColor] forState:UIControlStateNormal];
     closeBtn.titleLabel.font = [UIFont systemFontOfSize:14 weight:UIFontWeightBold];
     closeBtn.layer.cornerRadius = 16;
     closeBtn.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleTopMargin;

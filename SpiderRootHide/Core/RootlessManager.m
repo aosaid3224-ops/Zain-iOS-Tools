@@ -12,6 +12,7 @@
 #import "RootlessManager.h"
 #import "RuntimeEnvironment.h"
 #import "Logger.h"
+#import "../rootless.h"
 
 @implementation RootlessManager
 
@@ -35,35 +36,35 @@
 - (NSString *)resolvePath:(NSString *)path {
     if (!path || path.length == 0) return path;
 
+    NSFileManager *fm = [NSFileManager defaultManager];
     RuntimeEnvironment *rt = [RuntimeEnvironment sharedEnvironment];
 
-    // If path already starts with bootstrap path, it's already resolved
-    if (rt.bootstrapPath && [path hasPrefix:rt.bootstrapPath]) {
-        return path;
+    if (rt.bootstrapPath && [path hasPrefix:rt.bootstrapPath]) return path;
+    if ([fm fileExistsAtPath:path]) return path;
+
+    // RootHide/Relaxin exposes an outer randomized .jbroot directory. Its
+    // logical root is usually <outer-jbroot>/var/jb, not <outer-jbroot>.
+    // Prefer libroot's authoritative mapping, then probe both layouts.
+    NSString *librootMapped = SPJBRRootPath(path);
+    if (librootMapped.length && [fm fileExistsAtPath:librootMapped]) return librootMapped;
+
+    if (rt.bootstrapPath.length > 0 && [rt.bootstrapPath containsString:@".jbroot-"]) {
+        NSString *innerRoot = [rt.bootstrapPath stringByAppendingPathComponent:@"var/jb"];
+        NSString *innerCandidate = [innerRoot stringByAppendingPathComponent:[path hasPrefix:@"/"] ? [path substringFromIndex:1] : path];
+        if ([fm fileExistsAtPath:innerCandidate]) return innerCandidate;
+
+        NSString *outerCandidate = [rt.bootstrapPath stringByAppendingPathComponent:[path hasPrefix:@"/"] ? [path substringFromIndex:1] : path];
+        if ([fm fileExistsAtPath:outerCandidate]) return outerCandidate;
+
+        // Destinations must remain deterministic even before creation.
+        return innerCandidate;
     }
 
-    // If the path exists as-is, return it
-    if ([[NSFileManager defaultManager] fileExistsAtPath:path]) {
-        return path;
+    if (rt.isRootless && rt.bootstrapPath.length > 0) {
+        NSString *relativePath = [path hasPrefix:@"/"] ? [path substringFromIndex:1] : path;
+        return [rt.bootstrapPath stringByAppendingPathComponent:relativePath];
     }
 
-    // FIX(v3.0.26): In rootless, ALWAYS prepend bootstrap path.
-    // resolvePath must be deterministic based on runtime environment (jbroot), NOT file existence.
-    // New destinations that don't exist yet must resolve to the same namespace as staging.
-    // This ensures staging (/var/jb/var/tmp/...) and destApp (/var/jb/Applications/...)
-    // are always on the same logical filesystem, regardless of whether the file exists.
-    if (rt.isRootless && rt.bootstrapPath) {
-        NSString *resolved;
-        if ([path hasPrefix:@"/"]) {
-            NSString *relativePath = [path substringFromIndex:1];
-            resolved = [rt.bootstrapPath stringByAppendingPathComponent:relativePath];
-        } else {
-            resolved = [rt.bootstrapPath stringByAppendingPathComponent:path];
-        }
-        return resolved;
-    }
-
-    // Fallback: return original path (caller handles non-existence)
     return path;
 }
 
