@@ -42,8 +42,7 @@ static NSString * const kIPAExtractorPersistedItemsKey = @"IPAExtractor.Persiste
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.view.backgroundColor = [IPTheme backgroundColor];
-    self.title = @"";
-    self.navigationItem.title = @"";
+    // لا تضبط self.title: كان يمحو عنوان التبويب "فك الحزمة" بعد أول ضغطة عليه
     self.searchText = @"";
     self.items = [NSMutableArray array];
     [self restorePersistedItems];
