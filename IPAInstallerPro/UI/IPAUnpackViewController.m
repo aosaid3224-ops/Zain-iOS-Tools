@@ -683,28 +683,111 @@ static NSString * const kIPAExtractorPersistedItemsKey = @"IPAExtractor.Persiste
     [self presentViewController:confirm animated:YES completion:nil];
 }
 
+// White document, folded top-right corner, blue "IPA" — matches the reference
+// asset style: light page, crisp fold shadow, centered type.
 - (UIImage *)ipaFileIcon {
     CGSize size = CGSizeMake(52, 52);
     UIGraphicsImageRenderer *renderer = [[UIGraphicsImageRenderer alloc] initWithSize:size];
     return [renderer imageWithActions:^(UIGraphicsImageRendererContext *context) {
-        // Background rounded rect
-        CGRect bgRect = CGRectMake(2, 2, 48, 48);
-        UIBezierPath *bgPath = [UIBezierPath bezierPathWithRoundedRect:bgRect cornerRadius:10];
-        [[IPTheme accentColor] setFill];
-        [bgPath fill];
-        // White page icon
-        CGRect pageRect = CGRectMake(16, 10, 20, 26);
-        UIBezierPath *pagePath = [UIBezierPath bezierPathWithRoundedRect:pageRect cornerRadius:3];
+        CGContextRef ctx = context.CGContext;
+
+        // Soft drop shadow under the page
+        CGContextSaveGState(ctx);
+        CGContextSetShadowWithColor(ctx, CGSizeMake(0, 1.5), 2.5, [[UIColor blackColor] colorWithAlphaComponent:0.25].CGColor);
+
+        // Page body
+        CGRect pageRect = CGRectMake(7, 3, 38, 46);
+        UIBezierPath *page = [UIBezierPath bezierPathWithRoundedRect:pageRect cornerRadius:4];
         [[IPTheme textPrimaryColor] setFill];
-        [pagePath fill];
-        // Green badge
-        CGRect badgeRect = CGRectMake(10, 32, 32, 14);
-        UIBezierPath *badgePath = [UIBezierPath bezierPathWithRoundedRect:badgeRect cornerRadius:4];
-        [[IPTheme successColor] setFill];
-        [badgePath fill];
-        // IPA text
-        NSDictionary *attrs = @{ NSFontAttributeName: [UIFont systemFontOfSize:8 weight:UIFontWeightBold], NSForegroundColorAttributeName: UIColor.whiteColor };
-        [@"IPA" drawInRect:CGRectMake(10, 34, 32, 10) withAttributes:attrs];
+        [page fill];
+        CGContextRestoreGState(ctx);
+
+        // Folded corner (top-right) — folded-over triangle with subtle shading
+        CGPoint foldA = CGPointMake(37, 3);
+        CGPoint foldB = CGPointMake(45, 3);
+        CGPoint foldC = CGPointMake(45, 11);
+        UIBezierPath *fold = [UIBezierPath bezierPath];
+        [fold moveToPoint:foldA];
+        [fold addLineToPoint:foldB];
+        [fold addLineToPoint:foldC];
+        [fold closePath];
+        [[IPTheme accentMutedColor] setFill];
+        [fold fill];
+
+        // Fold crease line
+        UIBezierPath *crease = [UIBezierPath bezierPath];
+        [crease moveToPoint:foldA];
+        [crease addLineToPoint:foldC];
+        [[UIColor colorWithWhite:0.85 alpha:1.0] setStroke];
+        crease.lineWidth = 0.75;
+        [crease stroke];
+
+        // Blue "IPA" text
+        UIFont *font = [UIFont systemFontOfSize:15 weight:UIFontWeightBold];
+        NSDictionary *attrs = @{
+            NSFontAttributeName: font,
+            NSForegroundColorAttributeName: [UIColor colorWithRed:0.29 green:0.56 blue:0.78 alpha:1.0]
+        };
+        CGSize textSize = [@"IPA" sizeWithAttributes:attrs];
+        CGRect textRect = CGRectMake(CGRectGetMidX(pageRect) - textSize.width / 2.0,
+                                     CGRectGetMidY(pageRect) - textSize.height / 2.0 + 1,
+                                     textSize.width, textSize.height);
+        [@"IPA" drawInRect:textRect withAttributes:attrs];
+    }];
+}
+
+// Blue folder with 3×3 white grid + "IPA" — the extracted-output identity.
+- (UIImage *)extractedFolderIcon {
+    CGSize size = CGSizeMake(52, 52);
+    UIGraphicsImageRenderer *renderer = [[UIGraphicsImageRenderer alloc] initWithSize:size];
+    return [renderer imageWithActions:^(UIGraphicsImageRendererContext *context) {
+        CGContextRef ctx = context.CGContext;
+        UIColor *folderBlue = [UIColor colorWithRed:0.05 green:0.48 blue:0.95 alpha:1.0];
+
+        // Shadow
+        CGContextSaveGState(ctx);
+        CGContextSetShadowWithColor(ctx, CGSizeMake(0, 1.5), 2.5, [[UIColor blackColor] colorWithAlphaComponent:0.25].CGColor);
+
+        // Folder tab (top-left)
+        CGRect tabRect = CGRectMake(6, 7, 17, 8);
+        UIBezierPath *tab = [UIBezierPath bezierPathWithRoundedRect:tabRect
+                                                  byRoundingCorners:UIRectCornerTopLeft | UIRectCornerTopRight
+                                                        cornerRadii:CGSizeMake(3, 3)];
+        [folderBlue setFill];
+        [tab fill];
+
+        // Folder body
+        CGRect bodyRect = CGRectMake(4, 12, 44, 37);
+        UIBezierPath *body = [UIBezierPath bezierPathWithRoundedRect:bodyRect cornerRadius:5];
+        [folderBlue setFill];
+        [body fill];
+        CGContextRestoreGState(ctx);
+
+        // 3×3 grid of white rounded squares
+        CGFloat cell = 6.0, gap = 2.5;
+        CGFloat gridW = 3 * cell + 2 * gap;
+        CGFloat gridX = CGRectGetMidX(bodyRect) - gridW / 2.0;
+        CGFloat gridY = 19;
+        for (NSInteger row = 0; row < 3; row++) {
+            for (NSInteger col = 0; col < 3; col++) {
+                CGRect r = CGRectMake(gridX + col * (cell + gap), gridY + row * (cell + gap), cell, cell);
+                UIBezierPath *sq = [UIBezierPath bezierPathWithRoundedRect:r cornerRadius:1.6];
+                [[UIColor whiteColor] setFill];
+                [sq fill];
+            }
+        }
+
+        // White "IPA" under grid
+        UIFont *font = [UIFont systemFontOfSize:10 weight:UIFontWeightBold];
+        NSDictionary *attrs = @{
+            NSFontAttributeName: font,
+            NSForegroundColorAttributeName: UIColor.whiteColor
+        };
+        CGSize textSize = [@"IPA" sizeWithAttributes:attrs];
+        CGRect textRect = CGRectMake(CGRectGetMidX(bodyRect) - textSize.width / 2.0,
+                                     gridY + gridW + 3.5,
+                                     textSize.width, textSize.height);
+        [@"IPA" drawInRect:textRect withAttributes:attrs];
     }];
 }
 
@@ -842,7 +925,7 @@ static NSString * const kIPAExtractorPersistedItemsKey = @"IPAExtractor.Persiste
         title = @"المجلد المستخرج";
         subtitle = [NSString stringWithFormat:@"↳ %@ — Extracted", sourceTitle];
         meta = outputAvailable ? [NSString stringWithFormat:@"%@ • %@", outputSize, [self formattedDate:attrs[NSFileModificationDate]]] : @"الناتج غير متاح";
-        icon = [[UIImage systemImageNamed:@"folder.fill"] imageWithTintColor:[IPTheme accentColor]];
+        icon = [self extractedFolderIcon];
         statusColor = outputAvailable ? [IPTheme successColor] : [IPTheme errorColor];
     } else {
         BOOL extracting = [item[@"extracting"] boolValue];
