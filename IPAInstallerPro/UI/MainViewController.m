@@ -13,8 +13,6 @@
 @property (nonatomic, strong) UILabel *toastLabel;
 @property (nonatomic, strong) UIView *dashboardHeader;
 @property (nonatomic, assign) BOOL hasShownAutoAbout;
-@property (nonatomic, strong) UILabel *trustedCountLabel;
-@property (nonatomic, strong) UILabel *installedCountLabel;
 @property (nonatomic, strong) UIView *importOverlayView;
 @property (nonatomic, strong) UIActivityIndicatorView *importSpinner;
 @property (nonatomic, strong) UILabel *importLabel;
@@ -102,7 +100,7 @@
 
 - (void)setupDashboardHeader {
     CGFloat width = self.view.bounds.size.width;
-    self.dashboardHeader = [[UIView alloc] initWithFrame:CGRectMake(0, 0, width, 200.0)];
+    self.dashboardHeader = [[UIView alloc] initWithFrame:CGRectMake(0, 0, width, 100.0)];
     self.dashboardHeader.backgroundColor = UIColor.clearColor;
     self.dashboardHeader.autoresizingMask = UIViewAutoresizingFlexibleWidth;
 
@@ -115,13 +113,12 @@
     title.autoresizingMask = UIViewAutoresizingFlexibleWidth;
     [self.dashboardHeader addSubview:title];
 
-    // Primary action — a single, calm accent circle.
+    // Primary action — bare plus symbol, no background circle.
     UIButton *add = [UIButton buttonWithType:UIButtonTypeSystem];
     add.frame = CGRectMake(width - 62, 30, 42, 42);
-    add.layer.cornerRadius = 21;
-    add.backgroundColor = [IPTheme accentColor];
+    add.backgroundColor = UIColor.clearColor;
     [add setImage:[UIImage systemImageNamed:@"plus"] forState:UIControlStateNormal];
-    add.tintColor = [UIColor blackColor];
+    add.tintColor = [IPTheme textPrimaryColor];
     [add addTarget:self action:@selector(addIPATapped:) forControlEvents:UIControlEventTouchUpInside];
     [self.dashboardHeader addSubview:add];
 
@@ -135,59 +132,9 @@
     [viewMode addTarget:self action:@selector(toggleViewMode:) forControlEvents:UIControlEventTouchUpInside];
     [self.dashboardHeader addSubview:viewMode];
 
-    // Stats — one quiet surface, hairline separators, no heavy border.
-    UIView *stats = [[UIView alloc] initWithFrame:CGRectMake(16, 118, MAX(width - 32, 1), 68)];
-    stats.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-    stats.backgroundColor = [IPTheme surfaceColor];
-    stats.layer.cornerRadius = [IPTheme radiusMedium];
-    [self.dashboardHeader addSubview:stats];
-
-    NSArray *icons = @[@"cube", @"chart.pie", @"shield", @"arrow.down.circle"];
-    NSArray *labels = @[@"التطبيقات", @"إجمالي الحجم", @"موثوقة", @"تم التثبيت"];
-    NSMutableArray *values = [NSMutableArray array];
-    CGFloat seg = stats.bounds.size.width / 4.0;
-    for (NSInteger i = 0; i < 4; i++) {
-        CGFloat x = seg * i;
-        if (i) {
-            UIView *d = [[UIView alloc] initWithFrame:CGRectMake(x, 14, 0.5, 40)];
-            d.backgroundColor = [IPTheme separatorColor];
-            [stats addSubview:d];
-        }
-        UIImageView *iv = [[UIImageView alloc] initWithFrame:CGRectMake(x + (seg - 18) / 2.0, 10, 18, 18)];
-        iv.image = [UIImage systemImageNamed:icons[i]];
-        iv.tintColor = [IPTheme textQuaternaryColor];
-        iv.contentMode = UIViewContentModeScaleAspectFit;
-        [stats addSubview:iv];
-
-        UILabel *v = [[UILabel alloc] initWithFrame:CGRectMake(x + 3, 28, seg - 6, 20)];
-        v.textAlignment = NSTextAlignmentCenter;
-        v.font = [UIFont monospacedSystemFontOfSize:15 weight:UIFontWeightSemibold];
-        v.textColor = [IPTheme textPrimaryColor];
-        [stats addSubview:v];
-        [values addObject:v];
-
-        UILabel *c = [[UILabel alloc] initWithFrame:CGRectMake(x + 1, 48, seg - 2, 14)];
-        c.text = labels[i];
-        c.textAlignment = NSTextAlignmentCenter;
-        c.font = [UIFont systemFontOfSize:10 weight:UIFontWeightMedium];
-        c.textColor = [IPTheme textTertiaryColor];
-        [stats addSubview:c];
-    }
-    self.appsCountLabel = values[0];
-    self.totalSizeLabel = values[1];
-    self.trustedCountLabel = values[2];
-    self.installedCountLabel = values[3];
-    self.totalSizeLabel.adjustsFontSizeToFitWidth = YES;
-    self.totalSizeLabel.minimumScaleFactor = 0.45;
-    self.totalSizeLabel.numberOfLines = 1;
     self.tableView.tableHeaderView = self.dashboardHeader;
 }
 
-- (void)updateDashboardStatistics {
-    NSUInteger trusted = 0; unsigned long long total = 0; for (IPAExtractedInfo *info in self.ipaFiles) { total += info.fileSize.unsignedLongLongValue; if (info.teamIdentifier.length > 0 && ![info.teamIdentifier isEqualToString:@"غير معروف"]) trusted++; }
-    NSUInteger installed = 0; NSFileManager *fm = [NSFileManager defaultManager]; RuntimeEnvironment *rt = [RuntimeEnvironment sharedEnvironment]; NSMutableArray *appRoots = [NSMutableArray arrayWithObject:@"/Applications"]; if (rt.bootstrapPath) { [appRoots addObject:[rt.bootstrapPath stringByAppendingPathComponent:@"Applications"]]; } else { [appRoots addObject:@"/var/jb/Applications"]; } for (NSString *root in appRoots) { for (NSString *item in [fm contentsOfDirectoryAtPath:root error:nil]) if ([item.pathExtension.lowercaseString isEqualToString:@"app"]) installed++; }
-    self.appsCountLabel.text = [NSString stringWithFormat:@"%lu", (unsigned long)self.ipaFiles.count]; self.totalSizeLabel.text = [[IPAExtractor sharedExtractor] formatFileSize:(long long)total]; self.trustedCountLabel.text = [NSString stringWithFormat:@"%lu", (unsigned long)trusted]; self.installedCountLabel.text = [NSString stringWithFormat:@"%lu", (unsigned long)installed];
-}
 
 - (void)setupEmptyState {
     self.emptyLabel = [[UILabel alloc] init];
@@ -529,7 +476,6 @@ static NSString * const kPersistentCacheKey = @"IPAInstallerPro.PersistentMetada
             [self.ipaFiles removeAllObjects];
             [self.ipaFiles addObjectsFromArray:foundFiles];
             [self.tableView reloadData];
-            [self updateDashboardStatistics];
             self.emptyLabel.hidden = (self.ipaFiles.count > 0);
             self.emptyLabel.frame = CGRectMake(20, self.view.bounds.size.height / 2 - 40, self.view.bounds.size.width - 40, 80);
             [self.refreshControl endRefreshing];
@@ -611,7 +557,6 @@ static NSString * const kPersistentCacheKey = @"IPAInstallerPro.PersistentMetada
                     [batchLock unlock];
                     [self.tableView reloadRowsAtIndexPaths:toReload withRowAnimation:UITableViewRowAnimationNone];
                 }
-                [self updateDashboardStatistics];
             });
 
             // Phase 3: icon enrichment (background, limited concurrency)
@@ -838,7 +783,6 @@ static NSString * const kPersistentCacheKey = @"IPAInstallerPro.PersistentMetada
         });
         [self clearPersistentCacheForPath:info.filePath];
         [self.ipaFiles removeObjectAtIndex:indexPath.row];
-        [self updateDashboardStatistics];
         [tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
         completionHandler(YES);
     }];
