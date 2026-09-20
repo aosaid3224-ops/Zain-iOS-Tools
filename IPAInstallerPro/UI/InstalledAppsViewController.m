@@ -60,7 +60,7 @@
 #pragma mark - UI Setup
 
 - (void)setupSegmentControl {
-    _segmentControl = [[UISegmentedControl alloc] initWithItems:@[@"الكل", @"مستخدم", @"نظام"]];
+    _segmentControl = [[UISegmentedControl alloc] initWithItems:@[@"مستخدم", @"نظام"]];
     _segmentControl.translatesAutoresizingMaskIntoConstraints = NO;
     _segmentControl.selectedSegmentIndex = 0;
     _segmentControl.backgroundColor = [IPTheme surfaceSubtleColor];
@@ -95,7 +95,7 @@
     [self.view addSubview:_searchBar];
 
     [NSLayoutConstraint activateConstraints:@[
-        [_searchBar.topAnchor constraintEqualToAnchor:_segmentControl.bottomAnchor],
+        [_searchBar.topAnchor constraintEqualToAnchor:_segmentControl.bottomAnchor constant:[IPTheme space12]],
         [_searchBar.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:4],
         [_searchBar.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor constant:-4],
         [_searchBar.heightAnchor constraintEqualToConstant:40]
@@ -226,9 +226,9 @@
 
 - (void)filterApps {
     NSArray<AppInfo *> *segmented = self.apps;
-    if (self.segmentControl.selectedSegmentIndex == 1) {
+    if (self.segmentControl.selectedSegmentIndex == 0) {
         segmented = [segmented filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"isSystemApp == NO"]];
-    } else if (self.segmentControl.selectedSegmentIndex == 2) {
+    } else if (self.segmentControl.selectedSegmentIndex == 1) {
         segmented = [segmented filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"isSystemApp == YES"]];
     }
 
