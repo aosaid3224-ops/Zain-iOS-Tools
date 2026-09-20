@@ -26,17 +26,6 @@ jobs:
           export HOMEBREW_NO_REQUIRE_TAP_TRUST=1
           brew install dpkg ldid
 
-      - name: Fix package script permissions
-        run: |
-          chmod +x source/IPAInstallerPro/layout/DEBIAN/postinst 2>/dev/null || true
-          chmod +x source/IPAInstallerPro/layout/DEBIAN/prerm 2>/dev/null || true
-
-      - name: Build IPA Installer Pro
-        run: |
-          cd source/IPAInstallerPro
-          make clean
-          make package
-
       - name: Build Crack Lab
         run: |
           cd source/CrackLab
@@ -49,7 +38,6 @@ jobs:
         with:
           name: cracklab-development-packages
           path: |
-            source/IPAInstallerPro/packages/*.deb
             source/CrackLab/packages/*.deb
             source/scripts/generate-repo.py
           if-no-files-found: error
