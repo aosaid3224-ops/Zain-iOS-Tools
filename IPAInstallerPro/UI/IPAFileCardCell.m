@@ -20,7 +20,7 @@
     if (!self) return nil;
     self.backgroundColor = UIColor.clearColor;
     self.contentView.backgroundColor = UIColor.clearColor;
-    self.selectionStyle = UITableViewCellSelectionStyleDefault;
+    self.selectionStyle = UITableViewCellSelectionStyleNone; // بلا غطاء افتراضي — التمييز عبر setHighlighted فقط
     self.semanticContentAttribute = UISemanticContentAttributeForceRightToLeft;
     self.contentView.semanticContentAttribute = UISemanticContentAttributeForceRightToLeft;
     self.contentView.layoutMargins = UIEdgeInsetsMake(3.0, 4.0, 3.0, 4.0);
@@ -150,7 +150,15 @@
 - (void)setSelected:(BOOL)selected animated:(BOOL)animated {
     [super setSelected:selected animated:animated];
     [UIView animateWithDuration:0.12 animations:^{
-        self.cardView.backgroundColor = selected ? [IPTheme errorColor] : (self.showsChildIndent ? [IPTheme secondaryCardColor] : [IPTheme cardColor]);
+        self.cardView.backgroundColor = selected ? [IPTheme selectionColor] : (self.showsChildIndent ? [IPTheme secondaryCardColor] : [IPTheme cardColor]);
+    }];
+}
+
+- (void)setHighlighted:(BOOL)highlighted animated:(BOOL)animated {
+    [super setHighlighted:highlighted animated:animated];
+    // تغذية راجعة لمس فقط — النصوص تبقى ظاهرة دائماً
+    [UIView animateWithDuration:0.1 animations:^{
+        self.cardView.backgroundColor = highlighted ? [IPTheme selectionColor] : (self.showsChildIndent ? [IPTheme secondaryCardColor] : [IPTheme cardColor]);
     }];
 }
 
