@@ -1,4 +1,3 @@
-name: Build IPA Installer Pro and Sync to Dev Repo
 name: Build Apps and Prepare Dev Packages
 permissions:
   contents: read
