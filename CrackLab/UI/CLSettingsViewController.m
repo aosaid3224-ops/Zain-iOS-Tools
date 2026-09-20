@@ -59,7 +59,6 @@
     ]];
     UIView *markWrap = [UIView new];
     [markWrap addSubview:mark];
-    mark.centerXAnchor.active = NO;
     [mark.centerXAnchor constraintEqualToAnchor:markWrap.centerXAnchor].active = YES;
     [mark.topAnchor constraintEqualToAnchor:markWrap.topAnchor].active = YES;
     [mark.bottomAnchor constraintEqualToAnchor:markWrap.bottomAnchor].active = YES;
