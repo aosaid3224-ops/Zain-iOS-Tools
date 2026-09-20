@@ -25,8 +25,8 @@
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    self.title = @"";
-    self.navigationItem.title = @"";
+    // لا تضبط self.title هنا: UIKit ينسخه إلى tabBarItem فيمحو عنوان التبويب "ملفات IPA"
+    // الترويسة المخصصة (dashboardHeader) تكفي، وشريط التنقل يبقى فارغاً بلا عنوان
     self.view.backgroundColor = [IPTheme backgroundColor];
     self.ipaFiles = [NSMutableArray array];
     self.isLoading = NO;
