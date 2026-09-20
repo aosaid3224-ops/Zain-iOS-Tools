@@ -7,6 +7,9 @@
 
 #import <UIKit/UIKit.h>
 
+@interface CLTheme : NSObject
+@end
+
 @interface CLTheme (Colors)
 + (UIColor *)backgroundColor;
 + (UIColor *)surfaceColor;

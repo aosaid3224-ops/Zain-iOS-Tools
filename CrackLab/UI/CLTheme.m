@@ -4,6 +4,9 @@
 
 #import "CLTheme.h"
 
+@implementation CLTheme
+@end
+
 @implementation CLTheme (Colors)
 + (UIColor *)backgroundColor {
     return [UIColor colorWithRed:0.055 green:0.052 blue:0.058 alpha:1.0]; // #0E0D0F warm near-black
