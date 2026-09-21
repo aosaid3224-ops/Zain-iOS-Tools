@@ -41,7 +41,11 @@ jobs:
           dpkg-deb -I "$deb"
           test "$(dpkg-deb -f "$deb" Package)" = "com.cracklab.app"
           expected_version=$(awk '$1 == "Version:" { print $2; exit }' CrackLab/control)
-          test "$(dpkg-deb -f "$deb" Version)" = "$expected_version"
+          actual_version=$(dpkg-deb -f "$deb" Version)
+          case "$actual_version" in
+            "$expected_version"|"$expected_version"-*) ;;
+            *) echo "Version mismatch: expected ${expected_version} or a Theos suffix, got ${actual_version}"; exit 1 ;;
+          esac
           test "$(dpkg-deb -f "$deb" Architecture)" = "iphoneos-arm64"
 
       - name: Upload verified package
