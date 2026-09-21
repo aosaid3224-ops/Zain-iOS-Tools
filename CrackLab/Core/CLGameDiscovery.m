@@ -1,22 +1,24 @@
 //
 //  CLGameDiscovery.m
 //
-//  Classification: LSApplicationProxy genre + bundle marker heuristics.
-//  Games-only output; user/system games both included.
-//
 
 #import "CLGameDiscovery.h"
 #import "CLEngineDetector.h"
 #import "CLOperationLog.h"
 
-@implementation CLGameDiscovery
+@implementation CLGameDiscovery {
+    NSArray<CLDiscoveryRecord *> *_lastDiagnostics;
+}
+
+#pragma mark - Public
+
+- (NSArray<CLDiscoveryRecord *> *)lastDiagnostics { return _lastDiagnostics ?: @[]; }
 
 + (long long)bundleSizeAtPath:(NSString *)path {
     NSFileManager *fm = [NSFileManager defaultManager];
     NSDictionary *attrs = [fm attributesOfItemAtPath:path error:nil];
     if (!attrs) return 0;
     if ([attrs.fileType isEqualToString:NSFileTypeDirectory]) {
-        // Sum top-level to keep it cheap; recursion cap below.
         long long total = 0;
         NSDirectoryEnumerator *en = [fm enumeratorAtPath:path];
         NSString *rel; NSInteger n = 0;
@@ -32,129 +34,83 @@
 
 - (void)discoverGamesWithCompletion:(void (^)(NSArray<CLGame *> *, NSString *))completion {
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        // ── Layer 1: Application Discovery (mechanism chain) ──
         NSMutableArray<id> *rawProxies = [NSMutableArray array];
         NSString *mechanism = nil;
         NSString *errorMsg = nil;
 
-        // ── Mechanism chain: first that returns real proxies wins ──
         Class wsClass = NSClassFromString(@"LSApplicationWorkspace");
         id workspace = ([wsClass respondsToSelector:@selector(defaultWorkspace)])
             ? [wsClass performSelector:@selector(defaultWorkspace)] : nil;
 
         if (workspace) {
-            // (1) Block enumeration — the stable modern SPI across iOS 13–18.
             SEL enumSel = NSSelectorFromString(@"enumerateApplicationsOfType:legacySPI:block:");
             if (![workspace respondsToSelector:enumSel])
                 enumSel = NSSelectorFromString(@"enumerateApplicationsOfType:legacySPI:usingBlock:");
             if ([workspace respondsToSelector:enumSel]) {
-                void (^proxyBlock)(id) = ^(id proxy) {
-                    if (proxy) [rawProxies addObject:proxy];
-                };
+                void (^proxyBlock)(id) = ^(id proxy) { if (proxy) [rawProxies addObject:proxy]; };
                 @try {
                     NSMethodSignature *sig = [workspace methodSignatureForSelector:enumSel];
                     NSInvocation *inv = [NSInvocation invocationWithMethodSignature:sig];
-                    [inv setTarget:workspace];
-                    [inv setSelector:enumSel];
-                    unsigned long long type = 0;   // 0 = all applications
-                    BOOL legacy = NO;
+                    [inv setTarget:workspace]; [inv setSelector:enumSel];
+                    unsigned long long type = 0; BOOL legacy = NO;
                     [inv setArgument:&type atIndex:2];
                     [inv setArgument:&legacy atIndex:3];
                     [inv setArgument:&proxyBlock atIndex:4];
                     [inv invoke];
-                    if (rawProxies.count > 0) mechanism = @"LSApplicationWorkspace enumerateApplicationsOfType";
+                    if (rawProxies.count > 0) mechanism = @"enumerateApplicationsOfType";
                 } @catch (NSException *e) {
-                    errorMsg = [NSString stringWithFormat:@"فشل التعداد بالـ block: %@", e.reason ?: @"خطأ غير معروف"];
-                    [rawProxies removeAllObjects];
+                    errorMsg = e.reason; [rawProxies removeAllObjects];
                 }
             }
-
-            // (2) Instance allInstalledApplications on the WORKSPACE
-            //     (the previous bug called this on LSApplicationProxy, which
-            //     does not implement it — unrecognized selector).
             if (!mechanism && [workspace respondsToSelector:@selector(allInstalledApplications)]) {
                 @try {
                     id apps = [workspace performSelector:@selector(allInstalledApplications)];
                     if ([apps isKindOfClass:[NSArray class]] && [apps count] > 0) {
                         [rawProxies addObjectsFromArray:apps];
-                        mechanism = @"LSApplicationWorkspace allInstalledApplications";
+                        mechanism = @"allInstalledApplications";
                     }
-                } @catch (NSException *e) {
-                    errorMsg = [NSString stringWithFormat:@"فشل allInstalledApplications: %@", e.reason ?: @"خطأ غير معروف"];
-                }
+                } @catch (NSException *e) { errorMsg = e.reason; }
             }
         }
 
         if (!mechanism || rawProxies.count == 0) {
-            NSString *final = [NSString stringWithFormat:
-                @"تعذّر جلب التطبيقات من كل الآليات المتاحة. %@", errorMsg ?: @"لا توجد آلية LaunchServices متاحة."];
+            NSString *final = [NSString stringWithFormat:@"تعذّر جلب التطبيقات من كل الآليات. %@", errorMsg ?: @""];
             dispatch_async(dispatch_get_main_queue(), ^{ completion(@[], final); });
             return;
         }
 
-        // ── Classification: games only, robust per-proxy handling ──
+        // ── Layer 2+3: metadata + multi-signal classification, with diagnostics ──
         NSMutableArray<CLGame *> *games = [NSMutableArray array];
-        for (id proxy in rawProxies) {
-            @autoreleasepool {
+        NSMutableArray<CLDiscoveryRecord *> *diagnostics = [NSMutableArray array];
+
+        [self classifyProxies:rawProxies intoGames:games diagnostics:diagnostics];
+
+        // Fallback: if the strict pass produced zero games, rescan proxies with
+        // richer metadata (legacySPI:YES often restores genre fields on modern iOS).
+        BOOL usedLegacyPass = NO;
+        if (games.count == 0) {
+            NSMutableArray<id> *richProxies = [NSMutableArray array];
+            SEL enumSel = NSSelectorFromString(@"enumerateApplicationsOfType:legacySPI:block:");
+            if (![workspace respondsToSelector:enumSel])
+                enumSel = NSSelectorFromString(@"enumerateApplicationsOfType:legacySPI:usingBlock:");
+            if ([workspace respondsToSelector:enumSel]) {
+                void (^proxyBlock)(id) = ^(id proxy) { if (proxy) [richProxies addObject:proxy]; };
                 @try {
-                    NSString *bundleID = [proxy valueForKey:@"bundleIdentifier"];
-                    NSString *name = [proxy valueForKey:@"localizedName"];
-                    NSURL *bundleURL = [proxy valueForKey:@"bundleURL"];
-                    NSString *bundlePath = bundleURL.path;
-                    if (!bundleID.length || !bundlePath.length) continue;
-                    if (![bundlePath hasSuffix:@".app"]) continue;
-
-                    NSDictionary *info = [NSDictionary dictionaryWithContentsOfFile:
-                        [bundlePath stringByAppendingPathComponent:@"Info.plist"]];
-                    if (!info) continue;
-
-                    BOOL isGame = NO;
-                    @try {
-                        NSArray *genreIDs = [proxy valueForKey:@"genreIDs"];
-                        for (id gid in genreIDs) {
-                            if ([gid respondsToSelector:@selector(integerValue)] && [gid integerValue] == 6014) { isGame = YES; break; }
-                        }
-                        if (!isGame) {
-                            NSString *genre = [proxy valueForKey:@"genre"];
-                            if ([genre.lowercaseString containsString:@"game"]) isGame = YES;
-                        }
-                        if (!isGame) {
-                            NSArray *genres = [proxy valueForKey:@"genres"];
-                            for (NSString *g in genres) {
-                                if ([g.lowercaseString containsString:@"game"]) { isGame = YES; break; }
-                            }
-                        }
-                    } @catch (__unused NSException *e) {}
-
-                    if (!isGame) {
-                        NSArray *fw = nil;
-                        CLGameEngine eng = [CLEngineDetector detectEngineForBundle:bundlePath linkedFrameworks:&fw];
-                        if (eng == CLGameEngineUnity || eng == CLGameEngineUnreal || eng == CLGameEngineGodot)
-                            isGame = YES;
+                    NSMethodSignature *sig = [workspace methodSignatureForSelector:enumSel];
+                    NSInvocation *inv = [NSInvocation invocationWithMethodSignature:sig];
+                    [inv setTarget:workspace]; [inv setSelector:enumSel];
+                    unsigned long long type = 0; BOOL legacy = YES;
+                    [inv setArgument:&type atIndex:2];
+                    [inv setArgument:&legacy atIndex:3];
+                    [inv setArgument:&proxyBlock atIndex:4];
+                    [inv invoke];
+                    if (richProxies.count > 0) {
+                        [games removeAllObjects]; [diagnostics removeAllObjects];
+                        [self classifyProxies:richProxies intoGames:games diagnostics:diagnostics];
+                        usedLegacyPass = YES;
                     }
-                    if (!isGame) continue;
-
-                    CLGame *game = [CLGame new];
-                    game.bundleID = bundleID;
-                    game.name = name.length ? name : bundleID;
-                    game.bundlePath = bundlePath;
-                    game.version = info[@"CFBundleShortVersionString"] ?: info[@"CFBundleVersion"] ?: @"؟";
-                    id rawExecutableName = info[@"CFBundleExecutable"];
-                    NSString *executableName = [rawExecutableName isKindOfClass:[NSString class]]
-                        ? (NSString *)rawExecutableName : nil;
-                    game.executablePath = executableName.length
-                        ? [bundlePath stringByAppendingPathComponent:executableName] : nil;
-                    game.lastModified = [[NSFileManager defaultManager]
-                        attributesOfItemAtPath:bundlePath error:nil].fileModificationDate;
-                    game.icon = [self iconForBundle:bundlePath info:info];
-
-                    NSArray *fw = nil;
-                    game.engine = [CLEngineDetector detectEngineForBundle:bundlePath linkedFrameworks:&fw];
-                    game.engineName = [CLEngineDetector localizedNameForEngine:game.engine];
-                    game.frameworks = fw;
-                    game.bundleSize = [CLGameDiscovery bundleSizeAtPath:bundlePath];
-
-                    [games addObject:game];
-                } @catch (__unused NSException *e) { continue; }
+                } @catch (__unused NSException *e) {}
             }
         }
 
@@ -162,16 +118,144 @@
             return [a.name localizedCaseInsensitiveCompare:b.name];
         }];
 
-        // Successful discovery is only claimed when a real list came back.
-        NSString *summary = [NSString stringWithFormat:
-            @"%ld تطبيق ممسوح · %ld لعبة · الآلية: %@",
-            (long)rawProxies.count, (long)games.count, mechanism];
+        _lastDiagnostics = [diagnostics copy];
+        // Persist diagnostics for developer inspection.
+        NSMutableArray *raw = [NSMutableArray array];
+        for (CLDiscoveryRecord *d in diagnostics) [raw addObject:[d dictionaryRepresentation]];
+        NSString *docs = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES).firstObject;
+        [raw writeToFile:[docs stringByAppendingPathComponent:@"CLDiscoveryDiagnostics.plist"] atomically:YES];
+
+        // ── Log: summary + per-game reason ──
+        NSString *summary = [NSString stringWithFormat:@"%ld تطبيق · %ld لعبة · %@%@",
+            (long)rawProxies.count, (long)games.count, mechanism,
+            usedLegacyPass ? @" (legacy pass)" : @""];
         [[CLOperationLog sharedLog] addEntryWithKind:CLOperationKindDiscovery
             status:CLOperationStatusSuccess title:@"اكتشاف الألعاب" detail:summary];
+        for (CLGame *g in games) {
+            CLDiscoveryRecord *rec = nil;
+            for (CLDiscoveryRecord *d in diagnostics) {
+                if ([d.bundleID isEqualToString:g.bundleID]) { rec = d; break; }
+            }
+            NSString *why = rec.signals.count ? [rec.signals componentsJoinedByString:@" + "] : @"—";
+            [[CLOperationLog sharedLog] addEntryWithKind:CLOperationKindDiscovery
+                status:CLOperationStatusSuccess
+                title:[NSString stringWithFormat:@"لعبة: %@", g.name]
+                detail:[NSString stringWithFormat:@"%@ · v%@ · %@", g.bundleID, g.version, why]];
+        }
 
         dispatch_async(dispatch_get_main_queue(), ^{ completion([games copy], nil); });
     });
 }
+
+#pragma mark - Layer 2/3: metadata + scoring classification
+
+- (void)classifyProxies:(NSArray<id> *)proxies
+             intoGames:(NSMutableArray<CLGame *> *)games
+           diagnostics:(NSMutableArray<CLDiscoveryRecord *> *)diagnostics {
+    NSFileManager *fm = [NSFileManager defaultManager];
+
+    for (id proxy in proxies) {
+        @autoreleasepool {
+            CLDiscoveryRecord *rec = [CLDiscoveryRecord new];
+            rec.signals = [NSMutableArray array];
+            rec.score = 0;
+            @try {
+                rec.bundleID = [proxy valueForKey:@"bundleIdentifier"] ?: @"";
+                rec.name = [proxy valueForKey:@"localizedName"] ?: rec.bundleID;
+                NSURL *bundleURL = [proxy valueForKey:@"bundleURL"];
+                rec.bundlePath = bundleURL.path ?: @"";
+            } @catch (__unused NSException *e) { continue; }
+
+            if (!rec.bundleID.length || ![rec.bundlePath hasSuffix:@".app"]) continue;
+
+            // App type: user vs system by install location (reliable).
+            if ([rec.bundlePath hasPrefix:@"/private/var/containers/Bundle/Application/"]) rec.appType = @"مستخدم";
+            else if ([rec.bundlePath hasPrefix:@"/Applications"]) rec.appType = @"نظام";
+            else rec.appType = @"أخرى";
+
+            NSString *infoPath = [rec.bundlePath stringByAppendingPathComponent:@"Info.plist"];
+            NSDictionary *info = [NSDictionary dictionaryWithContentsOfFile:infoPath];
+            rec.hasInfoPlist = (info != nil);
+            if (!info) {
+                rec.isGame = NO;
+                [rec.signals addObject:@"لا يوجد Info.plist"];
+                [diagnostics addObject:rec];
+                continue;
+            }
+
+            // ── Metadata signals ──
+            // (a) LSApplicationCategoryType — the App Store category the developer
+            //     declared in their own Info.plist. Works for sideloaded apps too.
+            rec.categoryType = info[@"LSApplicationCategoryType"] ?: @"";
+            if ([rec.categoryType.lowercaseString containsString:@"game"]) {
+                rec.score += 3;
+                [rec.signals addObject:[NSString stringWithFormat:@"التصنيف=%@", rec.categoryType]];
+            }
+
+            // (b) LaunchServices genre fields (may be nil on modern iOS — non-fatal).
+            @try {
+                rec.genreIDs = [proxy valueForKey:@"genreIDs"];
+                for (id gid in rec.genreIDs) {
+                    if ([gid respondsToSelector:@selector(integerValue)] && [gid integerValue] == 6014) {
+                        rec.score += 3; [rec.signals addObject:@"genreID=6014"]; break;
+                    }
+                }
+                NSString *genre = [proxy valueForKey:@"genre"];
+                if ([genre.lowercaseString containsString:@"game"]) { rec.score += 2; [rec.signals addObject:@"genre=Games"]; }
+                NSMutableArray *gs = [NSMutableArray array];
+                for (NSString *g in ([proxy valueForKey:@"genres"] ?: @[])) { if (g.length) [gs addObject:g]; }
+                rec.genres = gs;
+                for (NSString *g in gs) {
+                    if ([g.lowercaseString containsString:@"game"]) { rec.score += 2; [rec.signals addObject:@"genres∋Games"]; break; }
+                }
+            } @catch (__unused NSException *e) {}
+
+            // (c) Linked game frameworks via Mach-O scan.
+            NSArray *fw = nil;
+            CLGameEngine eng = [CLEngineDetector detectEngineForBundle:rec.bundlePath linkedFrameworks:&fw];
+            rec.engineName = [CLEngineDetector localizedNameForEngine:eng];
+            if (eng == CLGameEngineUnity || eng == CLGameEngineUnreal || eng == CLGameEngineGodot) {
+                rec.score += 2; [rec.signals addObject:[NSString stringWithFormat:@"محرك=%@", rec.engineName]];
+            }
+            for (NSString *d in fw) {
+                NSString *low = d.lowercaseString;
+                if ([low containsString:@"gamecontroller"] || [low containsString:@"gamekit"]) {
+                    rec.score += 2; [rec.signals addObject:@"GameController/GameKit"]; break;
+                }
+            }
+            for (NSString *d in fw) {
+                NSString *low = d.lowercaseString;
+                if ([low containsString:@"spritekit"] || [low containsString:@"scenekit"]) {
+                    rec.score += 1; [rec.signals addObject:@"SpriteKit/SceneKit"]; break;
+                }
+            }
+
+            // ── Decision: >= 2 is a game (engine/framework signals are specific) ──
+            rec.isGame = (rec.score >= 2);
+            if (!rec.isGame) [rec.signals addObject:@"لا إشارة لعبة موثوقة"];
+            [diagnostics addObject:rec];
+            if (!rec.isGame) continue;
+
+            // Build the CLGame (Layer 4 engine info reused for display).
+            CLGame *game = [CLGame new];
+            game.bundleID = rec.bundleID;
+            game.name = rec.name.length ? rec.name : rec.bundleID;
+            game.bundlePath = rec.bundlePath;
+            game.version = info[@"CFBundleShortVersionString"] ?: info[@"CFBundleVersion"] ?: @"؟";
+            game.executablePath = info[@"CFBundleExecutable"].length
+                ? [rec.bundlePath stringByAppendingPathComponent:info[@"CFBundleExecutable"]] : nil;
+            game.lastModified = [fm attributesOfItemAtPath:rec.bundlePath error:nil].fileModificationDate;
+            game.icon = [self iconForBundle:rec.bundlePath info:info];
+            game.engine = eng;
+            game.engineName = rec.engineName;
+            game.frameworks = fw;
+            game.bundleSize = [CLGameDiscovery bundleSizeAtPath:rec.bundlePath];
+            [games addObject:game];
+        }
+    }
+}
+
+#pragma mark - Icon
 
 - (UIImage *)iconForBundle:(NSString *)path info:(NSDictionary *)info {
     NSArray *iconFiles = nil;
