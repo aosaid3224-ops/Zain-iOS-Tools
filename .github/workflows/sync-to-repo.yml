@@ -1,6 +1,6 @@
 name: Build Apps and Prepare Dev Packages
 permissions:
-  contents: read
+  contents: write
 
 on:
   push:
@@ -15,6 +15,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: source
+
+      - name: Checkout repo-dev
+        uses: actions/checkout@v4
+        with:
+          repository: aosaid3224-ops/repo-dev
+          token: ${{ secrets.PAT }}
+          path: repo-dev
 
       - name: Setup Theos
         run: |
@@ -41,3 +48,24 @@ jobs:
             source/CrackLab/packages/*.deb
             source/scripts/generate-repo.py
           if-no-files-found: error
+
+      - name: Deploy Crack Lab to repo-dev
+        run: |
+          set -e
+          git config --global user.email "ci@github.com"
+          git config --global user.name "GitHub CI"
+          mkdir -p repo-dev/pool/main/iphoneos-arm64
+          cp source/CrackLab/packages/*.deb repo-dev/pool/main/iphoneos-arm64/
+          mkdir -p repo-dev/scripts
+          cp source/scripts/generate-repo.py repo-dev/scripts/
+          python3 repo-dev/scripts/generate-repo.py repo-dev --dev
+          python3 source/scripts/validate-repo.py repo-dev
+          cd repo-dev
+          git add -A
+          if git diff --cached --quiet; then
+            echo "repo-dev is already synchronized"
+          else
+            version=$(awk '$1 == "Version:" { print $2; exit }' ../source/CrackLab/control)
+            git commit -m "Crack Lab v${version} — dev build"
+            git push origin main
+          fi

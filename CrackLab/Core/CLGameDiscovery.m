@@ -96,8 +96,9 @@
                     game.name = name.length ? name : bundleID;
                     game.bundlePath = bundlePath;
                     game.version = info[@"CFBundleShortVersionString"] ?: info[@"CFBundleVersion"] ?: @"؟";
-                    NSString *executableName = [info[@"CFBundleExecutable"] isKindOfClass:[NSString class]]
-                        ? info[@"CFBundleExecutable"] : nil;
+                    id rawExecutableName = info[@"CFBundleExecutable"];
+                    NSString *executableName = [rawExecutableName isKindOfClass:[NSString class]]
+                        ? (NSString *)rawExecutableName : nil;
                     game.executablePath = executableName.length
                         ? [bundlePath stringByAppendingPathComponent:executableName] : nil;
                     game.lastModified = [[NSFileManager defaultManager]

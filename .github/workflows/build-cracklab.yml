@@ -40,12 +40,13 @@ jobs:
           test -n "$deb"
           dpkg-deb -I "$deb"
           test "$(dpkg-deb -f "$deb" Package)" = "com.cracklab.app"
-          test "$(dpkg-deb -f "$deb" Version)" = "1.0.0"
+          expected_version=$(awk '$1 == "Version:" { print $2; exit }' CrackLab/control)
+          test "$(dpkg-deb -f "$deb" Version)" = "$expected_version"
           test "$(dpkg-deb -f "$deb" Architecture)" = "iphoneos-arm64"
 
       - name: Upload verified package
         uses: actions/upload-artifact@v4
         with:
-          name: cracklab-1.0.0
+          name: cracklab-${{ github.sha }}
           path: CrackLab/packages/*.deb
           if-no-files-found: error
