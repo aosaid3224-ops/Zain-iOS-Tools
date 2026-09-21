@@ -28,6 +28,7 @@
         @"receiptPresent": @(self.receiptPresent),
         @"infoPlistStoreKeys": self.infoPlistStoreKeys ?: @{},
         @"engine": self.engineName ?: @"",
+        @"confidence": self.confidence ?: @"",
         @"signals": self.signals ?: @[],
         @"score": @(self.score),
         @"isGame": @(self.isGame)
