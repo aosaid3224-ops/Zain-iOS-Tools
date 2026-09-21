@@ -71,13 +71,11 @@
     [self showSkeleton:YES];
 
     CLGameDiscovery *discovery = [CLGameDiscovery new];
-    NSDate *start = [NSDate date];
     [discovery discoverGamesWithCompletion:^(NSArray<CLGame *> *games, NSString *error) {
         __strong typeof(weakSelf) self = weakSelf;
         if (!self) return;
         self.isScanning = NO;                    // always reset, every path
         [self.refreshControl endRefreshing];
-        NSTimeInterval ms = [[NSDate date] timeIntervalSinceDate:start] * 1000.0;
 
         if (error.length) {
             [[CLOperationLog sharedLog] addEntryWithKind:CLOperationKindDiscovery
