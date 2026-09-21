@@ -148,15 +148,15 @@
                     : @"—";
                 NSString *detail = [NSString stringWithFormat:
                     @"bundle: %@%@\n"
-                    "container: %@\n"
-                    "metadata: %@ (%@)%@\n"
-                    "state: %@ · readable:%@ parseable:%@\n"
-                    "keys: %@\n"
-                    "genreId: %@ · genre: %@\n"
-                    "receipt: %@\n"
-                    "infoPlist-store: %@\n"
-                    "cat: %@ · LSgenreIDs:%@ · محرك:%@ · نقاط:%ld\n"
-                    "قرار: %@ — %@",
+                    @"container: %@\n"
+                    @"metadata: %@ (%@)%@\n"
+                    @"state: %@ · readable:%@ parseable:%@\n"
+                    @"keys: %@\n"
+                    @"genreId: %@ · genre: %@\n"
+                    @"receipt: %@\n"
+                    @"infoPlist-store: %@\n"
+                    @"cat: %@ · LSgenreIDs:%@ · محرك:%@ · نقاط:%ld\n"
+                    @"قرار: %@ — %@",
                     rec.bundleID, rec.bundlePath.length ? @" [exists]" : @" [NO PATH]",
                     rec.dataContainerPath.length ? rec.dataContainerPath : @"—",
                     rec.metadataPath.length ? rec.metadataPath : @"غير موجود",
