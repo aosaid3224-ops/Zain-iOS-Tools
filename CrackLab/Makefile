@@ -16,6 +16,7 @@ CrackLab_FILES = main.m \
 	UI/CLSettingsViewController.m \
 	Core/CLGame.m \
 	Core/CLGameDiscovery.m \
+	Core/CLDiscoveryRecord.m \
 	Core/CLEngineDetector.m \
 	Core/CLGameStateInspector.m \
 	Core/CLOperationLog.m
