@@ -15,6 +15,7 @@
 #import "CLGameDiscovery.h"
 #import "CLEngineDetector.h"
 #import "CLOperationLog.h"
+#import "CLMetadataProbe.h"
 
 @implementation CLGameDiscovery {
     NSArray<CLDiscoveryRecord *> *_lastDiagnostics;
@@ -139,21 +140,56 @@
                     (long)rawProxies.count, (long)games.count, mechanism,
                     usedLegacyPass ? @" (legacy pass)" : @""]];
         for (CLDiscoveryRecord *rec in diagnostics) {
-            NSString *genreShow = rec.iTunesGenre.length ? rec.iTunesGenre
-                                : (rec.genres.count ? rec.genres.firstObject : @"—");
-            NSString *detail = [NSString stringWithFormat:
-                @"%@ · %@ · cat:%@ · genreId:%@ · genre:%@ · محرك:%@ · نقاط:%ld%@",
-                rec.bundleID, rec.appType,
-                rec.categoryType.length ? rec.categoryType : @"—",
-                rec.iTunesGenreId ?: @"—",
-                genreShow,
-                rec.engineName.length ? rec.engineName : @"—",
-                (long)rec.score,
-                rec.signals.count ? [@" · " stringByAppendingString:[rec.signals componentsJoinedByString:@"+"]] : @""];
-            [[CLOperationLog sharedLog] addEntryWithKind:CLOperationKindDiscovery
-                status:(rec.isGame ? CLOperationStatusSuccess : CLOperationStatusSkipped)
-                title:[NSString stringWithFormat:@"%@: %@", (rec.isGame ? @"لعبة" : @"مستبعد"), rec.name]
-                detail:detail];
+            // Full forensic report for every USER app (Township included, even if
+            // excluded); compact line for system apps.
+            if ([rec.appType isEqualToString:@"مستخدم"]) {
+                NSString *infoKeys = rec.infoPlistStoreKeys.count
+                    ? [rec.infoPlistStoreKeys.description stringByReplacingOccurrencesOfString:@"\n" withString:@" "]
+                    : @"—";
+                NSString *detail = [NSString stringWithFormat:
+                    @"bundle: %@%@\n"
+                    "container: %@\n"
+                    "metadata: %@ (%@)%@\n"
+                    "state: %@ · readable:%@ parseable:%@\n"
+                    "keys: %@\n"
+                    "genreId: %@ · genre: %@\n"
+                    "receipt: %@\n"
+                    "infoPlist-store: %@\n"
+                    "cat: %@ · LSgenreIDs:%@ · محرك:%@ · نقاط:%ld\n"
+                    "قرار: %@ — %@",
+                    rec.bundleID, rec.bundlePath.length ? @" [exists]" : @" [NO PATH]",
+                    rec.dataContainerPath.length ? rec.dataContainerPath : @"—",
+                    rec.metadataPath.length ? rec.metadataPath : @"غير موجود",
+                    rec.metadataState,
+                    rec.metadataSize > 0 ? [NSString stringWithFormat:@" · %lldB", rec.metadataSize] : @"",
+                    rec.metadataState,
+                    rec.metadataReadable ? @"YES" : @"NO",
+                    rec.metadataParseable ? @"YES" : @"NO",
+                    rec.metadataKeys.count ? [rec.metadataKeys componentsJoinedByString:@", "] : @"—",
+                    rec.iTunesGenreId ?: @"—",
+                    rec.iTunesGenre ?: @"—",
+                    rec.receiptPresent ? @"YES" : @"NO",
+                    infoKeys,
+                    rec.categoryType.length ? rec.categoryType : @"—",
+                    rec.genreIDs.count ? [rec.genreIDs componentsJoinedByString:@","] : @"—",
+                    rec.engineName.length ? rec.engineName : @"—",
+                    (long)rec.score,
+                    rec.isGame ? @"لعبة" : @"مستبعد",
+                    rec.signals.count ? [rec.signals componentsJoinedByString:@" + "] : @"—"];
+                [[CLOperationLog sharedLog] addEntryWithKind:CLOperationKindDiscovery
+                    status:(rec.isGame ? CLOperationStatusSuccess : CLOperationStatusSkipped)
+                    title:[NSString stringWithFormat:@"فحص: %@", rec.name]
+                    detail:detail];
+            } else {
+                NSString *detail = [NSString stringWithFormat:
+                    @"%@ · %@ · metadata:%@ · نقاط:%ld%@",
+                    rec.bundleID, rec.appType, rec.metadataState, (long)rec.score,
+                    rec.isGame ? @" · لعبة" : @"");
+                [[CLOperationLog sharedLog] addEntryWithKind:CLOperationKindDiscovery
+                    status:(rec.isGame ? CLOperationStatusSuccess : CLOperationStatusSkipped)
+                    title:[NSString stringWithFormat:@"%@: %@", (rec.isGame ? @"لعبة" : @"نظام"), rec.name]
+                    detail:detail];
+            }
         }
 
         dispatch_async(dispatch_get_main_queue(), ^{ completion([games copy], nil); });
@@ -220,23 +256,37 @@
 
             // ── BASE SIGNALS ──
 
-            // (1) iTunesMetadata.plist — App Store store-metadata embedded at
-            //     install time (genreId 6014 = Games). Disk-based; unaffected by
-            //     LaunchServices private API changes on iOS 17/18.
-            NSDictionary *itunesMeta = [NSDictionary dictionaryWithContentsOfFile:
-                [rec.bundlePath stringByAppendingPathComponent:@"iTunesMetadata.plist"]];
-            if (itunesMeta) {
-                rec.iTunesGenreId = itunesMeta[@"genreId"];
-                rec.iTunesGenre = itunesMeta[@"genre"];
+            // (1) App Store metadata — via CLMetadataProbe: checks the bundle AND
+            //     the data container (the real location on modern iOS), reports
+            //     missing/unreadable/unparseable honestly, never assumes a path.
+            CLMetadataProbeResult *probe = [CLMetadataProbe probeProxy:proxy bundlePath:rec.bundlePath];
+            rec.dataContainerPath = probe.dataContainerPath;
+            rec.metadataState = probe.metadataState;
+            rec.metadataPath = probe.metadataPath;
+            rec.metadataSize = probe.metadataSize;
+            rec.metadataReadable = probe.metadataReadable;
+            rec.metadataParseable = probe.metadataParseable;
+            rec.metadataKeys = probe.metadataKeys;
+            rec.iTunesGenreId = probe.genreId;
+            rec.iTunesGenre = probe.genre;
+            rec.receiptPresent = probe.receiptPresent;
+            rec.infoPlistStoreKeys = probe.infoPlistStoreKeys;
+
+            if ([probe.metadataState isEqualToString:@"ok"]) {
                 BOOL itGame = NO;
                 if ([rec.iTunesGenreId respondsToSelector:@selector(integerValue)] &&
                     [rec.iTunesGenreId integerValue] == 6014) itGame = YES;
                 if (!itGame && [rec.iTunesGenre.lowercaseString containsString:@"game"]) itGame = YES;
                 if (itGame) {
                     rec.score += 4;
-                    [rec.signals addObject:[NSString stringWithFormat:@"iTunes genreId=%@",
+                    [rec.signals addObject:[NSString stringWithFormat:@"iTunesMetadata genreId=%@",
                         rec.iTunesGenreId ?: rec.iTunesGenre]];
+                } else {
+                    [rec.signals addObject:@"iTunesMetadata موجود بلا genreId/genre"];
                 }
+            } else {
+                [rec.signals addObject:[NSString stringWithFormat:@"iTunesMetadata: %@",
+                    probe.metadataState]];
             }
 
             // (2) LSApplicationCategoryType — developer-declared in Info.plist.
