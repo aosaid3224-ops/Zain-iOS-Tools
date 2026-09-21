@@ -31,25 +31,68 @@
 
 - (void)discoverGamesWithCompletion:(void (^)(NSArray<CLGame *> *, NSString *))completion {
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
-        NSMutableArray<CLGame *> *games = [NSMutableArray array];
+        NSMutableArray<id> *rawProxies = [NSMutableArray array];
+        NSString *mechanism = nil;
         NSString *errorMsg = nil;
 
-        Class proxyClass = NSClassFromString(@"LSApplicationProxy");
-        if (!proxyClass) {
-            errorMsg = @"تعذّر الوصول إلى LaunchServices (LSApplicationProxy غير متاح).";
-            dispatch_async(dispatch_get_main_queue(), ^{ completion(@[], errorMsg); });
+        // ── Mechanism chain: first that returns real proxies wins ──
+        Class wsClass = NSClassFromString(@"LSApplicationWorkspace");
+        id workspace = ([wsClass respondsToSelector:@selector(defaultWorkspace)])
+            ? [wsClass performSelector:@selector(defaultWorkspace)] : nil;
+
+        if (workspace) {
+            // (1) Block enumeration — the stable modern SPI across iOS 13–18.
+            SEL enumSel = NSSelectorFromString(@"enumerateApplicationsOfType:legacySPI:block:");
+            if (![workspace respondsToSelector:enumSel])
+                enumSel = NSSelectorFromString(@"enumerateApplicationsOfType:legacySPI:usingBlock:");
+            if ([workspace respondsToSelector:enumSel]) {
+                void (^proxyBlock)(id) = ^(id proxy) {
+                    if (proxy) [rawProxies addObject:proxy];
+                };
+                @try {
+                    NSMethodSignature *sig = [workspace methodSignatureForSelector:enumSel];
+                    NSInvocation *inv = [NSInvocation invocationWithMethodSignature:sig];
+                    [inv setTarget:workspace];
+                    [inv setSelector:enumSel];
+                    unsigned long long type = 0;   // 0 = all applications
+                    BOOL legacy = NO;
+                    [inv setArgument:&type atIndex:2];
+                    [inv setArgument:&legacy atIndex:3];
+                    [inv setArgument:&proxyBlock atIndex:4];
+                    [inv invoke];
+                    if (rawProxies.count > 0) mechanism = @"LSApplicationWorkspace enumerateApplicationsOfType";
+                } @catch (NSException *e) {
+                    errorMsg = [NSString stringWithFormat:@"فشل التعداد بالـ block: %@", e.reason ?: @"خطأ غير معروف"];
+                    [rawProxies removeAllObjects];
+                }
+            }
+
+            // (2) Instance allInstalledApplications on the WORKSPACE
+            //     (the previous bug called this on LSApplicationProxy, which
+            //     does not implement it — unrecognized selector).
+            if (!mechanism && [workspace respondsToSelector:@selector(allInstalledApplications)]) {
+                @try {
+                    id apps = [workspace performSelector:@selector(allInstalledApplications)];
+                    if ([apps isKindOfClass:[NSArray class]] && [apps count] > 0) {
+                        [rawProxies addObjectsFromArray:apps];
+                        mechanism = @"LSApplicationWorkspace allInstalledApplications";
+                    }
+                } @catch (NSException *e) {
+                    errorMsg = [NSString stringWithFormat:@"فشل allInstalledApplications: %@", e.reason ?: @"خطأ غير معروف"];
+                }
+            }
+        }
+
+        if (!mechanism || rawProxies.count == 0) {
+            NSString *final = [NSString stringWithFormat:
+                @"تعذّر جلب التطبيقات من كل الآليات المتاحة. %@", errorMsg ?: @"لا توجد آلية LaunchServices متاحة."];
+            dispatch_async(dispatch_get_main_queue(), ^{ completion(@[], final); });
             return;
         }
 
-        NSArray *proxies = nil;
-        @try {
-            proxies = [proxyClass performSelector:@selector(allInstalledApplications)];
-        } @catch (NSException *e) {
-            errorMsg = [NSString stringWithFormat:@"فشل استعلام التطبيقات: %@", e.reason ?: @"خطأ غير معروف"];
-        }
-        if (![proxies isKindOfClass:[NSArray class]]) proxies = @[];
-
-        for (id proxy in proxies) {
+        // ── Classification: games only, robust per-proxy handling ──
+        NSMutableArray<CLGame *> *games = [NSMutableArray array];
+        for (id proxy in rawProxies) {
             @autoreleasepool {
                 @try {
                     NSString *bundleID = [proxy valueForKey:@"bundleIdentifier"];
@@ -63,7 +106,6 @@
                         [bundlePath stringByAppendingPathComponent:@"Info.plist"]];
                     if (!info) continue;
 
-                    // ── Game classification ──
                     BOOL isGame = NO;
                     @try {
                         NSArray *genreIDs = [proxy valueForKey:@"genreIDs"];
@@ -82,7 +124,6 @@
                         }
                     } @catch (__unused NSException *e) {}
 
-                    // Heuristic fallback: game-only frameworks in the main executable
                     if (!isGame) {
                         NSArray *fw = nil;
                         CLGameEngine eng = [CLEngineDetector detectEngineForBundle:bundlePath linkedFrameworks:&fw];
@@ -100,17 +141,12 @@
                         ? [bundlePath stringByAppendingPathComponent:info[@"CFBundleExecutable"]] : nil;
                     game.lastModified = [[NSFileManager defaultManager]
                         attributesOfItemAtPath:bundlePath error:nil].fileModificationDate;
-
-                    // Icon: primary icon file in bundle
                     game.icon = [self iconForBundle:bundlePath info:info];
 
-                    // Engine + frameworks
                     NSArray *fw = nil;
                     game.engine = [CLEngineDetector detectEngineForBundle:bundlePath linkedFrameworks:&fw];
                     game.engineName = [CLEngineDetector localizedNameForEngine:game.engine];
                     game.frameworks = fw;
-
-                    // Size
                     game.bundleSize = [CLGameDiscovery bundleSizeAtPath:bundlePath];
 
                     [games addObject:game];
@@ -122,8 +158,15 @@
             return [a.name localizedCaseInsensitiveCompare:b.name];
         }];
 
-        dispatch_async(dispatch_get_main_queue(), ^{ completion([games copy], errorMsg); });
-    });
+        // Successful discovery is only claimed when a real list came back.
+        NSString *summary = [NSString stringWithFormat:
+            @"%ld تطبيق ممسوح · %ld لعبة · الآلية: %@",
+            (long)rawProxies.count, (long)games.count, mechanism];
+        [[CLOperationLog sharedLog] addEntryWithKind:CLOperationKindDiscovery
+            status:CLOperationStatusSuccess title:@"اكتشاف الألعاب" detail:summary];
+
+        dispatch_async(dispatch_get_main_queue(), ^{ completion([games copy], nil); });
+    }];
 }
 
 - (UIImage *)iconForBundle:(NSString *)path info:(NSDictionary *)info {
