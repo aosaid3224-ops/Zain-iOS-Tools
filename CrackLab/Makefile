@@ -17,6 +17,7 @@ CrackLab_FILES = main.m \
 	Core/CLGameDiscovery.m \
 	Core/CLDiscoveryRecord.m \
 	Core/CLMetadataProbe.m \
+	Core/CLGameClassifier.m \
 	Core/CLEngineDetector.m \
 	Core/CLGameStateInspector.m \
 	Core/CLOperationLog.m
