@@ -140,56 +140,31 @@
                     (long)rawProxies.count, (long)games.count, mechanism,
                     usedLegacyPass ? @" (legacy pass)" : @""]];
         for (CLDiscoveryRecord *rec in diagnostics) {
-            // Full forensic report for every USER app (Township included, even if
-            // excluded); compact line for system apps.
-            if ([rec.appType isEqualToString:@"مستخدم"]) {
-                NSString *infoKeys = rec.infoPlistStoreKeys.count
-                    ? [rec.infoPlistStoreKeys.description stringByReplacingOccurrencesOfString:@"\n" withString:@" "]
-                    : @"—";
-                NSString *detail = [NSString stringWithFormat:
-                    @"bundle: %@%@\n"
-                    @"container: %@\n"
-                    @"metadata: %@ (%@)%@\n"
-                    @"state: %@ · readable:%@ parseable:%@\n"
-                    @"keys: %@\n"
-                    @"genreId: %@ · genre: %@\n"
-                    @"receipt: %@\n"
-                    @"infoPlist-store: %@\n"
-                    @"cat: %@ · LSgenreIDs:%@ · محرك:%@ · نقاط:%ld\n"
-                    @"قرار: %@ — %@",
-                    rec.bundleID, rec.bundlePath.length ? @" [exists]" : @" [NO PATH]",
-                    rec.dataContainerPath.length ? rec.dataContainerPath : @"—",
-                    rec.metadataPath.length ? rec.metadataPath : @"غير موجود",
-                    rec.metadataState,
-                    rec.metadataSize > 0 ? [NSString stringWithFormat:@" · %lldB", rec.metadataSize] : @"",
-                    rec.metadataState,
-                    rec.metadataReadable ? @"YES" : @"NO",
-                    rec.metadataParseable ? @"YES" : @"NO",
-                    rec.metadataKeys.count ? [rec.metadataKeys componentsJoinedByString:@", "] : @"—",
-                    rec.iTunesGenreId ?: @"—",
-                    rec.iTunesGenre ?: @"—",
-                    rec.receiptPresent ? @"YES" : @"NO",
-                    infoKeys,
-                    rec.categoryType.length ? rec.categoryType : @"—",
-                    rec.genreIDs.count ? [rec.genreIDs componentsJoinedByString:@","] : @"—",
-                    rec.engineName.length ? rec.engineName : @"—",
-                    (long)rec.score,
-                    rec.isGame ? @"لعبة" : @"مستبعد",
-                    rec.signals.count ? [rec.signals componentsJoinedByString:@" + "] : @"—"];
-                [[CLOperationLog sharedLog] addEntryWithKind:CLOperationKindDiscovery
-                    status:(rec.isGame ? CLOperationStatusSuccess : CLOperationStatusSkipped)
-                    title:[NSString stringWithFormat:@"فحص: %@", rec.name]
-                    detail:detail];
-            } else {
-                NSString *detail = [NSString stringWithFormat:
-                    @"%@ · %@ · metadata:%@ · نقاط:%ld%@",
-                    rec.bundleID, rec.appType, rec.metadataState, (long)rec.score,
-                    rec.isGame ? @" · لعبة" : @"");
-                [[CLOperationLog sharedLog] addEntryWithKind:CLOperationKindDiscovery
-                    status:(rec.isGame ? CLOperationStatusSuccess : CLOperationStatusSkipped)
-                    title:[NSString stringWithFormat:@"%@: %@", (rec.isGame ? @"لعبة" : @"نظام"), rec.name]
-                    detail:detail];
-            }
+            NSString *infoKeys = rec.infoPlistStoreKeys.count
+                ? [rec.infoPlistStoreKeys.description stringByReplacingOccurrencesOfString:@"\n" withString:@" "]
+                : @"—";
+            NSString *detail = [NSString stringWithFormat:
+                @"bundle: %@%@\ncontainer: %@\nmetadata: %@ (%@)\nstate: %@ · readable:%@ parseable:%@\nkeys: %@\ngenreId: %@ · genre: %@\nreceipt: %@\ninfoPlist-store: %@\ncat: %@ · LSgenreIDs:%@ · محرك:%@ · نقاط:%ld\nقرار: %@ — %@",
+                rec.bundleID,
+                rec.bundlePath.length ? @" [exists]" : @" [NO PATH]",
+                rec.dataContainerPath.length ? rec.dataContainerPath : @"—",
+                rec.metadataPath.length ? rec.metadataPath : @"غير موجود",
+                rec.metadataState ?: @"missing",
+                rec.metadataState ?: @"missing",
+                rec.metadataReadable ? @"YES" : @"NO",
+                rec.metadataParseable ? @"YES" : @"NO",
+                rec.metadataKeys.count ? [rec.metadataKeys componentsJoinedByString:@", "] : @"—",
+                rec.iTunesGenreId ?: @"—", rec.iTunesGenre ?: @"—",
+                rec.receiptPresent ? @"YES" : @"NO", infoKeys,
+                rec.categoryType.length ? rec.categoryType : @"—",
+                rec.genreIDs.count ? [rec.genreIDs componentsJoinedByString:@","] : @"—",
+                rec.engineName.length ? rec.engineName : @"—", (long)rec.score,
+                rec.isGame ? @"لعبة" : @"مستبعد",
+                rec.signals.count ? [rec.signals componentsJoinedByString:@" + "] : @"—"];
+            [[CLOperationLog sharedLog] addEntryWithKind:CLOperationKindDiscovery
+                status:(rec.isGame ? CLOperationStatusSuccess : CLOperationStatusSkipped)
+                title:[NSString stringWithFormat:@"فحص: %@", rec.name]
+                detail:detail];
         }
 
         dispatch_async(dispatch_get_main_queue(), ^{ completion([games copy], nil); });
