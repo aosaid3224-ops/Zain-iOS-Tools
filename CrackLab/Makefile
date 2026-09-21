@@ -1,5 +1,6 @@
 ARCHS := arm64
 TARGET := iphone:clang:latest:15.0
+THEOS_PACKAGE_SCHEME = rootless
 
 APPLICATION_NAME = CrackLab
 
