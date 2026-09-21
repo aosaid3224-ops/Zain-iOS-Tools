@@ -15,7 +15,7 @@
 @property (nonatomic, strong) NSArray<NSString *> *genres;
 @property (nonatomic, strong) NSArray<NSNumber *> *genreIDs;
 @property (nonatomic, strong) NSString *engineName;
-@property (nonatomic, strong) NSArray<NSString *> *signals;  // why Game / why not
+@property (nonatomic, strong) NSMutableArray<NSString *> *signals;  // why Game / why not
 @property (nonatomic, assign) NSInteger score;
 @property (nonatomic, assign) BOOL isGame;
 - (NSDictionary *)dictionaryRepresentation;

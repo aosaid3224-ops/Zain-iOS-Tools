@@ -242,8 +242,11 @@
             game.name = rec.name.length ? rec.name : rec.bundleID;
             game.bundlePath = rec.bundlePath;
             game.version = info[@"CFBundleShortVersionString"] ?: info[@"CFBundleVersion"] ?: @"؟";
-            game.executablePath = info[@"CFBundleExecutable"].length
-                ? [rec.bundlePath stringByAppendingPathComponent:info[@"CFBundleExecutable"]] : nil;
+            id rawExecutableName = info[@"CFBundleExecutable"];
+            NSString *executableName = [rawExecutableName isKindOfClass:[NSString class]]
+                ? (NSString *)rawExecutableName : nil;
+            game.executablePath = executableName.length
+                ? [rec.bundlePath stringByAppendingPathComponent:executableName] : nil;
             game.lastModified = [fm attributesOfItemAtPath:rec.bundlePath error:nil].fileModificationDate;
             game.icon = [self iconForBundle:rec.bundlePath info:info];
             game.engine = eng;
