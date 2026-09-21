@@ -1,6 +1,16 @@
 //
 //  CLGameDiscovery.m
 //
+//  Classification principle (anti false-positive):
+//    BASE   = category-type signals only:
+//               (1) iTunesMetadata.plist genreId/genre  ← App Store store-metadata,
+//                   embedded in the bundle at install time; works on iOS 18
+//                   regardless of LaunchServices private API availability.
+//               (2) LSApplicationCategoryType (developer-declared, Info.plist)
+//               (3) LaunchServices genre/genreIDs (when available)
+//    SUPPORT = engine / game-framework signals (cap 2, never sufficient alone)
+//    Game    = base score >= 3  (support can push a borderline base over)
+//
 
 #import "CLGameDiscovery.h"
 #import "CLEngineDetector.h"
@@ -34,13 +44,13 @@
 
 - (void)discoverGamesWithCompletion:(void (^)(NSArray<CLGame *> *, NSString *))completion {
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
-        // ── Layer 1: Application Discovery (mechanism chain) ──
         NSMutableArray<id> *rawProxies = [NSMutableArray array];
         NSString *mechanism = nil;
         NSString *errorMsg = nil;
+        id workspace = nil;
 
         Class wsClass = NSClassFromString(@"LSApplicationWorkspace");
-        id workspace = ([wsClass respondsToSelector:@selector(defaultWorkspace)])
+        workspace = ([wsClass respondsToSelector:@selector(defaultWorkspace)])
             ? [wsClass performSelector:@selector(defaultWorkspace)] : nil;
 
         if (workspace) {
@@ -59,9 +69,7 @@
                     [inv setArgument:&proxyBlock atIndex:4];
                     [inv invoke];
                     if (rawProxies.count > 0) mechanism = @"enumerateApplicationsOfType";
-                } @catch (NSException *e) {
-                    errorMsg = e.reason; [rawProxies removeAllObjects];
-                }
+                } @catch (NSException *e) { errorMsg = e.reason; [rawProxies removeAllObjects]; }
             }
             if (!mechanism && [workspace respondsToSelector:@selector(allInstalledApplications)]) {
                 @try {
@@ -76,20 +84,19 @@
 
         if (!mechanism || rawProxies.count == 0) {
             NSString *final = [NSString stringWithFormat:@"تعذّر جلب التطبيقات من كل الآليات. %@", errorMsg ?: @""];
+            [[CLOperationLog sharedLog] addEntryWithKind:CLOperationKindDiscovery
+                status:CLOperationStatusFailed title:@"اكتشاف الألعاب" detail:final];
             dispatch_async(dispatch_get_main_queue(), ^{ completion(@[], final); });
             return;
         }
 
-        // ── Layer 2+3: metadata + multi-signal classification, with diagnostics ──
+        // ── Classification passes ──
         NSMutableArray<CLGame *> *games = [NSMutableArray array];
         NSMutableArray<CLDiscoveryRecord *> *diagnostics = [NSMutableArray array];
-
         [self classifyProxies:rawProxies intoGames:games diagnostics:diagnostics];
 
-        // Fallback: if the strict pass produced zero games, rescan proxies with
-        // richer metadata (legacySPI:YES often restores genre fields on modern iOS).
         BOOL usedLegacyPass = NO;
-        if (games.count == 0) {
+        if (games.count == 0 && workspace) {
             NSMutableArray<id> *richProxies = [NSMutableArray array];
             SEL enumSel = NSSelectorFromString(@"enumerateApplicationsOfType:legacySPI:block:");
             if (![workspace respondsToSelector:enumSel])
@@ -119,35 +126,41 @@
         }];
 
         _lastDiagnostics = [diagnostics copy];
-        // Persist diagnostics for developer inspection.
         NSMutableArray *raw = [NSMutableArray array];
         for (CLDiscoveryRecord *d in diagnostics) [raw addObject:[d dictionaryRepresentation]];
         NSString *docs = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES).firstObject;
         [raw writeToFile:[docs stringByAppendingPathComponent:@"CLDiscoveryDiagnostics.plist"] atomically:YES];
 
-        // ── Log: summary + per-game reason ──
-        NSString *summary = [NSString stringWithFormat:@"%ld تطبيق · %ld لعبة · %@%@",
-            (long)rawProxies.count, (long)games.count, mechanism,
-            usedLegacyPass ? @" (legacy pass)" : @""];
+        // ── Log: EVERY scanned app, with its decision and reason ──
         [[CLOperationLog sharedLog] addEntryWithKind:CLOperationKindDiscovery
-            status:CLOperationStatusSuccess title:@"اكتشاف الألعاب" detail:summary];
-        for (CLGame *g in games) {
-            CLDiscoveryRecord *rec = nil;
-            for (CLDiscoveryRecord *d in diagnostics) {
-                if ([d.bundleID isEqualToString:g.bundleID]) { rec = d; break; }
-            }
-            NSString *why = rec.signals.count ? [rec.signals componentsJoinedByString:@" + "] : @"—";
+            status:CLOperationStatusSuccess
+            title:@"اكتشاف الألعاب"
+            detail:[NSString stringWithFormat:@"%ld تطبيق · %ld لعبة · %@%@",
+                    (long)rawProxies.count, (long)games.count, mechanism,
+                    usedLegacyPass ? @" (legacy pass)" : @""]];
+        for (CLDiscoveryRecord *rec in diagnostics) {
+            NSString *genreShow = rec.iTunesGenre.length ? rec.iTunesGenre
+                                : (rec.genres.count ? rec.genres.firstObject : @"—");
+            NSString *detail = [NSString stringWithFormat:
+                @"%@ · %@ · cat:%@ · genreId:%@ · genre:%@ · محرك:%@ · نقاط:%ld%@",
+                rec.bundleID, rec.appType,
+                rec.categoryType.length ? rec.categoryType : @"—",
+                rec.iTunesGenreId ?: @"—",
+                genreShow,
+                rec.engineName.length ? rec.engineName : @"—",
+                (long)rec.score,
+                rec.signals.count ? [@" · " stringByAppendingString:[rec.signals componentsJoinedByString:@"+"]] : @""];
             [[CLOperationLog sharedLog] addEntryWithKind:CLOperationKindDiscovery
-                status:CLOperationStatusSuccess
-                title:[NSString stringWithFormat:@"لعبة: %@", g.name]
-                detail:[NSString stringWithFormat:@"%@ · v%@ · %@", g.bundleID, g.version, why]];
+                status:(rec.isGame ? CLOperationStatusSuccess : CLOperationStatusSkipped)
+                title:[NSString stringWithFormat:@"%@: %@", (rec.isGame ? @"لعبة" : @"مستبعد"), rec.name]
+                detail:detail];
         }
 
         dispatch_async(dispatch_get_main_queue(), ^{ completion([games copy], nil); });
     });
 }
 
-#pragma mark - Layer 2/3: metadata + scoring classification
+#pragma mark - Classification (base = category, support = engine/framework, capped)
 
 - (void)classifyProxies:(NSArray<id> *)proxies
              intoGames:(NSMutableArray<CLGame *> *)games
@@ -159,16 +172,38 @@
             CLDiscoveryRecord *rec = [CLDiscoveryRecord new];
             rec.signals = [NSMutableArray array];
             rec.score = 0;
+
+            // Proxy read — record even a broken proxy so nothing is invisible.
             @try {
                 rec.bundleID = [proxy valueForKey:@"bundleIdentifier"] ?: @"";
                 rec.name = [proxy valueForKey:@"localizedName"] ?: rec.bundleID;
                 NSURL *bundleURL = [proxy valueForKey:@"bundleURL"];
                 rec.bundlePath = bundleURL.path ?: @"";
-            } @catch (__unused NSException *e) { continue; }
+            } @catch (NSException *e) {
+                rec.name = @"proxy غير مقروء"; rec.bundleID = @"";
+                [rec.signals addObject:[NSString stringWithFormat:@"استثناء قراءة proxy: %@", e.reason ?: @""]];
+                [diagnostics addObject:rec];
+                continue;
+            }
 
-            if (!rec.bundleID.length || ![rec.bundlePath hasSuffix:@".app"]) continue;
+            if (!rec.bundleID.length) {
+                [rec.signals addObject:@"لا يوجد bundleID"];
+                [diagnostics addObject:rec];
+                continue;
+            }
+            if (!rec.bundlePath.length) {
+                rec.appType = @"غير معروف";
+                [rec.signals addObject:@"لا يوجد مسار حزمة"];
+                [diagnostics addObject:rec];
+                continue;
+            }
+            if (![rec.bundlePath hasSuffix:@".app"]) {
+                rec.appType = @"أخرى";
+                [rec.signals addObject:@"المسار ليس .app"];
+                [diagnostics addObject:rec];
+                continue;
+            }
 
-            // App type: user vs system by install location (reliable).
             if ([rec.bundlePath hasPrefix:@"/private/var/containers/Bundle/Application/"]) rec.appType = @"مستخدم";
             else if ([rec.bundlePath hasPrefix:@"/Applications"]) rec.appType = @"نظام";
             else rec.appType = @"أخرى";
@@ -178,65 +213,85 @@
             rec.hasInfoPlist = (info != nil);
             if (!info) {
                 rec.isGame = NO;
-                [rec.signals addObject:@"لا يوجد Info.plist"];
+                [rec.signals addObject:@"لا يوجد Info.plist مقروء"];
                 [diagnostics addObject:rec];
                 continue;
             }
 
-            // ── Metadata signals ──
-            // (a) LSApplicationCategoryType — the App Store category the developer
-            //     declared in their own Info.plist. Works for sideloaded apps too.
+            // ── BASE SIGNALS ──
+
+            // (1) iTunesMetadata.plist — App Store store-metadata embedded at
+            //     install time (genreId 6014 = Games). Disk-based; unaffected by
+            //     LaunchServices private API changes on iOS 17/18.
+            NSDictionary *itunesMeta = [NSDictionary dictionaryWithContentsOfFile:
+                [rec.bundlePath stringByAppendingPathComponent:@"iTunesMetadata.plist"]];
+            if (itunesMeta) {
+                rec.iTunesGenreId = itunesMeta[@"genreId"];
+                rec.iTunesGenre = itunesMeta[@"genre"];
+                BOOL itGame = NO;
+                if ([rec.iTunesGenreId respondsToSelector:@selector(integerValue)] &&
+                    [rec.iTunesGenreId integerValue] == 6014) itGame = YES;
+                if (!itGame && [rec.iTunesGenre.lowercaseString containsString:@"game"]) itGame = YES;
+                if (itGame) {
+                    rec.score += 4;
+                    [rec.signals addObject:[NSString stringWithFormat:@"iTunes genreId=%@",
+                        rec.iTunesGenreId ?: rec.iTunesGenre]];
+                }
+            }
+
+            // (2) LSApplicationCategoryType — developer-declared in Info.plist.
             rec.categoryType = info[@"LSApplicationCategoryType"] ?: @"";
             if ([rec.categoryType.lowercaseString containsString:@"game"]) {
                 rec.score += 3;
-                [rec.signals addObject:[NSString stringWithFormat:@"التصنيف=%@", rec.categoryType]];
+                [rec.signals addObject:@"LSApplicationCategoryType=Games"];
             }
 
-            // (b) LaunchServices genre fields (may be nil on modern iOS — non-fatal).
+            // (3) LaunchServices genre fields (best-effort; may be nil on iOS 18).
             @try {
                 rec.genreIDs = [proxy valueForKey:@"genreIDs"];
                 for (id gid in rec.genreIDs) {
                     if ([gid respondsToSelector:@selector(integerValue)] && [gid integerValue] == 6014) {
-                        rec.score += 3; [rec.signals addObject:@"genreID=6014"]; break;
+                        rec.score += 3; [rec.signals addObject:@"LS genreID=6014"]; break;
                     }
                 }
                 NSString *genre = [proxy valueForKey:@"genre"];
-                if ([genre.lowercaseString containsString:@"game"]) { rec.score += 2; [rec.signals addObject:@"genre=Games"]; }
+                if ([genre.lowercaseString containsString:@"game"]) { rec.score += 2; [rec.signals addObject:@"LS genre=Games"]; }
                 NSMutableArray *gs = [NSMutableArray array];
                 for (NSString *g in ([proxy valueForKey:@"genres"] ?: @[])) { if (g.length) [gs addObject:g]; }
                 rec.genres = gs;
                 for (NSString *g in gs) {
-                    if ([g.lowercaseString containsString:@"game"]) { rec.score += 2; [rec.signals addObject:@"genres∋Games"]; break; }
+                    if ([g.lowercaseString containsString:@"game"]) { rec.score += 2; [rec.signals addObject:@"LS genres∋Games"]; break; }
                 }
             } @catch (__unused NSException *e) {}
 
-            // (c) Linked game frameworks via Mach-O scan.
+            // ── SUPPORT SIGNALS (cap 2 — never sufficient alone) ──
+            NSInteger support = 0;
             NSArray *fw = nil;
             CLGameEngine eng = [CLEngineDetector detectEngineForBundle:rec.bundlePath linkedFrameworks:&fw];
             rec.engineName = [CLEngineDetector localizedNameForEngine:eng];
             if (eng == CLGameEngineUnity || eng == CLGameEngineUnreal || eng == CLGameEngineGodot) {
-                rec.score += 2; [rec.signals addObject:[NSString stringWithFormat:@"محرك=%@", rec.engineName]];
+                support += 1; [rec.signals addObject:[NSString stringWithFormat:@"محرك %@", rec.engineName]];
             }
+            BOOL hasGameKit = NO, hasSK = NO;
             for (NSString *d in fw) {
                 NSString *low = d.lowercaseString;
-                if ([low containsString:@"gamecontroller"] || [low containsString:@"gamekit"]) {
-                    rec.score += 2; [rec.signals addObject:@"GameController/GameKit"]; break;
-                }
+                if ([low containsString:@"gamecontroller"] || [low containsString:@"gamekit"]) hasGameKit = YES;
+                if ([low containsString:@"spritekit"] || [low containsString:@"scenekit"]) hasSK = YES;
             }
-            for (NSString *d in fw) {
-                NSString *low = d.lowercaseString;
-                if ([low containsString:@"spritekit"] || [low containsString:@"scenekit"]) {
-                    rec.score += 1; [rec.signals addObject:@"SpriteKit/SceneKit"]; break;
-                }
-            }
+            if (hasGameKit) { support += 1; [rec.signals addObject:@"GameKit/GameController"]; }
+            if (hasSK && support < 2) { support += 1; [rec.signals addObject:@"SpriteKit/SceneKit"]; }
+            if (support > 2) support = 2;
+            rec.score += support;
 
-            // ── Decision: >= 2 is a game (engine/framework signals are specific) ──
-            rec.isGame = (rec.score >= 2);
-            if (!rec.isGame) [rec.signals addObject:@"لا إشارة لعبة موثوقة"];
+            // ── Decision ──
+            // Game needs a real category-class base (score >= 3 always includes
+            // at least one category signal: iTunes 4, CategoryType 3, LSgenreID 3,
+            // or genre 2 + one support). Pure-framework apps cap at 2 → excluded.
+            rec.isGame = (rec.score >= 3);
+            if (!rec.isGame) [rec.signals addObject:[NSString stringWithFormat:@"نقاط %ld < 3", (long)rec.score]];
             [diagnostics addObject:rec];
             if (!rec.isGame) continue;
 
-            // Build the CLGame (Layer 4 engine info reused for display).
             CLGame *game = [CLGame new];
             game.bundleID = rec.bundleID;
             game.name = rec.name.length ? rec.name : rec.bundleID;
