@@ -37,7 +37,9 @@
         int swapped = (magic == FAT_CIGAM || magic == FAT_CIGAM_64);
         uint32_t nfat = 0;
         if (is64) {
-            struct fat_header_64 fh; rewind(f);
+            // fat_header is shared by 32-bit and 64-bit fat binaries;
+            // only the per-architecture records are widened in fat_arch_64.
+            struct fat_header fh; rewind(f);
             if (fread(&fh, sizeof(fh), 1, f) == 1) {
                 nfat = swapped ? OSSwapInt32(fh.nfat_arch) : fh.nfat_arch;
             }
