@@ -3,6 +3,9 @@
 //
 
 #import "CLGameClassifier.h"
+#include <mach-o/loader.h>
+#include <mach-o/fat.h>
+#include <libkern/OSByteOrder.h>
 
 // Evidence weights — single source of truth, every weight is named.
 static NSInteger const kWeightOfficialMetadata = 60;  // genreId 6014 / category Games / LS genreID
