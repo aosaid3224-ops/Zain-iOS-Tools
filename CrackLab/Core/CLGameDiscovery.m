@@ -170,7 +170,7 @@
             status:CLOperationStatusSuccess title:@"اكتشاف الألعاب" detail:summary];
 
         dispatch_async(dispatch_get_main_queue(), ^{ completion([games copy], nil); });
-    }];
+    });
 }
 
 - (UIImage *)iconForBundle:(NSString *)path info:(NSDictionary *)info {
