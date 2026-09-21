@@ -7,6 +7,7 @@
 
 #import "CLGameDiscovery.h"
 #import "CLEngineDetector.h"
+#import "CLOperationLog.h"
 
 @implementation CLGameDiscovery
 
