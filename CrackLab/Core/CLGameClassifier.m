@@ -17,7 +17,6 @@
 //              SUPPORT TOTAL IS CAPPED AT 30 — strictly below the game
 //              threshold (40), so no combination of generic frameworks can
 //              ever classify a non-game app as a game.
-static NSInteger const kWeightOfficialMetadata = 60;  // genreId 6014 / category Games / LS genreID
 static NSInteger const kWeightGameKit          = 40;  // Game Center APIs — games only
 static NSInteger const kWeightGameController   = 30;  // support
 static NSInteger const kWeightReplayKit        = 25;  // support
