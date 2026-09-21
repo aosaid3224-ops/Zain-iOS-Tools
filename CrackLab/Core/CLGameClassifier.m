@@ -184,8 +184,10 @@ static NSString * const kEntitlementPatternOld = @"<key>game-center</key>";
         int swapped = (magic == FAT_CIGAM || magic == FAT_CIGAM_64);
         uint32_t nfat = 0;
         rewind(f);
-        if (is64) { struct fat_header_64 fh; if (fread(&fh, sizeof(fh), 1, f) == 1) nfat = swapped ? OSSwapInt32(fh.nfat_arch) : fh.nfat_arch; }
-        else      { struct fat_header   fh; if (fread(&fh, sizeof(fh), 1, f) == 1) nfat = swapped ? OSSwapInt32(fh.nfat_arch) : fh.nfat_arch; }
+        // The fat header has the same nfat_arch layout for 32/64 containers;
+        // only fat_arch versus fat_arch_64 differs below.
+        struct fat_header fh;
+        if (fread(&fh, sizeof(fh), 1, f) == 1) nfat = swapped ? OSSwapInt32(fh.nfat_arch) : fh.nfat_arch;
         for (uint32_t i = 0; i < nfat && i < 8; i++) {
             uint32_t off = 0;
             if (is64) { struct fat_arch_64 a; if (fread(&a, sizeof(a), 1, f) == 1) off = swapped ? (uint32_t)OSSwapInt64(a.offset) : (uint32_t)a.offset; }
