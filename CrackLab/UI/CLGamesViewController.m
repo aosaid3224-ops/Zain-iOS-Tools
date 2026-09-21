@@ -17,6 +17,7 @@
 @property (nonatomic, strong) UIStackView *skeletonStack;
 @property (nonatomic, strong) CLEmptyStateView *emptyView;
 @property (nonatomic, strong) CLNoticeView *errorView;
+@property (nonatomic, assign) BOOL isScanning;
 @end
 
 @implementation CLGamesViewController
@@ -58,34 +59,41 @@
 - (void)refresh:(UIRefreshControl *)rc { [self discover]; }
 
 - (void)discover {
+    if (self.isScanning) return;                 // no overlapping scans
+    self.isScanning = YES;
+
+    __weak typeof(self) weakSelf = self;
     [self.emptyView removeFromSuperview];
     [self.errorView removeFromSuperview];
+    self.games = nil;                            // drop stale list
+    [self.tableView reloadData];                 // clear rows immediately
     self.tableView.hidden = YES;
     [self showSkeleton:YES];
 
     CLGameDiscovery *discovery = [CLGameDiscovery new];
     NSDate *start = [NSDate date];
     [discovery discoverGamesWithCompletion:^(NSArray<CLGame *> *games, NSString *error) {
-        [self showSkeleton:NO];
+        __strong typeof(weakSelf) self = weakSelf;
+        if (!self) return;
+        self.isScanning = NO;                    // always reset, every path
         [self.refreshControl endRefreshing];
         NSTimeInterval ms = [[NSDate date] timeIntervalSinceDate:start] * 1000.0;
 
         if (error.length) {
             [[CLOperationLog sharedLog] addEntryWithKind:CLOperationKindDiscovery
                 status:CLOperationStatusFailed title:@"اكتشاف الألعاب" detail:error];
+            [self showSkeleton:NO];
             [self showError:error];
             return;
         }
         self.games = games;
-        [[CLOperationLog sharedLog] addEntryWithKind:CLOperationKindDiscovery
-            status:CLOperationStatusSuccess
-            title:@"اكتشاف الألعاب"
-            detail:[NSString stringWithFormat:@"تم العثور على %ld لعبة خلال %.0fms", (long)games.count, ms]];
 
         if (games.count == 0) {
+            [self showSkeleton:NO];
             [self showEmpty];
             return;
         }
+        [self showSkeleton:NO];
         self.tableView.hidden = NO;
         [self.tableView reloadData];
     }];
