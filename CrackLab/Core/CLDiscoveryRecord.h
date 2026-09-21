@@ -27,7 +27,8 @@
 @property (nonatomic, assign) BOOL receiptPresent;
 @property (nonatomic, strong) NSDictionary *infoPlistStoreKeys;
 @property (nonatomic, strong) NSString *engineName;
-@property (nonatomic, strong) NSMutableArray<NSString *> *signals;  // why Game / why not
+@property (nonatomic, strong) NSString *confidence;   // واثق / محتمل / ضئيل
+@property (nonatomic, strong) NSMutableArray<NSString *> *signals;
 @property (nonatomic, assign) NSInteger score;
 @property (nonatomic, assign) BOOL isGame;
 - (NSDictionary *)dictionaryRepresentation;
