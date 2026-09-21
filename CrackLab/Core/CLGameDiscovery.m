@@ -132,7 +132,8 @@
 
         [[CLOperationLog sharedLog] addEntryWithKind:CLOperationKindDiscovery
             status:CLOperationStatusSuccess title:@"اكتشاف الألعاب"
-            detail:[NSString stringWithFormat:@"%ld تطبيق · %ld لعبة · %@", (long)rawProxies.count, (long)games.count, mechanism]];
+            detail:[NSString stringWithFormat:@"%ld تطبيق · %ld لعبة · %@%@", (long)rawProxies.count, (long)games.count, mechanism,
+                    usedLegacyPass ? @" (legacy pass)" : @""]];
 
         for (CLDiscoveryRecord *rec in diagnostics) {
             if ([rec.appType isEqualToString:@"مستخدم"]) {
@@ -140,13 +141,13 @@
                     ? [rec.infoPlistStoreKeys.description stringByReplacingOccurrencesOfString:@"\n" withString:@" "] : @"—";
                 NSString *detail = [NSString stringWithFormat:
                     @"bundle: %@\n"
-                    "container: %@\n"
-                    "metadata: %@ (%@)%@\n"
-                    "genreId: %@ · genre: %@\n"
-                    "receipt: %@\n"
-                    "infoPlist-store: %@\n"
-                    "cat: %@ · محرك: %@ · ثقة: %@ (%ld)\n"
-                    "قرار: %@ — %@",
+                    @"container: %@\n"
+                    @"metadata: %@ (%@)%@\n"
+                    @"genreId: %@ · genre: %@\n"
+                    @"receipt: %@\n"
+                    @"infoPlist-store: %@\n"
+                    @"cat: %@ · محرك: %@ · ثقة: %@ (%ld)\n"
+                    @"قرار: %@ — %@",
                     rec.bundleID,
                     rec.dataContainerPath.length ? rec.dataContainerPath : @"—",
                     rec.metadataPath.length ? rec.metadataPath : @"غير موجود",
@@ -232,8 +233,11 @@
             rec.receiptPresent = probe.receiptPresent;
             rec.infoPlistStoreKeys = probe.infoPlistStoreKeys;
 
-            NSString *exePath = info[@"CFBundleExecutable"].length
-                ? [rec.bundlePath stringByAppendingPathComponent:info[@"CFBundleExecutable"]] : nil;
+            id rawExecutableName = info[@"CFBundleExecutable"];
+            NSString *executableName = [rawExecutableName isKindOfClass:[NSString class]]
+                ? (NSString *)rawExecutableName : nil;
+            NSString *exePath = executableName.length
+                ? [rec.bundlePath stringByAppendingPathComponent:executableName] : nil;
 
             // Layer 3 — classify (confidence engine)
             CLClassificationResult *result = [CLGameClassifier classifyProxy:proxy info:info probe:probe executablePath:exePath];
