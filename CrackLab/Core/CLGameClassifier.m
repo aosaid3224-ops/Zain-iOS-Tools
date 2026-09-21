@@ -8,7 +8,6 @@
 #include <libkern/OSByteOrder.h>
 
 // Evidence weights — single source of truth, every weight is named.
-static NSInteger const kWeightOfficialMetadata = 60;  // genreId 6014 / category Games / LS genreID
 static NSInteger const kWeightGameKit          = 40;  // Game Center APIs — games only
 static NSInteger const kWeightGameController   = 30;
 static NSInteger const kWeightReplayKit        = 25;
