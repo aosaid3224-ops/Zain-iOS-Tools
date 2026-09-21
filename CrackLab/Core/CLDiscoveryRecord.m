@@ -16,6 +16,8 @@
         @"categoryType": self.categoryType ?: @"",
         @"genres": self.genres ?: @[],
         @"genreIDs": self.genreIDs ?: @[],
+        @"iTunesGenreId": self.iTunesGenreId ?: @"",
+        @"iTunesGenre": self.iTunesGenre ?: @"",
         @"engine": self.engineName ?: @"",
         @"signals": self.signals ?: @[],
         @"score": @(self.score),
