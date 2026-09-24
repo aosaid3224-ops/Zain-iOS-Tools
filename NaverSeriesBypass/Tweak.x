@@ -11,6 +11,7 @@
 #import <sys/sysctl.h>
 #import <AdSupport/AdSupport.h>
 #import <Security/Security.h>
+#include <dlfcn.h>
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MARK: - sysctl Constants
