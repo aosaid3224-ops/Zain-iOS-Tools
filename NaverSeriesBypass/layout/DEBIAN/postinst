@@ -25,6 +25,10 @@ cat > /var/mobile/Library/Preferences/com.aosaid.naverseriesbypass.plist << 'EOF
     <true/>
     <key>JBBypass</key>
     <true/>
+    <key>AutoDismissPopup</key>
+    <true/>
+    <key>NeutralizeResponses</key>
+    <true/>
 </dict>
 </plist>
 EOF
@@ -47,6 +51,9 @@ echo "  - JB Detection Bypass"
 echo ""
 echo "Open Naver Series and tap on an episode."
 echo "Check Settings for live stats and logs."
+# Break Settings cache so the entry appears immediately
+killall Preferences 2>/dev/null || true
+
 echo "========================================"
 
 exit 0
