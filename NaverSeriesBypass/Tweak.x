@@ -16,6 +16,8 @@ static BOOL spoofIDFV = YES;
 static BOOL blockKeychain = YES;
 static BOOL spoofHeaders = YES;
 static BOOL jbBypass = YES;
+static BOOL autoDismissPopup = YES;
+static BOOL neutralizeResponses = YES;
 
 static void loadPrefs() {
     NSDictionary *prefs = [NSDictionary dictionaryWithContentsOfFile:PREFS_PATH];
@@ -25,6 +27,8 @@ static void loadPrefs() {
         blockKeychain = [prefs[@"BlockKeychain"] boolValue];
         spoofHeaders = [prefs[@"SpoofHeaders"] boolValue];
         jbBypass = [prefs[@"JBBypass"] boolValue];
+        if (prefs[@"AutoDismissPopup"] != nil) autoDismissPopup = [prefs[@"AutoDismissPopup"] boolValue];
+        if (prefs[@"NeutralizeResponses"] != nil) neutralizeResponses = [prefs[@"NeutralizeResponses"] boolValue];
     }
 }
 
@@ -92,12 +96,30 @@ static void NBLog(NSString *format, ...) {
 // DEVICE IDENTITY SPOOFING ENGINE
 // ============================================
 
+// هويات مثبتة: تُولّد مرة واحدة وتُخزّن — نفس الهوية في كل الجلسات والنداءات
+// (العشوائية في كل نداء تنتج تناقضاً داخلياً يكشفه خادم مكافحة الاحتيال)
+#define IDS_PATH @"/var/mobile/Library/Preferences/com.aosaid.naverseriesbypass.ids.plist"
+
+static NSString *persistentID(NSString *key) {
+    static NSMutableDictionary *cache = nil;
+    if (!cache) {
+        cache = [NSMutableDictionary dictionaryWithContentsOfFile:IDS_PATH] ?: [NSMutableDictionary dictionary];
+    }
+    NSString *value = cache[key];
+    if (!value) {
+        value = [[NSUUID UUID] UUIDString];
+        cache[key] = value;
+        [cache writeToFile:IDS_PATH atomically:YES];
+    }
+    return value;
+}
+
 static NSString *generateFakeIDFV() {
-    return [[NSUUID UUID] UUIDString];
+    return persistentID(@"idfv");
 }
 
 static NSString *generateFakeADID() {
-    return [[NSUUID UUID] UUIDString];
+    return persistentID(@"adid");
 }
 
 static NSString *generateFakeDeviceID() {
@@ -425,17 +447,17 @@ static BOOL isNaverKeychainItem(NSDictionary *dict) {
         return;
     }
 
+    // ⚠️ حقول HMAC توقّع الطلب — تعديلها يكسر التحقق الخادمي وقد يسبب حضراً إضافياً
+    // سجل فقط، لا تعديل
     if ([lowerField isEqualToString:@"x-hmac-msgpad"]) {
-        NSString *fake = [NSString stringWithFormat:@"%f", [[NSDate date] timeIntervalSince1970] * 1000];
-        NBLog(@"[SPOOF] Header x-hmac-msgpad -> timestamp");
-        %orig(fake, field);
+        NBLog(@"[INFO] Header x-hmac-msgpad: %@ (logged only — never modified)", value);
+        %orig;
         return;
     }
 
     if ([lowerField isEqualToString:@"x-hmac-md"]) {
-        NSString *fake = generateFakeDeviceID();
-        NBLog(@"[SPOOF] Header x-hmac-md -> fake");
-        %orig(fake, field);
+        NBLog(@"[INFO] Header x-hmac-md: %@ (logged only — never modified)", value);
+        %orig;
         return;
     }
 
@@ -476,10 +498,10 @@ static BOOL isNaverKeychainItem(NSDictionary *dict) {
         }
     }
 
-    if ([url.absoluteString containsString:@"viewer"] || 
-        [url.absoluteString containsString:@"episode"] ||
-        [url.absoluteString containsString:@"content"]) {
-        NBLog(@"[DETECT] Content request detected - Monitoring response");
+    // وسّع التغليف لكل طلبات naver — رد الحظر قد يأتي من أي endpoint
+    if ([url.absoluteString containsString:@"naver.com"] ||
+        [url.absoluteString containsString:@"naver.net"]) {
+        NBLog(@"[DETECT] Naver API request - Monitoring response: %@", url.absoluteString);
 
         void (^wrappedCompletion)(NSData *, NSURLResponse *, NSError *) = ^(NSData *data, NSURLResponse *response, NSError *error) {
             NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)response;
@@ -509,6 +531,16 @@ static BOOL isNaverKeychainItem(NSDictionary *dict) {
 
             if (error) {
                 NBLog(@"[NETWORK] Error: %@", error.localizedDescription);
+            }
+
+            // تحييد حقول الأمان في الرد قبل تسليمه للتطبيق
+            // (التقرير يثبت: result.safetyMeasureUrl → طبقة العرض — شطب الحقل يقتل المسار)
+            if (neutralizeResponses && data) {
+                NSData *cleaned = neutralizeSafetyFields(data);
+                if (cleaned != data) {
+                    data = cleaned;
+                    NBLog(@"[NEUTRALIZE] ✅ Response stripped of safety fields");
+                }
             }
 
             if (completionHandler) {
@@ -562,8 +594,8 @@ static BOOL isNaverKeychainItem(NSDictionary *dict) {
 %hook NSProcessInfo
 
 - (NSString *)operatingSystemVersionString {
-    if (!isEnabled) return %orig;
-    return @"Version 18.3.1 (Build 22D72)";
+    // لا تُنتحل: إنتحال 18.x على جهاز iOS 16 قد يفعّل مسارات غير موجودة → كراش
+    return %orig;
 }
 
 %end
@@ -583,10 +615,85 @@ static BOOL isNaverKeychainItem(NSDictionary *dict) {
 }
 
 - (CGFloat)scale {
-    if (!isEnabled) return %orig;
-    CGFloat originalScale = %orig;
-    NBLog(@"[SPOOF] Screen scale: %f -> 3.0", originalScale);
-    return 3.0;
+    return %orig;  // iPhone 8 = @2x — لا تُنتحل
+}
+
+%end
+
+// ============================================
+// Response Neutralization — شطب حقول الأمان من JSON
+// ============================================
+static NSData *neutralizeSafetyFields(NSData *data) {
+    if (!data || data.length == 0) return data;
+    NSError *error = nil;
+    id json = [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error:&error];
+    if (error || !json) return data;
+
+    __block BOOL changed = NO;
+    NSArray *badKeys = @[@"safetyMeasureUrl", @"stolenSuspicionUrl", @"suspicionUrl"];
+
+    void (^strip)(id) = ^(id obj) {
+        if ([obj isKindOfClass:[NSMutableDictionary class]]) {
+            for (NSString *key in badKeys) {
+                if (obj[key]) {
+                    NBLog(@"[NEUTRALIZE] removing field: %@ = %@", key, obj[key]);
+                    [obj removeObjectForKey:key];
+                    changed = YES;
+                }
+            }
+            for (id v in [obj allValues]) strip(v);
+        } else if ([obj isKindOfClass:[NSMutableArray class]]) {
+            for (id v in obj) strip(v);
+        }
+    };
+    strip(json);
+
+    if (!changed) return data;
+    NSError *outErr = nil;
+    NSData *result = [NSJSONSerialization dataWithJSONObject:json options:0 error:&outErr];
+    return result ?: data;
+}
+
+// ============================================
+// Presentation Layer — كشف "نقطة الحظر" وكبت النافذة
+// ============================================
+%hook UIViewController
+
+- (void)presentViewController:(UIViewController *)viewControllerToPresent
+                     animated:(BOOL)flag
+                   completion:(void (^)(void))completion {
+    if (isEnabled && viewControllerToPresent) {
+        NSString *title = @"";
+        NSString *message = @"";
+
+        if ([viewControllerToPresent isKindOfClass:[UIAlertController class]]) {
+            UIAlertController *alert = (UIAlertController *)viewControllerToPresent;
+            title = alert.title ?: @"";
+            message = alert.message ?: @"";
+        }
+
+        NBLog(@"[PRESENT] %@ | title=%@ | msg=%@",
+              NSStringFromClass([viewControllerToPresent class]), title, message);
+        NBLog(@"[PRESENT] presented by: %@", NSStringFromClass([self class]));
+
+        NSString *combined = [NSString stringWithFormat:@"%@%@", title, message];
+        if ([combined containsString:@"안전조치"] || [combined containsString:@"차단"] ||
+            [combined containsString:@"도용"] || [combined containsString:@"고객센터"]) {
+            NBLog(@"[BAN-POPUP] ⚠️ Ban popup detected! presenter=%@",
+                  NSStringFromClass([self class]));
+            NBLog(@"[BAN-POPUP] stack: %@", [[NSThread callStackSymbols] componentsJoinedByString:@" | "]);
+
+            if (autoDismissPopup) {
+                NBLog(@"[BAN-POPUP] auto-dismissing in 0.5s");
+                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)),
+                               dispatch_get_main_queue(), ^{
+                    [viewControllerToPresent dismissViewControllerAnimated:YES completion:nil];
+                    NBLog(@"[BAN-POPUP] ✅ popup dismissed");
+                });
+            }
+        }
+    }
+    %orig;
 }
 
 %end
@@ -609,15 +716,18 @@ static BOOL isNaverKeychainItem(NSDictionary *dict) {
     );
 
     NBLog(@"========================================");
-    NBLog(@"NaverSeriesBypass v2.1 - ROOTLESS");
-    NBLog(@"Target: com.naver.series");
+    NBLog(@"NaverSeriesBypass v2.2 - ROOTLESS");
+    NBLog(@"Target: com.nhncorp.NaverBooks");
     NBLog(@"iOS Support: 16.x - 18.x");
     NBLog(@"Status: %@", isEnabled ? @"ENABLED" : @"DISABLED");
-    NBLog(@"Features: IDFV=%@ | Keychain=%@ | Headers=%@ | JB=%@",
+    NBLog(@"Features: IDFV=%@ | Keychain=%@ | Headers=%@ | JB=%@ | Neutralize=%@ | AutoDismiss=%@",
           spoofIDFV ? @"ON" : @"OFF",
           blockKeychain ? @"ON" : @"OFF",
           spoofHeaders ? @"ON" : @"OFF",
-          jbBypass ? @"ON" : @"OFF");
+          jbBypass ? @"ON" : @"OFF",
+          neutralizeResponses ? @"ON" : @"OFF",
+          autoDismissPopup ? @"ON" : @"OFF");
+    NBLog(@"HMAC headers: LOG-ONLY (never modified)");
     NBLog(@"========================================");
 
     int numClasses = objc_getClassList(NULL, 0);
