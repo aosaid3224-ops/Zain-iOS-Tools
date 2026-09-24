@@ -194,6 +194,11 @@ static UIWindow *NBActiveWindow(void) {
         NSDictionary *prefs = [NSDictionary dictionaryWithContentsOfFile:PREFS_PATH];
         NSDictionary *savedStats = [NSDictionary dictionaryWithContentsOfFile:STATS_PATH];
         BOOL enabled = prefs[@"Enabled"] == nil ? YES : [prefs[@"Enabled"] boolValue];
+        BOOL spoofDevice = prefs[@"SpoofDevice"] == nil ? YES : [prefs[@"SpoofDevice"] boolValue];
+        BOOL spoofIDFV = prefs[@"SpoofIDFV"] == nil ? YES : [prefs[@"SpoofIDFV"] boolValue];
+        BOOL spoofIDFA = prefs[@"SpoofIDFA"] == nil ? YES : [prefs[@"SpoofIDFA"] boolValue];
+        BOOL spoofHeaders = prefs[@"SpoofHeaders"] == nil ? YES : [prefs[@"SpoofHeaders"] boolValue];
+        BOOL blockKeychain = prefs[@"BlockKeychain"] == nil ? YES : [prefs[@"BlockKeychain"] boolValue];
         NSDate *lastLaunch = savedStats[@"lastLaunch"];
         NSDate *lastHeartbeat = savedStats[@"lastHeartbeat"];
         NSTimeInterval heartbeatAge = lastHeartbeat ? [[NSDate date] timeIntervalSinceDate:lastHeartbeat] : DBL_MAX;
