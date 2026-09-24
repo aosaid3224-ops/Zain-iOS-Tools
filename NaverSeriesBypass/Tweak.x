@@ -614,6 +614,48 @@ static int hook_sysctl(const int *name, u_int namelen, void *oldp, size_t *oldle
 
 %end
 
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MARK: - Heartbeat System (Proof of Injection)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+static NSString *const kHeartbeatPath = @"/tmp/com.aosaid.naverseriesbypass.heartbeat";
+static NSString *const kStatsPath = @"/tmp/com.aosaid.naverseriesbypass.stats";
+static dispatch_source_t heartbeatTimer = nil;
+
+static void writeHeartbeat() {
+    NSDictionary *heartbeat = @{
+        @"timestamp": @([[NSDate date] timeIntervalSince1970]),
+        @"bundleId": [[NSBundle mainBundle] bundleIdentifier] ?: @"unknown",
+        @"processName": [[NSProcessInfo processInfo] processName] ?: @"unknown",
+        @"pid": @([[NSProcessInfo processInfo] processIdentifier]),
+        @"active": @(isEnabled),
+        @"version": @"3.1",
+    };
+    [heartbeat writeToFile:kHeartbeatPath atomically:YES];
+}
+
+static void writeStats() {
+    dispatch_async(nbStatsQueue, ^{
+        NSMutableDictionary *statsCopy = [stats mutableCopy] ?: [NSMutableDictionary dictionary];
+        statsCopy[@"lastUpdate"] = @([[NSDate date] timeIntervalSince1970]);
+        statsCopy[@"bundleId"] = [[NSBundle mainBundle] bundleIdentifier] ?: @"unknown";
+        statsCopy[@"processName"] = [[NSProcessInfo processInfo] processName] ?: @"unknown";
+        [statsCopy writeToFile:kStatsPath atomically:YES];
+    });
+}
+
+static void startHeartbeat() {
+    heartbeatTimer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0));
+    dispatch_source_set_timer(heartbeatTimer, DISPATCH_TIME_NOW, 2.0 * NSEC_PER_SEC, 0.5 * NSEC_PER_SEC);
+    dispatch_source_set_event_handler(heartbeatTimer, ^{
+        writeHeartbeat();
+        writeStats();
+    });
+    dispatch_resume(heartbeatTimer);
+    NBLog(@"[HEARTBEAT] Started — writing to %@", kHeartbeatPath);
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // MARK: - Constructor
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -650,5 +692,12 @@ static int hook_sysctl(const int *name, u_int namelen, void *oldp, size_t *oldle
 
         NBLog(@"Bypass engine initialized - All device identifiers spoofed");
         NBLogStats();
+
+        // Start heartbeat to prove injection is working
+        startHeartbeat();
+
+        // Write initial proof of injection
+        writeHeartbeat();
+        writeStats();
     }
 }
