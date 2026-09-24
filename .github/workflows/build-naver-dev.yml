@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 env:
   THEOS: ${{ github.workspace }}/theos
@@ -19,14 +19,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
-          path: source
-
-      - name: Checkout repo-dev
-        uses: actions/checkout@v4
-        with:
-          repository: aosaid3224-ops/repo-dev
-          token: ${{ secrets.PAT }}
-          path: repo-dev
 
       - name: Install dependencies
         run: brew install dpkg ldid
@@ -39,7 +31,7 @@ jobs:
 
       - name: Build NaverSeriesBypass
         run: |
-          cd source/NaverSeriesBypass
+          cd NaverSeriesBypass
           chmod +x layout/DEBIAN/postinst layout/DEBIAN/postrm 2>/dev/null || true
           make clean
           make package THEOS_PACKAGE_SCHEME=rootless FINALPACKAGE=1
@@ -47,27 +39,15 @@ jobs:
           test -n "$DEB_FILE"
           dpkg-deb -f "$DEB_FILE" Package Version Architecture
           test "$(dpkg-deb -f "$DEB_FILE" Package)" = "com.aosaid.naverseriesbypass"
+          test "$(dpkg-deb -f "$DEB_FILE" Version)" = "2.2.0"
           test "$(dpkg-deb -f "$DEB_FILE" Architecture)" = "iphoneos-arm64"
-          echo "DEB_FILE=$DEB_FILE" >> "$GITHUB_ENV"
 
-      - name: Deploy to repo-dev
-        run: |
-          git config --global user.email "ci@github.com"
-          git config --global user.name "GitHub CI"
-          mkdir -p repo-dev/pool/main/iphoneos-arm64 repo-dev/scripts
-          cp source/NaverSeriesBypass/packages/*.deb repo-dev/pool/main/iphoneos-arm64/
-          cp source/scripts/generate-repo.py repo-dev/scripts/generate-repo.py
-          cd repo-dev
-          python3 scripts/generate-repo.py . --dev
-          python3 ../source/scripts/validate-repo.py .
-          git add -A
-          if git diff --cached --quiet; then
-            echo "repo-dev already contains this build"
-          else
-            VERSION=$(dpkg-deb -f ../source/NaverSeriesBypass/packages/*.deb Version | head -1)
-            git commit -m "NaverSeriesBypass ${VERSION} — dev build"
-            git push origin main
-          fi
+      - name: Upload verified package
+        uses: actions/upload-artifact@v4
+        with:
+          name: naverseriesbypass-2.2.0
+          path: NaverSeriesBypass/packages/*.deb
+          if-no-files-found: error
 
       - name: Summary
         if: always()
