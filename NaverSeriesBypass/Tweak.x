@@ -1,7 +1,7 @@
 /*
- * NaverSeriesBypass v3.3 - Professional Device Ban Bypass
- * FIXED: All logical errors, misleading stats, and connection issues resolved
- * Target: iPhone 8 (iOS 16) -> Spoof to iPhone 15 Pro (iOS 18.3.1)
+ * NaverSeriesBypass v3.3.1 - CRASH FIX
+ * Fixed: %hookf replaced with MSHookFunction, delayed keychain cleanup,
+ *        removed UIKit from filter, fixed buffer overflows
  */
 
 #import <substrate.h>
@@ -10,12 +10,10 @@
 #import <sys/utsname.h>
 #import <sys/sysctl.h>
 #import <AdSupport/AdSupport.h>
-#import <CoreTelephony/CTTelephonyNetworkInfo.h>
-#import <CoreTelephony/CTCarrier.h>
 #import <Security/Security.h>
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// MARK: - sysctl Constants (for compatibility)
+// MARK: - sysctl Constants
 // ═══════════════════════════════════════════════════════════════════════════════
 
 #ifndef CTL_HW
@@ -46,7 +44,7 @@ static NSString *const kKeyBlockKeychain = @"BlockKeychain";
 static NSString *const kKeyJBBypass = @"JBBypass";
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// MARK: - Configuration (Read from Preferences)
+// MARK: - Configuration
 // ═══════════════════════════════════════════════════════════════════════════════
 
 static BOOL isEnabled = YES;
@@ -58,16 +56,14 @@ static BOOL spoofNetwork = YES;
 static BOOL blockKeychain = YES;
 static BOOL jbBypass = YES;
 
-// Target spoof identity: iPhone 15 Pro, iOS 18.3.1
 static NSString *const kSpoofModel = @"iPhone16,1";
 static NSString *const kSpoofLocalizedModel = @"iPhone";
 static NSString *const kSpoofSystemVersion = @"18.3.1";
 static NSString *const kSpoofSystemName = @"iOS";
 static NSString *const kSpoofDeviceName = @"iPhone";
-static NSString *const kSpoofKernelVersion = @"Darwin Kernel Version 22.6.0: Wed Jun 28 20:10:54 PDT 2023; root:xnu-8796.142.1~1/RELEASE_ARM64_T8120";
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// MARK: - Safe File Paths (NOT /tmp - sandboxed apps can't write there reliably)
+// MARK: - Safe File Paths
 // ═══════════════════════════════════════════════════════════════════════════════
 
 static NSString *heartbeatPath() {
@@ -144,49 +140,48 @@ static NSString *generateFakeDeviceID() { return persistentID(@"device_v3"); }
 static NSString *generateFakeADID() { return persistentID(@"adid_v3"); }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// MARK: - Heartbeat System (Proof of Injection)
+// MARK: - Heartbeat System (FIXED: Reduced frequency, background queue)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 static dispatch_source_t heartbeatTimer = nil;
 
 static void writeHeartbeat() {
     if (!isEnabled) return;
-    NSDictionary *heartbeat = @{
-        @"timestamp": @([[NSDate date] timeIntervalSince1970]),
-        @"bundleId": [[NSBundle mainBundle] bundleIdentifier] ?: @"unknown",
-        @"processName": [[NSProcessInfo processInfo] processName] ?: @"unknown",
-        @"pid": @([[NSProcessInfo processInfo] processIdentifier]),
-        @"active": @(isEnabled),
-        @"version": @"3.3",
-    };
-    NSString *path = heartbeatPath();
-    BOOL ok = [heartbeat writeToFile:path atomically:YES];
-    if (!ok) {
-        // Fallback: try NSTemporaryDirectory
-        NSString *tmp = [NSTemporaryDirectory() stringByAppendingPathComponent:@"naverseriesbypass_heartbeat.plist"];
-        [heartbeat writeToFile:tmp atomically:YES];
+    @try {
+        NSDictionary *heartbeat = @{
+            @"timestamp": @([[NSDate date] timeIntervalSince1970]),
+            @"bundleId": [[NSBundle mainBundle] bundleIdentifier] ?: @"unknown",
+            @"processName": [[NSProcessInfo processInfo] processName] ?: @"unknown",
+            @"pid": @([[NSProcessInfo processInfo] processIdentifier]),
+            @"active": @(isEnabled),
+            @"version": @"3.3.1",
+        };
+        NSString *path = heartbeatPath();
+        [heartbeat writeToFile:path atomically:YES];
+    } @catch (NSException *e) {
+        // Silent fail - don't crash
     }
 }
 
 static void writeStats() {
     if (!isEnabled) return;
-    NSDictionary *copy = NBGetStatsCopy();
-    NSMutableDictionary *statsDict = [copy mutableCopy] ?: [NSMutableDictionary dictionary];
-    statsDict[@"lastUpdate"] = @([[NSDate date] timeIntervalSince1970]);
-    statsDict[@"bundleId"] = [[NSBundle mainBundle] bundleIdentifier] ?: @"unknown";
-    statsDict[@"processName"] = [[NSProcessInfo processInfo] processName] ?: @"unknown";
-    NSString *path = statsPath();
-    BOOL ok = [statsDict writeToFile:path atomically:YES];
-    if (!ok) {
-        NSString *tmp = [NSTemporaryDirectory() stringByAppendingPathComponent:@"naverseriesbypass_stats.plist"];
-        [statsDict writeToFile:tmp atomically:YES];
+    @try {
+        NSDictionary *copy = NBGetStatsCopy();
+        NSMutableDictionary *statsDict = [copy mutableCopy] ?: [NSMutableDictionary dictionary];
+        statsDict[@"lastUpdate"] = @([[NSDate date] timeIntervalSince1970]);
+        statsDict[@"bundleId"] = [[NSBundle mainBundle] bundleIdentifier] ?: @"unknown";
+        NSString *path = statsPath();
+        [statsDict writeToFile:path atomically:YES];
+    } @catch (NSException *e) {
+        // Silent fail
     }
 }
 
 static void startHeartbeat() {
-    if (heartbeatTimer) return; // Already running
+    if (heartbeatTimer) return;
+    // FIXED: Reduced to 10 seconds, use background queue
     heartbeatTimer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0));
-    dispatch_source_set_timer(heartbeatTimer, DISPATCH_TIME_NOW, 2.0 * NSEC_PER_SEC, 0.5 * NSEC_PER_SEC);
+    dispatch_source_set_timer(heartbeatTimer, dispatch_time(DISPATCH_TIME_NOW, 10 * NSEC_PER_SEC), 10.0 * NSEC_PER_SEC, 1.0 * NSEC_PER_SEC);
     dispatch_source_set_event_handler(heartbeatTimer, ^{
         writeHeartbeat();
         writeStats();
@@ -202,26 +197,29 @@ static void stopHeartbeat() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// MARK: - Keychain Cleanup (Remove old ban data on startup)
+// MARK: - Keychain Cleanup (FIXED: Delayed, wrapped in try-catch)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 static void cleanupKeychain() {
     if (!blockKeychain) return;
+    @try {
+        NSArray *servicesToDelete = @[@"com.nhncorp.NaverBooks", @"com.naver.series", @"com.naver.books"];
+        NSArray *secClasses = @[
+            (__bridge id)kSecClassGenericPassword,
+            (__bridge id)kSecClassInternetPassword,
+        ];
 
-    NSArray *servicesToDelete = @[@"com.nhncorp.NaverBooks", @"com.naver.series", @"com.naver.books"];
-    NSArray *secClasses = @[
-        (__bridge id)kSecClassGenericPassword,
-        (__bridge id)kSecClassInternetPassword,
-    ];
-
-    for (NSString *service in servicesToDelete) {
-        for (id secClass in secClasses) {
-            NSDictionary *query = @{
-                (__bridge id)kSecClass: secClass,
-                (__bridge id)kSecAttrService: service
-            };
-            SecItemDelete((__bridge CFDictionaryRef)query);
+        for (NSString *service in servicesToDelete) {
+            for (id secClass in secClasses) {
+                NSDictionary *query = @{
+                    (__bridge id)kSecClass: secClass,
+                    (__bridge id)kSecAttrService: service
+                };
+                SecItemDelete((__bridge CFDictionaryRef)query);
+            }
         }
+    } @catch (NSException *e) {
+        // Silent fail
     }
 }
 
@@ -234,7 +232,9 @@ static void cleanupKeychain() {
 - (NSUUID *)identifierForVendor {
     if (!isEnabled || !spoofIDFV) return %orig;
     NBIncrementStat(@"idfv");
-    return [[NSUUID alloc] initWithUUIDString:generateFakeIDFV()];
+    NSString *uuid = generateFakeIDFV();
+    NSUUID *result = [[NSUUID alloc] initWithUUIDString:uuid];
+    return result ?: %orig;
 }
 
 - (NSString *)name {
@@ -284,7 +284,9 @@ static void cleanupKeychain() {
 - (NSUUID *)advertisingIdentifier {
     if (!isEnabled || !spoofIDFA) return %orig;
     NBIncrementStat(@"idfa");
-    return [[NSUUID alloc] initWithUUIDString:generateFakeIDFA()];
+    NSString *uuid = generateFakeIDFA();
+    NSUUID *result = [[NSUUID alloc] initWithUUIDString:uuid];
+    return result ?: %orig;
 }
 
 - (BOOL)isAdvertisingTrackingEnabled {
@@ -296,7 +298,7 @@ static void cleanupKeychain() {
 %end
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// MARK: - uname / sysctl Spoofing
+// MARK: - uname / sysctl Spoofing (FIXED: Safe buffer handling)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 static int (*orig_uname)(struct utsname *);
@@ -304,10 +306,10 @@ static int hook_uname(struct utsname *value) {
     if (!isEnabled || !spoofDevice) return orig_uname(value);
     int ret = orig_uname(value);
     if (ret == 0 && value) {
-        strncpy(value->machine, [kSpoofModel UTF8String], sizeof(value->machine) - 1);
-        value->machine[sizeof(value->machine) - 1] = '\0';
-        strncpy(value->version, [kSpoofKernelVersion UTF8String], sizeof(value->version) - 1);
-        value->version[sizeof(value->version) - 1] = '\0';
+        // FIXED: Use snprintf for safety
+        snprintf(value->machine, sizeof(value->machine), "%s", [kSpoofModel UTF8String]);
+        // FIXED: Shortened kernel version to fit buffer
+        snprintf(value->version, sizeof(value->version), "Darwin Kernel Version 22.6.0");
         NBIncrementStat(@"uname");
     }
     return ret;
@@ -458,7 +460,7 @@ static int hook_sysctl(const int *name, u_int namelen, void *oldp, size_t *oldle
 %end
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// MARK: - Keychain Blocking (Targeted - only Naver Series)
+// MARK: - Keychain Blocking (FIXED: Using MSHookFunction instead of %hookf)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 static BOOL isNaverKeychainItem(NSDictionary *dict) {
@@ -475,36 +477,40 @@ static BOOL isNaverKeychainItem(NSDictionary *dict) {
     return NO;
 }
 
-%hookf(OSStatus, SecItemAdd, CFDictionaryRef attributes, CFTypeRef *result) {
-    if (!isEnabled || !blockKeychain) return %orig;
+// FIXED: Using function pointers + MSHookFunction instead of %hookf
+static OSStatus (*orig_SecItemAdd)(CFDictionaryRef, CFTypeRef *);
+static OSStatus hook_SecItemAdd(CFDictionaryRef attributes, CFTypeRef *result) {
+    if (!isEnabled || !blockKeychain) return orig_SecItemAdd(attributes, result);
     if (isNaverKeychainItem((__bridge NSDictionary *)attributes)) {
         NBIncrementStat(@"keychain_blocked");
         if (result) *result = NULL;
         return errSecSuccess;
     }
-    return %orig;
+    return orig_SecItemAdd(attributes, result);
 }
 
-%hookf(OSStatus, SecItemUpdate, CFDictionaryRef query, CFDictionaryRef attributesToUpdate) {
-    if (!isEnabled || !blockKeychain) return %orig;
+static OSStatus (*orig_SecItemUpdate)(CFDictionaryRef, CFDictionaryRef);
+static OSStatus hook_SecItemUpdate(CFDictionaryRef query, CFDictionaryRef attributesToUpdate) {
+    if (!isEnabled || !blockKeychain) return orig_SecItemUpdate(query, attributesToUpdate);
     if (isNaverKeychainItem((__bridge NSDictionary *)query)) {
         NBIncrementStat(@"keychain_blocked");
         return errSecSuccess;
     }
-    return %orig;
+    return orig_SecItemUpdate(query, attributesToUpdate);
 }
 
-%hookf(OSStatus, SecItemCopyMatching, CFDictionaryRef query, CFTypeRef *result) {
-    if (!isEnabled || !blockKeychain) return %orig;
+static OSStatus (*orig_SecItemCopyMatching)(CFDictionaryRef, CFTypeRef *);
+static OSStatus hook_SecItemCopyMatching(CFDictionaryRef query, CFTypeRef *result) {
+    if (!isEnabled || !blockKeychain) return orig_SecItemCopyMatching(query, result);
     if (isNaverKeychainItem((__bridge NSDictionary *)query)) {
         NBIncrementStat(@"keychain_blocked");
         return errSecItemNotFound;
     }
-    return %orig;
+    return orig_SecItemCopyMatching(query, result);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// MARK: - Constructor
+// MARK: - Constructor (FIXED: Delayed initialization, safe hooks)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 %ctor {
@@ -516,11 +522,31 @@ static BOOL isNaverKeychainItem(NSDictionary *dict) {
         MSHookFunction((void *)uname, (void *)hook_uname, (void **)&orig_uname);
         MSHookFunction((void *)sysctl, (void *)hook_sysctl, (void **)&orig_sysctl);
 
-        // Cleanup old keychain
-        cleanupKeychain();
+        // FIXED: Hook Security framework functions using MSHookFunction
+        void *secItemAddPtr = dlsym(RTLD_DEFAULT, "SecItemAdd");
+        void *secItemUpdatePtr = dlsym(RTLD_DEFAULT, "SecItemUpdate");
+        void *secItemCopyMatchingPtr = dlsym(RTLD_DEFAULT, "SecItemCopyMatching");
 
-        // Start heartbeat
-        startHeartbeat();
+        if (secItemAddPtr) {
+            MSHookFunction(secItemAddPtr, (void *)hook_SecItemAdd, (void **)&orig_SecItemAdd);
+        }
+        if (secItemUpdatePtr) {
+            MSHookFunction(secItemUpdatePtr, (void *)hook_SecItemUpdate, (void **)&orig_SecItemUpdate);
+        }
+        if (secItemCopyMatchingPtr) {
+            MSHookFunction(secItemCopyMatchingPtr, (void *)hook_SecItemCopyMatching, (void **)&orig_SecItemCopyMatching);
+        }
+
+        // FIXED: Delay keychain cleanup to avoid crash on locked keychain
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2 * NSEC_PER_SEC), dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), ^{
+            cleanupKeychain();
+        });
+
+        // FIXED: Delay heartbeat start
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 5 * NSEC_PER_SEC), dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), ^{
+            startHeartbeat();
+        });
+
         writeHeartbeat();
         writeStats();
 
