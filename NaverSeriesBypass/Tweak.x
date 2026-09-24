@@ -132,6 +132,14 @@ static void NBMarkTweakLoaded(void) {
     }
 }
 
+static void NBPreferencesChanged(CFNotificationCenterRef center,
+                                 void *observer,
+                                 CFStringRef name,
+                                 const void *object,
+                                 CFDictionaryRef userInfo) {
+    loadPrefs();
+}
+
 // ============================================
 // DEVICE IDENTITY SPOOFING ENGINE
 // ============================================
@@ -187,32 +195,23 @@ static NSString *generateFakeDeviceID() {
 }
 
 - (NSString *)name {
-    if (!isEnabled) return %orig;
-    NSString *originalName = %orig;
-    NBLog(@"[SPOOF] deviceName: %@ -> iPhone", originalName);
-    return @"iPhone";
+    return %orig;
 }
 
 - (NSString *)model {
-    if (!isEnabled) return %orig;
-    NSString *originalModel = %orig;
-    NBLog(@"[SPOOF] model: %@ -> iPhone15,2", originalModel);
-    return @"iPhone";
+    return %orig;
 }
 
 - (NSString *)localizedModel {
-    return @"iPhone";
+    return %orig;
 }
 
 - (NSString *)systemVersion {
-    if (!isEnabled) return %orig;
-    NSString *originalSystemVersion = %orig;
-    NBLog(@"[SPOOF] systemVersion: %@ -> 18.3.1", originalSystemVersion);
-    return @"18.3.1";
+    return %orig;
 }
 
 - (NSString *)systemName {
-    return @"iOS";
+    return %orig;
 }
 
 %end
@@ -316,7 +315,7 @@ static BOOL isNaverKeychainItem(NSDictionary *dict) {
 %hook NSUserDefaults
 
 - (id)objectForKey:(NSString *)defaultName {
-    if (!isEnabled) return %orig;
+    return %orig;
 
     NSArray *blockedKeys = @[
         @"naver", @"series", @"device", @"ban", @"block",
@@ -338,10 +337,8 @@ static BOOL isNaverKeychainItem(NSDictionary *dict) {
 }
 
 - (void)setObject:(id)value forKey:(NSString *)defaultName {
-    if (!isEnabled) {
-        %orig;
-        return;
-    }
+    %orig;
+    return;
 
     for (NSString *keyword in @[@"ban", @"block", @"device_id", @"fingerprint"]) {
         if ([defaultName rangeOfString:keyword options:NSCaseInsensitiveSearch].location != NSNotFound) {
@@ -359,18 +356,7 @@ static BOOL isNaverKeychainItem(NSDictionary *dict) {
 // ============================================
 
 %hookf(int, uname, struct utsname *value) {
-    if (!isEnabled) return %orig;
-
-    int result = %orig;
-    if (result == 0 && value) {
-        strncpy(value->machine, "iPhone15,2", sizeof(value->machine) - 1);
-        strncpy(value->nodename, "iPhone", sizeof(value->nodename) - 1);
-        strncpy(value->release, "23.3.0", sizeof(value->release) - 1);
-        strncpy(value->version, "Darwin Kernel Version 23.3.0", sizeof(value->version) - 1);
-        strncpy(value->sysname, "Darwin", sizeof(value->sysname) - 1);
-        NBLog(@"[SPOOF] uname -> machine:iPhone15,2 sysname:Darwin");
-    }
-    return result;
+    return %orig;
 }
 
 %hookf(int, sysctl, int *name, u_int namelen, void *oldp, size_t *oldlenp, void *newp, size_t newlen) {
@@ -397,7 +383,7 @@ static BOOL isNaverKeychainItem(NSDictionary *dict) {
 %hook NSFileManager
 
 - (BOOL)fileExistsAtPath:(NSString *)path {
-    if (!isEnabled || !jbBypass) return %orig;
+    return %orig;
 
     NSArray *jailbreakPaths = @[
         @"/Applications/Cydia.app",
@@ -427,7 +413,7 @@ static BOOL isNaverKeychainItem(NSDictionary *dict) {
 }
 
 - (BOOL)fileExistsAtPath:(NSString *)path isDirectory:(BOOL *)isDirectory {
-    if (!isEnabled || !jbBypass) return %orig;
+    return %orig;
 
     NSArray *jailbreakPaths = @[
         @"/Applications/Cydia.app",
@@ -450,7 +436,7 @@ static BOOL isNaverKeychainItem(NSDictionary *dict) {
 %hook UIApplication
 
 - (BOOL)canOpenURL:(NSURL *)url {
-    if (!isEnabled || !jbBypass) return %orig;
+    return %orig;
 
     if (url) {
         NSString *scheme = url.scheme;
@@ -647,11 +633,7 @@ static BOOL isNaverKeychainItem(NSDictionary *dict) {
 %hook UIScreen
 
 - (CGRect)bounds {
-    CGRect orig = %orig;
-    if (isEnabled) {
-        NBLog(@"[SPOOF] Screen bounds: %@", NSStringFromCGRect(orig));
-    }
-    return orig;
+    return %orig;
 }
 
 - (CGFloat)scale {
@@ -750,14 +732,14 @@ static NSData *neutralizeSafetyFields(NSData *data) {
     CFNotificationCenterAddObserver(
         CFNotificationCenterGetDarwinNotifyCenter(),
         NULL,
-        (CFNotificationCallback)loadPrefs,
+        NBPreferencesChanged,
         CFSTR("com.aosaid.naverseriesbypass/prefsChanged"),
         NULL,
         CFNotificationSuspensionBehaviorCoalesce
     );
 
     NBLog(@"========================================");
-    NBLog(@"NaverSeriesBypass v2.2.2 - ROOTLESS");
+    NBLog(@"NaverSeriesBypass v2.2.3 - ROOTLESS");
     NBLog(@"Target: com.nhncorp.NaverBooks");
     NBLog(@"iOS Support: 16.x - 18.x");
     NBLog(@"Status: %@", isEnabled ? @"ENABLED" : @"DISABLED");
