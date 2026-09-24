@@ -2,6 +2,8 @@
 #import <UIKit/UIKit.h>
 
 #define LOG_FILE @"/var/mobile/Documents/NaverBypass_Diagnostics.log"
+#define PREFS_PATH @"/var/mobile/Library/Preferences/com.aosaid.naverseriesbypass.plist"
+#define STATS_PATH @"/var/mobile/Library/Preferences/com.aosaid.naverseriesbypass.stats.plist"
 
 static UIWindow *NBActiveWindow(void) {
     UIApplication *application = [UIApplication sharedApplication];
@@ -163,33 +165,49 @@ static UIWindow *NBActiveWindow(void) {
         UITextView *logView = (UITextView *)[overlay viewWithTag:10003];
 
         NSString *log = [self readLog];
+        NSDictionary *prefs = [NSDictionary dictionaryWithContentsOfFile:PREFS_PATH];
+        NSDictionary *savedStats = [NSDictionary dictionaryWithContentsOfFile:STATS_PATH];
+        BOOL enabled = prefs[@"Enabled"] == nil ? YES : [prefs[@"Enabled"] boolValue];
+        NSDate *lastLaunch = savedStats[@"lastLaunch"];
+        BOOL loadedRecently = [savedStats[@"loaded"] boolValue] && lastLaunch &&
+            [[NSDate date] timeIntervalSinceDate:lastLaunch] < (30.0 * 60.0);
 
-        // Status
         BOOL blocked = [log containsString:@"BLOCKED"] || [log containsString:@"BAN"];
-        BOOL success = [log containsString:@"200"] || [log containsString:@"SPOOF"];
-        if (blocked) {
-            status.text = @"محظور - خادمي";
-            status.textColor = [UIColor colorWithRed:0.9 green:0.2 blue:0.2 alpha:1.0];
-        } else if (success) {
-            status.text = @"يعمل - تم التجاوز";
+        if (!enabled) {
+            status.text = @"معطّل — أوقفته من المفتاح";
+            status.textColor = [UIColor colorWithRed:0.9 green:0.35 blue:0.25 alpha:1.0];
+        } else if (blocked) {
+            status.text = @"مفعّل — حظر مكتشف من الخادم";
+            status.textColor = [UIColor colorWithRed:0.9 green:0.35 blue:0.25 alpha:1.0];
+        } else if (loadedRecently) {
+            status.text = @"مفعّل — التويك محمّل الآن";
             status.textColor = [UIColor colorWithRed:0.2 green:0.8 blue:0.3 alpha:1.0];
         } else {
-            status.text = @"في الانتظار...";
-            status.textColor = [UIColor grayColor];
+            status.text = @"مفعّل — بانتظار فتح Naver Series";
+            status.textColor = [UIColor colorWithRed:0.95 green:0.7 blue:0.25 alpha:1.0];
         }
 
-        // Stats
-        NSArray *lines = [log componentsSeparatedByString:@"\n"];
-        int req=0, blk=0, spf=0, jb=0;
-        for (NSString *ln in lines) {
-            if ([ln containsString:@"[NETWORK] Request"]) req++;
-            if ([ln containsString:@"[ALERT]"]) blk++;
-            if ([ln containsString:@"[SPOOF]"]) spf++;
-            if ([ln containsString:@"[JB-BYPASS]"]) jb++;
+        // Use persistent counters written by the tweak; fall back to old logs once.
+        NSArray *lines = log.length ? [log componentsSeparatedByString:@"\n"] : @[];
+        NSInteger req = [savedStats[@"requests"] integerValue];
+        NSInteger blk = [savedStats[@"blocked"] integerValue];
+        NSInteger spf = [savedStats[@"spoofed"] integerValue];
+        NSInteger jb = [savedStats[@"jbBypass"] integerValue];
+        NSInteger neutralized = [savedStats[@"neutralized"] integerValue];
+        NSInteger popups = [savedStats[@"popups"] integerValue];
+        if (!savedStats.count) {
+            for (NSString *ln in lines) {
+                if ([ln containsString:@"[NETWORK] Request"]) req++;
+                if ([ln containsString:@"[ALERT]"]) blk++;
+                if ([ln containsString:@"[SPOOF]"]) spf++;
+                if ([ln containsString:@"[JB-BYPASS]"]) jb++;
+            }
         }
+        BOOL hasActivity = req || blk || spf || jb || neutralized || popups;
         stats.text = [NSString stringWithFormat:
-            @"الطلبات: %d | الحظر: %d | التعديل: %d | JB: %d | الاسطر: %lu",
-            req, blk, spf, jb, (unsigned long)lines.count];
+            @"الطلبات: %ld | الحظر: %ld | التعديل: %ld\nJB: %ld | تحييد الردود: %ld | النوافذ: %ld\n%@",
+            (long)req, (long)blk, (long)spf, (long)jb, (long)neutralized, (long)popups,
+            hasActivity ? @"النشاط مسجل من داخل التويك" : @"لا يوجد نشاط بعد — افتح Naver Series لاختبار التويك"];
 
         // Logs
         NSArray *last = lines.count > 15 ? [lines subarrayWithRange:NSMakeRange(lines.count - 15, 15)] : lines;

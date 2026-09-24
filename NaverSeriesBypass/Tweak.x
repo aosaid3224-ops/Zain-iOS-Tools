@@ -10,6 +10,7 @@
 // ============================================
 
 #define PREFS_PATH @"/var/mobile/Library/Preferences/com.aosaid.naverseriesbypass.plist"
+#define STATS_PATH @"/var/mobile/Library/Preferences/com.aosaid.naverseriesbypass.stats.plist"
 
 static BOOL isEnabled = YES;
 static BOOL spoofIDFV = YES;
@@ -20,6 +21,9 @@ static BOOL autoDismissPopup = YES;
 static BOOL neutralizeResponses = YES;
 
 static NSData *neutralizeSafetyFields(NSData *data);
+static NSMutableDictionary *NBMutableStats(void);
+static void NBIncrementStat(NSString *key);
+static void NBMarkTweakLoaded(void);
 
 static void loadPrefs() {
     NSDictionary *prefs = [NSDictionary dictionaryWithContentsOfFile:PREFS_PATH];
@@ -48,6 +52,13 @@ static void NBLog(NSString *format, ...) {
     va_start(args, format);
     NSString *msg = [[NSString alloc] initWithFormat:format arguments:args];
     va_end(args);
+
+    if ([msg containsString:@"[NETWORK] Request"]) NBIncrementStat(@"requests");
+    if ([msg containsString:@"[ALERT]"]) NBIncrementStat(@"blocked");
+    if ([msg containsString:@"[SPOOF]"]) NBIncrementStat(@"spoofed");
+    if ([msg containsString:@"[JB-BYPASS]"]) NBIncrementStat(@"jbBypass");
+    if ([msg containsString:@"[NEUTRALIZE] ✅ Response stripped"]) NBIncrementStat(@"neutralized");
+    if ([msg containsString:@"[BAN-POPUP] ⚠️"]) NBIncrementStat(@"popups");
 
     NSString *timestamp = [NSDateFormatter localizedStringFromDate:[NSDate date] 
                                                          dateStyle:NSDateFormatterNoStyle 
@@ -91,6 +102,33 @@ static void NBLog(NSString *format, ...) {
     }
     @catch (NSException *e) {
         NSLog(@"[NaverBypass] ERROR writing log: %@", e.reason);
+    }
+}
+
+static NSMutableDictionary *NBMutableStats(void) {
+    NSDictionary *saved = [NSDictionary dictionaryWithContentsOfFile:STATS_PATH];
+    return saved ? [saved mutableCopy] : [NSMutableDictionary dictionary];
+}
+
+static void NBIncrementStat(NSString *key) {
+    @try {
+        NSMutableDictionary *stats = NBMutableStats();
+        stats[key] = @([stats[key] integerValue] + 1);
+        stats[@"lastActivity"] = [NSDate date];
+        [stats writeToFile:STATS_PATH atomically:YES];
+    } @catch (NSException *e) {
+        NSLog(@"[NaverBypass] Stats write error: %@", e.reason);
+    }
+}
+
+static void NBMarkTweakLoaded(void) {
+    @try {
+        NSMutableDictionary *stats = NBMutableStats();
+        stats[@"loaded"] = @YES;
+        stats[@"lastLaunch"] = [NSDate date];
+        [stats writeToFile:STATS_PATH atomically:YES];
+    } @catch (NSException *e) {
+        NSLog(@"[NaverBypass] Stats init error: %@", e.reason);
     }
 }
 
@@ -706,6 +744,7 @@ static NSData *neutralizeSafetyFields(NSData *data) {
 
 %ctor {
     loadPrefs();
+    NBMarkTweakLoaded();
 
     // Watch for preference changes
     CFNotificationCenterAddObserver(
@@ -718,7 +757,7 @@ static NSData *neutralizeSafetyFields(NSData *data) {
     );
 
     NBLog(@"========================================");
-    NBLog(@"NaverSeriesBypass v2.2 - ROOTLESS");
+    NBLog(@"NaverSeriesBypass v2.2.2 - ROOTLESS");
     NBLog(@"Target: com.nhncorp.NaverBooks");
     NBLog(@"iOS Support: 16.x - 18.x");
     NBLog(@"Status: %@", isEnabled ? @"ENABLED" : @"DISABLED");
