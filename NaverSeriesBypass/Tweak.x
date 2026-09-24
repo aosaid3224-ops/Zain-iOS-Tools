@@ -19,6 +19,8 @@ static BOOL spoofHeaders = YES;
 static BOOL jbBypass = YES;
 static BOOL autoDismissPopup = YES;
 static BOOL neutralizeResponses = YES;
+static dispatch_source_t nbHeartbeatTimer = nil;
+static dispatch_queue_t nbStatsQueue = nil;
 
 static NSData *neutralizeSafetyFields(NSData *data);
 static NSMutableDictionary *NBMutableStats(void);
@@ -138,6 +140,8 @@ static void NBMarkTweakLoaded(void) {
         stats[@"active"] = @YES;
         stats[@"lastLaunch"] = [NSDate date];
         stats[@"lastHeartbeat"] = [NSDate date];
+        stats[@"processBundle"] = [[NSBundle mainBundle] bundleIdentifier] ?: @"unknown";
+        stats[@"processID"] = @([[NSProcessInfo processInfo] processIdentifier]);
         stats[@"lastEvent"] = @"تم فتح Naver Series وتفعيل التويك";
         stats[@"lastEventAt"] = [NSDate date];
         [stats writeToFile:STATS_PATH atomically:YES];
@@ -147,19 +151,23 @@ static void NBMarkTweakLoaded(void) {
 }
 
 static void NBStartHeartbeat(void) {
-    dispatch_source_t timer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, dispatch_get_global_queue(QOS_CLASS_UTILITY, 0));
-    dispatch_source_set_timer(timer, dispatch_time(DISPATCH_TIME_NOW, 0), 2 * NSEC_PER_SEC, 200 * NSEC_PER_MSEC);
-    dispatch_source_set_event_handler(timer, ^{
+    if (nbHeartbeatTimer) return;
+    if (!nbStatsQueue) nbStatsQueue = dispatch_queue_create("com.aosaid.naverseriesbypass.stats", DISPATCH_QUEUE_SERIAL);
+    nbHeartbeatTimer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, nbStatsQueue);
+    dispatch_source_set_timer(nbHeartbeatTimer, dispatch_time(DISPATCH_TIME_NOW, 0), 2 * NSEC_PER_SEC, 200 * NSEC_PER_MSEC);
+    dispatch_source_set_event_handler(nbHeartbeatTimer, ^{
         @try {
             NSMutableDictionary *stats = NBMutableStats();
             stats[@"active"] = @YES;
             stats[@"lastHeartbeat"] = [NSDate date];
+            stats[@"processBundle"] = [[NSBundle mainBundle] bundleIdentifier] ?: @"unknown";
+            stats[@"processID"] = @([[NSProcessInfo processInfo] processIdentifier]);
             [stats writeToFile:STATS_PATH atomically:YES];
         } @catch (NSException *e) {
             NSLog(@"[NaverBypass] Heartbeat error: %@", e.reason);
         }
     });
-    dispatch_resume(timer);
+    dispatch_resume(nbHeartbeatTimer);
 }
 
 static void NBPreferencesChanged(CFNotificationCenterRef center,
@@ -798,7 +806,7 @@ static NSData *neutralizeSafetyFields(NSData *data) {
     );
 
     NBLog(@"========================================");
-    NBLog(@"NaverSeriesBypass v2.2.5 - ROOTLESS");
+    NBLog(@"NaverSeriesBypass v2.2.6 - ROOTLESS");
     NBLog(@"Target: com.nhncorp.NaverBooks");
     NBLog(@"iOS Support: 16.x - 18.x");
     NBLog(@"Status: %@", isEnabled ? @"ENABLED" : @"DISABLED");
