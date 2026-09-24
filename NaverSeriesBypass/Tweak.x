@@ -146,6 +146,24 @@ static NSString *generateFakeADID() { return persistentID(@"adid_v3"); }
 
 static dispatch_source_t heartbeatTimer = nil;
 
+// CRASH/STATUS FIX: Direct writeToFile to /var/mobile/Library/Preferences is
+// DENIED by the app sandbox (returns NO silently) - that's why the dashboard
+// showed "غير محقن". CFPreferences routes through cfprefsd (unsandboxed daemon)
+// so the file appears at the exact same path the dashboard reads.
+// Each key is written as a TOP-LEVEL app value so the plist file structure
+// matches what the dashboard expects: {timestamp:..., pid:..., ...}
+static void CFPreferencesWriteDictFlat(NSDictionary *dict, CFStringRef domain) {
+    [dict enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop) {
+        BOOL plistSafe = [obj isKindOfClass:[NSString class]] || [obj isKindOfClass:[NSNumber class]] ||
+                         [obj isKindOfClass:[NSArray class]]  || [obj isKindOfClass:[NSDictionary class]] ||
+                         [obj isKindOfClass:[NSDate class]]   || [obj isKindOfClass:[NSData class]];
+        if (plistSafe) {
+            CFPreferencesSetAppValue((__bridge CFStringRef)key, (__bridge CFPropertyListRef)obj, domain);
+        }
+    }];
+    CFPreferencesSynchronize(domain, kCFPreferencesCurrentUser, kCFPreferencesAnyHost);
+}
+
 static void writeHeartbeat() {
     if (!isEnabled) return;
     @try {
@@ -155,10 +173,9 @@ static void writeHeartbeat() {
             @"processName": [[NSProcessInfo processInfo] processName] ?: @"unknown",
             @"pid": @([[NSProcessInfo processInfo] processIdentifier]),
             @"active": @(isEnabled),
-            @"version": @"3.3.2",
+            @"version": @"3.3.3",
         };
-        NSString *path = heartbeatPath();
-        [heartbeat writeToFile:path atomically:YES];
+        CFPreferencesWriteDictFlat(heartbeat, CFSTR("com.aosaid.naverseriesbypass.heartbeat"));
     } @catch (NSException *e) {
         // Silent fail - don't crash
     }
@@ -171,8 +188,8 @@ static void writeStats() {
         NSMutableDictionary *statsDict = [copy mutableCopy] ?: [NSMutableDictionary dictionary];
         statsDict[@"lastUpdate"] = @([[NSDate date] timeIntervalSince1970]);
         statsDict[@"bundleId"] = [[NSBundle mainBundle] bundleIdentifier] ?: @"unknown";
-        NSString *path = statsPath();
-        [statsDict writeToFile:path atomically:YES];
+        // Same sandbox fix: write via cfprefsd so the dashboard can read the file
+        CFPreferencesWriteDictFlat(statsDict, CFSTR("com.aosaid.naverseriesbypass.stats"));
     } @catch (NSException *e) {
         // Silent fail
     }
@@ -182,7 +199,8 @@ static void startHeartbeat() {
     if (heartbeatTimer) return;
     // FIXED: Reduced to 10 seconds, use background queue
     heartbeatTimer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0));
-    dispatch_source_set_timer(heartbeatTimer, dispatch_time(DISPATCH_TIME_NOW, 10 * NSEC_PER_SEC), 10.0 * NSEC_PER_SEC, 1.0 * NSEC_PER_SEC);
+    // Dashboard threshold is age < 10s — write every 5s to guarantee freshness margin
+    dispatch_source_set_timer(heartbeatTimer, dispatch_time(DISPATCH_TIME_NOW, 5 * NSEC_PER_SEC), 5.0 * NSEC_PER_SEC, 1.0 * NSEC_PER_SEC);
     dispatch_source_set_event_handler(heartbeatTimer, ^{
         writeHeartbeat();
         writeStats();
