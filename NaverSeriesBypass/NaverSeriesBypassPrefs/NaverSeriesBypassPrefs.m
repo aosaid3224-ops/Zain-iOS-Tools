@@ -194,11 +194,6 @@ static UIWindow *NBActiveWindow(void) {
         NSDictionary *prefs = [NSDictionary dictionaryWithContentsOfFile:PREFS_PATH];
         NSDictionary *savedStats = [NSDictionary dictionaryWithContentsOfFile:STATS_PATH];
         BOOL enabled = prefs[@"Enabled"] == nil ? YES : [prefs[@"Enabled"] boolValue];
-        BOOL spoofDevice = prefs[@"SpoofDevice"] == nil ? YES : [prefs[@"SpoofDevice"] boolValue];
-        BOOL spoofIDFV = prefs[@"SpoofIDFV"] == nil ? YES : [prefs[@"SpoofIDFV"] boolValue];
-        BOOL spoofIDFA = prefs[@"SpoofIDFA"] == nil ? YES : [prefs[@"SpoofIDFA"] boolValue];
-        BOOL spoofHeaders = prefs[@"SpoofHeaders"] == nil ? YES : [prefs[@"SpoofHeaders"] boolValue];
-        BOOL blockKeychain = prefs[@"BlockKeychain"] == nil ? YES : [prefs[@"BlockKeychain"] boolValue];
 
         // Read REAL heartbeat from Tweak (proof of injection)
         NSString *heartbeatPath = @"/var/mobile/Library/Preferences/com.aosaid.naverseriesbypass.heartbeat.plist";
@@ -221,9 +216,6 @@ static UIWindow *NBActiveWindow(void) {
         if (liveStats) {
             savedStats = liveStats;
         }
-        NSDate *lastLaunch = savedStats[@"lastLaunch"];
-        NSDate *lastStatsHeartbeat = savedStats[@"lastHeartbeat"];
-        NSTimeInterval heartbeatAge = lastStatsHeartbeat ? [[NSDate date] timeIntervalSinceDate:lastStatsHeartbeat] : DBL_MAX;
         BOOL hasInjectionMarker = savedStats[@"loaded"] != nil || savedStats[@"processBundle"] != nil;
         // REAL injection status from heartbeat file
         BOOL live = isInjected;
