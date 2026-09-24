@@ -244,7 +244,7 @@ static UIWindow *NBActiveWindow(void) {
             status.text = @"❌ غير محقن — افتح Naver Series أولاً";
         } else if (launchRecentlyStopped) {
             status.text = @"فشل/انقطع — توقف heartbeat بعد فتح Naver Series";
-            status.text = [NSString stringWithFormat:@"⏳ آخر نشاط قبل %.0f ثانية — أعد فتح Naver Series", [[NSDate date] timeIntervalSince1970] - lastHeartbeat];
+            status.text = [NSString stringWithFormat:@"⏳ آخر نشاط قبل %.0f ثانية — أعد فتح Naver Series", [[NSDate date] timeIntervalSince1970] - heartbeatTimestamp];
         } else {
             status.text = @"مفعّل — بانتظار فتح Naver Series";
             status.text = @"⏳ بانتظار فتح Naver Series";
