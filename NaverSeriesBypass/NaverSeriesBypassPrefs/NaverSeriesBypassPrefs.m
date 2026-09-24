@@ -199,13 +199,35 @@ static UIWindow *NBActiveWindow(void) {
         BOOL spoofIDFA = prefs[@"SpoofIDFA"] == nil ? YES : [prefs[@"SpoofIDFA"] boolValue];
         BOOL spoofHeaders = prefs[@"SpoofHeaders"] == nil ? YES : [prefs[@"SpoofHeaders"] boolValue];
         BOOL blockKeychain = prefs[@"BlockKeychain"] == nil ? YES : [prefs[@"BlockKeychain"] boolValue];
+
+        // Read REAL heartbeat from Tweak (proof of injection)
+        NSString *heartbeatPath = @"/tmp/com.aosaid.naverseriesbypass.heartbeat";
+        NSString *statsPath = @"/tmp/com.aosaid.naverseriesbypass.stats";
+        NSDictionary *heartbeat = [[NSDictionary alloc] initWithContentsOfFile:heartbeatPath];
+        NSDictionary *liveStats = [[NSDictionary alloc] initWithContentsOfFile:statsPath];
+
+        BOOL isInjected = NO;
+        NSString *injectedProcess = @"غير معروف";
+        NSTimeInterval lastHeartbeat = 0;
+
+        if (heartbeat) {
+            lastHeartbeat = [heartbeat[@"timestamp"] doubleValue];
+            NSTimeInterval age = [[NSDate date] timeIntervalSince1970] - lastHeartbeat;
+            isInjected = (age < 10.0); // Heartbeat within last 10 seconds
+            injectedProcess = heartbeat[@"processName"] ?: @"غير معروف";
+        }
+
+        // Use live stats from Tweak if available
+        if (liveStats) {
+            savedStats = liveStats;
+        }
         NSDate *lastLaunch = savedStats[@"lastLaunch"];
         NSDate *lastHeartbeat = savedStats[@"lastHeartbeat"];
         NSTimeInterval heartbeatAge = lastHeartbeat ? [[NSDate date] timeIntervalSinceDate:lastHeartbeat] : DBL_MAX;
         BOOL hasInjectionMarker = savedStats[@"loaded"] != nil || savedStats[@"processBundle"] != nil;
-        BOOL live = hasInjectionMarker && [savedStats[@"active"] boolValue] && heartbeatAge <= 6.0;
-        BOOL launchRecentlyStopped = [savedStats[@"loaded"] boolValue] && lastLaunch &&
-            [[NSDate date] timeIntervalSinceDate:lastLaunch] < (30.0 * 60.0) && !live;
+        // REAL injection status from heartbeat file
+        BOOL live = isInjected;
+        BOOL launchRecentlyStopped = !isInjected && lastHeartbeat > 0;
 
         BOOL blocked = [log containsString:@"BLOCKED"] || [log containsString:@"BAN"];
         if (!enabled) {
@@ -213,19 +235,19 @@ static UIWindow *NBActiveWindow(void) {
             status.textColor = [UIColor colorWithRed:0.9 green:0.35 blue:0.25 alpha:1.0];
         } else if (blocked) {
             status.text = @"مفعّل — حظر مكتشف من الخادم";
-            status.textColor = [UIColor colorWithRed:0.9 green:0.35 blue:0.25 alpha:1.0];
+            status.text = @"⚠️ حظر مكتشف من الخادم";
         } else if (live) {
             status.text = @"مفعّل — Naver Series مفتوح والتويك يعمل الآن";
-            status.textColor = [UIColor colorWithRed:0.2 green:0.8 blue:0.3 alpha:1.0];
+            status.text = [NSString stringWithFormat:@"✅ محقن في: %@ (PID:%@) — يعمل الآن", injectedProcess, heartbeat[@"pid"] ?: @"?"];
         } else if (!hasInjectionMarker) {
             status.text = @"غير محقن — لم تصل بصمة من Naver Series";
-            status.textColor = [UIColor colorWithRed:0.95 green:0.25 blue:0.2 alpha:1.0];
+            status.text = @"❌ غير محقن — افتح Naver Series أولاً";
         } else if (launchRecentlyStopped) {
             status.text = @"فشل/انقطع — توقف heartbeat بعد فتح Naver Series";
-            status.textColor = [UIColor colorWithRed:0.95 green:0.25 blue:0.2 alpha:1.0];
+            status.text = [NSString stringWithFormat:@"⏳ آخر نشاط قبل %.0f ثانية — أعد فتح Naver Series", [[NSDate date] timeIntervalSince1970] - lastHeartbeat];
         } else {
             status.text = @"مفعّل — بانتظار فتح Naver Series";
-            status.textColor = [UIColor colorWithRed:0.95 green:0.7 blue:0.25 alpha:1.0];
+            status.text = @"⏳ بانتظار فتح Naver Series";
         }
 
         // Use persistent counters written by the tweak; fall back to old logs once.
