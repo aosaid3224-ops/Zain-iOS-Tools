@@ -155,7 +155,7 @@ static void writeHeartbeat() {
             @"processName": [[NSProcessInfo processInfo] processName] ?: @"unknown",
             @"pid": @([[NSProcessInfo processInfo] processIdentifier]),
             @"active": @(isEnabled),
-            @"version": @"3.3.1",
+            @"version": @"3.3.2",
         };
         NSString *path = heartbeatPath();
         [heartbeat writeToFile:path atomically:YES];
@@ -464,18 +464,43 @@ static int hook_sysctl(const int *name, u_int namelen, void *oldp, size_t *oldle
 // MARK: - Keychain Blocking (FIXED: Using MSHookFunction instead of %hookf)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-static BOOL isNaverKeychainItem(NSDictionary *dict) {
-    NSString *service = dict[(__bridge NSString *)kSecAttrService];
-    NSString *account = dict[(__bridge NSString *)kSecAttrAccount];
-    NSString *group = dict[(__bridge NSString *)kSecAttrAccessGroup];
+static NSString *NBStringFromAttr(id value) {
+    if (!value) return nil;
+    if ([value isKindOfClass:[NSString class]]) return (NSString *)value;
+    if ([value isKindOfClass:[NSData class]]) {
+        NSString *s = [[NSString alloc] initWithData:(NSData *)value encoding:NSUTF8StringEncoding];
+        if (s) return s;
+        return [[NSString alloc] initWithData:(NSData *)value encoding:NSASCIIStringEncoding];
+    }
+    return [value description];
+}
 
-    NSArray *naverKeywords = @[@"naver", @"series", @"NaverBooks", @"nhncorp"];
-    for (NSString *kw in naverKeywords) {
-        if ([service containsString:kw]) return YES;
-        if ([account containsString:kw]) return YES;
-        if ([group containsString:kw]) return YES;
+static BOOL NBStringMatches(NSString *s, NSArray *keywords) {
+    if (!s) return NO;
+    for (NSString *kw in keywords) {
+        if ([s rangeOfString:kw options:NSCaseInsensitiveSearch].location != NSNotFound) return YES;
     }
     return NO;
+}
+
+static BOOL isNaverKeychainItem(NSDictionary *dict) {
+    // CRASH FIX: kSecAttrService/kSecAttrAccount/kSecAttrAccessGroup can be
+    // CFDataRef (NSConcreteMutableData) not NSString - must convert before
+    // calling NSString methods. This was the exact SIGABRT in crash log
+    // incident 85457303 on queue com.appsflyer.serial.
+    NSString *service = NBStringFromAttr(dict[(__bridge NSString *)kSecAttrService]);
+    NSString *account = NBStringFromAttr(dict[(__bridge NSString *)kSecAttrAccount]);
+    NSString *group   = NBStringFromAttr(dict[(__bridge NSString *)kSecAttrAccessGroup]);
+
+    static NSArray *naverKeywords = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        naverKeywords = @[@"naver", @"series", @"NaverBooks", @"nhncorp", @"nid"];
+    });
+
+    return NBStringMatches(service, naverKeywords)
+        || NBStringMatches(account, naverKeywords)
+        || NBStringMatches(group, naverKeywords);
 }
 
 // FIXED: Using function pointers + MSHookFunction instead of %hookf
@@ -552,10 +577,11 @@ static OSStatus hook_SecItemCopyMatching(CFDictionaryRef query, CFTypeRef *resul
         writeStats();
 
         // Register for preference changes
+        static CFNotificationCallback nbPrefsCallback = (CFNotificationCallback)loadPreferences;
         CFNotificationCenterAddObserver(
             CFNotificationCenterGetDarwinNotifyCenter(),
             NULL,
-            (CFNotificationCallback)loadPreferences,
+            nbPrefsCallback,
             CFSTR("com.aosaid.naverseriesbypass/preferences.changed"),
             NULL,
             CFNotificationSuspensionBehaviorCoalesce
