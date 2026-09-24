@@ -1,847 +1,429 @@
+/*
+ * NaverSeriesBypass - Enhanced Device Ban Bypass
+ * Target: iPhone 8 (iOS 16) -> Spoof to iPhone 15 Pro (iOS 18.3.1)
+ * Author: aosaid3224-ops (Enhanced by Consultant)
+ */
+
 #import <substrate.h>
 #import <UIKit/UIKit.h>
-#import <Security/Security.h>
+#import <Foundation/Foundation.h>
 #import <sys/utsname.h>
 #import <sys/sysctl.h>
-#import <Foundation/Foundation.h>
+#import <AdSupport/AdSupport.h>
+#import <CoreTelephony/CTTelephonyNetworkInfo.h>
+#import <CoreTelephony/CTCarrier.h>
 
-// ============================================
-// PREFERENCES - Settings from Arabic UI
-// ============================================
-
-#define PREFS_PATH @"/var/mobile/Library/Preferences/com.aosaid.naverseriesbypass.plist"
-#define STATS_PATH @"/var/mobile/Library/Preferences/com.aosaid.naverseriesbypass.stats.plist"
+// ═══════════════════════════════════════════════════════════════════════════════
+// MARK: - Configuration
+// ═══════════════════════════════════════════════════════════════════════════════
 
 static BOOL isEnabled = YES;
 static BOOL spoofIDFV = YES;
-static BOOL blockKeychain = YES;
+static BOOL spoofIDFA = YES;
 static BOOL spoofHeaders = YES;
-static BOOL jbBypass = YES;
-static BOOL autoDismissPopup = YES;
-static BOOL neutralizeResponses = YES;
-static dispatch_source_t nbHeartbeatTimer = nil;
+static BOOL spoofDevice = YES;
+static BOOL spoofNetwork = YES;
+
+// Target spoof identity: iPhone 15 Pro, iOS 18.3.1
+static NSString *const kSpoofModel = @"iPhone16,1";
+static NSString *const kSpoofLocalizedModel = @"iPhone";
+static NSString *const kSpoofSystemVersion = @"18.3.1";
+static NSString *const kSpoofSystemName = @"iOS";
+static NSString *const kSpoofDeviceName = @"iPhone";
+static NSString *const kSpoofUserAgent = @"iPhone16,1/18.3.1";
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MARK: - Statistics & Logging
+// ═══════════════════════════════════════════════════════════════════════════════
+
+static NSMutableDictionary *stats = nil;
 static dispatch_queue_t nbStatsQueue = nil;
 
-static NSData *neutralizeSafetyFields(NSData *data);
-static NSMutableDictionary *NBMutableStats(void);
-static void NBIncrementStat(NSString *key);
-static void NBMarkTweakLoaded(void);
-static void NBStartHeartbeat(void);
-
-static void loadPrefs() {
-    NSDictionary *prefs = [NSDictionary dictionaryWithContentsOfFile:PREFS_PATH];
-    if (prefs) {
-        isEnabled = [prefs[@"Enabled"] boolValue];
-        spoofIDFV = [prefs[@"SpoofIDFV"] boolValue];
-        blockKeychain = [prefs[@"BlockKeychain"] boolValue];
-        spoofHeaders = [prefs[@"SpoofHeaders"] boolValue];
-        jbBypass = [prefs[@"JBBypass"] boolValue];
-        if (prefs[@"AutoDismissPopup"] != nil) autoDismissPopup = [prefs[@"AutoDismissPopup"] boolValue];
-        if (prefs[@"NeutralizeResponses"] != nil) neutralizeResponses = [prefs[@"NeutralizeResponses"] boolValue];
-    }
-}
-
-// ============================================
-// DIAGNOSTIC ENGINE - Built-in Logger
-// ============================================
-
-#define LOG_FILE @"/var/mobile/Documents/NaverBypass_Diagnostics.log"
-#define MAX_LOG_SIZE (5 * 1024 * 1024)
-
-static void NBLog(NSString *format, ...) {
-    if (!isEnabled) return;
-
-    va_list args;
-    va_start(args, format);
-    NSString *msg = [[NSString alloc] initWithFormat:format arguments:args];
-    va_end(args);
-
-    @try {
-        NSMutableDictionary *stats = NBMutableStats();
-        stats[@"lastEvent"] = msg;
-        stats[@"lastEventAt"] = [NSDate date];
-        [stats writeToFile:STATS_PATH atomically:YES];
-    } @catch (NSException *e) {
-        NSLog(@"[NaverBypass] Event write error: %@", e.reason);
-    }
-
-    if ([msg containsString:@"[NETWORK] Request"]) NBIncrementStat(@"requests");
-    if ([msg containsString:@"[ALERT]"]) NBIncrementStat(@"blocked");
-    if ([msg containsString:@"[SPOOF]"]) NBIncrementStat(@"spoofed");
-    if ([msg containsString:@"[JB-BYPASS]"]) NBIncrementStat(@"jbBypass");
-    if ([msg containsString:@"[NEUTRALIZE] ✅ Response stripped"]) NBIncrementStat(@"neutralized");
-    if ([msg containsString:@"[BAN-POPUP] ⚠️"]) NBIncrementStat(@"popups");
-
-    NSString *timestamp = [NSDateFormatter localizedStringFromDate:[NSDate date] 
-                                                         dateStyle:NSDateFormatterNoStyle 
-                                                         timeStyle:NSDateFormatterMediumStyle];
-    NSString *logLine = [NSString stringWithFormat:@"[%@] [NaverBypass] %@\n", timestamp, msg];
-
-    // Always log to NSLog (visible in system console)
-    NSLog(@"%@", logLine);
-
-    // Try to write to file
-    @try {
-        NSFileManager *fm = [NSFileManager defaultManager];
-        NSString *docsDir = @"/var/mobile/Documents";
-
-        // Ensure directory exists
-        if (![fm fileExistsAtPath:docsDir]) {
-            [fm createDirectoryAtPath:docsDir withIntermediateDirectories:YES attributes:@{NSFileOwnerAccountName:@"mobile", NSFileGroupOwnerAccountName:@"mobile"} error:nil];
-        }
-
-        // Create file if not exists
-        if (![fm fileExistsAtPath:LOG_FILE]) {
-            [fm createFileAtPath:LOG_FILE contents:[@"" dataUsingEncoding:NSUTF8StringEncoding] attributes:@{NSFileOwnerAccountName:@"mobile", NSFileGroupOwnerAccountName:@"mobile", NSFilePosixPermissions:@0644}];
-        }
-
-        NSFileHandle *fh = [NSFileHandle fileHandleForWritingAtPath:LOG_FILE];
-        if (fh) {
-            [fh seekToEndOfFile];
-            [fh writeData:[logLine dataUsingEncoding:NSUTF8StringEncoding]];
-            [fh closeFile];
-        } else {
-            NSLog(@"[NaverBypass] WARNING: Could not open log file for writing");
-        }
-
-        // Rotate if too big
-        NSDictionary *attrs = [fm attributesOfItemAtPath:LOG_FILE error:nil];
-        if (attrs && attrs.fileSize > MAX_LOG_SIZE) {
-            NSString *oldLog = [LOG_FILE stringByAppendingString:@".old"];
-            [fm removeItemAtPath:oldLog error:nil];
-            [fm moveItemAtPath:LOG_FILE toPath:oldLog error:nil];
-        }
-    }
-    @catch (NSException *e) {
-        NSLog(@"[NaverBypass] ERROR writing log: %@", e.reason);
-    }
-}
-
-static NSMutableDictionary *NBMutableStats(void) {
-    NSDictionary *saved = [NSDictionary dictionaryWithContentsOfFile:STATS_PATH];
-    return saved ? [saved mutableCopy] : [NSMutableDictionary dictionary];
-}
+#define NBLog(fmt, ...) NSLog(@"[NaverBypass] " fmt, ##__VA_ARGS__)
 
 static void NBIncrementStat(NSString *key) {
-    @try {
-        NSMutableDictionary *stats = NBMutableStats();
-        stats[key] = @([stats[key] integerValue] + 1);
-        stats[@"lastActivity"] = [NSDate date];
-        [stats writeToFile:STATS_PATH atomically:YES];
-    } @catch (NSException *e) {
-        NSLog(@"[NaverBypass] Stats write error: %@", e.reason);
-    }
-}
-
-static void NBMarkTweakLoaded(void) {
-    @try {
-        NSMutableDictionary *stats = NBMutableStats();
-        stats[@"loaded"] = @YES;
-        stats[@"active"] = @YES;
-        stats[@"lastLaunch"] = [NSDate date];
-        stats[@"lastHeartbeat"] = [NSDate date];
-        stats[@"processBundle"] = [[NSBundle mainBundle] bundleIdentifier] ?: @"unknown";
-        stats[@"processID"] = @([[NSProcessInfo processInfo] processIdentifier]);
-        stats[@"lastEvent"] = @"تم فتح Naver Series وتفعيل التويك";
-        stats[@"lastEventAt"] = [NSDate date];
-        [stats writeToFile:STATS_PATH atomically:YES];
-    } @catch (NSException *e) {
-        NSLog(@"[NaverBypass] Stats init error: %@", e.reason);
-    }
-}
-
-static void NBStartHeartbeat(void) {
-    if (nbHeartbeatTimer) return;
-    if (!nbStatsQueue) nbStatsQueue = dispatch_queue_create("com.aosaid.naverseriesbypass.stats", DISPATCH_QUEUE_SERIAL);
-    nbHeartbeatTimer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, nbStatsQueue);
-    dispatch_source_set_timer(nbHeartbeatTimer, dispatch_time(DISPATCH_TIME_NOW, 0), 2 * NSEC_PER_SEC, 200 * NSEC_PER_MSEC);
-    dispatch_source_set_event_handler(nbHeartbeatTimer, ^{
-        @try {
-            NSMutableDictionary *stats = NBMutableStats();
-            stats[@"active"] = @YES;
-            stats[@"lastHeartbeat"] = [NSDate date];
-            stats[@"processBundle"] = [[NSBundle mainBundle] bundleIdentifier] ?: @"unknown";
-            stats[@"processID"] = @([[NSProcessInfo processInfo] processIdentifier]);
-            [stats writeToFile:STATS_PATH atomically:YES];
-        } @catch (NSException *e) {
-            NSLog(@"[NaverBypass] Heartbeat error: %@", e.reason);
-        }
+    dispatch_async(nbStatsQueue, ^{
+        if (!stats) stats = [NSMutableDictionary dictionary];
+        NSNumber *val = stats[key] ?: @0;
+        stats[key] = @(val.integerValue + 1);
     });
-    dispatch_resume(nbHeartbeatTimer);
 }
 
-static void NBPreferencesChanged(CFNotificationCenterRef center,
-                                 void *observer,
-                                 CFStringRef name,
-                                 const void *object,
-                                 CFDictionaryRef userInfo) {
-    loadPrefs();
+static void NBLogStats() {
+    dispatch_async(nbStatsQueue, ^{
+        NBLog(@"=== STATS ===");
+        [stats enumerateKeysAndObjectsUsingBlock:^(id k, id v, BOOL *stop) {
+            NBLog(@"  %@: %@", k, v);
+        }];
+    });
 }
 
-// ============================================
-// DEVICE IDENTITY SPOOFING ENGINE
-// ============================================
+// ═══════════════════════════════════════════════════════════════════════════════
+// MARK: - Persistent ID Generation (Deterministic per-app-install)
+// ═══════════════════════════════════════════════════════════════════════════════
 
-// هويات مثبتة: تُولّد مرة واحدة وتُخزّن — نفس الهوية في كل الجلسات والنداءات
-// (العشوائية في كل نداء تنتج تناقضاً داخلياً يكشفه خادم مكافحة الاحتيال)
-#define IDS_PATH @"/var/mobile/Library/Preferences/com.aosaid.naverseriesbypass.ids.plist"
-
-static NSString *persistentID(NSString *key) {
-    static NSMutableDictionary *cache = nil;
-    if (!cache) {
-        cache = [NSMutableDictionary dictionaryWithContentsOfFile:IDS_PATH] ?: [NSMutableDictionary dictionary];
+static NSString *persistentID(NSString *prefix) {
+    NSString *key = [NSString stringWithFormat:@"com.aosaid.naverseriesbypass.%@", prefix];
+    NSString *uuid = [[NSUserDefaults standardUserDefaults] stringForKey:key];
+    if (!uuid) {
+        uuid = [[NSUUID UUID] UUIDString];
+        [[NSUserDefaults standardUserDefaults] setObject:uuid forKey:key];
+        [[NSUserDefaults standardUserDefaults] synchronize];
     }
-    NSString *value = cache[key];
-    if (!value) {
-        value = [[NSUUID UUID] UUIDString];
-        cache[key] = value;
-        [cache writeToFile:IDS_PATH atomically:YES];
-    }
-    return value;
+    return uuid;
 }
 
 static NSString *generateFakeIDFV() {
-    return persistentID(@"idfv");
+    return persistentID(@"idfv_v2");
 }
 
-static NSString *generateFakeADID() {
-    return persistentID(@"adid");
+static NSString *generateFakeIDFA() {
+    return persistentID(@"idfa_v2");
 }
 
 static NSString *generateFakeDeviceID() {
-    NSString *chars = @"abcdefghijklmnopqrstuvwxyz0123456789";
-    NSMutableString *result = [NSMutableString stringWithCapacity:32];
-    for (int i = 0; i < 32; i++) {
-        uint32_t r = arc4random_uniform((uint32_t)[chars length]);
-        [result appendFormat:@"%C", [chars characterAtIndex:r]];
-    }
-    return result;
+    return persistentID(@"device_v2");
 }
 
-// ============================================
-// 1. UIDevice Hooks (iOS 16 & 18 Compatible)
-// ============================================
+static NSString *generateFakeADID() {
+    return persistentID(@"adid_v2");
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MARK: - Device Identity Spoofing Engine
+// ═══════════════════════════════════════════════════════════════════════════════
 
 %hook UIDevice
 
 - (NSUUID *)identifierForVendor {
     if (!isEnabled || !spoofIDFV) return %orig;
     NSString *fake = generateFakeIDFV();
-    NSUUID *originalIdentifier = %orig;
-    NBLog(@"[SPOOF] identifierForVendor: %@ -> %@", originalIdentifier, fake);
+    NSUUID *orig = %orig;
+    NBLog(@"[SPOOF] identifierForVendor: %@ -> %@", orig, fake);
+    NBIncrementStat(@"idfv");
     return [[NSUUID alloc] initWithUUIDString:fake];
 }
 
 - (NSString *)name {
-    if (!isEnabled) return %orig;
-    NSString *originalName = %orig;
-    NBLog(@"[SPOOF] deviceName: %@ -> iPhone", originalName);
-    return @"iPhone";
+    if (!isEnabled || !spoofDevice) return %orig;
+    NSString *orig = %orig;
+    NBLog(@"[SPOOF] deviceName: %@ -> %@", orig, kSpoofDeviceName);
+    NBIncrementStat(@"deviceName");
+    return kSpoofDeviceName;
 }
 
 - (NSString *)model {
-    if (!isEnabled) return %orig;
-    NSString *originalModel = %orig;
-    NBLog(@"[SPOOF] model: %@ -> iPhone15,2", originalModel);
-    return @"iPhone";
+    if (!isEnabled || !spoofDevice) return %orig;
+    NSString *orig = %orig;
+    NBLog(@"[SPOOF] model: %@ -> %@", orig, kSpoofModel);
+    NBIncrementStat(@"model");
+    return kSpoofModel;
 }
 
 - (NSString *)localizedModel {
-    return @"iPhone";
+    if (!isEnabled || !spoofDevice) return %orig;
+    NSString *orig = %orig;
+    NBLog(@"[SPOOF] localizedModel: %@ -> %@", orig, kSpoofLocalizedModel);
+    NBIncrementStat(@"localizedModel");
+    return kSpoofLocalizedModel;
 }
 
 - (NSString *)systemVersion {
-    if (!isEnabled) return %orig;
-    NSString *originalSystemVersion = %orig;
-    NBLog(@"[SPOOF] systemVersion: %@ -> 18.3.1", originalSystemVersion);
-    return @"18.3.1";
+    if (!isEnabled || !spoofDevice) return %orig;
+    NSString *orig = %orig;
+    NBLog(@"[SPOOF] systemVersion: %@ -> %@", orig, kSpoofSystemVersion);
+    NBIncrementStat(@"systemVersion");
+    return kSpoofSystemVersion;
 }
 
 - (NSString *)systemName {
-    return @"iOS";
-}
-
-%end
-
-// ============================================
-// 2. NSBundle Hooks - App Identity
-// ============================================
-
-%hook NSBundle
-
-- (NSString *)bundleIdentifier {
+    if (!isEnabled || !spoofDevice) return %orig;
     NSString *orig = %orig;
-    NBLog(@"[INFO] bundleIdentifier accessed: %@", orig);
-    return orig;
+    NBLog(@"[SPOOF] systemName: %@ -> %@", orig, kSpoofSystemName);
+    NBIncrementStat(@"systemName");
+    return kSpoofSystemName;
+}
+
+- (UIUserInterfaceIdiom)userInterfaceIdiom {
+    if (!isEnabled || !spoofDevice) return %orig;
+    UIUserInterfaceIdiom orig = %orig;
+    UIUserInterfaceIdiom fake = UIUserInterfaceIdiomPhone;
+    NBLog(@"[SPOOF] userInterfaceIdiom: %ld -> %ld", (long)orig, (long)fake);
+    NBIncrementStat(@"idiom");
+    return fake;
+}
+
+- (NSString *)systemVersionString {
+    if (!isEnabled || !spoofDevice) return %orig;
+    NBLog(@"[SPOOF] systemVersionString -> %@", kSpoofSystemVersion);
+    NBIncrementStat(@"systemVersionString");
+    return kSpoofSystemVersion;
 }
 
 %end
 
-// ============================================
-// 3. Keychain Hooks - Naver Data Interception
-// ============================================
+// ═══════════════════════════════════════════════════════════════════════════════
+// MARK: - IDFA (Advertising Identifier) Spoofing
+// ═══════════════════════════════════════════════════════════════════════════════
 
-static BOOL isNaverKeychainItem(NSDictionary *dict) {
-    if (!dict) return NO;
-    if (!isEnabled || !blockKeychain) return NO;
+%hook ASIdentifierManager
 
-    NSString *account = dict[(__bridge NSString *)kSecAttrAccount];
-    NSString *service = dict[(__bridge NSString *)kSecAttrService];
-    NSString *accessGroup = dict[(__bridge NSString *)kSecAttrAccessGroup];
-    NSString *generic = dict[(__bridge NSString *)kSecAttrGeneric];
+- (NSUUID *)advertisingIdentifier {
+    if (!isEnabled || !spoofIDFA) return %orig;
+    NSString *fake = generateFakeIDFA();
+    NSUUID *orig = %orig;
+    NBLog(@"[SPOOF] advertisingIdentifier: %@ -> %@", orig, fake);
+    NBIncrementStat(@"idfa");
+    return [[NSUUID alloc] initWithUUIDString:fake];
+}
 
-    NSArray *naverKeywords = @[
-        @"naver", @"series", @"ntracker", @"nhncorp",
-        @"YAZD8YA78S", @"device", @"ban", @"block",
-        @"safety", @"action", @"previous", @"idfv",
-        @"consumer", @"hmac", @"adid"
-    ];
-
-    BOOL (^containsKeyword)(id, NSString *) = ^BOOL(id value, NSString *keyword) {
-        return [value isKindOfClass:[NSString class]] &&
-            [(NSString *)value rangeOfString:keyword options:NSCaseInsensitiveSearch].location != NSNotFound;
-    };
-
-    for (NSString *keyword in naverKeywords) {
-        if (containsKeyword(account, keyword) || containsKeyword(service, keyword) ||
-            containsKeyword(accessGroup, keyword) || containsKeyword(generic, keyword)) {
-            return YES;
-        }
-    }
+- (BOOL)isAdvertisingTrackingEnabled {
+    if (!isEnabled || !spoofIDFA) return %orig;
+    NBLog(@"[SPOOF] isAdvertisingTrackingEnabled -> NO");
+    NBIncrementStat(@"tracking");
     return NO;
 }
 
-%hookf(OSStatus, SecItemCopyMatching, CFDictionaryRef query, CFTypeRef *result) {
-    if (!isEnabled || !blockKeychain) return %orig;
-
-    NSDictionary *dict = (__bridge NSDictionary *)query;
-    if (isNaverKeychainItem(dict)) {
-        NSString *account = dict[(__bridge NSString *)kSecAttrAccount] ?: @"(nil)";
-        NSString *service = dict[(__bridge NSString *)kSecAttrService] ?: @"(nil)";
-        NBLog(@"[BLOCK] SecItemCopyMatching - Account:%@ Service:%@ -> errSecItemNotFound", account, service);
-        return errSecItemNotFound;
-    }
-    return %orig;
-}
-
-%hookf(OSStatus, SecItemAdd, CFDictionaryRef attributes, CFTypeRef *result) {
-    if (!isEnabled || !blockKeychain) return %orig;
-
-    NSDictionary *dict = (__bridge NSDictionary *)attributes;
-    if (isNaverKeychainItem(dict)) {
-        NSString *account = dict[(__bridge NSString *)kSecAttrAccount] ?: @"(nil)";
-        NBLog(@"[BLOCK] SecItemAdd - Account:%@ -> Fake Success", account);
-        return errSecSuccess;
-    }
-    return %orig;
-}
-
-%hookf(OSStatus, SecItemUpdate, CFDictionaryRef query, CFDictionaryRef attributesToUpdate) {
-    if (!isEnabled || !blockKeychain) return %orig;
-
-    NSDictionary *dict = (__bridge NSDictionary *)query;
-    if (isNaverKeychainItem(dict)) {
-        NBLog(@"[BLOCK] SecItemUpdate -> Fake Success");
-        return errSecSuccess;
-    }
-    return %orig;
-}
-
-%hookf(OSStatus, SecItemDelete, CFDictionaryRef query) {
-    if (!isEnabled || !blockKeychain) return %orig;
-
-    NSDictionary *dict = (__bridge NSDictionary *)query;
-    if (isNaverKeychainItem(dict)) {
-        NBLog(@"[BLOCK] SecItemDelete -> Fake Success");
-        return errSecSuccess;
-    }
-    return %orig;
-}
-
-// ============================================
-// 4. NSUserDefaults Hooks
-// ============================================
-
-%hook NSUserDefaults
-
-- (id)objectForKey:(NSString *)defaultName {
-    if (!isEnabled || ![defaultName isKindOfClass:[NSString class]]) return %orig;
-
-    NSArray *blockedKeys = @[
-        @"naver", @"series", @"device", @"ban", @"block",
-        @"safety", @"action", @"previous", @"idfv", @"fingerprint"
-    ];
-
-    for (NSString *keyword in blockedKeys) {
-        if ([defaultName rangeOfString:keyword options:NSCaseInsensitiveSearch].location != NSNotFound) {
-            NBLog(@"[BLOCK] NSUserDefaults objectForKey:%@ -> nil", defaultName);
-            return nil;
-        }
-    }
-
-    id result = %orig;
-    if (result) {
-        NBLog(@"[INFO] NSUserDefaults objectForKey:%@ -> %@", defaultName, result);
-    }
-    return result;
-}
-
-- (void)setObject:(id)value forKey:(NSString *)defaultName {
-    if (!isEnabled || ![defaultName isKindOfClass:[NSString class]]) {
-        %orig;
-        return;
-    }
-
-    for (NSString *keyword in @[@"ban", @"block", @"device_id", @"fingerprint"]) {
-        if ([defaultName rangeOfString:keyword options:NSCaseInsensitiveSearch].location != NSNotFound) {
-            NBLog(@"[BLOCK] NSUserDefaults setObject:forKey:%@ -> Skipped", defaultName);
-            return;
-        }
-    }
-    %orig;
-}
-
 %end
 
-// ============================================
-// 5. sysctl / uname Hooks
-// ============================================
+// ═══════════════════════════════════════════════════════════════════════════════
+// MARK: - uname / sysctl Spoofing (Critical for hw.machine)
+// ═══════════════════════════════════════════════════════════════════════════════
 
-%hookf(int, uname, struct utsname *value) {
-    if (!isEnabled) return %orig;
-    int result = %orig;
-    if (result == 0 && value) {
-        strlcpy(value->machine, "iPhone15,2", sizeof(value->machine));
-        strlcpy(value->nodename, "iPhone", sizeof(value->nodename));
-        strlcpy(value->release, "23.3.0", sizeof(value->release));
-        strlcpy(value->version, "Darwin Kernel Version 23.3.0", sizeof(value->version));
-        strlcpy(value->sysname, "Darwin", sizeof(value->sysname));
-        NBLog(@"[SPOOF] uname -> machine:iPhone15,2 sysname:Darwin");
+static int (*orig_uname)(struct utsname *);
+static int hook_uname(struct utsname *value) {
+    if (!isEnabled || !spoofDevice) return orig_uname(value);
+    int ret = orig_uname(value);
+    if (ret == 0 && value) {
+        strncpy(value->machine, [kSpoofModel UTF8String], sizeof(value->machine) - 1);
+        value->machine[sizeof(value->machine) - 1] = '\0';
+        strncpy(value->version, "Darwin Kernel Version 22.6.0", sizeof(value->version) - 1);
+        value->version[sizeof(value->version) - 1] = '\0';
+        NBLog(@"[SPOOF] uname -> machine:%s version:%s", value->machine, value->version);
+        NBIncrementStat(@"uname");
     }
-    return result;
+    return ret;
 }
 
-%hookf(int, sysctl, int *name, u_int namelen, void *oldp, size_t *oldlenp, void *newp, size_t newlen) {
-    if (!isEnabled) return %orig;
-    if (name && namelen >= 2) {
-        NBLog(@"[INFO] sysctl called: name[0]=%d name[1]=%d", name[0], name[1]);
-    }
-    return %orig;
-}
-
-%hookf(int, sysctlbyname, const char *name, void *oldp, size_t *oldlenp, void *newp, size_t newlen) {
-    if (!isEnabled) return %orig;
-    if (name) {
-        NSString *nameStr = [NSString stringWithUTF8String:name];
-        NBLog(@"[INFO] sysctlbyname called: %@", nameStr);
-    }
-    return %orig;
-}
-
-// ============================================
-// 6. Jailbreak Detection Bypass
-// ============================================
-
-%hook NSFileManager
-
-- (BOOL)fileExistsAtPath:(NSString *)path {
-    if (!isEnabled || !jbBypass) return %orig;
-
-    NSArray *jailbreakPaths = @[
-        @"/Applications/Cydia.app",
-        @"/Applications/blackra1n.app",
-        @"/Applications/SBSettings.app",
-        @"/Library/MobileSubstrate/DynamicLibraries/LiveClock.plist",
-        @"/private/var/lib/cydia",
-        @"/usr/sbin/sshd",
-        @"/var/lib/cydia",
-        @"/etc/apt",
-        @"/private/var/stash",
-        @"/var/tmp/cydia.log",
-        @"/var/mobile/Library/SBSettings/Themes",
-        @"/Library/MobileSubstrate/MobileSubstrate.dylib",
-        @"/var/cache/apt",
-        @"/var/lib/apt",
-        @"/var/mobile/Documents/Cydia"
-    ];
-
-    for (NSString *jbPath in jailbreakPaths) {
-        if ([path isEqualToString:jbPath]) {
-            NBLog(@"[JB-BYPASS] Hid path: %@", path);
-            return NO;
-        }
-    }
-    return %orig;
-}
-
-- (BOOL)fileExistsAtPath:(NSString *)path isDirectory:(BOOL *)isDirectory {
-    if (!isEnabled || !jbBypass) return %orig;
-
-    NSArray *jailbreakPaths = @[
-        @"/Applications/Cydia.app",
-        @"/Library/MobileSubstrate",
-        @"/var/lib/cydia"
-    ];
-
-    for (NSString *jbPath in jailbreakPaths) {
-        if ([path isEqualToString:jbPath]) {
-            NBLog(@"[JB-BYPASS] Hid directory: %@", path);
-            if (isDirectory) *isDirectory = YES;
-            return NO;
-        }
-    }
-    return %orig;
-}
-
-%end
-
-%hook UIApplication
-
-- (BOOL)canOpenURL:(NSURL *)url {
-    if (!isEnabled || !jbBypass) return %orig;
-
-    if (url) {
-        NSString *scheme = url.scheme;
-        if ([scheme isEqualToString:@"cydia"] || 
-            [scheme isEqualToString:@"sileo"] ||
-            [scheme isEqualToString:@"zbra"]) {
-            NBLog(@"[JB-BYPASS] Blocked canOpenURL for scheme: %@", scheme);
-            return NO;
-        }
-    }
-    return %orig;
-}
-
-%end
-
-// ============================================
-// 7. Network Request Interception & Spoofing
-// ============================================
-
-%hook NSMutableURLRequest
-
-- (void)setValue:(NSString *)value forHTTPHeaderField:(NSString *)field {
-    if (!isEnabled || !spoofHeaders) {
-        %orig;
-        return;
-    }
-
-    NSString *lowerField = [field lowercaseString];
-
-    if ([lowerField isEqualToString:@"x-consumer-id"]) {
-        NSString *fake = generateFakeDeviceID();
-        NBLog(@"[SPOOF] Header x-consumer-id: %@ -> %@", value, fake);
-        %orig(fake, field);
-        return;
-    }
-
-    // ⚠️ حقول HMAC توقّع الطلب — تعديلها يكسر التحقق الخادمي وقد يسبب حضراً إضافياً
-    // سجل فقط، لا تعديل
-    if ([lowerField isEqualToString:@"x-hmac-msgpad"]) {
-        NBLog(@"[INFO] Header x-hmac-msgpad: %@ (logged only — never modified)", value);
-        %orig;
-        return;
-    }
-
-    if ([lowerField isEqualToString:@"x-hmac-md"]) {
-        NBLog(@"[INFO] Header x-hmac-md: %@ (logged only — never modified)", value);
-        %orig;
-        return;
-    }
-
-    if ([lowerField isEqualToString:@"x-adid"]) {
-        NSString *fake = generateFakeADID();
-        NBLog(@"[SPOOF] Header x-adid: %@ -> %@", value, fake);
-        %orig(fake, field);
-        return;
-    }
-
-    if ([lowerField isEqualToString:@"user-agent"]) {
-        NBLog(@"[INFO] User-Agent: %@", value);
-    }
-
-    %orig;
-}
-
-%end
-
-%hook NSURLSession
-
-- (NSURLSessionDataTask *)dataTaskWithRequest:(NSURLRequest *)request
-                            completionHandler:(void (^)(NSData *, NSURLResponse *, NSError *))completionHandler {
-    if (!isEnabled) return %orig;
-
-    NSURL *url = request.URL;
-    NBLog(@"[NETWORK] Request: %@ %@", request.HTTPMethod, url.absoluteString);
-
-    NSDictionary *headers = request.allHTTPHeaderFields;
-    for (NSString *key in headers) {
-        NBLog(@"[NETWORK] Header %@: %@", key, headers[key]);
-    }
-
-    if (request.HTTPBody) {
-        NSString *body = [[NSString alloc] initWithData:request.HTTPBody encoding:NSUTF8StringEncoding];
-        if (body) {
-            NBLog(@"[NETWORK] Body: %@", body);
-        }
-    }
-
-    // وسّع التغليف لكل طلبات naver — رد الحظر قد يأتي من أي endpoint
-    if ([url.absoluteString containsString:@"naver.com"] ||
-        [url.absoluteString containsString:@"naver.net"]) {
-        NBLog(@"[DETECT] Naver API request - Monitoring response: %@", url.absoluteString);
-
-        void (^wrappedCompletion)(NSData *, NSURLResponse *, NSError *) = ^(NSData *data, NSURLResponse *response, NSError *error) {
-            NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)response;
-            if (httpResponse) {
-                NBLog(@"[NETWORK] Response Status: %ld", (long)httpResponse.statusCode);
-                NBLog(@"[NETWORK] Response Headers: %@", httpResponse.allHeaderFields);
-
-                if (httpResponse.statusCode == 403 || httpResponse.statusCode == 401) {
-                    NBLog(@"[ALERT] BLOCKED! Server returned %ld - Device ban confirmed server-side", (long)httpResponse.statusCode);
+static int (*orig_sysctl)(const int *, u_int, void *, size_t *, const void *, size_t);
+static int hook_sysctl(const int *name, u_int namelen, void *oldp, size_t *oldlenp, const void *newp, size_t newlen) {
+    if (!isEnabled || !spoofDevice) return orig_sysctl(name, namelen, oldp, oldlenp, newp, newlen);
+    int ret = orig_sysctl(name, namelen, oldp, oldlenp, newp, newlen);
+    if (ret == 0 && oldp && oldlenp) {
+        if (namelen >= 2 && name[0] == CTL_HW) {
+            if (name[1] == HW_MACHINE) {
+                const char *fake = [kSpoofModel UTF8String];
+                size_t len = strlen(fake) + 1;
+                if (*oldlenp >= len) {
+                    strcpy((char *)oldp, fake);
+                    *oldlenp = len;
+                    NBLog(@"[SPOOF] sysctl HW_MACHINE -> %s", fake);
+                    NBIncrementStat(@"sysctl_machine");
+                }
+            } else if (name[1] == HW_MODEL) {
+                const char *fake = [kSpoofModel UTF8String];
+                size_t len = strlen(fake) + 1;
+                if (*oldlenp >= len) {
+                    strcpy((char *)oldp, fake);
+                    *oldlenp = len;
+                    NBLog(@"[SPOOF] sysctl HW_MODEL -> %s", fake);
+                    NBIncrementStat(@"sysctl_model");
                 }
             }
-
-            if (data) {
-                NSString *responseBody = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-                if (responseBody) {
-                    NBLog(@"[NETWORK] Response Body: %@", responseBody);
-
-                    if ([responseBody containsString:@"안전조치"] || 
-                        [responseBody containsString:@"차단"] ||
-                        [responseBody containsString:@"보호"] ||
-                        [responseBody containsString:@"safety"] ||
-                        [responseBody containsString:@"block"]) {
-                        NBLog(@"[ALERT] BAN MESSAGE DETECTED IN RESPONSE!");
-                    }
-                }
-            }
-
-            if (error) {
-                NBLog(@"[NETWORK] Error: %@", error.localizedDescription);
-            }
-
-            // تحييد حقول الأمان في الرد قبل تسليمه للتطبيق
-            // (التقرير يثبت: result.safetyMeasureUrl → طبقة العرض — شطب الحقل يقتل المسار)
-            if (neutralizeResponses && data) {
-                NSData *cleaned = neutralizeSafetyFields(data);
-                if (cleaned != data) {
-                    data = cleaned;
-                    NBLog(@"[NEUTRALIZE] ✅ Response stripped of safety fields");
-                }
-            }
-
-            if (completionHandler) {
-                completionHandler(data, response, error);
-            }
-        };
-
-        return %orig(request, wrappedCompletion);
+        }
     }
+    return ret;
+}
 
-    return %orig(request, completionHandler);
+// ═══════════════════════════════════════════════════════════════════════════════
+// MARK: - NSProcessInfo Spoofing
+// ═══════════════════════════════════════════════════════════════════════════════
+
+%hook NSProcessInfo
+
+- (NSString *)hostName {
+    if (!isEnabled || !spoofDevice) return %orig;
+    NBLog(@"[SPOOF] hostName -> iPhone");
+    NBIncrementStat(@"hostName");
+    return @"iPhone";
+}
+
+- (NSString *)operatingSystemVersionString {
+    if (!isEnabled || !spoofDevice) return %orig;
+    NSString *fake = @"Version 18.3.1 (Build 22D72)";
+    NBLog(@"[SPOOF] operatingSystemVersionString -> %@", fake);
+    NBIncrementStat(@"osVersionString");
+    return fake;
+}
+
+- (NSOperatingSystemVersion)operatingSystemVersion {
+    if (!isEnabled || !spoofDevice) return %orig;
+    NSOperatingSystemVersion fake = {18, 3, 1};
+    NBLog(@"[SPOOF] operatingSystemVersion -> 18.3.1");
+    NBIncrementStat(@"osVersion");
+    return fake;
 }
 
 %end
 
-// ============================================
-// 8. WebView Monitoring
-// ============================================
-
-%hook WKWebView
-
-- (void)loadRequest:(NSURLRequest *)request {
-    if (isEnabled) {
-        NBLog(@"[WEBVIEW] loadRequest: %@", request.URL.absoluteString);
-    }
-    %orig;
-}
-
-%end
-
-// ============================================
-// 9. AppsFlyer / Tracker ID Spoofing
-// ============================================
+// ═══════════════════════════════════════════════════════════════════════════════
+// MARK: - NSUUID Spoofing (All UUID generation)
+// ═══════════════════════════════════════════════════════════════════════════════
 
 %hook NSUUID
 
-+ (instancetype)UUID {
++ (NSUUID *)UUID {
     NSUUID *uuid = %orig;
-    if (isEnabled) {
-        NBLog(@"[SPOOF] NSUUID.UUID generated: %@", uuid.UUIDString);
+    if (isEnabled && spoofDevice) {
+        NSString *fake = generateFakeDeviceID();
+        NBLog(@"[SPOOF] NSUUID.UUID generated: %@ -> %@", uuid.UUIDString, fake);
+        NBIncrementStat(@"nsuuid");
+        return [[NSUUID alloc] initWithUUIDString:fake];
     }
     return uuid;
 }
 
 %end
 
-// ============================================
-// 10. Process Info Spoofing
-// ============================================
-
-%hook NSProcessInfo
-
-- (NSString *)operatingSystemVersionString {
-    // لا تُنتحل: إنتحال 18.x على جهاز iOS 16 قد يفعّل مسارات غير موجودة → كراش
-    return %orig;
-}
-
-%end
-
-// ============================================
-// 11. UIScreen Spoofing
-// ============================================
+// ═══════════════════════════════════════════════════════════════════════════════
+// MARK: - UIScreen Spoofing (iPhone 15 Pro dimensions)
+// ═══════════════════════════════════════════════════════════════════════════════
 
 %hook UIScreen
 
 - (CGRect)bounds {
+    if (!isEnabled || !spoofDevice) return %orig;
     CGRect orig = %orig;
-    if (isEnabled) {
-        NBLog(@"[SPOOF] Screen bounds: %@", NSStringFromCGRect(orig));
-    }
-    return orig;
+    // iPhone 15 Pro: 393 x 852 points @ 3x
+    CGRect fake = CGRectMake(0, 0, 393, 852);
+    NBLog(@"[SPOOF] Screen bounds: %@ -> %@", NSStringFromCGRect(orig), NSStringFromCGRect(fake));
+    NBIncrementStat(@"screenBounds");
+    return fake;
 }
 
 - (CGFloat)scale {
-    return %orig;  // iPhone 8 = @2x — لا تُنتحل
+    if (!isEnabled || !spoofDevice) return %orig;
+    NBLog(@"[SPOOF] Screen scale -> 3.0");
+    NBIncrementStat(@"screenScale");
+    return 3.0;
+}
+
+- (CGFloat)nativeScale {
+    if (!isEnabled || !spoofDevice) return %orig;
+    NBLog(@"[SPOOF] Screen nativeScale -> 3.0");
+    NBIncrementStat(@"nativeScale");
+    return 3.0;
 }
 
 %end
 
-// ============================================
-// Response Neutralization — شطب حقول الأمان من JSON
-// ============================================
-static NSData *neutralizeSafetyFields(NSData *data) {
-    if (!data || data.length == 0) return data;
-    NSError *error = nil;
-    id json = [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error:&error];
-    if (error || !json) return data;
+// ═══════════════════════════════════════════════════════════════════════════════
+// MARK: - Network Request Interception & Spoofing
+// ═══════════════════════════════════════════════════════════════════════════════
 
-    __block BOOL changed = NO;
-    NSArray *badKeys = @[@"safetyMeasureUrl", @"stolenSuspicionUrl", @"suspicionUrl"];
+%hook NSMutableURLRequest
 
-    void (^strip)(id) = ^(id obj) {
-        if ([obj isKindOfClass:[NSMutableDictionary class]]) {
-            for (NSString *key in badKeys) {
-                if (obj[key]) {
-                    NBLog(@"[NEUTRALIZE] removing field: %@ = %@", key, obj[key]);
-                    [obj removeObjectForKey:key];
-                    changed = YES;
-                }
-            }
-            for (id v in [obj allValues]) strip(v);
-        } else if ([obj isKindOfClass:[NSMutableArray class]]) {
-            for (id v in obj) strip(v);
-        }
-    };
-    strip(json);
-
-    if (!changed) return data;
-    NSError *outErr = nil;
-    NSData *result = [NSJSONSerialization dataWithJSONObject:json options:0 error:&outErr];
-    return result ?: data;
-}
-
-// ============================================
-// Presentation Layer — كشف "نقطة الحظر" وكبت النافذة
-// ============================================
-%hook UIViewController
-
-- (void)presentViewController:(UIViewController *)viewControllerToPresent
-                     animated:(BOOL)flag
-                   completion:(void (^)(void))completion {
-    if (isEnabled && viewControllerToPresent) {
-        NSString *title = @"";
-        NSString *message = @"";
-
-        if ([viewControllerToPresent isKindOfClass:[UIAlertController class]]) {
-            UIAlertController *alert = (UIAlertController *)viewControllerToPresent;
-            title = alert.title ?: @"";
-            message = alert.message ?: @"";
-        }
-
-        NBLog(@"[PRESENT] %@ | title=%@ | msg=%@",
-              NSStringFromClass([viewControllerToPresent class]), title, message);
-        NBLog(@"[PRESENT] presented by: %@", NSStringFromClass([self class]));
-
-        NSString *combined = [NSString stringWithFormat:@"%@%@", title, message];
-        if ([combined containsString:@"안전조치"] || [combined containsString:@"차단"] ||
-            [combined containsString:@"도용"] || [combined containsString:@"고객센터"]) {
-            NBLog(@"[BAN-POPUP] ⚠️ Ban popup detected! presenter=%@",
-                  NSStringFromClass([self class]));
-            NBLog(@"[BAN-POPUP] stack: %@", [[NSThread callStackSymbols] componentsJoinedByString:@" | "]);
-
-            if (autoDismissPopup) {
-                NBLog(@"[BAN-POPUP] auto-dismissing in 0.5s");
-                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)),
-                               dispatch_get_main_queue(), ^{
-                    [viewControllerToPresent dismissViewControllerAnimated:YES completion:nil];
-                    NBLog(@"[BAN-POPUP] ✅ popup dismissed");
-                });
-            }
-        }
+- (void)setValue:(NSString *)value forHTTPHeaderField:(NSString *)field {
+    if (!isEnabled || !spoofHeaders) {
+        %orig(value, field);
+        return;
     }
-    %orig;
+    NSString *lower = [field lowercaseString];
+    if ([lower isEqualToString:@"x-consumer-id"] || [lower isEqualToString:@"x-device-id"]) {
+        NSString *fake = generateFakeDeviceID();
+        NBLog(@"[SPOOF] Header %@: %@ -> %@", field, value, fake);
+        NBIncrementStat(@"header_device");
+        %orig(fake, field);
+    } else if ([lower isEqualToString:@"x-adid"] || [lower isEqualToString:@"x-advertising-id"]) {
+        NSString *fake = generateFakeADID();
+        NBLog(@"[SPOOF] Header %@: %@ -> %@", field, value, fake);
+        NBIncrementStat(@"header_adid");
+        %orig(fake, field);
+    } else if ([lower isEqualToString:@"user-agent"]) {
+        NSString *fake = [NSString stringWithFormat:@"NaverSeries/%@ (iPhone; iOS %@; Scale/3.0)", kSpoofSystemVersion, kSpoofSystemVersion];
+        NBLog(@"[SPOOF] User-Agent: %@ -> %@", value, fake);
+        NBIncrementStat(@"header_ua");
+        %orig(fake, field);
+    } else {
+        %orig(value, field);
+    }
 }
 
 %end
 
-// ============================================
-// 12. CONSTRUCTOR
-// ============================================
+%hook NSURLSession
+
+- (NSURLSessionDataTask *)dataTaskWithRequest:(NSURLRequest *)request {
+    if (!isEnabled || !spoofHeaders) return %orig;
+    NSMutableURLRequest *mutable = [request mutableCopy];
+    [mutable setValue:generateFakeDeviceID() forHTTPHeaderField:@"X-Consumer-Id"];
+    [mutable setValue:generateFakeADID() forHTTPHeaderField:@"X-Adid"];
+    [mutable setValue:[NSString stringWithFormat:@"NaverSeries/%@ (iPhone; iOS %@; Scale/3.0)", kSpoofSystemVersion, kSpoofSystemVersion] forHTTPHeaderField:@"User-Agent"];
+    NBLog(@"[SPOOF] dataTaskWithRequest - injected spoof headers");
+    NBIncrementStat(@"dataTask");
+    return %orig(mutable);
+}
+
+%end
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MARK: - Keychain Cleanup (Remove old ban data)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+%hookf(OSStatus, SecItemAdd, CFDictionaryRef attributes, CFTypeRef *result) {
+    if (!isEnabled) return %orig;
+    NSDictionary *dict = (__bridge NSDictionary *)attributes;
+    NSString *account = dict[(__bridge NSString *)kSecAttrAccount];
+    if ([account containsString:@"naver"] || [account containsString:@"series"] || [account containsString:@"device"] || [account containsString:@"ban"]) {
+        NBLog(@"[BLOCK] SecItemAdd - Account:%@ -> Fake Success", account);
+        NBIncrementStat(@"keychain_add_blocked");
+        if (result) *result = NULL;
+        return errSecSuccess;
+    }
+    return %orig;
+}
+
+%hookf(OSStatus, SecItemUpdate, CFDictionaryRef query, CFDictionaryRef attributesToUpdate) {
+    if (!isEnabled) return %orig;
+    NSDictionary *dict = (__bridge NSDictionary *)query;
+    NSString *account = dict[(__bridge NSString *)kSecAttrAccount];
+    if ([account containsString:@"naver"] || [account containsString:@"series"] || [account containsString:@"device"] || [account containsString:@"ban"]) {
+        NBLog(@"[BLOCK] SecItemUpdate - Account:%@ -> Fake Success", account);
+        NBIncrementStat(@"keychain_update_blocked");
+        return errSecSuccess;
+    }
+    return %orig;
+}
+
+%hookf(OSStatus, SecItemDelete, CFDictionaryRef query) {
+    if (!isEnabled) return %orig;
+    // Allow deletion (cleanup old data)
+    return %orig;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MARK: - Constructor
+// ═══════════════════════════════════════════════════════════════════════════════
 
 %ctor {
-    loadPrefs();
-    NBMarkTweakLoaded();
-    NBStartHeartbeat();
+    @autoreleasepool {
+        NBLog(@"=== NaverSeriesBypass v3.0 - DEVICE BAN BYPASS ===");
+        NBLog(@"Target: iPhone 8 iOS 16 -> Spoof as iPhone 15 Pro iOS 18.3.1");
 
-    // Watch for preference changes
-    CFNotificationCenterAddObserver(
-        CFNotificationCenterGetDarwinNotifyCenter(),
-        NULL,
-        NBPreferencesChanged,
-        CFSTR("com.aosaid.naverseriesbypass/prefsChanged"),
-        NULL,
-        CFNotificationSuspensionBehaviorCoalesce
-    );
+        nbStatsQueue = dispatch_queue_create("com.aosaid.naverseriesbypass.stats", DISPATCH_QUEUE_SERIAL);
 
-    NBLog(@"========================================");
-    NBLog(@"NaverSeriesBypass v2.2.8 - ROOTLESS");
-    NBLog(@"Target: com.nhncorp.NaverBooks");
-    NBLog(@"iOS Support: 16.x - 18.x");
-    NBLog(@"Status: %@", isEnabled ? @"ENABLED" : @"DISABLED");
-    NBLog(@"Features: IDFV=%@ | Keychain=%@ | Headers=%@ | JB=%@ | Neutralize=%@ | AutoDismiss=%@",
-          spoofIDFV ? @"ON" : @"OFF",
-          blockKeychain ? @"ON" : @"OFF",
-          spoofHeaders ? @"ON" : @"OFF",
-          jbBypass ? @"ON" : @"OFF",
-          neutralizeResponses ? @"ON" : @"OFF",
-          autoDismissPopup ? @"ON" : @"OFF");
-    NBLog(@"HMAC headers: LOG-ONLY (never modified)");
-    NBLog(@"========================================");
-    NBLog(@"[LIFECYCLE] تم فتح Naver Series وتفعيل التويك");
+        // Hook uname/sysctl at C level
+        MSHookFunction((void *)uname, (void *)hook_uname, (void **)&orig_uname);
+        MSHookFunction((void *)sysctl, (void *)hook_sysctl, (void **)&orig_sysctl);
 
-    int numClasses = objc_getClassList(NULL, 0);
-    Class *classes = (Class *)malloc(sizeof(Class) * numClasses);
-    objc_getClassList(classes, numClasses);
+        // Clear any existing persistent IDs to get fresh identity
+        // (Uncomment next 4 lines to force new identity on every reinstall)
+        // [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"com.aosaid.naverseriesbypass.idfv_v2"];
+        // [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"com.aosaid.naverseriesbypass.idfa_v2"];
+        // [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"com.aosaid.naverseriesbypass.device_v2"];
+        // [[NSUserDefaults standardUserDefaults] synchronize];
 
-    for (int i = 0; i < numClasses; i++) {
-        NSString *className = NSStringFromClass(classes[i]);
-        if ([className rangeOfString:@"Naver" options:NSCaseInsensitiveSearch].location != NSNotFound ||
-            [className rangeOfString:@"Series" options:NSCaseInsensitiveSearch].location != NSNotFound ||
-            [className rangeOfString:@"NHN" options:NSCaseInsensitiveSearch].location != NSNotFound) {
-            NBLog(@"[DISCOVERY] Found Naver class: %@", className);
-        }
+        NBLog(@"Bypass engine initialized - All device identifiers spoofed");
+        NBLogStats();
     }
-
-    free(classes);
-
-    NSFileManager *fm = [NSFileManager defaultManager];
-    NSString *docsPath = @"/var/mobile/Documents";
-    if (![fm fileExistsAtPath:docsPath]) {
-        [fm createDirectoryAtPath:docsPath withIntermediateDirectories:YES attributes:nil error:nil];
-    }
-
-    NBLog(@"[INIT] Diagnostics log: %@", LOG_FILE);
-    NBLog(@"[INIT] Tweak loaded successfully");
 }
