@@ -9,6 +9,10 @@
             <string>com.nhncorp.NaverBooks</string>
             <string>com.naver.series</string>
         </array>
+        <key>Executables</key>
+        <array>
+            <string>NaverBooks</string>
+        </array>
     </dict>
 </dict>
 </plist>

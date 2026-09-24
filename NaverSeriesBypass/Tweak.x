@@ -806,7 +806,7 @@ static NSData *neutralizeSafetyFields(NSData *data) {
     );
 
     NBLog(@"========================================");
-    NBLog(@"NaverSeriesBypass v2.2.7 - ROOTLESS");
+    NBLog(@"NaverSeriesBypass v2.2.8 - ROOTLESS");
     NBLog(@"Target: com.nhncorp.NaverBooks");
     NBLog(@"iOS Support: 16.x - 18.x");
     NBLog(@"Status: %@", isEnabled ? @"ENABLED" : @"DISABLED");
