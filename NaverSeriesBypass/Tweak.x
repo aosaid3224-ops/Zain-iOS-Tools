@@ -173,7 +173,7 @@ static void writeHeartbeat() {
             @"processName": [[NSProcessInfo processInfo] processName] ?: @"unknown",
             @"pid": @([[NSProcessInfo processInfo] processIdentifier]),
             @"active": @(isEnabled),
-            @"version": @"3.3.3",
+            @"version": @"3.3.4",
         };
         CFPreferencesWriteDictFlat(heartbeat, CFSTR("com.aosaid.naverseriesbypass.heartbeat"));
     } @catch (NSException *e) {
@@ -188,6 +188,14 @@ static void writeStats() {
         NSMutableDictionary *statsDict = [copy mutableCopy] ?: [NSMutableDictionary dictionary];
         statsDict[@"lastUpdate"] = @([[NSDate date] timeIntervalSince1970]);
         statsDict[@"bundleId"] = [[NSBundle mainBundle] bundleIdentifier] ?: @"unknown";
+        // CONTRACT FIX: the dashboard decides "injected" via hasInjectionMarker =
+        // savedStats[@"loaded"] || savedStats[@"processBundle"]. These keys were
+        // NEVER written by the tweak, so the dashboard always fell through to
+        // "غير محقن" even when injection was fully working. Write them.
+        statsDict[@"loaded"] = @YES;
+        statsDict[@"processBundle"] = [[NSBundle mainBundle] bundleIdentifier] ?: @"unknown";
+        statsDict[@"processName"] = [[NSProcessInfo processInfo] processName] ?: @"unknown";
+        statsDict[@"lastEvent"] = @"heartbeat";
         // Same sandbox fix: write via cfprefsd so the dashboard can read the file
         CFPreferencesWriteDictFlat(statsDict, CFSTR("com.aosaid.naverseriesbypass.stats"));
     } @catch (NSException *e) {
@@ -526,7 +534,7 @@ static OSStatus (*orig_SecItemAdd)(CFDictionaryRef, CFTypeRef *);
 static OSStatus hook_SecItemAdd(CFDictionaryRef attributes, CFTypeRef *result) {
     if (!isEnabled || !blockKeychain) return orig_SecItemAdd(attributes, result);
     if (isNaverKeychainItem((__bridge NSDictionary *)attributes)) {
-        NBIncrementStat(@"keychain_blocked");
+        NBIncrementStat(@"keychain_add_blocked");
         if (result) *result = NULL;
         return errSecSuccess;
     }
@@ -537,7 +545,7 @@ static OSStatus (*orig_SecItemUpdate)(CFDictionaryRef, CFDictionaryRef);
 static OSStatus hook_SecItemUpdate(CFDictionaryRef query, CFDictionaryRef attributesToUpdate) {
     if (!isEnabled || !blockKeychain) return orig_SecItemUpdate(query, attributesToUpdate);
     if (isNaverKeychainItem((__bridge NSDictionary *)query)) {
-        NBIncrementStat(@"keychain_blocked");
+        NBIncrementStat(@"keychain_update_blocked");
         return errSecSuccess;
     }
     return orig_SecItemUpdate(query, attributesToUpdate);
@@ -547,7 +555,7 @@ static OSStatus (*orig_SecItemCopyMatching)(CFDictionaryRef, CFTypeRef *);
 static OSStatus hook_SecItemCopyMatching(CFDictionaryRef query, CFTypeRef *result) {
     if (!isEnabled || !blockKeychain) return orig_SecItemCopyMatching(query, result);
     if (isNaverKeychainItem((__bridge NSDictionary *)query)) {
-        NBIncrementStat(@"keychain_blocked");
+        NBIncrementStat(@"keychain_copy_blocked");
         return errSecItemNotFound;
     }
     return orig_SecItemCopyMatching(query, result);
