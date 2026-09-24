@@ -8,10 +8,8 @@
         <array>
             <string>com.nhncorp.NaverBooks</string>
             <string>com.naver.series</string>
-        </array>
-        <key>Executables</key>
-        <array>
-            <string>NaverBooks</string>
+            <string>com.naver.books</string>
+            <string>com.apple.UIKit</string>
         </array>
     </dict>
 </dict>
