@@ -24,9 +24,32 @@ static UIWindow *NBActiveWindow(void) {
 }
 
 @interface NaverSeriesBypassPrefsListController : PSListController
+@property(nonatomic, strong) NSTimer *dashboardTimer;
 @end
 
 @implementation NaverSeriesBypassPrefsListController
+
+- (void)viewWillAppear:(BOOL)animated {
+    [super viewWillAppear:animated];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationBecameActive:) name:UIApplicationDidBecomeActiveNotification object:nil];
+}
+
+- (void)applicationBecameActive:(NSNotification *)notification {
+    (void)notification;
+    [self refreshDashboard];
+}
+
+- (void)viewWillDisappear:(BOOL)animated {
+    [super viewWillDisappear:animated];
+    [self.dashboardTimer invalidate];
+    self.dashboardTimer = nil;
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationDidBecomeActiveNotification object:nil];
+}
+
+- (void)dealloc {
+    [self.dashboardTimer invalidate];
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+}
 
 - (id)specifiers {
     if (!_specifiers) {
@@ -113,7 +136,9 @@ static UIWindow *NBActiveWindow(void) {
 
     // Start refresh
     [self refreshDashboard];
-    [NSTimer scheduledTimerWithTimeInterval:2.0 target:self selector:@selector(refreshDashboard) userInfo:nil repeats:YES];
+    [self.dashboardTimer invalidate];
+    self.dashboardTimer = [NSTimer timerWithTimeInterval:1.0 target:self selector:@selector(refreshDashboard) userInfo:nil repeats:YES];
+    [[NSRunLoop mainRunLoop] addTimer:self.dashboardTimer forMode:NSRunLoopCommonModes];
 }
 
 - (void)closeDashboard {
@@ -172,7 +197,8 @@ static UIWindow *NBActiveWindow(void) {
         NSDate *lastLaunch = savedStats[@"lastLaunch"];
         NSDate *lastHeartbeat = savedStats[@"lastHeartbeat"];
         NSTimeInterval heartbeatAge = lastHeartbeat ? [[NSDate date] timeIntervalSinceDate:lastHeartbeat] : DBL_MAX;
-        BOOL live = [savedStats[@"active"] boolValue] && heartbeatAge <= 6.0;
+        BOOL hasInjectionMarker = savedStats[@"loaded"] != nil || savedStats[@"processBundle"] != nil;
+        BOOL live = hasInjectionMarker && [savedStats[@"active"] boolValue] && heartbeatAge <= 6.0;
         BOOL launchRecentlyStopped = [savedStats[@"loaded"] boolValue] && lastLaunch &&
             [[NSDate date] timeIntervalSinceDate:lastLaunch] < (30.0 * 60.0) && !live;
 
@@ -186,6 +212,9 @@ static UIWindow *NBActiveWindow(void) {
         } else if (live) {
             status.text = @"مفعّل — Naver Series مفتوح والتويك يعمل الآن";
             status.textColor = [UIColor colorWithRed:0.2 green:0.8 blue:0.3 alpha:1.0];
+        } else if (!hasInjectionMarker) {
+            status.text = @"غير محقن — لم تصل بصمة من Naver Series";
+            status.textColor = [UIColor colorWithRed:0.95 green:0.25 blue:0.2 alpha:1.0];
         } else if (launchRecentlyStopped) {
             status.text = @"فشل/انقطع — توقف heartbeat بعد فتح Naver Series";
             status.textColor = [UIColor colorWithRed:0.95 green:0.25 blue:0.2 alpha:1.0];
@@ -212,11 +241,12 @@ static UIWindow *NBActiveWindow(void) {
         }
         BOOL hasActivity = req || blk || spf || jb || neutralized || popups;
         NSString *lastEvent = savedStats[@"lastEvent"] ?: @"لا يوجد حدث بعد";
+        NSString *process = savedStats[@"processBundle"] ?: @"لم تُسجل عملية الهدف";
         stats.text = [NSString stringWithFormat:
-            @"الطلبات: %ld | الحظر: %ld | التعديل: %ld\nJB: %ld | تحييد الردود: %ld | النوافذ: %ld\n%@\nآخر حدث: %@",
+            @"الطلبات: %ld | الحظر: %ld | التعديل: %ld\nJB: %ld | تحييد الردود: %ld | النوافذ: %ld\n%@\nالعملية: %@\nآخر حدث: %@",
             (long)req, (long)blk, (long)spf, (long)jb, (long)neutralized, (long)popups,
             hasActivity ? @"النشاط مسجل من داخل التويك" : @"لا يوجد نشاط بعد — افتح Naver Series لاختبار التويك",
-            lastEvent];
+            process, lastEvent];
 
         // Logs
         NSArray *last = lines.count > 15 ? [lines subarrayWithRange:NSMakeRange(lines.count - 15, 15)] : lines;
