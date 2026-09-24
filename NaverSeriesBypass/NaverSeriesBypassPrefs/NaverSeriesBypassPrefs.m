@@ -236,6 +236,16 @@ static UIWindow *NBActiveWindow(void) {
         NSInteger jb = [savedStats[@"jbBypass"] integerValue];
         NSInteger neutralized = [savedStats[@"neutralized"] integerValue];
         NSInteger popups = [savedStats[@"popups"] integerValue];
+
+        // Device Ban stats
+        NSInteger deviceSpoofs = [savedStats[@"deviceName"] integerValue] + [savedStats[@"model"] integerValue] + 
+                                  [savedStats[@"systemVersion"] integerValue] + [savedStats[@"uname"] integerValue];
+        NSInteger idfvSpoofs = [savedStats[@"idfv"] integerValue];
+        NSInteger idfaSpoofs = [savedStats[@"idfa"] integerValue];
+        NSInteger keychainBlocked = [savedStats[@"keychain_add_blocked"] integerValue] + 
+                                     [savedStats[@"keychain_update_blocked"] integerValue];
+        NSInteger headerSpoofs = [savedStats[@"header_ua"] integerValue] + [savedStats[@"header_device"] integerValue];
+
         if (!savedStats.count) {
             for (NSString *ln in lines) {
                 if ([ln containsString:@"[NETWORK] Request"]) req++;
@@ -244,13 +254,23 @@ static UIWindow *NBActiveWindow(void) {
                 if ([ln containsString:@"[JB-BYPASS]"]) jb++;
             }
         }
-        BOOL hasActivity = req || blk || spf || jb || neutralized || popups;
+        BOOL hasActivity = req || blk || spf || jb || neutralized || popups || deviceSpoofs || idfvSpoofs || idfaSpoofs;
         NSString *lastEvent = savedStats[@"lastEvent"] ?: @"لا يوجد حدث بعد";
         NSString *process = savedStats[@"processBundle"] ?: @"لم تُسجل عملية الهدف";
         stats.text = [NSString stringWithFormat:
-            @"الطلبات: %ld | الحظر: %ld | التعديل: %ld\nJB: %ld | تحييد الردود: %ld | النوافذ: %ld\n%@\nالعملية: %@\nآخر حدث: %@",
-            (long)req, (long)blk, (long)spf, (long)jb, (long)neutralized, (long)popups,
-            hasActivity ? @"النشاط مسجل من داخل التويك" : @"لا يوجد نشاط بعد — افتح Naver Series لاختبار التويك",
+            @"الطلبات: %ld | الحظر: %ld | التعديل: %ld
+"
+            @"Device: %ld | IDFV: %ld | IDFA: %ld
+"
+            @"Keychain: %ld | Headers: %ld | JB: %ld
+"
+            @"%@
+العملية: %@
+آخر حدث: %@",
+            (long)req, (long)blk, (long)spf,
+            (long)deviceSpoofs, (long)idfvSpoofs, (long)idfaSpoofs,
+            (long)keychainBlocked, (long)headerSpoofs, (long)jb,
+            hasActivity ? @"✅ النشاط مسجل — التويك يعمل" : @"⏳ لا يوجد نشاط — افتح Naver Series",
             process, lastEvent];
 
         // Logs
