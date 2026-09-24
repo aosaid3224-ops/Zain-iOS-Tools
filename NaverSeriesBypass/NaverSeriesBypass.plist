@@ -6,6 +6,7 @@
     <dict>
         <key>Bundles</key>
         <array>
+            <string>com.nhncorp.NaverBooks</string>
             <string>com.naver.series</string>
         </array>
     </dict>
