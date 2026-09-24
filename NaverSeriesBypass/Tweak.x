@@ -19,6 +19,8 @@ static BOOL jbBypass = YES;
 static BOOL autoDismissPopup = YES;
 static BOOL neutralizeResponses = YES;
 
+static NSData *neutralizeSafetyFields(NSData *data);
+
 static void loadPrefs() {
     NSDictionary *prefs = [NSDictionary dictionaryWithContentsOfFile:PREFS_PATH];
     if (prefs) {
