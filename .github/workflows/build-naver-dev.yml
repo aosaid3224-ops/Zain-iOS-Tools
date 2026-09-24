@@ -20,13 +20,6 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Checkout repo-dev
-        uses: actions/checkout@v4
-        with:
-          repository: aosaid3224-ops/repo-dev
-          token: ${{ secrets.PAT }}
-          path: repo-dev
-
       - name: Install dependencies
         run: brew install dpkg ldid
 
@@ -56,28 +49,9 @@ jobs:
           path: NaverSeriesBypass/packages/*.deb
           if-no-files-found: error
 
-      - name: Publish verified package to repo-dev
-        run: |
-          set -euo pipefail
-          git config --global user.email "ci@github.com"
-          git config --global user.name "GitHub CI"
-          mkdir -p repo-dev/pool/main/iphoneos-arm64
-          cp NaverSeriesBypass/packages/*.deb repo-dev/pool/main/iphoneos-arm64/
-          cp scripts/generate-repo.py repo-dev/scripts/generate-repo.py
-          python3 scripts/generate-repo.py repo-dev --dev
-          python3 scripts/validate-repo.py repo-dev
-          cd repo-dev
-          git add -A
-          if git diff --cached --quiet; then
-            echo "repo-dev is already synchronized"
-          else
-            git commit -m "NaverSeriesBypass v3.2.0 — dev build"
-            git push origin main
-          fi
-
       - name: Summary
         if: always()
         run: |
-          echo "Dev repo: https://aosaid3224-ops.github.io/repo-dev/"
+          echo "Verified artifact created; repo-dev sync is performed with the authenticated GitHub connector"
           echo "Package: com.aosaid.naverseriesbypass"
           echo "Version: 3.2.0"
