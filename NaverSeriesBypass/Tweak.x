@@ -1,5 +1,5 @@
 /*
- * NaverSeriesBypass v3.3.1 - CRASH FIX
+ * NaverSeriesBypass v3.3.2 - CRASH FIX
  * Fixed: %hookf replaced with MSHookFunction, delayed keychain cleanup,
  *        removed UIKit from filter, fixed buffer overflows
  */
