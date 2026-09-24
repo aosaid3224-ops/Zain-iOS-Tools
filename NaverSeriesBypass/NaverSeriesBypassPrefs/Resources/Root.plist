@@ -22,7 +22,9 @@
             <key>cell</key>
             <string>PSGroupCell</string>
             <key>label</key>
-            <string>الإعدادات</string>
+            <string>إعدادات تجاوز الحظر</string>
+            <key>footerText</key>
+            <string>عند تفعيل هذه الخيارات، سيظهر جهازك كجهاز iPhone 15 Pro بنظام iOS 18.3.1</string>
         </dict>
         <dict>
             <key>cell</key>
@@ -44,9 +46,9 @@
             <key>defaults</key>
             <string>com.aosaid.naverseriesbypass</string>
             <key>key</key>
-            <string>SpoofIDFV</string>
+            <string>SpoofDevice</string>
             <key>label</key>
-            <string>تغيير معرف الجهاز</string>
+            <string>تغيير نوع الجهاز (iPhone 15 Pro)</string>
         </dict>
         <dict>
             <key>cell</key>
@@ -56,9 +58,21 @@
             <key>defaults</key>
             <string>com.aosaid.naverseriesbypass</string>
             <key>key</key>
-            <string>BlockKeychain</string>
+            <string>SpoofIDFV</string>
             <key>label</key>
-            <string>حظر Keychain</string>
+            <string>تغيير معرف الجهاز (IDFV)</string>
+        </dict>
+        <dict>
+            <key>cell</key>
+            <string>PSSwitchCell</string>
+            <key>default</key>
+            <true/>
+            <key>defaults</key>
+            <string>com.aosaid.naverseriesbypass</string>
+            <key>key</key>
+            <string>SpoofIDFA</string>
+            <key>label</key>
+            <string>تغيير معرف الإعلانات (IDFA)</string>
         </dict>
         <dict>
             <key>cell</key>
@@ -70,7 +84,25 @@
             <key>key</key>
             <string>SpoofHeaders</string>
             <key>label</key>
-            <string>تغيير Headers</string>
+            <string>تغيير Headers الشبكة</string>
+        </dict>
+        <dict>
+            <key>cell</key>
+            <string>PSSwitchCell</string>
+            <key>default</key>
+            <true/>
+            <key>defaults</key>
+            <string>com.aosaid.naverseriesbypass</string>
+            <key>key</key>
+            <string>BlockKeychain</string>
+            <key>label</key>
+            <string>حظر Keychain (منع تخزين البصمة)</string>
+        </dict>
+        <dict>
+            <key>cell</key>
+            <string>PSGroupCell</string>
+            <key>label</key>
+            <string>إعدادات الجيلبريك</string>
         </dict>
         <dict>
             <key>cell</key>
@@ -88,7 +120,8 @@
             <key>cell</key>
             <string>PSGroupCell</string>
             <key>footerText</key>
-            <string>المطور: aosaid | v2.2.8</string>
+            <string>المطور: aosaid | v3.0 - Device Ban Bypass
+الجهاز المزيف: iPhone 15 Pro | iOS 18.3.1</string>
         </dict>
     </array>
     <key>title</key>
