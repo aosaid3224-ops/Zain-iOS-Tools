@@ -208,11 +208,11 @@ static UIWindow *NBActiveWindow(void) {
 
         BOOL isInjected = NO;
         NSString *injectedProcess = @"غير معروف";
-        NSTimeInterval lastHeartbeat = 0;
+        NSTimeInterval heartbeatTimestamp = 0;
 
         if (heartbeat) {
-            lastHeartbeat = [heartbeat[@"timestamp"] doubleValue];
-            NSTimeInterval age = [[NSDate date] timeIntervalSince1970] - lastHeartbeat;
+            heartbeatTimestamp = [heartbeat[@"timestamp"] doubleValue];
+            NSTimeInterval age = [[NSDate date] timeIntervalSince1970] - heartbeatTimestamp;
             isInjected = (age < 10.0); // Heartbeat within last 10 seconds
             injectedProcess = heartbeat[@"processName"] ?: @"غير معروف";
         }
@@ -222,12 +222,12 @@ static UIWindow *NBActiveWindow(void) {
             savedStats = liveStats;
         }
         NSDate *lastLaunch = savedStats[@"lastLaunch"];
-        NSDate *lastHeartbeat = savedStats[@"lastHeartbeat"];
-        NSTimeInterval heartbeatAge = lastHeartbeat ? [[NSDate date] timeIntervalSinceDate:lastHeartbeat] : DBL_MAX;
+        NSDate *lastStatsHeartbeat = savedStats[@"lastHeartbeat"];
+        NSTimeInterval heartbeatAge = lastStatsHeartbeat ? [[NSDate date] timeIntervalSinceDate:lastStatsHeartbeat] : DBL_MAX;
         BOOL hasInjectionMarker = savedStats[@"loaded"] != nil || savedStats[@"processBundle"] != nil;
         // REAL injection status from heartbeat file
         BOOL live = isInjected;
-        BOOL launchRecentlyStopped = !isInjected && lastHeartbeat > 0;
+        BOOL launchRecentlyStopped = !isInjected && heartbeatTimestamp > 0;
 
         BOOL blocked = [log containsString:@"BLOCKED"] || [log containsString:@"BAN"];
         if (!enabled) {
@@ -244,7 +244,7 @@ static UIWindow *NBActiveWindow(void) {
             status.text = @"❌ غير محقن — افتح Naver Series أولاً";
         } else if (launchRecentlyStopped) {
             status.text = @"فشل/انقطع — توقف heartbeat بعد فتح Naver Series";
-            status.text = [NSString stringWithFormat:@"⏳ آخر نشاط قبل %.0f ثانية — أعد فتح Naver Series", [[NSDate date] timeIntervalSince1970] - lastHeartbeat];
+            status.text = [NSString stringWithFormat:@"⏳ آخر نشاط قبل %.0f ثانية — أعد فتح Naver Series", [[NSDate date] timeIntervalSince1970] - heartbeatTimestamp];
         } else {
             status.text = @"مفعّل — بانتظار فتح Naver Series";
             status.text = @"⏳ بانتظار فتح Naver Series";
