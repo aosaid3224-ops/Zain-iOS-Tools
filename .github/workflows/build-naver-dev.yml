@@ -39,13 +39,13 @@ jobs:
           test -n "$DEB_FILE"
           dpkg-deb -f "$DEB_FILE" Package Version Architecture
           test "$(dpkg-deb -f "$DEB_FILE" Package)" = "com.aosaid.naverseriesbypass"
-          test "$(dpkg-deb -f "$DEB_FILE" Version)" = "2.2.3"
+          test "$(dpkg-deb -f "$DEB_FILE" Version)" = "2.2.4"
           test "$(dpkg-deb -f "$DEB_FILE" Architecture)" = "iphoneos-arm64"
 
       - name: Upload verified package
         uses: actions/upload-artifact@v4
         with:
-          name: naverseriesbypass-2.2.3
+          name: naverseriesbypass-2.2.4
           path: NaverSeriesBypass/packages/*.deb
           if-no-files-found: error
 

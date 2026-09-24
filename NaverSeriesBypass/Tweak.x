@@ -195,23 +195,32 @@ static NSString *generateFakeDeviceID() {
 }
 
 - (NSString *)name {
-    return %orig;
+    if (!isEnabled) return %orig;
+    NSString *originalName = %orig;
+    NBLog(@"[SPOOF] deviceName: %@ -> iPhone", originalName);
+    return @"iPhone";
 }
 
 - (NSString *)model {
-    return %orig;
+    if (!isEnabled) return %orig;
+    NSString *originalModel = %orig;
+    NBLog(@"[SPOOF] model: %@ -> iPhone15,2", originalModel);
+    return @"iPhone";
 }
 
 - (NSString *)localizedModel {
-    return %orig;
+    return @"iPhone";
 }
 
 - (NSString *)systemVersion {
-    return %orig;
+    if (!isEnabled) return %orig;
+    NSString *originalSystemVersion = %orig;
+    NBLog(@"[SPOOF] systemVersion: %@ -> 18.3.1", originalSystemVersion);
+    return @"18.3.1";
 }
 
 - (NSString *)systemName {
-    return %orig;
+    return @"iOS";
 }
 
 %end
@@ -250,11 +259,14 @@ static BOOL isNaverKeychainItem(NSDictionary *dict) {
         @"consumer", @"hmac", @"adid"
     ];
 
+    BOOL (^containsKeyword)(id, NSString *) = ^BOOL(id value, NSString *keyword) {
+        return [value isKindOfClass:[NSString class]] &&
+            [(NSString *)value rangeOfString:keyword options:NSCaseInsensitiveSearch].location != NSNotFound;
+    };
+
     for (NSString *keyword in naverKeywords) {
-        if ((account && [account rangeOfString:keyword options:NSCaseInsensitiveSearch].location != NSNotFound) ||
-            (service && [service rangeOfString:keyword options:NSCaseInsensitiveSearch].location != NSNotFound) ||
-            (accessGroup && [accessGroup rangeOfString:keyword options:NSCaseInsensitiveSearch].location != NSNotFound) ||
-            (generic && [generic rangeOfString:keyword options:NSCaseInsensitiveSearch].location != NSNotFound)) {
+        if (containsKeyword(account, keyword) || containsKeyword(service, keyword) ||
+            containsKeyword(accessGroup, keyword) || containsKeyword(generic, keyword)) {
             return YES;
         }
     }
@@ -315,7 +327,7 @@ static BOOL isNaverKeychainItem(NSDictionary *dict) {
 %hook NSUserDefaults
 
 - (id)objectForKey:(NSString *)defaultName {
-    return %orig;
+    if (!isEnabled || ![defaultName isKindOfClass:[NSString class]]) return %orig;
 
     NSArray *blockedKeys = @[
         @"naver", @"series", @"device", @"ban", @"block",
@@ -337,8 +349,10 @@ static BOOL isNaverKeychainItem(NSDictionary *dict) {
 }
 
 - (void)setObject:(id)value forKey:(NSString *)defaultName {
-    %orig;
-    return;
+    if (!isEnabled || ![defaultName isKindOfClass:[NSString class]]) {
+        %orig;
+        return;
+    }
 
     for (NSString *keyword in @[@"ban", @"block", @"device_id", @"fingerprint"]) {
         if ([defaultName rangeOfString:keyword options:NSCaseInsensitiveSearch].location != NSNotFound) {
@@ -356,7 +370,17 @@ static BOOL isNaverKeychainItem(NSDictionary *dict) {
 // ============================================
 
 %hookf(int, uname, struct utsname *value) {
-    return %orig;
+    if (!isEnabled) return %orig;
+    int result = %orig;
+    if (result == 0 && value) {
+        strlcpy(value->machine, "iPhone15,2", sizeof(value->machine));
+        strlcpy(value->nodename, "iPhone", sizeof(value->nodename));
+        strlcpy(value->release, "23.3.0", sizeof(value->release));
+        strlcpy(value->version, "Darwin Kernel Version 23.3.0", sizeof(value->version));
+        strlcpy(value->sysname, "Darwin", sizeof(value->sysname));
+        NBLog(@"[SPOOF] uname -> machine:iPhone15,2 sysname:Darwin");
+    }
+    return result;
 }
 
 %hookf(int, sysctl, int *name, u_int namelen, void *oldp, size_t *oldlenp, void *newp, size_t newlen) {
@@ -383,7 +407,7 @@ static BOOL isNaverKeychainItem(NSDictionary *dict) {
 %hook NSFileManager
 
 - (BOOL)fileExistsAtPath:(NSString *)path {
-    return %orig;
+    if (!isEnabled || !jbBypass) return %orig;
 
     NSArray *jailbreakPaths = @[
         @"/Applications/Cydia.app",
@@ -413,7 +437,7 @@ static BOOL isNaverKeychainItem(NSDictionary *dict) {
 }
 
 - (BOOL)fileExistsAtPath:(NSString *)path isDirectory:(BOOL *)isDirectory {
-    return %orig;
+    if (!isEnabled || !jbBypass) return %orig;
 
     NSArray *jailbreakPaths = @[
         @"/Applications/Cydia.app",
@@ -436,7 +460,7 @@ static BOOL isNaverKeychainItem(NSDictionary *dict) {
 %hook UIApplication
 
 - (BOOL)canOpenURL:(NSURL *)url {
-    return %orig;
+    if (!isEnabled || !jbBypass) return %orig;
 
     if (url) {
         NSString *scheme = url.scheme;
@@ -633,7 +657,11 @@ static BOOL isNaverKeychainItem(NSDictionary *dict) {
 %hook UIScreen
 
 - (CGRect)bounds {
-    return %orig;
+    CGRect orig = %orig;
+    if (isEnabled) {
+        NBLog(@"[SPOOF] Screen bounds: %@", NSStringFromCGRect(orig));
+    }
+    return orig;
 }
 
 - (CGFloat)scale {
@@ -739,7 +767,7 @@ static NSData *neutralizeSafetyFields(NSData *data) {
     );
 
     NBLog(@"========================================");
-    NBLog(@"NaverSeriesBypass v2.2.3 - ROOTLESS");
+    NBLog(@"NaverSeriesBypass v2.2.4 - ROOTLESS");
     NBLog(@"Target: com.nhncorp.NaverBooks");
     NBLog(@"iOS Support: 16.x - 18.x");
     NBLog(@"Status: %@", isEnabled ? @"ENABLED" : @"DISABLED");
