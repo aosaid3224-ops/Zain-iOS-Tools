@@ -280,15 +280,10 @@ static UIWindow *NBActiveWindow(void) {
         NSString *lastEvent = savedStats[@"lastEvent"] ?: @"لا يوجد حدث بعد";
         NSString *process = savedStats[@"processBundle"] ?: @"لم تُسجل عملية الهدف";
         stats.text = [NSString stringWithFormat:
-            @"الطلبات: %ld | الحظر: %ld | التعديل: %ld
-"
-            @"Device: %ld | IDFV: %ld | IDFA: %ld
-"
-            @"Keychain: %ld | Headers: %ld | JB: %ld
-"
-            @"%@
-العملية: %@
-آخر حدث: %@",
+            @"الطلبات: %ld | الحظر: %ld | التعديل: %ld\n"
+            @"Device: %ld | IDFV: %ld | IDFA: %ld\n"
+            @"Keychain: %ld | Headers: %ld | JB: %ld\n"
+            @"%@\nالعملية: %@\nآخر حدث: %@",
             (long)req, (long)blk, (long)spf,
             (long)deviceSpoofs, (long)idfvSpoofs, (long)idfaSpoofs,
             (long)keychainBlocked, (long)headerSpoofs, (long)jb,
