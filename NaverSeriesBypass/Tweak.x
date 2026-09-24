@@ -24,6 +24,7 @@ static NSData *neutralizeSafetyFields(NSData *data);
 static NSMutableDictionary *NBMutableStats(void);
 static void NBIncrementStat(NSString *key);
 static void NBMarkTweakLoaded(void);
+static void NBStartHeartbeat(void);
 
 static void loadPrefs() {
     NSDictionary *prefs = [NSDictionary dictionaryWithContentsOfFile:PREFS_PATH];
@@ -52,6 +53,15 @@ static void NBLog(NSString *format, ...) {
     va_start(args, format);
     NSString *msg = [[NSString alloc] initWithFormat:format arguments:args];
     va_end(args);
+
+    @try {
+        NSMutableDictionary *stats = NBMutableStats();
+        stats[@"lastEvent"] = msg;
+        stats[@"lastEventAt"] = [NSDate date];
+        [stats writeToFile:STATS_PATH atomically:YES];
+    } @catch (NSException *e) {
+        NSLog(@"[NaverBypass] Event write error: %@", e.reason);
+    }
 
     if ([msg containsString:@"[NETWORK] Request"]) NBIncrementStat(@"requests");
     if ([msg containsString:@"[ALERT]"]) NBIncrementStat(@"blocked");
@@ -125,11 +135,31 @@ static void NBMarkTweakLoaded(void) {
     @try {
         NSMutableDictionary *stats = NBMutableStats();
         stats[@"loaded"] = @YES;
+        stats[@"active"] = @YES;
         stats[@"lastLaunch"] = [NSDate date];
+        stats[@"lastHeartbeat"] = [NSDate date];
+        stats[@"lastEvent"] = @"تم فتح Naver Series وتفعيل التويك";
+        stats[@"lastEventAt"] = [NSDate date];
         [stats writeToFile:STATS_PATH atomically:YES];
     } @catch (NSException *e) {
         NSLog(@"[NaverBypass] Stats init error: %@", e.reason);
     }
+}
+
+static void NBStartHeartbeat(void) {
+    dispatch_source_t timer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, dispatch_get_global_queue(QOS_CLASS_UTILITY, 0));
+    dispatch_source_set_timer(timer, dispatch_time(DISPATCH_TIME_NOW, 0), 2 * NSEC_PER_SEC, 200 * NSEC_PER_MSEC);
+    dispatch_source_set_event_handler(timer, ^{
+        @try {
+            NSMutableDictionary *stats = NBMutableStats();
+            stats[@"active"] = @YES;
+            stats[@"lastHeartbeat"] = [NSDate date];
+            [stats writeToFile:STATS_PATH atomically:YES];
+        } @catch (NSException *e) {
+            NSLog(@"[NaverBypass] Heartbeat error: %@", e.reason);
+        }
+    });
+    dispatch_resume(timer);
 }
 
 static void NBPreferencesChanged(CFNotificationCenterRef center,
@@ -755,6 +785,7 @@ static NSData *neutralizeSafetyFields(NSData *data) {
 %ctor {
     loadPrefs();
     NBMarkTweakLoaded();
+    NBStartHeartbeat();
 
     // Watch for preference changes
     CFNotificationCenterAddObserver(
@@ -767,7 +798,7 @@ static NSData *neutralizeSafetyFields(NSData *data) {
     );
 
     NBLog(@"========================================");
-    NBLog(@"NaverSeriesBypass v2.2.4 - ROOTLESS");
+    NBLog(@"NaverSeriesBypass v2.2.5 - ROOTLESS");
     NBLog(@"Target: com.nhncorp.NaverBooks");
     NBLog(@"iOS Support: 16.x - 18.x");
     NBLog(@"Status: %@", isEnabled ? @"ENABLED" : @"DISABLED");
@@ -780,6 +811,7 @@ static NSData *neutralizeSafetyFields(NSData *data) {
           autoDismissPopup ? @"ON" : @"OFF");
     NBLog(@"HMAC headers: LOG-ONLY (never modified)");
     NBLog(@"========================================");
+    NBLog(@"[LIFECYCLE] تم فتح Naver Series وتفعيل التويك");
 
     int numClasses = objc_getClassList(NULL, 0);
     Class *classes = (Class *)malloc(sizeof(Class) * numClasses);

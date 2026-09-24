@@ -1,5 +1,6 @@
 #import <Preferences/Preferences.h>
 #import <UIKit/UIKit.h>
+#import <float.h>
 
 #define LOG_FILE @"/var/mobile/Documents/NaverBypass_Diagnostics.log"
 #define PREFS_PATH @"/var/mobile/Library/Preferences/com.aosaid.naverseriesbypass.plist"
@@ -169,8 +170,11 @@ static UIWindow *NBActiveWindow(void) {
         NSDictionary *savedStats = [NSDictionary dictionaryWithContentsOfFile:STATS_PATH];
         BOOL enabled = prefs[@"Enabled"] == nil ? YES : [prefs[@"Enabled"] boolValue];
         NSDate *lastLaunch = savedStats[@"lastLaunch"];
-        BOOL loadedRecently = [savedStats[@"loaded"] boolValue] && lastLaunch &&
-            [[NSDate date] timeIntervalSinceDate:lastLaunch] < (30.0 * 60.0);
+        NSDate *lastHeartbeat = savedStats[@"lastHeartbeat"];
+        NSTimeInterval heartbeatAge = lastHeartbeat ? [[NSDate date] timeIntervalSinceDate:lastHeartbeat] : DBL_MAX;
+        BOOL live = [savedStats[@"active"] boolValue] && heartbeatAge <= 6.0;
+        BOOL launchRecentlyStopped = [savedStats[@"loaded"] boolValue] && lastLaunch &&
+            [[NSDate date] timeIntervalSinceDate:lastLaunch] < (30.0 * 60.0) && !live;
 
         BOOL blocked = [log containsString:@"BLOCKED"] || [log containsString:@"BAN"];
         if (!enabled) {
@@ -179,9 +183,12 @@ static UIWindow *NBActiveWindow(void) {
         } else if (blocked) {
             status.text = @"مفعّل — حظر مكتشف من الخادم";
             status.textColor = [UIColor colorWithRed:0.9 green:0.35 blue:0.25 alpha:1.0];
-        } else if (loadedRecently) {
-            status.text = @"مفعّل — التويك محمّل الآن";
+        } else if (live) {
+            status.text = @"مفعّل — Naver Series مفتوح والتويك يعمل الآن";
             status.textColor = [UIColor colorWithRed:0.2 green:0.8 blue:0.3 alpha:1.0];
+        } else if (launchRecentlyStopped) {
+            status.text = @"فشل/انقطع — توقف heartbeat بعد فتح Naver Series";
+            status.textColor = [UIColor colorWithRed:0.95 green:0.25 blue:0.2 alpha:1.0];
         } else {
             status.text = @"مفعّل — بانتظار فتح Naver Series";
             status.textColor = [UIColor colorWithRed:0.95 green:0.7 blue:0.25 alpha:1.0];
@@ -204,10 +211,12 @@ static UIWindow *NBActiveWindow(void) {
             }
         }
         BOOL hasActivity = req || blk || spf || jb || neutralized || popups;
+        NSString *lastEvent = savedStats[@"lastEvent"] ?: @"لا يوجد حدث بعد";
         stats.text = [NSString stringWithFormat:
-            @"الطلبات: %ld | الحظر: %ld | التعديل: %ld\nJB: %ld | تحييد الردود: %ld | النوافذ: %ld\n%@",
+            @"الطلبات: %ld | الحظر: %ld | التعديل: %ld\nJB: %ld | تحييد الردود: %ld | النوافذ: %ld\n%@\nآخر حدث: %@",
             (long)req, (long)blk, (long)spf, (long)jb, (long)neutralized, (long)popups,
-            hasActivity ? @"النشاط مسجل من داخل التويك" : @"لا يوجد نشاط بعد — افتح Naver Series لاختبار التويك"];
+            hasActivity ? @"النشاط مسجل من داخل التويك" : @"لا يوجد نشاط بعد — افتح Naver Series لاختبار التويك",
+            lastEvent];
 
         // Logs
         NSArray *last = lines.count > 15 ? [lines subarrayWithRange:NSMakeRange(lines.count - 15, 15)] : lines;
