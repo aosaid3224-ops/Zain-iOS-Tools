@@ -23,6 +23,18 @@ static UIWindow *NBActiveWindow(void) {
     return nil;
 }
 
+// CONTRACT FIX: read via cfprefsd (same daemon the tweak writes through)
+// instead of raw file access — sees values even before they hit disk.
+static NSDictionary *NBReadPrefsDomain(NSString *domain) {
+    CFStringRef d = (__bridge CFStringRef)domain;
+    CFArrayRef keys = CFPreferencesCopyKeyList(d, kCFPreferencesCurrentUser, kCFPreferencesAnyHost);
+    if (!keys) return nil;
+    CFDictionaryRef dict = CFPreferencesCopyMultiple(keys, d, kCFPreferencesCurrentUser, kCFPreferencesAnyHost);
+    CFRelease(keys);
+    if (!dict) return nil;
+    return (__bridge_transfer NSDictionary *)dict;
+}
+
 @interface NaverSeriesBypassPrefsListController : PSListController
 @property(nonatomic, strong) NSTimer *dashboardTimer;
 @end
@@ -195,11 +207,9 @@ static UIWindow *NBActiveWindow(void) {
         NSDictionary *savedStats = [NSDictionary dictionaryWithContentsOfFile:STATS_PATH];
         BOOL enabled = prefs[@"Enabled"] == nil ? YES : [prefs[@"Enabled"] boolValue];
 
-        // Read REAL heartbeat from Tweak (proof of injection)
-        NSString *heartbeatPath = @"/var/mobile/Library/Preferences/com.aosaid.naverseriesbypass.heartbeat.plist";
-        NSString *statsPath = @"/var/mobile/Library/Preferences/com.aosaid.naverseriesbypass.stats.plist";
-        NSDictionary *heartbeat = [[NSDictionary alloc] initWithContentsOfFile:heartbeatPath];
-        NSDictionary *liveStats = [[NSDictionary alloc] initWithContentsOfFile:statsPath];
+        // Read REAL heartbeat from Tweak (proof of injection) - via cfprefsd
+        NSDictionary *heartbeat = NBReadPrefsDomain(@"com.aosaid.naverseriesbypass.heartbeat");
+        NSDictionary *liveStats = NBReadPrefsDomain(@"com.aosaid.naverseriesbypass.stats");
 
         BOOL isInjected = NO;
         NSString *injectedProcess = @"غير معروف";
