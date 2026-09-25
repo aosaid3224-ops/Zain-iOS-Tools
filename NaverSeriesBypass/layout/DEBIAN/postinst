@@ -37,7 +37,7 @@ chmod 644 /var/mobile/Library/Preferences/com.aosaid.naverseriesbypass.plist
 chown mobile:mobile /var/mobile/Library/Preferences/com.aosaid.naverseriesbypass.plist
 
 echo "========================================"
-echo "Naver Series Bypass v3.3.4 installed!"
+echo "Naver Series Bypass v3.3.5 installed!"
 echo "========================================"
 echo ""
 echo "Settings: Settings -> Naver Series Bypass"
@@ -54,7 +54,6 @@ echo "Check Settings for live stats and logs."
 # Break Settings cache so the entry appears immediately
 killall Preferences 2>/dev/null || true
 # Stop a running target so the dynamic loader applies the new filter on next launch.
-killall NaverBooks 2>/dev/null || true
 killall NaverSeries 2>/dev/null || true
 
 echo "========================================"

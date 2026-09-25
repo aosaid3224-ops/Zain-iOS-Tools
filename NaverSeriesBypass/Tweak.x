@@ -1,5 +1,5 @@
 /*
- * NaverSeriesBypass v3.3.4 - Dashboard contract and cfprefsd sync fix
+ * NaverSeriesBypass v3.3.5 - Live Darwin heartbeat and dashboard injection proof
  * Fixed: %hookf replaced with MSHookFunction, delayed keychain cleanup,
  *        removed UIKit from filter, fixed buffer overflows
  */
