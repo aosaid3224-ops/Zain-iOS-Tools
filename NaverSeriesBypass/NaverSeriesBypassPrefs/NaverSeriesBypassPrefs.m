@@ -51,6 +51,17 @@ static NSString *NBReadMirroredString(const char *slot) {
     return out;
 }
 
+// قراءة مفاتيح التحكم من cfprefsd — نفس قناة الإعدادات، طازجة دائمًا.
+// قراءة الملف المباشرة قد ترجع قيمة قديمة أو nil فتُسقط في افتراض "مفعّل" = تضليل.
+static BOOL NBToggle(NSString *key) {
+    CFPropertyListRef v = CFPreferencesCopyAppValue((__bridge CFStringRef)key,
+                                                     CFSTR("com.aosaid.naverseriesbypass"));
+    if (!v) return YES;   // الافتراضي من Root.plist = مفعّل
+    BOOL on = CFBooleanGetTypeID() == CFGetTypeID(v) ? CFBooleanGetValue((CFBooleanRef)v) : YES;
+    CFRelease(v);
+    return on;
+}
+
 static NSString *NBTargetProcessName(void) {
     static NSString *cached;
     if (cached) return cached;
@@ -285,7 +296,7 @@ static void NBAliveCallback(CFNotificationCenterRef center, void *observer, CFNo
         NSString *log = [self readLog];
         NSDictionary *prefs = [NSDictionary dictionaryWithContentsOfFile:PREFS_PATH];
         NSDictionary *savedStats = [NSDictionary dictionaryWithContentsOfFile:STATS_PATH];
-        BOOL enabled = prefs[@"Enabled"] == nil ? YES : [prefs[@"Enabled"] boolValue];
+        BOOL enabled = NBToggle(@"Enabled");   // طازج من cfprefsd — لا افتراض مضلل
 
         // Read heartbeat payload via notify_set_state — the ONLY channel that
         // survives sandboxing (cfprefsd drops foreign-domain plist writes from
@@ -459,28 +470,40 @@ static void NBAliveCallback(CFNotificationCenterRef center, void *observer, CFNo
         if (n == 1) break;   // حارس uint64
     }
 
-    // ═══ الترويسة: الهوية الحقيقية مقابل المموّهة + حالة الجلبريك + المفاتيح ═══
+    // ═══ الترويسة الصادقة: كل سطر مشروط بمفتاحه الحقيقي من الإعدادات ═══
     NSString *spoofModel = NBReadMirroredString("model");
     NSString *spoofOS = NBReadMirroredString("os");
     NSInteger unameN = NBReadStat(@"uname"), sysctlN = NBReadStat(@"sysctl");
     NSInteger kcN = NBReadStat(@"keychain_add_blocked") + NBReadStat(@"keychain_update_blocked") + NBReadStat(@"keychain_copy_blocked");
-    BOOL jbHidden = (unameN > 0 || sysctlN > 0);
+    BOOL tDevice = NBToggle(@"SpoofDevice"), tIDFV = NBToggle(@"SpoofIDFV"),
+         tIDFA = NBToggle(@"SpoofIDFA"), tHeaders = NBToggle(@"SpoofHeaders"),
+         tKeychain = NBToggle(@"BlockKeychain"), tJB = NBToggle(@"JBBypass"),
+         tEnabled = NBToggle(@"Enabled");
+    // "مخفي" فقط إذا: التويك مفعّل + تجاوز JB مفعّل + حدث تمويه فعلي
+    BOOL jbHidden = (tEnabled && tJB && (unameN > 0 || sysctlN > 0));
 
     NSMutableArray *full = [NSMutableArray array];
+    [full addObject:@"═══ الحماية ═══"];
+    [full addObject:[NSString stringWithFormat:@"حالة التويك: %@",
+                      tEnabled ? @"مفعّل" : @"معطّل — من مفتاح الإعدادات"]];
     [full addObject:@"═══ هوية الجهاز ═══"];
-    [full addObject:[NSString stringWithFormat:@"الحقيقي: %@ · iOS %@",
+    [full addObject:[NSString stringWithFormat:@"الجهاز الحقيقي: %@ — iOS %@",
                       NBRealMachine(), [UIDevice currentDevice].systemVersion]];
-    [full addObject:[NSString stringWithFormat:@"يقرأه التطبيق: %@ · iOS %@",
-                      spoofModel.length ? spoofModel : @"—",
-                      spoofOS.length ? spoofOS : @"—"]];
-    [full addObject:[NSString stringWithFormat:@"الجلبريك: %@",
-                      jbHidden ? @"مخفي ✅ (uname/sysctl مموّهان)" : @"⚠️ لا يوجد تمويه بعد"]];
-    [full addObject:@"═══ المفاتيح ═══"];
-    [full addObject:[NSString stringWithFormat:@"uname:%ld%@ · sysctl:%ld%@ · model:%ld · systemVersion:%ld",
-                      (long)unameN, unameN ? @" ✅" : @"", (long)sysctlN, sysctlN ? @" ✅" : @"",
-                      (long)NBReadStat(@"model"), (long)NBReadStat(@"systemVersion")]];
-    [full addObject:[NSString stringWithFormat:@"IDFA:%ld · IDFV:%ld · Keychain محظور:%ld · Headers:%ld · شبكة:%ld",
-                      (long)NBReadStat(@"idfa"), (long)NBReadStat(@"idfv"), (long)kcN,
+    [full addObject:[NSString stringWithFormat:@"يقرأه التطبيق: %@ — iOS %@",
+                      (tEnabled && tDevice && spoofModel.length) ? spoofModel : @"الحقيقي (بلا تمويه)",
+                      (tEnabled && tDevice && spoofOS.length) ? spoofOS : @"الإصدار الحقيقي"]];
+    [full addObject:[NSString stringWithFormat:@"كشف الجلبريك: %@",
+                      jbHidden ? @"متجاوَز — uname/sysctl مموّهان فعليًا" :
+                      (!tEnabled ? @"غير متجاوَز — التويك معطّل" :
+                       (!tJB ? @"غير متجاوَز — التجاوز معطّل من الإعدادات" :
+                        @"بلا تمويه بعد"))]];
+    [full addObject:@"═══ المفاتيح (حالتها من إعداداتك الآن) ═══"];
+    [full addObject:[NSString stringWithFormat:@"تغيير الجهاز: %@ | IDFV: %@ | IDFA: %@ | Headers: %@ | Keychain: %@ | تجاوز JB: %@",
+                      tDevice ? @"مفعّل" : @"معطّل", tIDFV ? @"مفعّل" : @"معطّل",
+                      tIDFA ? @"مفعّل" : @"معطّل", tHeaders ? @"مفعّل" : @"معطّل",
+                      tKeychain ? @"مفعّل" : @"معطّل", tJB ? @"مفعّل" : @"معطّل"]];
+    [full addObject:[NSString stringWithFormat:@"نشاط تراكمي: uname: %ld | sysctl: %ld | Keychain محظور: %ld | Headers معدّلة: %ld | شبكة: %ld",
+                      (long)unameN, (long)sysctlN, (long)kcN,
                       (long)(NBReadStat(@"header_ua") + NBReadStat(@"header_device") + NBReadStat(@"header_adid") + NBReadStat(@"header_model") + NBReadStat(@"header_os")),
                       (long)NBReadStat(@"dataTask")]];
     [full addObject:@"═══ الأحداث (الأحدث أولًا) ═══"];
