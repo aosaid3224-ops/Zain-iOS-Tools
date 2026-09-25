@@ -326,7 +326,7 @@ static NSDictionary *NBReadPrefsDomain(NSString *domain) {
             status.text = @"⚠️ حظر مكتشف من الخادم";
         } else if (live) {
             status.text = @"مفعّل — Naver Series مفتوح والتويك يعمل الآن";
-            status.text = [NSString stringWithFormat:@"✅ محقن في: %@ (PID:%@) — يعمل الآن", injectedProcess, heartbeat[@"pid"] ?: @"?"];
+            status.text = [NSString stringWithFormat:@"✅ محقن في: %@ (PID:%u) — يعمل الآن", injectedProcess, gAlivePID];
         } else if (!hasInjectionMarker) {
             status.text = @"غير محقن — لم تصل بصمة من Naver Series";
             status.text = @"❌ غير محقن — افتح Naver Series أولاً";
