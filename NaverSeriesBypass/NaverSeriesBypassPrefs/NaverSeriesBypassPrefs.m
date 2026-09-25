@@ -2,6 +2,65 @@
 #import <UIKit/UIKit.h>
 #import <float.h>
 
+#include <notify.h>
+#include <sys/utsname.h>
+
+static uint32_t gAlivePID = 0;
+
+// Reads the packed heartbeat state the tweak publishes via notify_set_state.
+static BOOL NBReadAliveState(uint32_t *outPid, NSTimeInterval *outTime) {
+    int token = 0;
+    if (notify_register_check("com.aosaid.nsb.alive", &token) != NOTIFY_STATUS_OK) return NO;
+    uint64_t state = 0;
+    if (notify_get_state(token, &state) != NOTIFY_STATUS_OK || state == 0) return NO;
+    uint32_t tsec = (uint32_t)(state >> 32);
+    uint32_t pid  = (uint32_t)(state & 0xffffffffu);
+    if (tsec == 0) return NO;
+    *outPid = pid;
+    *outTime = (NSTimeInterval)tsec;
+    return YES;
+}
+
+// Live stat counter mirrored by the tweak through notify state.
+static NSInteger NBReadStat(NSString *key) {
+    int token = 0;
+    NSString *sname = [@"com.aosaid.nsb.stat." stringByAppendingString:key];
+    if (notify_register_check(sname.UTF8String, &token) != NOTIFY_STATUS_OK) return 0;
+    uint64_t v = 0;
+    if (notify_get_state(token, &v) != NOTIFY_STATUS_OK) return 0;
+    return (NSInteger)v;
+}
+
+// Process name resolved from the tweak's OWN filter plist — injection only
+// happens where the filter says, so the name is known by construction.
+static NSString *NBTargetProcessName(void) {
+    static NSString *cached;
+    if (cached) return cached;
+    NSArray *paths = @[
+        @"/Library/MobileSubstrate/DynamicLibraries/NaverSeriesBypass.plist",
+        @"/var/jb/Library/MobileSubstrate/DynamicLibraries/NaverSeriesBypass.plist"
+    ];
+    NSString *bid = nil;
+    for (NSString *p in paths) {
+        NSArray *bundles = [NSDictionary dictionaryWithContentsOfFile:p][@"Filter"][@"Bundles"];
+        if (bundles.count) { bid = bundles.firstObject; break; }
+    }
+    NSString *name = nil;
+    if (bid.length) {
+        id proxy = [NSClassFromString(@"LSApplicationProxy") applicationProxyForIdentifier:bid];
+        name = [proxy valueForKey:@"localizedName"];
+    }
+    cached = name.length ? name : (bid.length ? bid : @"الهدف");
+    return cached;
+}
+
+// The REAL device values — read directly by the dashboard on the same device.
+static NSString *NBRealMachine(void) {
+    struct utsname u;
+    uname(&u);
+    return [NSString stringWithUTF8String:u.machine];
+}
+
 #define LOG_FILE @"/var/mobile/Documents/NaverBypass_Diagnostics.log"
 #define PREFS_PATH @"/var/mobile/Library/Preferences/com.aosaid.naverseriesbypass.plist"
 #define STATS_PATH @"/var/mobile/Library/Preferences/com.aosaid.naverseriesbypass.stats.plist"
@@ -217,25 +276,38 @@ static NSDictionary *NBReadPrefsDomain(NSString *domain) {
         NSDictionary *savedStats = [NSDictionary dictionaryWithContentsOfFile:STATS_PATH];
         BOOL enabled = prefs[@"Enabled"] == nil ? YES : [prefs[@"Enabled"] boolValue];
 
-        // Read REAL heartbeat from Tweak (proof of injection) - via cfprefsd
-        NSDictionary *heartbeat = NBReadPrefsDomain(@"com.aosaid.naverseriesbypass.heartbeat");
-        NSDictionary *liveStats = NBReadPrefsDomain(@"com.aosaid.naverseriesbypass.stats");
-
+        // Read heartbeat payload via notify_set_state — the ONLY channel that
+        // survives sandboxing (cfprefsd drops foreign-domain plist writes from
+        // sandboxed apps). Packed: [timestamp(32) | pid(32)].
         BOOL isInjected = NO;
         NSString *injectedProcess = @"غير معروف";
         NSTimeInterval heartbeatTimestamp = 0;
 
-        if (heartbeat) {
-            heartbeatTimestamp = [heartbeat[@"timestamp"] doubleValue];
-            NSTimeInterval age = [[NSDate date] timeIntervalSince1970] - heartbeatTimestamp;
-            isInjected = (age < 10.0); // Heartbeat within last 10 seconds
-            injectedProcess = heartbeat[@"processName"] ?: @"غير معروف";
+        uint32_t alivePid = 0;
+        NSTimeInterval aliveTime = 0;
+        if (NBReadAliveState(&alivePid, &aliveTime)) {
+            NSTimeInterval stateAge = [[NSDate date] timeIntervalSince1970] - aliveTime;
+            if (stateAge < 15.0) {
+                isInjected = YES;
+                heartbeatTimestamp = aliveTime;
+                gAlivePID = alivePid;
+                injectedProcess = NBTargetProcessName();
+            }
         }
 
-        // Use live stats from Tweak if available
-        if (liveStats) {
-            savedStats = liveStats;
+        // Merge live counters mirrored through notify state (sandbox-proof).
+        NSMutableDictionary *mergedStats = savedStats ? [savedStats mutableCopy] : [NSMutableDictionary dictionary];
+        for (NSString *key in @[@"requests", @"blocked", @"spoofed", @"jbBypass", @"neutralized",
+                                @"popups", @"uname", @"model", @"systemVersion", @"deviceName",
+                                @"idfv", @"idfa", @"keychain_add_blocked", @"keychain_update_blocked",
+                                @"header_ua", @"header_device", @"loaded", @"processBundle"]) {
+            NSInteger live = NBReadStat(key);
+            if (live > 0) {
+                NSNumber *cur = mergedStats[key] ?: @0;
+                if (live > [cur integerValue]) mergedStats[key] = @(live);
+            }
         }
+        savedStats = mergedStats;
         BOOL hasInjectionMarker = savedStats[@"loaded"] != nil || savedStats[@"processBundle"] != nil;
         // LIVE Darwin signal: if the tweak posted within the last 15s, it IS
         // injected and running right now - regardless of any file/plist state.
@@ -305,6 +377,10 @@ static NSDictionary *NBReadPrefsDomain(NSString *domain) {
             (long)keychainBlocked, (long)headerSpoofs, (long)jb,
             hasActivity ? @"✅ النشاط مسجل — التويك يعمل" : @"⏳ لا يوجد نشاط — افتح Naver Series",
             process, lastEvent];
+
+        // الخام والدقيق: الجهاز الفعلي مقابل ما يواجهه التطبيق فعليًا
+        stats.text = [stats.text stringByAppendingFormat:@"\nالجهاز الحقيقي: %@ · iOS %@\nيواجهه التطبيق: قيم مموّهة (uname/sysctl/IDFA/Keychain)",
+                       NBRealMachine(), [UIDevice currentDevice].systemVersion];
 
         // Logs
         NSArray *last = lines.count > 15 ? [lines subarrayWithRange:NSMakeRange(lines.count - 15, 15)] : lines;
