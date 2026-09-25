@@ -164,8 +164,20 @@ static void CFPreferencesWriteDictFlat(NSDictionary *dict, CFStringRef domain) {
     CFPreferencesSynchronize(domain, kCFPreferencesCurrentUser, kCFPreferencesAnyHost);
 }
 
+// LIVE SIGNAL: Darwin notifications are mach-port messages via notifyd -
+// they work between ANY two processes (even sandboxed) with zero file I/O.
+// cfprefsd silently DROPS writes to foreign domains from sandboxed apps,
+// which is why no heartbeat file ever appeared. This channel cannot fail.
+static void postDarwinHeartbeat(void) {
+    CFNotificationCenterPostNotification(
+        CFNotificationCenterGetDarwinNotifyCenter(),
+        CFSTR("com.aosaid.nsb.alive"),
+        NULL, NULL, true);
+}
+
 static void writeHeartbeat() {
     if (!isEnabled) return;
+    postDarwinHeartbeat();
     @try {
         NSDictionary *heartbeat = @{
             @"timestamp": @([[NSDate date] timeIntervalSince1970]),
@@ -173,7 +185,7 @@ static void writeHeartbeat() {
             @"processName": [[NSProcessInfo processInfo] processName] ?: @"unknown",
             @"pid": @([[NSProcessInfo processInfo] processIdentifier]),
             @"active": @(isEnabled),
-            @"version": @"3.3.4",
+            @"version": @"3.3.5",
         };
         CFPreferencesWriteDictFlat(heartbeat, CFSTR("com.aosaid.naverseriesbypass.heartbeat"));
     } @catch (NSException *e) {
