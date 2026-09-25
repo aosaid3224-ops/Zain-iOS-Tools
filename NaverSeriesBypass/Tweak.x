@@ -1,5 +1,5 @@
 /*
- * NaverSeriesBypass v3.3.2 - CRASH FIX
+ * NaverSeriesBypass v3.3.4 - Dashboard contract and cfprefsd sync fix
  * Fixed: %hookf replaced with MSHookFunction, delayed keychain cleanup,
  *        removed UIKit from filter, fixed buffer overflows
  */

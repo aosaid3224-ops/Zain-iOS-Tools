@@ -1,6 +1,6 @@
 Package: com.aosaid.naverseriesbypass
 Name: Naver Series Bypass
-Version: 3.3.2
+Version: 3.3.4
 Architecture: iphoneos-arm64
 Description: Advanced device ban bypass with Arabic UI & diagnostics for Naver Series. Supports iOS 16-18 Rootless.
 Maintainer: aosaid
