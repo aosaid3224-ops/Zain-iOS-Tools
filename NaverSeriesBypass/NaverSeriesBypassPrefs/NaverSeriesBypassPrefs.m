@@ -47,7 +47,9 @@ static NSString *NBTargetProcessName(void) {
     }
     NSString *name = nil;
     if (bid.length) {
-        id proxy = [NSClassFromString(@"LSApplicationProxy") applicationProxyForIdentifier:bid];
+        // Resolve the private API dynamically; current SDKs do not declare this selector.
+        Class proxyClass = NSClassFromString(@"LSApplicationProxy");
+        id proxy = [proxyClass performSelector:@selector(applicationProxyForIdentifier:) withObject:bid];
         name = [proxy valueForKey:@"localizedName"];
     }
     cached = name.length ? name : (bid.length ? bid : @"الهدف");
