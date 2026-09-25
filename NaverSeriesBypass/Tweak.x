@@ -83,6 +83,42 @@ static NSString *statsPath() {
 static NSMutableDictionary *stats = nil;
 static dispatch_queue_t nbStatsQueue = nil;
 
+// ===== نظام سجل الأحداث — حلقي عبر notify_set_state (يعبر الـ sandbox) =====
+// كل حدث = uint64: [timestamp:32 | code:16 | detail:16] في 32 خانة دوّارة.
+#define NB_LOG_SLOTS 32
+
+static void NBLogEvent(uint16_t code, uint16_t detail) {
+    static int countTok = 0;
+    if (!countTok) notify_register_check("com.aosaid.nsb.log.count", &countTok);
+    uint64_t count = 0;
+    notify_get_state(countTok, &count);
+    count++;
+    notify_set_state(countTok, count);
+
+    char name[64];
+    snprintf(name, sizeof(name), "com.aosaid.nsb.log.%llu", (unsigned long long)(count % NB_LOG_SLOTS));
+    int slotTok = 0;
+    notify_register_check(name, &slotTok);
+    uint32_t tsec = (uint32_t)[[NSDate date] timeIntervalSince1970];
+    uint64_t packed = ((uint64_t)tsec << 32) | ((uint64_t)code << 16) | (uint64_t)detail;
+    notify_set_state(slotTok, packed);
+}
+
+// ربط تلقائي: كل مفتاح NBIncrementStat له كود حدث — مكان واحد يغطي كل الـ ~30 hook
+static uint16_t NBEventCodeForKey(NSString *key) {
+    NSDictionary *map = @{
+        @"uname":@1, @"sysctl":@2, @"idfa":@3, @"tracking":@4, @"idfv":@5,
+        @"model":@6, @"systemVersion":@7, @"deviceName":@8, @"localizedModel":@9,
+        @"systemName":@10, @"idiom":@11, @"osVersionString":@12, @"osVersion":@13,
+        @"processorCount":@14, @"activeProcessorCount":@15, @"physicalMemory":@16,
+        @"screenBounds":@17, @"screenScale":@18, @"nativeScale":@19, @"nativeBounds":@20,
+        @"header_device":@21, @"header_adid":@22, @"header_ua":@23,
+        @"header_model":@24, @"header_os":@25, @"dataTask":@26,
+        @"keychain_add_blocked":@27, @"keychain_update_blocked":@28, @"keychain_copy_blocked":@29
+    };
+    return (uint16_t)[map[key] unsignedShortValue];
+}
+
 static void NBIncrementStat(NSString *key) {
     // Mirror to notify state immediately — CFPreferences plist writes from a
     // sandboxed app are silently dropped by cfprefsd, so the dashboard can
@@ -94,6 +130,10 @@ static void NBIncrementStat(NSString *key) {
         notify_get_state(stoken, &cur);
         notify_set_state(stoken, cur + 1);
     }
+
+    // سجل الأحداث: سجّل كل تفعيل hook تلقائيًا عبر الحلقة
+    uint16_t evCode = NBEventCodeForKey(key);
+    if (evCode) NBLogEvent(evCode, 0);
 
     dispatch_async(nbStatsQueue, ^{
         if (!stats) stats = [NSMutableDictionary dictionary];
@@ -645,4 +685,7 @@ static OSStatus hook_SecItemCopyMatching(CFDictionaryRef query, CFTypeRef *resul
             CFNotificationSuspensionBehaviorCoalesce
         );
     }
+
+    // حدث إقلاع التويك — أول سطر في سجل الأحداث
+    NBLogEvent(32, 0);
 }
