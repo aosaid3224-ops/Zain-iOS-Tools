@@ -12,6 +12,7 @@
 #import <AdSupport/AdSupport.h>
 #import <Security/Security.h>
 #include <dlfcn.h>
+#include <notify.h>
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MARK: - sysctl Constants
@@ -83,6 +84,17 @@ static NSMutableDictionary *stats = nil;
 static dispatch_queue_t nbStatsQueue = nil;
 
 static void NBIncrementStat(NSString *key) {
+    // Mirror to notify state immediately — CFPreferences plist writes from a
+    // sandboxed app are silently dropped by cfprefsd, so the dashboard can
+    // only see counters through the notify channel.
+    int stoken = 0;
+    NSString *sname = [@"com.aosaid.nsb.stat." stringByAppendingString:key];
+    if (notify_register_check(sname.UTF8String, &stoken) == NOTIFY_STATUS_OK) {
+        uint64_t cur = 0;
+        notify_get_state(stoken, &cur);
+        notify_set_state(stoken, cur + 1);
+    }
+
     dispatch_async(nbStatsQueue, ^{
         if (!stats) stats = [NSMutableDictionary dictionary];
         @synchronized(stats) {
@@ -169,6 +181,14 @@ static void CFPreferencesWriteDictFlat(NSDictionary *dict, CFStringRef domain) {
 // cfprefsd silently DROPS writes to foreign domains from sandboxed apps,
 // which is why no heartbeat file ever appeared. This channel cannot fail.
 static void postDarwinHeartbeat(void) {
+    // Payload channel: notify_set_state crosses sandbox boundaries (uint64).
+    // Packed: [timestamp(32) | pid(32)] — the dashboard decodes both.
+    int token = 0;
+    notify_register_check("com.aosaid.nsb.alive", &token);
+    uint32_t tsec = (uint32_t)[[NSDate date] timeIntervalSince1970];
+    uint32_t pid  = (uint32_t)[[NSProcessInfo processInfo] processIdentifier];
+    notify_set_state(token, ((uint64_t)tsec << 32) | (uint64_t)pid);
+
     CFNotificationCenterPostNotification(
         CFNotificationCenterGetDarwinNotifyCenter(),
         CFSTR("com.aosaid.nsb.alive"),
