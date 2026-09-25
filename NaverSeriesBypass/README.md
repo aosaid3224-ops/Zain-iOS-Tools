@@ -1,4 +1,4 @@
-# Naver Series Bypass v3.3.8
+# Naver Series Bypass v3.3.9
 
 ## Advanced Device Ban Bypass with Built-in Diagnostics & Arabic UI
 
@@ -36,7 +36,7 @@ The UI shows:
 make clean && make package
 
 # Install on device
-scp packages/com.aosaid.naverseriesbypass_3.3.8_iphoneos-arm64.deb root@DEVICE_IP:/tmp/
+scp packages/com.aosaid.naverseriesbypass_3.3.9_iphoneos-arm64.deb root@DEVICE_IP:/tmp/
 ssh root@DEVICE_IP "dpkg -i /tmp/*.deb && killall -9 SpringBoard"
 ```
 
@@ -58,12 +58,12 @@ View logs via:
 - Content loads normally
 - No "안전조치" popup
 - Status code 200 in logs
-- UI shows: ✅ التطبيق يعمل
+- UI shows: التطبيق يعمل
 
 **If bypass fails:**
 - Check logs for `[ALERT] BLOCKED! Server returned 403/401`
 - Check logs for `[ALERT] BAN MESSAGE DETECTED IN RESPONSE!`
-- UI shows: ❌ التطبيق محظور (خادمي)
+- UI shows: التطبيق محظور (خادمي)
 - This means the ban is **server-side** based on non-spoofable identifiers
 
 ### Troubleshooting

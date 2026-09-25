@@ -56,8 +56,8 @@ static NSString *NBReadMirroredString(const char *slot) {
 static BOOL NBToggle(NSString *key) {
     CFPropertyListRef v = CFPreferencesCopyAppValue((__bridge CFStringRef)key,
                                                      CFSTR("com.aosaid.naverseriesbypass"));
-    if (!v) return YES;   // الافتراضي من Root.plist = مفعّل
-    BOOL on = CFBooleanGetTypeID() == CFGetTypeID(v) ? CFBooleanGetValue((CFBooleanRef)v) : YES;
+    if (!v) return NO;   // فشل القراءة لا يتحول إلى حالة مفعّلة مضللة
+    BOOL on = CFBooleanGetTypeID() == CFGetTypeID(v) ? CFBooleanGetValue((CFBooleanRef)v) : NO;
     CFRelease(v);
     return on;
 }
@@ -354,7 +354,7 @@ static void NBAliveCallback(CFNotificationCenterRef center, void *observer, CFNo
             status.text = [NSString stringWithFormat:@"محقن في: %@ (PID: %u) — التويك يعمل", injectedProcess, gAlivePID];
         } else if (!hasInjectionMarker) {
             status.text = @"غير محقن — لم تصل بصمة من Naver Series";
-            status.text = @"❌ غير محقن — افتح Naver Series أولاً";
+            status.text = @"غير محقن — افتح Naver Series أولًا";
         } else if (launchRecentlyStopped) {
             status.text = @"فشل/انقطع — توقف heartbeat بعد فتح Naver Series";
             status.text = [NSString stringWithFormat:@"آخر نشاط قبل %.0f ثانية — أعد فتح Naver Series", [[NSDate date] timeIntervalSince1970] - heartbeatTimestamp];
