@@ -119,6 +119,25 @@ static uint16_t NBEventCodeForKey(NSString *key) {
     return (uint16_t)[map[key] unsignedShortValue];
 }
 
+// ناقل قيم الهوية المموّهة إلى الـ Dashboard — 8 بايت/خانة، خانتان = 16 حرف.
+// بلا تكرار مصدر: القيمة تأتي من ثوابت التويك نفسها.
+static void NBMirrorString(const char *slot, NSString *value) {
+    const char *u = value.UTF8String;
+    size_t len = u ? strlen(u) : 0;
+    for (int part = 0; part < 2; part++) {
+        char name[64];
+        snprintf(name, sizeof(name), "com.aosaid.nsb.meta.%s.%d", slot, part);
+        int tok = 0;
+        notify_register_check(name, &tok);
+        uint64_t packed = 0;
+        for (int i = 0; i < 8; i++) {
+            size_t idx = (size_t)part * 8 + (size_t)i;
+            if (idx < len) packed |= ((uint64_t)(unsigned char)u[idx]) << (8 * i);
+        }
+        notify_set_state(tok, packed);
+    }
+}
+
 static void NBIncrementStat(NSString *key) {
     // Mirror to notify state immediately — CFPreferences plist writes from a
     // sandboxed app are silently dropped by cfprefsd, so the dashboard can
@@ -131,9 +150,19 @@ static void NBIncrementStat(NSString *key) {
         notify_set_state(stoken, cur + 1);
     }
 
-    // سجل الأحداث: سجّل كل تفعيل hook تلقائيًا عبر الحلقة
-    uint16_t evCode = NBEventCodeForKey(key);
-    if (evCode) NBLogEvent(evCode, 0);
+    // سجل الأحداث: مفاتيح الضجيج العالي تُعدّ فقط — الحلقة للأحداث المهمة
+    static NSSet *quietKeys = nil;
+    static dispatch_once_t qOnce;
+    dispatch_once(&qOnce, ^{
+        quietKeys = [NSSet setWithArray:@[@"idiom", @"systemName", @"localizedModel",
+            @"screenBounds", @"screenScale", @"nativeScale", @"nativeBounds",
+            @"processorCount", @"activeProcessorCount", @"physicalMemory",
+            @"osVersionString", @"osVersion", @"tracking"]];
+    });
+    if (![quietKeys containsObject:key]) {
+        uint16_t evCode = NBEventCodeForKey(key);
+        if (evCode) NBLogEvent(evCode, 0);
+    }
 
     dispatch_async(nbStatsQueue, ^{
         if (!stats) stats = [NSMutableDictionary dictionary];
@@ -685,6 +714,10 @@ static OSStatus hook_SecItemCopyMatching(CFDictionaryRef query, CFTypeRef *resul
             CFNotificationSuspensionBehaviorCoalesce
         );
     }
+
+    // نقل هوية التمويه للعرض الصادق في السجل
+    NBMirrorString("model", kSpoofModel);
+    NBMirrorString("os", kSpoofSystemVersion);
 
     // حدث إقلاع التويك — أول سطر في سجل الأحداث
     NBLogEvent(32, 0);
