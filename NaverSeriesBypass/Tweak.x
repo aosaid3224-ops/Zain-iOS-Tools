@@ -1,5 +1,5 @@
 /*
- * NaverSeriesBypass v3.3.7 - live ring log and honest counters
+ * NaverSeriesBypass v3.3.8 - complete scrollable log and full counter merge
  * Fixed: %hookf replaced with MSHookFunction, delayed keychain cleanup,
  *        removed UIKit from filter, fixed buffer overflows
  */
@@ -274,7 +274,7 @@ static void writeHeartbeat() {
             @"processName": [[NSProcessInfo processInfo] processName] ?: @"unknown",
             @"pid": @([[NSProcessInfo processInfo] processIdentifier]),
             @"active": @(isEnabled),
-            @"version": @"3.3.7",
+            @"version": @"3.3.8",
         };
         CFPreferencesWriteDictFlat(heartbeat, CFSTR("com.aosaid.naverseriesbypass.heartbeat"));
     } @catch (NSException *e) {

@@ -308,10 +308,13 @@ static void NBAliveCallback(CFNotificationCenterRef center, void *observer, CFNo
 
         // Merge live counters mirrored through notify state (sandbox-proof).
         NSMutableDictionary *mergedStats = savedStats ? [savedStats mutableCopy] : [NSMutableDictionary dictionary];
-        for (NSString *key in @[@"requests", @"blocked", @"spoofed", @"jbBypass", @"neutralized",
-                                @"popups", @"uname", @"model", @"systemVersion", @"deviceName",
-                                @"idfv", @"idfa", @"keychain_add_blocked", @"keychain_update_blocked",
-                                @"header_ua", @"header_device", @"loaded", @"processBundle"]) {
+        for (NSString *key in @[@"uname", @"sysctl", @"idfa", @"tracking", @"idfv", @"model",
+                                @"systemVersion", @"deviceName", @"localizedModel", @"systemName",
+                                @"idiom", @"osVersionString", @"osVersion", @"processorCount",
+                                @"activeProcessorCount", @"physicalMemory", @"screenBounds", @"screenScale",
+                                @"nativeScale", @"nativeBounds", @"header_device", @"header_adid", @"header_ua",
+                                @"header_model", @"header_os", @"dataTask", @"keychain_add_blocked",
+                                @"keychain_update_blocked", @"keychain_copy_blocked", @"loaded", @"processBundle"]) {
             NSInteger live = NBReadStat(key);
             if (live > 0) {
                 NSNumber *cur = mergedStats[key] ?: @0;
@@ -400,9 +403,8 @@ static void NBAliveCallback(CFNotificationCenterRef center, void *observer, CFNo
         stats.text = [stats.text stringByAppendingFormat:@"\nالجهاز الحقيقي: %@ · iOS %@\nيواجهه التطبيق: قيم مموّهة (uname/sysctl/IDFA/Keychain)",
                        NBRealMachine(), [UIDevice currentDevice].systemVersion];
 
-        // Logs
-        NSArray *last = lines.count > 15 ? [lines subarrayWithRange:NSMakeRange(lines.count - 15, 15)] : lines;
-        logView.text = [last componentsJoinedByString:@"\n"];
+        // Logs: preserve the statistical header and all available ring events.
+        logView.text = log;
         if (logView.text.length > 0) {
             [logView scrollRangeToVisible:NSMakeRange(logView.text.length - 1, 1)];
         }
@@ -461,7 +463,7 @@ static void NBAliveCallback(CFNotificationCenterRef center, void *observer, CFNo
     NSString *spoofModel = NBReadMirroredString("model");
     NSString *spoofOS = NBReadMirroredString("os");
     NSInteger unameN = NBReadStat(@"uname"), sysctlN = NBReadStat(@"sysctl");
-    NSInteger kcN = NBReadStat(@"keychain_add_blocked") + NBReadStat(@"keychain_update_blocked");
+    NSInteger kcN = NBReadStat(@"keychain_add_blocked") + NBReadStat(@"keychain_update_blocked") + NBReadStat(@"keychain_copy_blocked");
     BOOL jbHidden = (unameN > 0 || sysctlN > 0);
 
     NSMutableArray *full = [NSMutableArray array];
@@ -479,7 +481,7 @@ static void NBAliveCallback(CFNotificationCenterRef center, void *observer, CFNo
                       (long)NBReadStat(@"model"), (long)NBReadStat(@"systemVersion")]];
     [full addObject:[NSString stringWithFormat:@"IDFA:%ld · IDFV:%ld · Keychain محظور:%ld · Headers:%ld · شبكة:%ld",
                       (long)NBReadStat(@"idfa"), (long)NBReadStat(@"idfv"), (long)kcN,
-                      (long)(NBReadStat(@"header_ua") + NBReadStat(@"header_device")),
+                      (long)(NBReadStat(@"header_ua") + NBReadStat(@"header_device") + NBReadStat(@"header_adid") + NBReadStat(@"header_model") + NBReadStat(@"header_os")),
                       (long)NBReadStat(@"dataTask")]];
     [full addObject:@"═══ الأحداث (الأحدث أولًا) ═══"];
     [full addObjectsFromArray:lines];

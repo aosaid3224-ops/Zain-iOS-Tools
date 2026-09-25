@@ -37,7 +37,7 @@ chmod 644 /var/mobile/Library/Preferences/com.aosaid.naverseriesbypass.plist
 chown mobile:mobile /var/mobile/Library/Preferences/com.aosaid.naverseriesbypass.plist
 
 echo "========================================"
-echo "Naver Series Bypass v3.3.7 installed!"
+echo "Naver Series Bypass v3.3.8 installed!"
 echo "========================================"
 echo ""
 echo "Settings: Settings -> Naver Series Bypass"
