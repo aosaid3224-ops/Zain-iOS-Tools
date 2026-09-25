@@ -330,10 +330,16 @@ static void NBAliveCallback(CFNotificationCenterRef center, void *observer, CFNo
 
         // Use persistent counters written by the tweak; fall back to old logs once.
         NSArray *lines = log.length ? [log componentsSeparatedByString:@"\n"] : @[];
-        NSInteger req = [savedStats[@"requests"] integerValue];
-        NSInteger blk = [savedStats[@"blocked"] integerValue];
-        NSInteger spf = [savedStats[@"spoofed"] integerValue];
-        NSInteger jb = [savedStats[@"jbBypass"] integerValue];
+        // مفاتيح حقيقية فقط — لا أصفار وهمية (الـ Tweak يكتب هذه المفاتيح فعليًا)
+        NSInteger req = [savedStats[@"dataTask"] integerValue];
+        NSInteger blk = [savedStats[@"keychain_add_blocked"] integerValue] +
+                        [savedStats[@"keychain_update_blocked"] integerValue] +
+                        [savedStats[@"keychain_copy_blocked"] integerValue];
+        NSInteger spf = [savedStats[@"uname"] integerValue] + [savedStats[@"sysctl"] integerValue] +
+                        [savedStats[@"model"] integerValue] + [savedStats[@"systemVersion"] integerValue] +
+                        [savedStats[@"idfa"] integerValue] + [savedStats[@"idfv"] integerValue] +
+                        [savedStats[@"header_ua"] integerValue] + [savedStats[@"header_device"] integerValue];
+        NSInteger jb = [savedStats[@"uname"] integerValue] + [savedStats[@"sysctl"] integerValue];
         NSInteger neutralized = [savedStats[@"neutralized"] integerValue];
         NSInteger popups = [savedStats[@"popups"] integerValue];
 
@@ -385,10 +391,50 @@ static void NBAliveCallback(CFNotificationCenterRef center, void *observer, CFNo
 }
 
 - (NSString *)readLog {
-    if (![[NSFileManager defaultManager] fileExistsAtPath:LOG_FILE]) return @"";
-    NSError *e = nil;
-    NSString *s = [NSString stringWithContentsOfFile:LOG_FILE encoding:NSUTF8StringEncoding error:&e];
-    return e ? @"" : s;
+    // سجل الأحداث الحقيقي: حلقة notify_set_state (32 خانة) — القناة الوحيدة
+    // التي تعبر sandbox التطبيق. كل حدث = [timestamp:32|code:16|detail:16].
+    int countTok = 0;
+    if (notify_register_check("com.aosaid.nsb.log.count", &countTok) != NOTIFY_STATUS_OK)
+        return @"السجل غير متاح";
+    uint64_t count = 0;
+    if (notify_get_state(countTok, &count) != NOTIFY_STATUS_OK || count == 0)
+        return @"لا توجد أحداث بعد — افتح Naver Series";
+
+    NSDictionary *names = @{
+        @1:@"uname مموّه", @2:@"sysctl مموّه", @3:@"IDFA مموّه", @4:@"Tracking معطّل",
+        @5:@"IDFV مموّه", @6:@"Model مموّه", @7:@"systemVersion مموّه", @8:@"deviceName مموّه",
+        @9:@"localizedModel", @10:@"systemName", @11:@"idiom", @12:@"osVersionString",
+        @13:@"osVersion", @14:@"processorCount", @15:@"activeProcessorCount", @16:@"physicalMemory",
+        @17:@"screenBounds", @18:@"screenScale", @19:@"nativeScale", @20:@"nativeBounds",
+        @21:@"header Device معدّل", @22:@"header ADID معدّل", @23:@"header UA معدّل",
+        @24:@"header Model معدّل", @25:@"header OS معدّل", @26:@"طلب شبكة مراقب",
+        @27:@"Keychain Add محظور", @28:@"Keychain Update محظور", @29:@"Keychain Copy محظور",
+        @30:@"تنظيف Keychain", @31:@"تفضيلات محدّثة", @32:@"إقلاع التويك"
+    };
+    static NSDateFormatter *df = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        df = [NSDateFormatter new];
+        df.dateFormat = @"HH:mm:ss";
+    });
+
+    NSMutableArray *lines = [NSMutableArray array];
+    uint64_t oldest = count > 32 ? count - 31 : 1;
+    for (uint64_t n = count; n >= oldest; n--) {
+        char nm[64];
+        snprintf(nm, sizeof(nm), "com.aosaid.nsb.log.%llu", (unsigned long long)(n % 32));
+        int tok = 0;
+        if (notify_register_check(nm, &tok) != NOTIFY_STATUS_OK) continue;
+        uint64_t ev = 0;
+        if (notify_get_state(tok, &ev) != NOTIFY_STATUS_OK || ev == 0) continue;
+        uint32_t tsec = (uint32_t)(ev >> 32);
+        uint16_t code = (uint16_t)((ev >> 16) & 0xffff);
+        NSString *label = names[@(code)] ?: [NSString stringWithFormat:@"حدث %u", code];
+        [lines addObject:[NSString stringWithFormat:@"%@ — %@",
+                          [df stringFromDate:[NSDate dateWithTimeIntervalSince1970:tsec]], label]];
+        if (n == 1) break;   // حارس uint64
+    }
+    return [lines componentsJoinedByString:@"\n"];
 }
 
 - (void)copyLogs {
