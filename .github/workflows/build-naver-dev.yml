@@ -30,13 +30,6 @@ jobs:
           test -f "$THEOS/makefiles/common.mk"
           test -f "$THEOS/makefiles/package/deb.mk"
 
-      - name: Checkout development repository
-        uses: actions/checkout@v4
-        with:
-          repository: aosaid3224-ops/repo-dev
-          token: ${{ secrets.PAT }}
-          path: repo-dev
-
       - name: Build NaverSeriesBypass
         run: |
           cd NaverSeriesBypass
@@ -50,22 +43,6 @@ jobs:
           test "$(dpkg-deb -f "$DEB_FILE" Version)" = "$NAVER_VERSION"
           test "$(dpkg-deb -f "$DEB_FILE" Architecture)" = "iphoneos-arm64"
 
-      - name: Publish verified package to development repository
-        run: |
-          set -euo pipefail
-          mkdir -p repo-dev/pool/main/iphoneos-arm64
-          rm -f repo-dev/pool/main/iphoneos-arm64/com.aosaid.naverseriesbypass_*.deb
-          cp NaverSeriesBypass/packages/*.deb repo-dev/pool/main/iphoneos-arm64/
-          mkdir -p repo-dev/scripts
-          cp scripts/generate-repo.py repo-dev/scripts/
-          python3 repo-dev/scripts/generate-repo.py repo-dev --dev
-          cd repo-dev
-          git config user.email 'ci@github.com'
-          git config user.name 'GitHub CI'
-          git add -A
-          git commit -m "Publish NaverSeriesBypass ${NAVER_VERSION} to development repo" || true
-          git push origin main
-
       - name: Upload verified package
         uses: actions/upload-artifact@v4
         with:
@@ -76,6 +53,6 @@ jobs:
       - name: Summary
         if: always()
         run: |
-          echo "Verified artifact created and published to repo-dev"
+          echo "Verified artifact created; publish to repo-dev follows after artifact verification"
           echo "Package: com.aosaid.naverseriesbypass"
           echo "Version: $NAVER_VERSION"
