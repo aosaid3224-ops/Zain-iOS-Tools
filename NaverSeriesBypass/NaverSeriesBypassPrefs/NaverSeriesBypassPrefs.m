@@ -294,7 +294,6 @@ static void NBAliveCallback(CFNotificationCenterRef center, void *observer, CFNo
         UITextView *logView = (UITextView *)[overlay viewWithTag:10003];
 
         NSString *log = [self readLog];
-        NSDictionary *prefs = [NSDictionary dictionaryWithContentsOfFile:PREFS_PATH];
         NSDictionary *savedStats = [NSDictionary dictionaryWithContentsOfFile:STATS_PATH];
         BOOL enabled = NBToggle(@"Enabled");   // طازج من cfprefsd — لا افتراض مضلل
 
