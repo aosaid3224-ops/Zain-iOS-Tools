@@ -1,4 +1,4 @@
-# Naver Series Bypass v3.3.9
+# Naver Series Bypass v3.3.10
 
 ## Advanced Device Ban Bypass with Built-in Diagnostics & Arabic UI
 
@@ -36,7 +36,7 @@ The UI shows:
 make clean && make package
 
 # Install on device
-scp packages/com.aosaid.naverseriesbypass_3.3.9_iphoneos-arm64.deb root@DEVICE_IP:/tmp/
+scp packages/com.aosaid.naverseriesbypass_3.3.10_iphoneos-arm64.deb root@DEVICE_IP:/tmp/
 ssh root@DEVICE_IP "dpkg -i /tmp/*.deb && killall -9 SpringBoard"
 ```
 

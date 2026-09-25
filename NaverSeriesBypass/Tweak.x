@@ -1,5 +1,5 @@
 /*
- * NaverSeriesBypass v3.3.9 - safe toggle reads and formal dashboard status
+ * NaverSeriesBypass v3.3.10 - updated developer attribution
  * Fixed: %hookf replaced with MSHookFunction, delayed keychain cleanup,
  *        removed UIKit from filter, fixed buffer overflows
  */
@@ -274,7 +274,7 @@ static void writeHeartbeat() {
             @"processName": [[NSProcessInfo processInfo] processName] ?: @"unknown",
             @"pid": @([[NSProcessInfo processInfo] processIdentifier]),
             @"active": @(isEnabled),
-            @"version": @"3.3.9",
+            @"version": @"3.3.10",
         };
         CFPreferencesWriteDictFlat(heartbeat, CFSTR("com.aosaid.naverseriesbypass.heartbeat"));
     } @catch (NSException *e) {
