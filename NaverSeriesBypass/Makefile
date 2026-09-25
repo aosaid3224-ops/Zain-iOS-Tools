@@ -17,4 +17,4 @@ include $(THEOS_MAKE_PATH)/tweak.mk
 include $(THEOS_MAKE_PATH)/aggregate.mk
 
 after-install::
-	install.exec "killall -9 SpringBoard; killall -9 NaverBooks; killall -9 Series"
+	install.exec "killall -9 SpringBoard; killall -9 NaverSeries; killall -9 Preferences"
