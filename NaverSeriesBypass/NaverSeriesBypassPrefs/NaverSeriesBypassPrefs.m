@@ -84,23 +84,11 @@ static UIWindow *NBActiveWindow(void) {
     return nil;
 }
 
-// CONTRACT FIX: read via cfprefsd (same daemon the tweak writes through)
-// instead of raw file access — sees values even before they hit disk.
 // LIVE SIGNAL receiver: stamps every incoming heartbeat from the tweak.
 static NSTimeInterval gLastAliveSignal = 0;
 static void NBAliveCallback(CFNotificationCenterRef center, void *observer, CFNotificationName name, const void *object, CFDictionaryRef userInfo) {
     (void)center; (void)observer; (void)name; (void)object; (void)userInfo;
     gLastAliveSignal = [[NSDate date] timeIntervalSince1970];
-}
-
-static NSDictionary *NBReadPrefsDomain(NSString *domain) {
-    CFStringRef d = (__bridge CFStringRef)domain;
-    CFArrayRef keys = CFPreferencesCopyKeyList(d, kCFPreferencesCurrentUser, kCFPreferencesAnyHost);
-    if (!keys) return nil;
-    CFDictionaryRef dict = CFPreferencesCopyMultiple(keys, d, kCFPreferencesCurrentUser, kCFPreferencesAnyHost);
-    CFRelease(keys);
-    if (!dict) return nil;
-    return (__bridge_transfer NSDictionary *)dict;
 }
 
 @interface NaverSeriesBypassPrefsListController : PSListController
