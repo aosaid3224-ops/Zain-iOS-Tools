@@ -1,5 +1,5 @@
 /*
- * NaverSeriesBypass v3.3.6 - notify payload heartbeat and live counters
+ * NaverSeriesBypass v3.3.7 - live ring log and honest counters
  * Fixed: %hookf replaced with MSHookFunction, delayed keychain cleanup,
  *        removed UIKit from filter, fixed buffer overflows
  */
@@ -245,7 +245,7 @@ static void writeHeartbeat() {
             @"processName": [[NSProcessInfo processInfo] processName] ?: @"unknown",
             @"pid": @([[NSProcessInfo processInfo] processIdentifier]),
             @"active": @(isEnabled),
-            @"version": @"3.3.6",
+            @"version": @"3.3.7",
         };
         CFPreferencesWriteDictFlat(heartbeat, CFSTR("com.aosaid.naverseriesbypass.heartbeat"));
     } @catch (NSException *e) {

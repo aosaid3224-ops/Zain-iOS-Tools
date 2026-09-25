@@ -349,7 +349,8 @@ static void NBAliveCallback(CFNotificationCenterRef center, void *observer, CFNo
         NSInteger idfvSpoofs = [savedStats[@"idfv"] integerValue];
         NSInteger idfaSpoofs = [savedStats[@"idfa"] integerValue];
         NSInteger keychainBlocked = [savedStats[@"keychain_add_blocked"] integerValue] + 
-                                     [savedStats[@"keychain_update_blocked"] integerValue];
+                                     [savedStats[@"keychain_update_blocked"] integerValue] +
+                                     [savedStats[@"keychain_copy_blocked"] integerValue];
         NSInteger headerSpoofs = [savedStats[@"header_ua"] integerValue] + [savedStats[@"header_device"] integerValue];
 
         if (!savedStats.count) {
@@ -458,6 +459,17 @@ static void NBAliveCallback(CFNotificationCenterRef center, void *observer, CFNo
         [a addAction:[UIAlertAction actionWithTitle:@"الغاء" style:UIAlertActionStyleCancel handler:nil]];
         [a addAction:[UIAlertAction actionWithTitle:@"مسح" style:UIAlertActionStyleDestructive handler:^(UIAlertAction *act) {
             [[NSFileManager defaultManager] removeItemAtPath:LOG_FILE error:nil];
+            int countTok = 0;
+            if (notify_register_check("com.aosaid.nsb.log.count", &countTok) == NOTIFY_STATUS_OK) {
+                notify_set_state(countTok, 0);
+                for (NSUInteger i = 0; i < 32; i++) {
+                    char name[64];
+                    snprintf(name, sizeof(name), "com.aosaid.nsb.log.%lu", (unsigned long)i);
+                    int slotTok = 0;
+                    if (notify_register_check(name, &slotTok) == NOTIFY_STATUS_OK)
+                        notify_set_state(slotTok, 0);
+                }
+            }
             [self refreshDashboard];
         }]];
         [self presentViewController:a animated:YES completion:nil];
