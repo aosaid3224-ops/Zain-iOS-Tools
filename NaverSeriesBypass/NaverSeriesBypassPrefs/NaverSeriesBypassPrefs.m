@@ -33,6 +33,24 @@ static NSInteger NBReadStat(NSString *key) {
 
 // Process name resolved from the tweak's OWN filter plist — injection only
 // happens where the filter says, so the name is known by construction.
+static NSString *NBReadMirroredString(const char *slot) {
+    NSMutableString *out = [NSMutableString string];
+    for (int part = 0; part < 2; part++) {
+        char name[64];
+        snprintf(name, sizeof(name), "com.aosaid.nsb.meta.%s.%d", slot, part);
+        int tok = 0;
+        if (notify_register_check(name, &tok) != NOTIFY_STATUS_OK) break;
+        uint64_t packed = 0;
+        if (notify_get_state(tok, &packed) != NOTIFY_STATUS_OK || packed == 0) break;
+        for (int i = 0; i < 8; i++) {
+            unsigned char c = (unsigned char)((packed >> (8 * i)) & 0xff);
+            if (c == 0) break;
+            [out appendFormat:@"%c", c];
+        }
+    }
+    return out;
+}
+
 static NSString *NBTargetProcessName(void) {
     static NSString *cached;
     if (cached) return cached;
@@ -182,6 +200,9 @@ static void NBAliveCallback(CFNotificationCenterRef center, void *observer, CFNo
     logView.textColor = [UIColor colorWithRed:0.4 green:0.8 blue:0.4 alpha:1.0];
     logView.font = [UIFont fontWithName:@"Courier" size:9];
     logView.editable = NO;
+    logView.scrollEnabled = YES;
+    logView.alwaysBounceVertical = YES;
+    logView.showsVerticalScrollIndicator = YES;
     logView.textAlignment = NSTextAlignmentRight;
     logView.tag = 10003;
     logView.text = @"لا يوجد سجل بعد...";
@@ -435,7 +456,34 @@ static void NBAliveCallback(CFNotificationCenterRef center, void *observer, CFNo
                           [df stringFromDate:[NSDate dateWithTimeIntervalSince1970:tsec]], label]];
         if (n == 1) break;   // حارس uint64
     }
-    return [lines componentsJoinedByString:@"\n"];
+
+    // ═══ الترويسة: الهوية الحقيقية مقابل المموّهة + حالة الجلبريك + المفاتيح ═══
+    NSString *spoofModel = NBReadMirroredString("model");
+    NSString *spoofOS = NBReadMirroredString("os");
+    NSInteger unameN = NBReadStat(@"uname"), sysctlN = NBReadStat(@"sysctl");
+    NSInteger kcN = NBReadStat(@"keychain_add_blocked") + NBReadStat(@"keychain_update_blocked");
+    BOOL jbHidden = (unameN > 0 || sysctlN > 0);
+
+    NSMutableArray *full = [NSMutableArray array];
+    [full addObject:@"═══ هوية الجهاز ═══"];
+    [full addObject:[NSString stringWithFormat:@"الحقيقي: %@ · iOS %@",
+                      NBRealMachine(), [UIDevice currentDevice].systemVersion]];
+    [full addObject:[NSString stringWithFormat:@"يقرأه التطبيق: %@ · iOS %@",
+                      spoofModel.length ? spoofModel : @"—",
+                      spoofOS.length ? spoofOS : @"—"]];
+    [full addObject:[NSString stringWithFormat:@"الجلبريك: %@",
+                      jbHidden ? @"مخفي ✅ (uname/sysctl مموّهان)" : @"⚠️ لا يوجد تمويه بعد"]];
+    [full addObject:@"═══ المفاتيح ═══"];
+    [full addObject:[NSString stringWithFormat:@"uname:%ld%@ · sysctl:%ld%@ · model:%ld · systemVersion:%ld",
+                      (long)unameN, unameN ? @" ✅" : @"", (long)sysctlN, sysctlN ? @" ✅" : @"",
+                      (long)NBReadStat(@"model"), (long)NBReadStat(@"systemVersion")]];
+    [full addObject:[NSString stringWithFormat:@"IDFA:%ld · IDFV:%ld · Keychain محظور:%ld · Headers:%ld · شبكة:%ld",
+                      (long)NBReadStat(@"idfa"), (long)NBReadStat(@"idfv"), (long)kcN,
+                      (long)(NBReadStat(@"header_ua") + NBReadStat(@"header_device")),
+                      (long)NBReadStat(@"dataTask")]];
+    [full addObject:@"═══ الأحداث (الأحدث أولًا) ═══"];
+    [full addObjectsFromArray:lines];
+    return [full componentsJoinedByString:@"\n"];
 }
 
 - (void)copyLogs {
