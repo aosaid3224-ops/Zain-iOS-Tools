@@ -25,6 +25,13 @@ static UIWindow *NBActiveWindow(void) {
 
 // CONTRACT FIX: read via cfprefsd (same daemon the tweak writes through)
 // instead of raw file access — sees values even before they hit disk.
+// LIVE SIGNAL receiver: stamps every incoming heartbeat from the tweak.
+static NSTimeInterval gLastAliveSignal = 0;
+static void NBAliveCallback(CFNotificationCenterRef center, void *observer, CFNotificationName name, const void *object, CFDictionaryRef userInfo) {
+    (void)center; (void)observer; (void)name; (void)object; (void)userInfo;
+    gLastAliveSignal = [[NSDate date] timeIntervalSince1970];
+}
+
 static NSDictionary *NBReadPrefsDomain(NSString *domain) {
     CFStringRef d = (__bridge CFStringRef)domain;
     CFArrayRef keys = CFPreferencesCopyKeyList(d, kCFPreferencesCurrentUser, kCFPreferencesAnyHost);
@@ -44,6 +51,8 @@ static NSDictionary *NBReadPrefsDomain(NSString *domain) {
 - (void)viewWillAppear:(BOOL)animated {
     [super viewWillAppear:animated];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationBecameActive:) name:UIApplicationDidBecomeActiveNotification object:nil];
+    CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, NBAliveCallback,
+        CFSTR("com.aosaid.nsb.alive"), NULL, CFNotificationSuspensionBehaviorDeliverImmediately);
 }
 
 - (void)applicationBecameActive:(NSNotification *)notification {
@@ -56,6 +65,7 @@ static NSDictionary *NBReadPrefsDomain(NSString *domain) {
     [self.dashboardTimer invalidate];
     self.dashboardTimer = nil;
     [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationDidBecomeActiveNotification object:nil];
+    CFNotificationCenterRemoveObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, CFSTR("com.aosaid.nsb.alive"), NULL);
 }
 
 - (void)dealloc {
@@ -227,8 +237,12 @@ static NSDictionary *NBReadPrefsDomain(NSString *domain) {
             savedStats = liveStats;
         }
         BOOL hasInjectionMarker = savedStats[@"loaded"] != nil || savedStats[@"processBundle"] != nil;
-        // REAL injection status from heartbeat file
-        BOOL live = isInjected;
+        // LIVE Darwin signal: if the tweak posted within the last 15s, it IS
+        // injected and running right now - regardless of any file/plist state.
+        NSTimeInterval aliveAge = [[NSDate date] timeIntervalSince1970] - gLastAliveSignal;
+        BOOL liveSignal = (gLastAliveSignal > 0.0 && aliveAge < 15.0);
+        // REAL injection status: heartbeat file OR live Darwin signal
+        BOOL live = isInjected || liveSignal;
         BOOL launchRecentlyStopped = !isInjected && heartbeatTimestamp > 0;
 
         BOOL blocked = [log containsString:@"BLOCKED"] || [log containsString:@"BAN"];
