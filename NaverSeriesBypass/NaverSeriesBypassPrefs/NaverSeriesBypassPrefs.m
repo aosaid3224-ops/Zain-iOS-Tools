@@ -348,10 +348,10 @@ static void NBAliveCallback(CFNotificationCenterRef center, void *observer, CFNo
             status.textColor = [UIColor colorWithRed:0.9 green:0.35 blue:0.25 alpha:1.0];
         } else if (blocked) {
             status.text = @"مفعّل — حظر مكتشف من الخادم";
-            status.text = @"⚠️ حظر مكتشف من الخادم";
+            status.text = @"تنبيه: رصد الخادم محاولة حظر";
         } else if (live) {
             status.text = @"مفعّل — Naver Series مفتوح والتويك يعمل الآن";
-            status.text = [NSString stringWithFormat:@"✅ محقن في: %@ (PID:%u) — يعمل الآن", injectedProcess, gAlivePID];
+            status.text = [NSString stringWithFormat:@"محقن في: %@ (PID: %u) — التويك يعمل", injectedProcess, gAlivePID];
         } else if (!hasInjectionMarker) {
             status.text = @"غير محقن — لم تصل بصمة من Naver Series";
             status.text = @"❌ غير محقن — افتح Naver Series أولاً";
@@ -407,7 +407,7 @@ static void NBAliveCallback(CFNotificationCenterRef center, void *observer, CFNo
             (long)req, (long)blk, (long)spf,
             (long)deviceSpoofs, (long)idfvSpoofs, (long)idfaSpoofs,
             (long)keychainBlocked, (long)headerSpoofs, (long)jb,
-            hasActivity ? @"✅ النشاط مسجل — التويك يعمل" : @"⏳ لا يوجد نشاط — افتح Naver Series",
+            hasActivity ? @"يوجد نشاط مسجل — التويك يعمل" : @"لا يوجد نشاط — افتح Naver Series أولًا",
             process, lastEvent];
 
         // الخام والدقيق: الجهاز الفعلي مقابل ما يواجهه التطبيق فعليًا
