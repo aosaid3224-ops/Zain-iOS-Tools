@@ -1,0 +1,62 @@
+name: Build IPAInstallerPro and Publish Artifact
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  THEOS: ${{ github.workspace }}/theos
+  SPIDER_VERSION: 3.3.10
+
+jobs:
+  build-spider:
+    name: Build IPAInstallerPro (Dev)
+    runs-on: macos-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install dependencies
+        run: brew install dpkg ldid
+
+      - name: Install Theos
+        run: |
+          git clone --recursive --depth 1 https://github.com/theos/theos.git "$THEOS"
+          test -f "$THEOS/makefiles/common.mk"
+          test -f "$THEOS/makefiles/package/deb.mk"
+
+      - name: Build and validate IPAInstallerPro
+        run: |
+          cd IPAInstallerPro
+          chmod +x layout/DEBIAN/postinst layout/DEBIAN/prerm 2>/dev/null || true
+          make clean
+          make package THEOS_PACKAGE_SCHEME=rootless FINALPACKAGE=1
+          DEB_FILE=$(ls -t packages/*.deb | head -1)
+          test -n "$DEB_FILE"
+          dpkg-deb -f "$DEB_FILE" Package Version Architecture
+          test "$(dpkg-deb -f "$DEB_FILE" Package)" = "com.aosaid.ipainstallerpro"
+          test "$(dpkg-deb -f "$DEB_FILE" Version)" = "$SPIDER_VERSION"
+          test "$(dpkg-deb -f "$DEB_FILE" Architecture)" = "iphoneos-arm64"
+          dpkg-deb -c "$DEB_FILE" | grep -q 'Applications/Spider.app/Spider'
+          dpkg-deb -c "$DEB_FILE" | grep -q 'Applications/Spider.app/libspiderjbhide.dylib'
+          dpkg-deb -e "$DEB_FILE" /tmp/spider-control
+          test -x /tmp/spider-control/postinst
+          test -x /tmp/spider-control/prerm
+
+      - name: Upload verified package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ipainstallerpro-${{ env.SPIDER_VERSION }}
+          path: IPAInstallerPro/packages/*.deb
+          if-no-files-found: error
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "Package: com.aosaid.ipainstallerpro"
+          echo "Version: $SPIDER_VERSION"
