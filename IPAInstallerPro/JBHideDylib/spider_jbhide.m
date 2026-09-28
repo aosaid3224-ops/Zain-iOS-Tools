@@ -46,7 +46,6 @@
 // on rootless installs, and blanket blocking would break the host's own
 // bundle access. Detectors are answered on the *indicator* paths instead.
 static const char *blockedExact[] = {
-    "/var/jb", "/private/var/jb",
     "/var/LIY", "/private/var/LIY",
     "/var/lib/dpkg", "/private/var/lib/dpkg",
     "/var/lib/apt", "/private/var/lib/apt",
@@ -83,17 +82,40 @@ static const char *blockedAppNames[] = {
 
 static BOOL pathIsBlocked(const char *path) {
     if (!path || path[0] != '/') return NO;
-    // Normalize a leading /private without walking the FS.
     const char *p = path;
-    if (strncmp(p, "/private", 8) == 0 && (p[8] == '/' || p[8] == 0)) {
-        // keep both forms checked below via exact table
-    }
+
+    // "/var/jb" حرفيًا فقط — التطبيق المضيف نفسه يعيش تحت /var/jb/Applications،
+    // فمطابقة البادئة هنا كانت تكسره (ENOENT على موارده الخاصة). المؤشرات
+    // داخل /var/jb تُحظر تحديدًا في الكتلة أدناه.
+    if (strcmp(p, "/var/jb") == 0 || strcmp(p, "/private/var/jb") == 0) return YES;
+
     for (int i = 0; blockedExact[i]; i++) {
         size_t n = strlen(blockedExact[i]);
         if (strncmp(p, blockedExact[i], n) == 0 && (p[n] == 0 || p[n] == '/')) return YES;
-        // Also match the /private-prefixed variant of the same entry.
-        if (strncmp(blockedExact[i], "/private", 8) != 0) {
-            if (strncmp(p, blockedExact[i], n) == 0) return YES;
+    }
+
+    // مؤشرات كشف الجلبريك داخل /var/jb تحديدًا (dpkg/apt/TweakInject/تطبيقات…)
+    const char *sub = strstr(p, "/var/jb/");
+    if (sub) sub += 8;
+    else { sub = strstr(p, "/private/var/jb/"); if (sub) sub += 16; }
+    if (sub) {
+        static const char *jbInd[] = {
+            "usr/bin/dpkg", "usr/bin/apt", "usr/bin/apt-get", "usr/bin/sudo",
+            "usr/sbin/sshd",
+            "usr/lib/TweakInject", "usr/lib/ellekit",
+            "usr/lib/libsubstrate.dylib", "usr/lib/libsubstitute.dylib",
+            "usr/lib/libhooker.dylib", "usr/lib/libellekit.dylib",
+            "etc/apt", "etc/dpkg", "etc/ssh/sshd_config", "etc/sudoers.d",
+            "var/lib/dpkg", "var/lib/apt", "var/cache/apt", "var/log/apt",
+            "var/log/dpkg.log",
+            "Applications/Cydia.app", "Applications/Sileo.app",
+            "Applications/Sileo-Nightly.app", "Applications/Zebra.app",
+            "Applications/ElleKit.app", "Applications/Installer.app",
+            "Applications/NewTerm.app", "Applications/Filza.app", NULL
+        };
+        for (int i = 0; jbInd[i]; i++) {
+            size_t n = strlen(jbInd[i]);
+            if (strncmp(sub, jbInd[i], n) == 0 && (sub[n] == 0 || sub[n] == '/')) return YES;
         }
     }
     // Blocked jailbreak apps under any Applications directory.
