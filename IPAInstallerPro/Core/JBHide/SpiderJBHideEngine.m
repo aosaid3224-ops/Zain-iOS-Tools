@@ -159,6 +159,13 @@ static NSString *const kDylibBaseName = @"libspiderjbhide";
 
     NSString *helper = [self helperPath];
     for (NSArray *pair in @[ @[stageDylib, dylibDest], @[stagePlist, plistDest] ]) {
+        // الـ helper يستخدم COPYFILE_CLONE — يفشل بـ EEXIST (errno 17) إذا وُجدت
+        // الوجهة من محاولة سابقة. احذفها أولًا ثم انسخ.
+        if ([[NSFileManager defaultManager] fileExistsAtPath:pair[1]]) {
+            [[ProcessRunner sharedRunner] runCommand:helper
+                                          arguments:@[@"/bin/rm", @"-f", pair[1]]
+                                            timeout:10];
+        }
         CommandResult *pr = [[ProcessRunner sharedRunner] runCommand:helper
                                                           arguments:@[@"--copy-tree", pair[0], pair[1]]
                                                             timeout:10];
