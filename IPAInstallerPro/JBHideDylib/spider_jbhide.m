@@ -30,7 +30,7 @@
 #import <stdlib.h>
 #import <stdarg.h>
 
-#define SPIDER_JBHIDE_VERSION "3.3.11"
+#define SPIDER_JBHIDE_VERSION "3.3.12"
 
 #pragma mark - DYLD_INTERPOSE
 

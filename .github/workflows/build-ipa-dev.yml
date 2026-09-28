@@ -8,7 +8,7 @@ permissions:
 
 env:
   THEOS: ${{ github.workspace }}/theos
-  SPIDER_VERSION: 3.3.11
+  SPIDER_VERSION: 3.3.12
 
 jobs:
   build-spider:
