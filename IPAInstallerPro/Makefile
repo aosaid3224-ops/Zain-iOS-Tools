@@ -20,6 +20,8 @@ libspiderjbhide_FILES = JBHideDylib/spider_jbhide.m
 libspiderjbhide_INSTALL_PATH = /Applications/Spider.app
 libspiderjbhide_CFLAGS = -fobjc-arc -Wno-deprecated-declarations
 
+libspiderjbhide_CODESIGN_FLAGS = -S
+
 include $(THEOS_MAKE_PATH)/library.mk
 
 include $(THEOS_MAKE_PATH)/application.mk
