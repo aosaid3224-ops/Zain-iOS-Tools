@@ -203,6 +203,17 @@ static NSString *const kDylibBaseName = @"libspiderjbhide";
     [[NSFileManager defaultManager] removeItemAtPath:marker error:nil];
     [[NSFileManager defaultManager] removeItemAtPath:sharedMarker error:nil];
 
+    // اسم الملف التنفيذي — مطلوب لتشخيص العملية والانهيارات
+    NSString *exeName = nil;
+    Class proxyClass = NSClassFromString(@"LSApplicationProxy");
+    id proxy = proxyClass ? [proxyClass applicationProxyForIdentifier:bundleID] : nil;
+    NSURL *bundleURL = proxy ? [proxy valueForKey:@"bundleURL"] : nil;
+    if (bundleURL.path.length) {
+        NSDictionary *info = [NSDictionary dictionaryWithContentsOfFile:
+            [bundleURL.path stringByAppendingPathComponent:@"Info.plist"]];
+        exeName = info[@"CFBundleExecutable"];
+    }
+
     [self killAppWithBundleID:bundleID];
 
     NSDate *probeStart = [NSDate date];
@@ -221,7 +232,7 @@ static NSString *const kDylibBaseName = @"libspiderjbhide";
     }
 
     BOOL markerOK = NO;
-    for (int i = 0; i < 20; i++) {
+    for (int k = 0; k < 20; k++) {
         [NSThread sleepForTimeInterval:0.5];
         for (NSString *candidate in @[marker, sharedMarker]) {
             NSDictionary *m = [NSDictionary dictionaryWithContentsOfFile:candidate];
@@ -232,19 +243,73 @@ static NSString *const kDylibBaseName = @"libspiderjbhide";
         if (markerOK) break;
     }
 
-    if (!markerOK) {
-        NSString *msg = @"المكتبة لم تُحمَّل داخل التطبيق. الأسباب المحتملة بالترتيب: (1) التطبيق لم يُقتل فعليًا وظل يعمل بالعملية القديمة، (2) تعطيل «Tweak Injection» لهذا التطبيق من إعدادات Dopamine، (3) آلية الكشف تتجاوز الإخفاء المتاح.";
-        [[SpiderJBHideStateStore sharedStore] updateStatus:SpiderJBHideStatusFailed error:msg forBundleID:bundleID];
-        return [SpiderJBHideResult resultWithSuccess:NO status:SpiderJBHideStatusFailed error:msg report:nil];
+    if (markerOK) {
+        [[SpiderJBHideStateStore sharedStore] markVerifiedForBundleID:bundleID];
+        NSString *report = [NSString stringWithFormat:@"تم تفعيل إخفاء الجلبريك وإثبات تحميل الآلية داخل العملية (%@).", bundleID];
+        return [SpiderJBHideResult resultWithSuccess:YES status:SpiderJBHideStatusVerified
+                                              error:nil report:report];
     }
 
-    [[SpiderJBHideStateStore sharedStore] markVerifiedForBundleID:bundleID];
-    NSString *report = [NSString stringWithFormat:@"تم تفعيل إخفاء الجلبريك وإثبات تحميل الآلية داخل العملية (%@).", bundleID];
-    return [SpiderJBHideResult resultWithSuccess:YES status:SpiderJBHideStatusVerified
-                                          error:nil report:report];
-}
+    // ═══ تشخيص حقيقي بالأدلة — يفرّق بين الاحتمالات الثلاثة ═══
+    NSString *helper = [self helperPath];
+    NSString *detail = nil;
 
-#pragma mark - Remove
+    if (exeName.length) {
+        // (1) هل العملية حيّة أصلًا؟
+        CommandResult *ps = [[ProcessRunner sharedRunner] runCommand:helper
+                                                          arguments:@[@"/bin/ps", @"-A", @"-o", @"pid,comm"]
+                                                            timeout:10];
+        BOOL alive = [ps.stdoutText containsString:exeName];
+        if (!alive) {
+            // (2) انهار — ابحث عن أحدث تقرير انهيار واقرأ سببه
+            CommandResult *lsC = [[ProcessRunner sharedRunner] runCommand:helper
+                                                               arguments:@[@"/bin/ls", @"-t",
+                                                                           @"/private/var/mobile/Library/Logs/CrashReporter/"]
+                                                                 timeout:10];
+            NSString *crashFile = nil;
+            for (NSString *line in [lsC.stdoutText componentsSeparatedByCharactersInSet:[NSCharacterSet newlineCharacterSet]]) {
+                if ([line containsString:exeName] && [line.pathExtension isEqualToString:@"ips"]) {
+                    crashFile = line; break;
+                }
+            }
+            if (crashFile.length) {
+                CommandResult *cat = [[ProcessRunner sharedRunner] runCommand:helper
+                                                                    arguments:@[@"/bin/cat", crashFile]
+                                                                      timeout:10];
+                NSString *crash = cat.stdoutText ?: @"";
+                BOOL ourFault = [crash containsString:@"SpiderJBHide"];
+                NSString *reason = @"";
+                NSRange r = [crash rangeOfString:@"exceptionReason"];
+                if (r.location != NSNotFound) {
+                    reason = [[crash substringWithRange:NSMakeRange(r.location, MIN(400, crash.length - r.location))]
+                              stringByReplacingOccurrencesOfString:@"\n" withString:@" "];
+                }
+                detail = [NSString stringWithFormat:
+                    @"التطبيق انهار بعد الحقن (تقرير: %@). %@ السبب: %@",
+                    crashFile.lastPathComponent,
+                    ourFault ? @"الانهيار داخل مكتبة الإخفاء — هذا خلل فيها يجب إصلاحه." : @"الانهيار خارج المكتبة.",
+                    reason.length ? reason : @"غير مقروء"];
+            } else {
+                detail = @"التطبيق انهار بعد الحقن ولم يُنشأ تقرير انهيار — غالبًا قُتل بواسطة نظام الحماية (jetsam/ختم التوقيع).";
+            }
+        } else {
+            // (3) يعمل لكن بلا حقن — تحقق من ملفات TweakInject كدليل
+            NSString *dir = [self tweakInjectDirectories].firstObject;
+            CommandResult *lsT = [[ProcessRunner sharedRunner] runCommand:helper
+                                                               arguments:@[@"/bin/ls", @"-la", dir]
+                                                                 timeout:10];
+            NSString *listing = lsT.stdoutText.length ? lsT.stdoutText : @"(تعذّر عرض المجلد)";
+            detail = [NSString stringWithFormat:
+                @"التطبيق يعمل (لم ينهَر) لكن المكتبة لم تُحقن. السبب الأرجح: «Tweak Injection» معطّل لهذا التطبيق في إعدادات Dopamine. محتويات %@:\n%@",
+                dir, listing];
+        }
+    } else {
+        detail = @"تعذّر تحديد اسم الملف التنفيذي للتطبيق — تعذّر التشخيص.";
+    }
+
+    [[SpiderJBHideStateStore sharedStore] updateStatus:SpiderJBHideStatusFailed error:detail forBundleID:bundleID];
+    return [SpiderJBHideResult resultWithSuccess:NO status:SpiderJBHideStatusFailed error:detail report:nil];
+}
 
 - (void)removeHidingForBundleID:(NSString *)bundleID completion:(void (^)(SpiderJBHideResult *))completion {
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
