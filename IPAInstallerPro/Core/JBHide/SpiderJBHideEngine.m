@@ -206,7 +206,12 @@ static NSString *const kDylibBaseName = @"libspiderjbhide";
     // اسم الملف التنفيذي — مطلوب لتشخيص العملية والانهيارات
     NSString *exeName = nil;
     Class proxyClass = NSClassFromString(@"LSApplicationProxy");
-    id proxy = proxyClass ? [proxyClass applicationProxyForIdentifier:bundleID] : nil;
+    id proxy = nil;
+    SEL proxySelector = NSSelectorFromString(@"applicationProxyForIdentifier:");
+    if (proxyClass && [proxyClass respondsToSelector:proxySelector]) {
+        id (*lookupProxy)(id, SEL, id) = (id (*)(id, SEL, id))[proxyClass methodForSelector:proxySelector];
+        if (lookupProxy) proxy = lookupProxy(proxyClass, proxySelector, bundleID);
+    }
     NSURL *bundleURL = proxy ? [proxy valueForKey:@"bundleURL"] : nil;
     if (bundleURL.path.length) {
         NSDictionary *info = [NSDictionary dictionaryWithContentsOfFile:
