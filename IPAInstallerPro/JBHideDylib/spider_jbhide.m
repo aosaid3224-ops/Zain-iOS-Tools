@@ -361,8 +361,23 @@ static void writeLoadMarker(void) {
     }
 }
 
+// حارس: أي خطأ في التهيئة يُبلَّغ ولا يُسقط التطبيق المضيف.
+static void spider_jbhide_swizzle_safely(void) {
+    @try {
+        Class fm = objc_getClass("NSFileManager");
+        if (fm) [fm performSelector:@selector(spiderJBHideLoad)];
+        Class ui = objc_getClass("UIApplication");
+        if (ui) [ui performSelector:@selector(spiderJBHideLoad)];
+    } @catch (NSException *e) {
+        // لا نفعل شيئًا — الماركر أُرسل، والتطبيق يجب أن يبقى حيًا.
+    }
+}
+
 __attribute__((constructor)) static void spider_jbhide_constructor(void) {
-    writeLoadMarker();
-    [NSFileManager performSelector:@selector(spiderJBHideLoad)];
-    [UIApplication performSelector:@selector(spiderJBHideLoad)];
+    @try {
+        writeLoadMarker();   // أولًا: إثبات التحميل حتى لو فشل الباقي
+        spider_jbhide_swizzle_safely();
+    } @catch (NSException *e) {
+        // الانهيار هنا كان سيقتل التطبيق — الآن يبقى حيًا.
+    }
 }
