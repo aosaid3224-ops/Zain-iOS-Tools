@@ -12,7 +12,7 @@ NaverSeriesBypassPrefs_FRAMEWORKS = UIKit Security
 # Preferences.framework is private and supplied by the jailbreak runtime.
 # Resolve its symbols dynamically so current Xcode SDKs can build the bundle.
 NaverSeriesBypassPrefs_PRIVATE_FRAMEWORKS =
-NaverSeriesBypassPrefs_LDFLAGS = -undefined dynamic_lookup -lcommonCrypto
+NaverSeriesBypassPrefs_LDFLAGS = -undefined dynamic_lookup
 NaverSeriesBypassPrefs_CFLAGS = -fobjc-arc
 
 THEOS_PACKAGE_SCHEME = rootless
