@@ -81,7 +81,7 @@ static uint64_t NBTrialPublishedRemaining(void) {
 }
 
 // The evaluation starts only when Naver Series launches, not when Settings opens.
-static BOOL NBTrialEnsureActive(void) {
+static __attribute__((unused)) BOOL NBTrialEnsureActive(void) {
     NSTimeInterval now = NSDate.date.timeIntervalSince1970;
     NSTimeInterval uptime = NSProcessInfo.processInfo.systemUptime;
     NSDictionary *state = NBTrialReadState();
