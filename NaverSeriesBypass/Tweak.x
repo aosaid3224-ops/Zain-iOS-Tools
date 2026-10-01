@@ -11,6 +11,7 @@
 #import <sys/sysctl.h>
 #import <AdSupport/AdSupport.h>
 #import <Security/Security.h>
+#import "TrialGate.h"
 #include <dlfcn.h>
 #include <notify.h>
 
@@ -190,8 +191,8 @@ static NSDictionary* NBGetStatsCopy() {
 static void loadPreferences() {
     NSDictionary *prefs = [[NSUserDefaults standardUserDefaults] persistentDomainForName:kPrefsDomain];
     if (!prefs) prefs = @{};
-
-    isEnabled = prefs[kKeyEnabled] == nil ? YES : [prefs[kKeyEnabled] boolValue];
+    BOOL trialActive = NBTrialEnsureActive();
+    isEnabled = trialActive && (prefs[kKeyEnabled] == nil ? YES : [prefs[kKeyEnabled] boolValue]);
     spoofDevice = prefs[kKeySpoofDevice] == nil ? YES : [prefs[kKeySpoofDevice] boolValue];
     spoofIDFV = prefs[kKeySpoofIDFV] == nil ? YES : [prefs[kKeySpoofIDFV] boolValue];
     spoofIDFA = prefs[kKeySpoofIDFA] == nil ? YES : [prefs[kKeySpoofIDFA] boolValue];

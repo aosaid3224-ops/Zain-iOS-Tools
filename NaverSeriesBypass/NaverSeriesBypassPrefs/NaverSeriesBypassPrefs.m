@@ -4,6 +4,7 @@
 
 #include <notify.h>
 #include <sys/utsname.h>
+#import "../TrialGate.h"
 
 static uint32_t gAlivePID = 0;
 
@@ -295,7 +296,8 @@ static void NBAliveCallback(CFNotificationCenterRef center, void *observer, CFNo
 
         NSString *log = [self readLog];
         NSDictionary *savedStats = [NSDictionary dictionaryWithContentsOfFile:STATS_PATH];
-        BOOL enabled = NBToggle(@"Enabled");   // طازج من cfprefsd — لا افتراض مضلل
+        BOOL trialActive = NBTrialIsActiveForDashboard();
+        BOOL enabled = trialActive && NBToggle(@"Enabled");   // لا تعرض التفعيل بعد انتهاء التجربة
 
         // Read heartbeat payload via notify_set_state — the ONLY channel that
         // survives sandboxing (cfprefsd drops foreign-domain plist writes from
@@ -342,7 +344,10 @@ static void NBAliveCallback(CFNotificationCenterRef center, void *observer, CFNo
         BOOL launchRecentlyStopped = !isInjected && heartbeatTimestamp > 0;
 
         BOOL blocked = [log containsString:@"BLOCKED"] || [log containsString:@"BAN"];
-        if (!enabled) {
+        if (!trialActive) {
+            status.text = NBTrialDisplayStatus();
+            status.textColor = [UIColor colorWithRed:0.95 green:0.55 blue:0.2 alpha:1.0];
+        } else if (!enabled) {
             status.text = @"معطّل — أوقفته من المفتاح";
             status.textColor = [UIColor colorWithRed:0.9 green:0.35 blue:0.25 alpha:1.0];
         } else if (blocked) {

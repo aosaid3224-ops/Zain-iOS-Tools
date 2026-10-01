@@ -1,4 +1,4 @@
-# Naver Series Bypass v3.3.10
+# Naver Series Bypass v3.3.11 Trial
 
 ## Advanced Device Ban Bypass with Built-in Diagnostics & Arabic UI
 
@@ -89,4 +89,11 @@ View logs via:
 - naver, series, ntracker, nhncorp, YAZD8YA78S, device, ban, block, safety, action, previous, idfv, consumer, hmac, adid
 
 ### License
-Private tool for authorized testing only.
+Private trial build for authorized customer evaluation only.
+
+### Trial licensing
+- The 72-hour evaluation starts on the first launch of Naver Series after installation.
+- The trial is bound to the device through the system Keychain.
+- Clock rollback and altered device-binding data invalidate the trial.
+- After expiry, the tweak disables all bypass hooks and the dashboard reports that a full license is required.
+- This is tamper-resistant, not mathematically unbreakable on a jailbroken device. A production license should use a server-issued signed entitlement.
