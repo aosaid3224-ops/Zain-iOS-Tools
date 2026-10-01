@@ -356,6 +356,7 @@ static void NBAliveCallback(CFNotificationCenterRef center, void *observer, CFNo
         } else if (live) {
             status.text = @"مفعّل — Naver Series مفتوح والتويك يعمل الآن";
             status.text = [NSString stringWithFormat:@"محقن في: %@ (PID: %u) — التويك يعمل", injectedProcess, gAlivePID];
+            status.textColor = [UIColor colorWithRed:0.25 green:0.85 blue:0.35 alpha:1.0];
         } else if (!hasInjectionMarker) {
             status.text = @"غير محقن — لم تصل بصمة من Naver Series";
             status.text = @"غير محقن — افتح Naver Series أولًا";

@@ -1,5 +1,5 @@
 /*
- * NaverSeriesBypass v3.3.10 - updated developer attribution
+ * NaverSeriesBypass v3.3.12 - device-bound trial and green live status
  * Fixed: %hookf replaced with MSHookFunction, delayed keychain cleanup,
  *        removed UIKit from filter, fixed buffer overflows
  */

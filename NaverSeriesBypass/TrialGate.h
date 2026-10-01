@@ -116,7 +116,7 @@ static NSString *NBTrialDisplayStatus(void) {
         uint64_t published = NBTrialPublishedRemaining();
         if (published == UINT64_MAX) return @"التجربة: انتهت أو أصبحت غير صالحة — يلزم ترخيص كامل";
         if (published > 0) return [NSString stringWithFormat:@"التجربة: مفعّلة — متبقٍ تقريبًا %llu ساعة — مرتبطة بهذا الجهاز", (unsigned long long)ceil((double)published / 3600.0)];
-        return @"التجربة: لم تبدأ بعد — تبدأ عند تشغيل Naver Series";
+        return @"";
     }
     NSNumber *start = state[@"start"], *last = state[@"last"];
     NSString *nonce = state[@"nonce"], *device = state[@"device"];

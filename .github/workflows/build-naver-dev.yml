@@ -8,7 +8,7 @@ permissions:
 
 env:
   THEOS: ${{ github.workspace }}/theos
-  NAVER_VERSION: 3.3.11
+  NAVER_VERSION: 3.3.12
 
 jobs:
   build-naver-dev:

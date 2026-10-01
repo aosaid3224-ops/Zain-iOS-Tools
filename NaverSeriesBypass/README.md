@@ -1,4 +1,4 @@
-# Naver Series Bypass v3.3.11 Trial
+# Naver Series Bypass v3.3.12 Trial
 
 ## Advanced Device Ban Bypass with Built-in Diagnostics & Arabic UI
 
