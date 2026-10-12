@@ -4,6 +4,8 @@
 
 #import "CLGameDetailViewController.h"
 #import "CLGameStateInspector.h"
+#import "CLGameLauncher.h"
+#import "CLLaunchOverlay.h"
 #import "CLOperationLog.h"
 #import "CLTheme.h"
 #import "CLComponents.h"
@@ -30,6 +32,7 @@
     [self setupLayout];
     [self renderHeader];
     [self renderInfoSection];
+    [self renderLaunchSection];
     [self renderStateSection];
     [self renderFutureNotice];
 }
@@ -180,6 +183,41 @@
     [self.stack addArrangedSubview:[self infoRow:@"المحرك" value:self.game.engineName]];
     [self.stack addArrangedSubview:[self infoRow:@"الحجم" value:[self formattedSize:self.game.bundleSize]]];
     [self.stack addArrangedSubview:[self infoRow:@"المسار" value:self.game.bundlePath]];
+}
+
+#pragma mark - Launch
+
+- (void)renderLaunchSection {
+    [self.stack addArrangedSubview:[self spacer:8]];
+    [self.stack addArrangedSubview:[self sectionHeader:@"التشغيل"]];
+    CLButton *launchButton = [CLButton primaryWithTitle:@"فتح اللعبة"];
+    [launchButton setImage:[UIImage systemImageNamed:@"play.fill"] forState:UIControlStateNormal];
+    launchButton.semanticContentAttribute = UISemanticContentAttributeForceLeftToRight;
+    [launchButton addTarget:self action:@selector(launchGame) forControlEvents:UIControlEventTouchUpInside];
+    [self.stack addArrangedSubview:launchButton];
+}
+
+- (void)launchGame {
+    __weak typeof(self) weakSelf = self;
+    CLLaunchOverlay *overlay = [CLLaunchOverlay presentWithGame:self.game];
+    [[CLOperationLog sharedLog] addEntryWithKind:CLOperationKindLaunch
+        status:CLOperationStatusSuccess
+        title:[NSString stringWithFormat:@"تشغيل: %@", self.game.name]
+        detail:[NSString stringWithFormat:@"bundle: %@", self.game.bundleID]];
+
+    CLGameLauncher *launcher = [CLGameLauncher new];
+    [launcher launchGame:self.game completion:^(BOOL success, NSString *error) {
+        __strong typeof(weakSelf) self = weakSelf;
+        if (!success) {
+            [overlay dismiss];
+            [[CLOperationLog sharedLog] addEntryWithKind:CLOperationKindLaunch
+                status:CLOperationStatusFailed
+                title:[NSString stringWithFormat:@"تشغيل: %@", self.game.name]
+                detail:error.length ? error : @"تعذّر فتح اللعبة من كل الآليات."];
+        }
+        // On success the overlay stays up: the game takes over, and the overlay
+        // dismisses itself when the user returns to Crack Lab.
+    }];
 }
 
 - (void)renderStateSection {
