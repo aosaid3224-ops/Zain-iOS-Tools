@@ -1,0 +1,17 @@
+Origin: Tools4Cydia
+Label: Tools4Cydia
+Suite: stable
+Version: 1.0
+Codename: ios
+Architectures: iphoneos-arm iphoneos-arm64 iphoneos-arm64e
+Components: main
+Description: Tools4Cydia Repo
+Date: Mon, 12 Oct 2026 21:21:07 UTC
+MD5Sum:
+ 5ccc984d9a889535070d5d66ffe1f837 725 Packages
+ b01e1964749693a754d5a4f39938dfec 480 Packages.gz
+ 6777014ff11c94d9dd4c685270f67d24 541 Packages.bz2
+SHA256:
+ 747ce4251613a309af8470a739bf471972c3801728d55604a7f6259eeba17ee6 725 Packages
+ 40208f5d2c5f7178c9542e6ec95fcd83426ffbf06087e0e9e6492248e3753377 480 Packages.gz
+ af72514bf0240ff0c48c35cbf04ec791b563e68ce7956df225528448f688ce83 541 Packages.bz2
