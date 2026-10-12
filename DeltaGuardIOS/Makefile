@@ -10,7 +10,7 @@ APPLICATION_NAME = DeltaGuard
 
 DeltaGuard_FILES = main.m AppDelegate.m RootViewController.m
 DeltaGuard_FRAMEWORKS = UIKit
-DeltaGuard_CFLAGS = -fobjc-arc
+DeltaGuard_CFLAGS = -fobjc-arc -Wno-deprecated-declarations
 DeltaGuard_CODESIGN_FLAGS = -Sentitlements.plist
 
 include $(THEOS_MAKE_PATH)/application.mk
