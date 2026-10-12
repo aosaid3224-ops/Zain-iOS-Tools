@@ -13,6 +13,7 @@ CrackLab_FILES = main.m \
 	UI/CLGameDetailViewController.m \
 	UI/CLLogViewController.m \
 	UI/CLSettingsViewController.m \
+	UI/CLLaunchOverlay.m \
 	Core/CLGame.m \
 	Core/CLGameDiscovery.m \
 	Core/CLDiscoveryRecord.m \
@@ -20,6 +21,7 @@ CrackLab_FILES = main.m \
 	Core/CLGameClassifier.m \
 	Core/CLEngineDetector.m \
 	Core/CLGameStateInspector.m \
+	Core/CLGameLauncher.m \
 	Core/CLOperationLog.m
 
 CrackLab_FRAMEWORKS = UIKit Foundation
