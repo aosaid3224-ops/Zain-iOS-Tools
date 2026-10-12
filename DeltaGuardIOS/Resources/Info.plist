@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleDevelopmentRegion</key><string>zh_CN</string>
-    <key>CFBundleDisplayName</key><string>DeltaGuard iOS</string>
+    <key>CFBundleDisplayName</key><string>حارس دلتا iOS</string>
     <key>CFBundleExecutable</key><string>DeltaGuard</string>
     <key>CFBundleIdentifier</key><string>com.aosaid.deltaguard</string>
     <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
