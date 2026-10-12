@@ -1,6 +1,6 @@
 //
 //  CLOperationLog.h
-//  Crack Lab — operation journal (discover/inspect/baseline…).
+//  Crack Lab — operation journal (discover/inspect/launch…).
 //  Same discipline as Spider: every action is a dated, kinded entry.
 //
 
@@ -11,6 +11,7 @@ typedef NS_ENUM(NSInteger, CLOperationKind) {
     CLOperationKindDiscovery,
     CLOperationKindInspect,
     CLOperationKindBaseline,
+    CLOperationKindLaunch,
     CLOperationKindBackup,      // reserved (phase 2)
     CLOperationKindPatch        // reserved (phase 3)
 };
