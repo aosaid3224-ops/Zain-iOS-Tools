@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key><string>zh_CN</string>
+    <key>CFBundleDisplayName</key><string>DeltaGuard iOS</string>
+    <key>CFBundleExecutable</key><string>DeltaGuard</string>
+    <key>CFBundleIdentifier</key><string>com.aosaid.deltaguard</string>
+    <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
+    <key>CFBundleIconFiles</key><array>
+        <string>AppIcon60x60@2x.png</string>
+        <string>AppIcon60x60@3x.png</string>
+    </array>
+    <key>CFBundleName</key><string>DeltaGuard</string>
+    <key>CFBundlePackageType</key><string>APPL</string>
+    <key>CFBundleShortVersionString</key><string>0.1.1</string>
+    <key>CFBundleVersion</key><string>11</string>
+    <key>LSRequiresIPhoneOS</key><true/>
+    <key>UIApplicationSupportsIndirectInputEvents</key><true/>
+    <key>UIRequiredDeviceCapabilities</key><array><string>arm64</string></array>
+    <key>UISupportedInterfaceOrientations</key><array>
+        <string>UIInterfaceOrientationPortrait</string>
+        <string>UIInterfaceOrientationLandscapeLeft</string>
+        <string>UIInterfaceOrientationLandscapeRight</string>
+    </array>
+</dict>
+</plist>

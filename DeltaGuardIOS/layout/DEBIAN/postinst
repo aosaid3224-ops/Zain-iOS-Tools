@@ -1,3 +1,9 @@
 #!/bin/sh
+APP="/var/jb/Applications/DeltaGuard.app"
+if [ -x /usr/bin/uicache ]; then
+    /usr/bin/uicache -p "$APP" 2>/dev/null || true
+elif [ -x /var/jb/usr/bin/uicache ]; then
+    /var/jb/usr/bin/uicache -p "$APP" 2>/dev/null || true
+fi
 killall SpringBoard 2>/dev/null || true
 exit 0
