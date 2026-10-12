@@ -1,0 +1,3 @@
+#!/bin/sh
+killall SpringBoard 2>/dev/null || true
+exit 0
