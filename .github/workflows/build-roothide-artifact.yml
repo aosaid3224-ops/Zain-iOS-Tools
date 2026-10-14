@@ -1,0 +1,62 @@
+name: Build Spider RootHide Artifact
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-roothide-artifact:
+    runs-on: macos-13
+    env:
+      THEOS: ${{ github.workspace }}/theos-roothide
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Checkout RootHide Theos
+        run: |
+          git clone --recursive --depth 1 https://github.com/roothide/theos.git "$THEOS"
+          test -f "$THEOS/makefiles/common.mk"
+          test -f "$THEOS/makefiles/package/deb.mk"
+
+      - name: Install build dependencies
+        run: brew install dpkg ldid
+
+      - name: Prepare RootHide source
+        run: |
+          chmod +x SpiderRootHide/layout/DEBIAN/postinst 2>/dev/null || true
+          chmod +x SpiderRootHide/layout/DEBIAN/prerm 2>/dev/null || true
+          sed -i '' 's/^Package: .*/Package: com.aosaid.ipainstallerpro.roothide/' SpiderRootHide/control
+          sed -i '' 's/^Name: .*/Name: Spider RootHide/' SpiderRootHide/control
+          VERSION=$(awk '$1 == "Version:" { print $2; exit }' SpiderRootHide/control)
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" SpiderRootHide/Resources/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $VERSION" SpiderRootHide/Resources/Info.plist
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('SpiderRootHide/control')
+          s = p.read_text()
+          s = s.replace('Depends: firmware (>= 15.0), com.aosaid.ipadecrypthelper, moe.misty.fouldecrypt', 'Depends: firmware (>= 15.0)\nRecommends: com.aosaid.ipadecrypthelper, moe.misty.fouldecrypt')
+          p.write_text(s)
+          PY
+          grep -E '^(Package|Name|Version|Depends|Recommends):' SpiderRootHide/control
+
+      - name: Build RootHide package
+        run: |
+          export PATH="$THEOS/bin:$PATH"
+          cd SpiderRootHide
+          make clean
+          make package THEOS_PACKAGE_SCHEME=roothide ARCHS=arm64e THEOS_PLATFORM_DEB_COMPRESSION_TYPE=gzip FINALPACKAGE=1
+          dpkg-deb -f packages/*.deb Package Name Version Architecture Depends Recommends
+          test "$(dpkg-deb -f packages/*.deb Architecture)" = "iphoneos-arm64e"
+          APP_BIN=$(find "$GITHUB_WORKSPACE/SpiderRootHide" -type f -path '*/Applications/Spider.app/Spider' -print -quit)
+          test -n "$APP_BIN"
+          file "$APP_BIN" | grep -q 'arm64e'
+
+      - name: Upload RootHide DEB
+        uses: actions/upload-artifact@v4
+        with:
+          name: spider-roothide-${{ github.sha }}
+          path: SpiderRootHide/packages/*.deb
+          if-no-files-found: error
