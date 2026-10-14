@@ -8,7 +8,7 @@ permissions:
 
 jobs:
   build-roothide-artifact:
-    runs-on: macos-13
+    runs-on: macos-latest
     env:
       THEOS: ${{ github.workspace }}/theos-roothide
     steps:
