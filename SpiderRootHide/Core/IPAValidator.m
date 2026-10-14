@@ -1,16 +1,3 @@
-//
-//  IPAValidator.m
-//  IPAInstallerPro — Commit 6: Rootless path resolution for unzip/codesign
-//
-//  FIXES:
-//  1. extractInfoPlistFromIPA now uses stdoutData (NSData) instead of stdoutText (NSString).
-//     Previously binary plists were corrupted when forced through UTF-8 string conversion.
-//  2. validateExecutableArchitecture now reads Mach-O magic bytes directly instead of
-//     relying on /usr/bin/file which is missing on many rootless setups.
-//  3. validateIPAAtPath caches the extracted Info.plist path to avoid double extraction.
-//  4. All temp directories are cleaned up synchronously on failure paths.
-//
-
 #import "IPAValidator.h"
 #import "ProcessRunner.h"
 #import "CommandResult.h"
@@ -49,8 +36,6 @@ extern char **environ;
     }
     return self;
 }
-
-#pragma mark - Public API
 
 - (IPAValidationResult *)validateIPAAtPath:(NSString *)ipaPath {
     IPAValidationResult *result = [[IPAValidationResult alloc] init];
@@ -163,8 +148,6 @@ extern char **environ;
     return results;
 }
 
-#pragma mark - Private Methods
-
 - (BOOL)isValidZipFile:(NSString *)path {
     NSFileHandle *handle = [NSFileHandle fileHandleForReadingAtPath:path];
     if (!handle) return NO;
@@ -186,9 +169,6 @@ extern char **environ;
         return nil;
     }
 
-    // FIX(wildcard): unzip -p Payload/*/Info.plist extracts ALL matching files
-    // concatenated, corrupting data when IPA contains WatchKit/AppClip extensions.
-    // Step 1: List archive contents to find the exact path of the MAIN app's Info.plist.
     NSString *cmd = [[RootlessManager sharedManager] resolvePath:@"/usr/bin/unzip"];
     CommandResult *listResult = [[ProcessRunner sharedRunner] runCommand:cmd arguments:@[@"-l", path] timeout:30.0];
     NSString *exactInfoPlistEntry = nil;
@@ -207,7 +187,6 @@ extern char **environ;
             NSString *component1 = components[1];
             if (!component1 || component1.length == 0) continue;
             if (![component1.lowercaseString hasSuffix:@".app"]) continue;
-            // Prefer shortest path (main app) over nested extensions
             if (!bestEntry || entry.length < bestEntry.length) {
                 bestEntry = entry;
             }
@@ -216,17 +195,14 @@ extern char **environ;
     }
 
     if (!exactInfoPlistEntry) {
-        // Fallback to wildcard only if listing failed (should be rare)
         exactInfoPlistEntry = @"Payload/*/Info.plist";
         [[Logger sharedLogger] warning:@"IPAValidator: could not determine exact Info.plist path, falling back to wildcard"];
     }
 
-    // Step 2: Extract the SINGLE exact Info.plist
     CommandResult *result = [[ProcessRunner sharedRunner] runCommand:cmd
                                                            arguments:@[@"-p", path, exactInfoPlistEntry]
                                                              timeout:60.0];
 
-    // Fallback: full extraction to disk if pipe-based methods failed
     if (!result.success || !result.stdoutData || result.stdoutData.length == 0) {
         NSString *fallbackTempDir = [NSTemporaryDirectory() stringByAppendingPathComponent:[[NSUUID UUID] UUIDString]];
         [[NSFileManager defaultManager] createDirectoryAtPath:fallbackTempDir withIntermediateDirectories:YES attributes:nil error:nil];
@@ -283,7 +259,6 @@ extern char **environ;
         }
     }
 
-    // Fallback: full extraction to disk if pipe-based extraction failed or returned corrupted data
     if (!parsedOK) {
         NSString *fallbackTempDir = [NSTemporaryDirectory() stringByAppendingPathComponent:[[NSUUID UUID] UUIDString]];
         [[NSFileManager defaultManager] createDirectoryAtPath:fallbackTempDir withIntermediateDirectories:YES attributes:nil error:nil];
@@ -386,14 +361,11 @@ extern char **environ;
 - (BOOL)validateExecutableArchitecture:(NSString *)path {
     NSFileHandle *handle = [NSFileHandle fileHandleForReadingAtPath:path];
     if (!handle) {
-        // FIX(v3.0.19): Cannot read file (encrypted, root-owned, or sandboxed).
-        // ldid handles decryption/re-signing during installation.
         return YES;
     }
     NSData *header = [handle readDataOfLength:8];
     [handle closeFile];
     if (header.length < 4) {
-        // Empty or unreadable — assume valid, ldid will handle it
         return YES;
     }
 
@@ -410,7 +382,6 @@ extern char **environ;
     if (magic == 0xcafebabe || magic == 0xbebafeca || magic == 0xcafebabf) {
         return YES;
     }
-    // FIX: Unknown magic bytes (likely encrypted). ldid will decrypt during install.
     return YES;
 }
 

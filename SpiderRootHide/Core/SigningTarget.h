@@ -1,10 +1,3 @@
-//
-// SigningTarget.h
-// IPAInstallerPro — Phase 2/3: Smart Signing System
-//
-// Represents a single binary target within an IPA that needs signing decisions.
-//
-
 #import <Foundation/Foundation.h>
 @class EntitlementSet;
 
@@ -20,10 +13,10 @@ typedef NS_ENUM(NSInteger, SigningTargetType) {
 
 typedef NS_ENUM(NSInteger, SigningStrategy) {
     SigningStrategyUnknown = 0,
-    SigningStrategyPreserveOriginal = 1,  // Keep original entitlements exactly
-    SigningStrategyGeneric = 2,            // Use full generic jailbreak entitlements
-    SigningStrategyMinimal = 3,            // Use minimal entitlements (platform-app only)
-    SigningStrategySkip = 4                // Do not re-sign this target
+    SigningStrategyPreserveOriginal = 1,
+    SigningStrategyGeneric = 2,
+    SigningStrategyMinimal = 3,
+    SigningStrategySkip = 4
 };
 
 @interface SigningTarget : NSObject
@@ -33,22 +26,19 @@ typedef NS_ENUM(NSInteger, SigningStrategy) {
 @property (nonatomic, assign) SigningTargetType targetType;
 @property (nonatomic, strong) NSString *targetTypeName;
 
-// Owning bundle context used for per-bundle container-aware signing.
 @property (nonatomic, strong) NSString *bundleIdentifier;
 @property (nonatomic, strong) NSString *bundlePath;
 
-// Original state (from IPA before any modification)
 @property (nonatomic, strong) EntitlementSet *originalEntitlements;
 @property (nonatomic, assign) BOOL hasOriginalSignature;
 @property (nonatomic, strong) NSString *originalTeamID;
 @property (nonatomic, strong) NSString *originalAuthority;
 
-// Planned state (what the planner decided)
 @property (nonatomic, strong) EntitlementSet *plannedEntitlements;
 @property (nonatomic, assign) SigningStrategy strategy;
 @property (nonatomic, strong) NSString *strategyName;
 @property (nonatomic, strong) NSString *strategyReason;
-@property (nonatomic, assign) NSInteger signingOrder; // 1=dylib, 2=framework, 3=extension, 4=main
+@property (nonatomic, assign) NSInteger signingOrder;
 @property (nonatomic, assign) BOOL needsSigning;
 
 - (NSString *)typeName;

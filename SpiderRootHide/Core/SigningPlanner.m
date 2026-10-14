@@ -1,7 +1,3 @@
-//
-// SigningPlanner.m
-//
-
 #import "SigningPlanner.h"
 #import "IPAStructuralResult.h"
 #import "SigningPlan.h"
@@ -24,17 +20,12 @@
     return shared;
 }
 
-#pragma mark - Main Entry Point
-
 - (SigningPlan *)createPlanForStructuralResult:(IPAStructuralResult *)result {
     SigningPlan *plan = [[SigningPlan alloc] init];
     plan.ipaPath = result.ipaPath;
 
     NSMutableArray<SigningTarget *> *targets = [NSMutableArray array];
 
-    // Analyze each executable while its extracted source still exists.
-    // Store paths relative to the top-level app bundle: the structural analyzer
-    // cleans its temporary extraction before the install signer runs.
     NSString *appRoot = nil;
     for (IPAStructuralBundle *bundle in result.bundles) {
         if ([bundle.bundleType isEqualToString:@".app"] && bundle.nestingLevel == 0) {
@@ -46,9 +37,6 @@
     for (IPAStructuralExecutable *exe in result.executables) {
         SigningTarget *target = [self analyzeExecutable:exe inResult:result];
         if (target) {
-            // Carry the owning bundle identity into the signing target. The
-            // structural analyzer already knows this; do not lose it between
-            // analysis and signing.
             IPAStructuralBundle *owner = nil;
             for (IPAStructuralBundle *bundle in result.bundles) {
                 if (![bundle.path isKindOfClass:[NSString class]] || bundle.path.length == 0) continue;
@@ -73,19 +61,14 @@
 
     plan.targets = [targets copy];
 
-    // Compute statistics
     [self computeStatistics:plan];
 
-    // Validate plan viability
     [self validatePlan:plan];
 
-    // Generate recommendations
     [self generateRecommendations:plan result:result];
 
     return plan;
 }
-
-#pragma mark - Executable Analysis
 
 - (SigningTarget *)analyzeExecutable:(IPAStructuralExecutable *)exe inResult:(IPAStructuralResult *)result {
     SigningTarget *target = [[SigningTarget alloc] init];
@@ -93,73 +76,57 @@
     target.targetName = exe.name;
     target.needsSigning = YES;
 
-    // 1. Classify target type
     target.targetType = [self classifyTargetType:exe path:exe.path bundles:result.bundles];
     target.targetTypeName = [target typeName];
 
-    // 2. Analyze original signature
     SignatureInfo *sigInfo = [[SignatureAnalyzer sharedAnalyzer] analyzeSignatureAtPath:exe.path];
     target.hasOriginalSignature = sigInfo.isSigned;
     target.originalTeamID = sigInfo.teamID;
     target.originalAuthority = sigInfo.authority;
 
-    // 3. Extract original entitlements
     NSDictionary *rawEnts = [[SignatureAnalyzer sharedAnalyzer] extractEntitlementsAtPath:exe.path];
     if (rawEnts) {
         target.originalEntitlements = [[EntitlementSet alloc] initWithDictionary:rawEnts sourcePath:exe.path];
     }
 
-    // 4. Decide strategy
     [self decideStrategyForTarget:target];
 
-    // 5. Build planned entitlements based on strategy
     [self buildPlannedEntitlementsForTarget:target];
 
     return target;
 }
 
-#pragma mark - Target Classification
-
 - (SigningTargetType)classifyTargetType:(IPAStructuralExecutable *)exe path:(NSString *)path bundles:(NSArray<IPAStructuralBundle *> *)bundles {
     NSString *lower = path.lowercaseString;
 
-    // Check by path patterns (most reliable)
     if ([lower containsString:@".appex/"]) return SigningTargetTypeAppExtension;
     if ([lower containsString:@".xpc/"]) return SigningTargetTypeXPCService;
     if ([lower containsString:@".framework/"]) return SigningTargetTypeFramework;
 
-    // Check by Mach-O type
     if ([exe.machOTypeName isEqualToString:@"MH_DYLIB"]) return SigningTargetTypeDylib;
 
-    // Check if it's the main executable of a top-level .app
     for (IPAStructuralBundle *bundle in bundles) {
         if ([bundle.bundleType isEqualToString:@".app"] && bundle.nestingLevel == 0) {
-            // Check if this executable belongs to the main app
             if (bundle.executablePath && [path isEqualToString:bundle.executablePath]) {
                 return SigningTargetTypeMainExecutable;
             }
         }
     }
 
-    // Check if it's an executable inside any .app (could be nested or main)
     for (IPAStructuralBundle *bundle in bundles) {
         if ([bundle.bundleType isEqualToString:@".app"] && bundle.executablePath && [path isEqualToString:bundle.executablePath]) {
             return SigningTargetTypeMainExecutable;
         }
     }
 
-    // Check for .bundle type
     if ([lower containsString:@".bundle/"]) return SigningTargetTypeBundle;
 
-    // Default: if it's MH_EXECUTE and we couldn't classify, assume main
     if ([exe.machOTypeName isEqualToString:@"MH_EXECUTE"]) {
         return SigningTargetTypeMainExecutable;
     }
 
     return SigningTargetTypeUnknown;
 }
-
-#pragma mark - Strategy Decision (THE BRAIN)
 
 - (void)decideStrategyForTarget:(SigningTarget *)target {
     switch (target.targetType) {
@@ -192,10 +159,7 @@
     }
 }
 
-// MARK: - Extension Strategy
 - (void)decideExtensionStrategy:(SigningTarget *)target {
-    // Extensions ALWAYS need their original entitlements preserved
-    // because they rely on specific Apple services (Push, Siri, Share, etc.)
     target.signingOrder = 3;
 
     if (target.originalEntitlements && target.originalEntitlements.isComplex) {
@@ -210,7 +174,6 @@
             @"%@ has entitlements that must be preserved for proper functionality",
             target.targetTypeName];
     } else {
-        // No original entitlements found — use generic but warn
         target.strategy = SigningStrategyGeneric;
         target.strategyReason = [NSString stringWithFormat:
             @"%@ has no original entitlements — using generic (may lose functionality)",
@@ -218,15 +181,11 @@
     }
 }
 
-// MARK: - Framework Strategy
 - (void)decideFrameworkStrategy:(SigningTarget *)target {
-    // Frameworks only need code signature validation
-    // They don't need special entitlements for runtime
     target.strategy = SigningStrategyMinimal;
     target.strategyReason = @"Frameworks only need minimal entitlements for code signature validation";
     target.signingOrder = 2;
 
-    // Exception: Some frameworks have embedded entitlements for specific reasons
     if (target.originalEntitlements && target.originalEntitlements.isComplex) {
         [self addWarningToTarget:target message:[NSString stringWithFormat:
             @"Framework %@ has complex entitlements — verify minimal signing is sufficient",
@@ -234,22 +193,15 @@
     }
 }
 
-// MARK: - Dylib Strategy
 - (void)decideDylibStrategy:(SigningTarget *)target {
-    // Dylibs are the lowest level — minimal entitlements only
     target.strategy = SigningStrategyMinimal;
     target.strategyReason = @"Dylibs only need platform-application for code loading";
     target.signingOrder = 1;
 }
 
-// MARK: - Main App Strategy
 - (void)decideMainAppStrategy:(SigningTarget *)target {
-    target.signingOrder = 4; // Last to sign (depends on everything else)
+    target.signingOrder = 4;
 
-    // Preserve every non-empty source entitlement set. A set that is not in our
-    // small "special" allowlist can still be required by the app at runtime.
-    // Generic policy is reserved for genuinely unsigned binaries with no source
-    // entitlements at all.
     if (target.originalEntitlements && target.originalEntitlements.entitlementCount > 0) {
         target.strategy = SigningStrategyPreserveOriginal;
         if (target.originalEntitlements.isComplex) {
@@ -278,15 +230,11 @@
     }
 }
 
-// MARK: - Bundle Strategy
 - (void)decideBundleStrategy:(SigningTarget *)target {
-    // Resource bundles with code — minimal signing
     target.strategy = SigningStrategyMinimal;
     target.strategyReason = @"Bundle only needs minimal entitlements";
     target.signingOrder = 2;
 }
-
-#pragma mark - Planned Entitlements Builder
 
 - (void)buildPlannedEntitlementsForTarget:(SigningTarget *)target {
     switch (target.strategy) {
@@ -294,7 +242,6 @@
             if (target.originalEntitlements) {
                 target.plannedEntitlements = target.originalEntitlements;
             } else {
-                // Fallback if no original found
                 target.plannedEntitlements = [[EntitlementSet alloc] initWithDictionary:[EntitlementSet genericJailbreakEntitlements] sourcePath:target.filePath];
                 [self addWarningToTarget:target message:@"PreserveOriginal requested but no original entitlements found — falling back to generic"];
             }
@@ -319,13 +266,8 @@
     }
 }
 
-#pragma mark - Container-aware entitlement policy
-
 - (void)applyContainerAwarePolicyToTarget:(SigningTarget *)target {
     if (!target.bundleIdentifier.length || !target.plannedEntitlements) return;
-    // Frameworks/dylibs are not app containers. Their minimal signatures must
-    // remain minimal, while app and extension executables receive a stable
-    // per-bundle container identity.
     if (target.targetType == SigningTargetTypeFramework ||
         target.targetType == SigningTargetTypeDylib ||
         target.targetType == SigningTargetTypeBundle) return;
@@ -333,9 +275,6 @@
     NSMutableDictionary *ents = [target.plannedEntitlements.rawEntitlements mutableCopy];
     if (!ents) ents = [NSMutableDictionary dictionary];
 
-    // For a completely unsigned main app, provide the same baseline identity
-    // that TrollStore synthesizes before its recursive signing pass. This is
-    // generic and deterministic per installer, never tied to one IPA.
     if (target.targetType == SigningTargetTypeMainExecutable &&
         target.strategy == SigningStrategyGeneric && !target.hasOriginalSignature) {
         NSString *appIdentifier = [NSString stringWithFormat:@"IPAINSTALLERPRO.%@", target.bundleIdentifier];
@@ -350,10 +289,6 @@
         }
     }
 
-    // Dopamine's PMAP-CS path exposes a lower-risk app-store trust level for
-    // user applications. TrollStore Lite uses this only on PMAP-CS devices;
-    // mirror that principle here without applying the private key globally or
-    // to frameworks/dylibs. The environment check is the compatibility gate.
     JailbreakEnvironment *environment = [JailbreakEnvironment sharedEnvironment];
     NSString *jbType = environment.jailbreakType.lowercaseString ?: @"";
     BOOL dopamineRootless = environment.isRootless && [jbType containsString:@"dopamine"];
@@ -368,29 +303,19 @@
     BOOL sourceNoSandbox = [target.originalEntitlements.rawEntitlements[@"com.apple.private.security.no-sandbox"] boolValue];
     id existing = ents[@"com.apple.private.security.container-required"];
     if ((sourceNoContainer || sourceNoSandbox) && ![existing isKindOfClass:[NSString class]]) {
-        // Preserve an explicitly unsandboxed source target; do not invent a
-        // conflicting container identity. The generic dictionary itself is not
-        // treated as source evidence because it is the installer's baseline.
         target.plannedEntitlements = [[EntitlementSet alloc] initWithDictionary:ents sourcePath:target.filePath];
         return;
     }
     if ([existing isKindOfClass:[NSString class]] && [(NSString *)existing length] > 0) {
-        // Keep a source-provided string container identity exactly, while still
-        // committing the PMAP-CS policy already added above.
         target.plannedEntitlements = [[EntitlementSet alloc] initWithDictionary:ents sourcePath:target.filePath];
         return;
     }
 
-    // TrollStore's signApp assigns the bundle identifier to this entitlement
-    // for every container-bearing non-framework bundle. This is especially
-    // important for unsigned/dumped apps whose source has no entitlements.
     ents[@"com.apple.private.security.container-required"] = target.bundleIdentifier;
     [ents removeObjectForKey:@"com.apple.private.security.no-container"];
     [ents removeObjectForKey:@"com.apple.private.security.no-sandbox"];
     target.plannedEntitlements = [[EntitlementSet alloc] initWithDictionary:ents sourcePath:target.filePath];
 }
-
-#pragma mark - Statistics
 
 - (void)computeStatistics:(SigningPlan *)plan {
     plan.totalTargets = plan.targets.count;
@@ -416,10 +341,7 @@
     plan.complexTargetsCount = complex;
 }
 
-#pragma mark - Validation
-
 - (void)validatePlan:(SigningPlan *)plan {
-    // Check for critical issues
     for (SigningTarget *t in plan.targets) {
         if (t.targetType == SigningTargetTypeAppExtension || t.targetType == SigningTargetTypeXPCService) {
             if (t.strategy != SigningStrategyPreserveOriginal && t.strategy != SigningStrategyGeneric) {
@@ -430,7 +352,6 @@
         }
     }
 
-    // Check if main app has no entitlements at all
     for (SigningTarget *t in plan.targets) {
         if (t.targetType == SigningTargetTypeMainExecutable) {
             if (!t.plannedEntitlements || t.plannedEntitlements.entitlementCount == 0) {
@@ -444,8 +365,6 @@
     plan.isViable = YES;
     plan.viabilityReason = @"All critical targets have valid signing strategies";
 }
-
-#pragma mark - Recommendations
 
 - (void)generateRecommendations:(SigningPlan *)plan result:(IPAStructuralResult *)result {
     if (plan.complexTargetsCount > 0) {
@@ -482,10 +401,7 @@
     }
 }
 
-#pragma mark - Helpers
-
 - (void)addWarningToTarget:(SigningTarget *)target message:(NSString *)message {
-    // Warnings are stored at plan level, but we can log them
     NSLog(@"[SigningPlanner] Warning for %@: %@", target.targetName, message);
 }
 

@@ -1,13 +1,8 @@
-//
-//  RuntimeEnvironment.m
-//  IPAInstallerPro — Commit 3: Runtime Environment Discovery
-//
-
 #import "RuntimeEnvironment.h"
 #import "Logger.h"
 #import "../rootless.h"
-#include <stdlib.h>  // for realpath()
-#include <errno.h>   // for errno
+#include <stdlib.h>
+#include <errno.h>
 
 #include <sys/sysctl.h>
 #include <sys/utsname.h>
@@ -16,6 +11,7 @@
 @interface RuntimeEnvironment ()
 @property (nonatomic, copy, readwrite) NSString *bootstrapPath;
 @property (nonatomic, assign, readwrite) BOOL isRootless;
+@property (nonatomic, assign, readwrite) BOOL isRootHide;
 @property (nonatomic, assign, readwrite) SpiderJailbreakType jailbreakType;
 @property (nonatomic, copy, readwrite) NSString *jailbreakTypeName;
 @property (nonatomic, copy, readwrite) NSString *iosVersion;
@@ -43,74 +39,50 @@
     return self;
 }
 
-#pragma mark - Discovery
-
 - (void)characterizeEnvironment {
     NSDate *start = [NSDate date];
 
-    // 1. Basic system info
     _iosVersion = [self detectIOSVersion];
     _architecture = [self detectArchitecture];
 
-    // 2. Bootstrap path discovery (highest priority first)
     _bootstrapPath = [self detectBootstrapPath];
     _isRootless = (_bootstrapPath != nil);
+    _isRootHide = SPIsRootHide();
 
-    // 3. Jailbreak type discovery
     _jailbreakType = [self detectJailbreakType];
     _jailbreakTypeName = [self nameForJailbreakType:_jailbreakType];
+    if (_isRootHide) {
+        _jailbreakTypeName = (_jailbreakType == SpiderJailbreakTypeDopamine) ? @"Dopamine RootHide" : @"RootHide";
+    }
 
-    // 4. Build search paths
     _binSearchPaths = [self buildBinSearchPaths];
     _librarySearchPaths = [self buildLibrarySearchPaths];
 
-    // 5. Build environment variables
     _environmentVariables = [self buildEnvironmentVariables];
 
     _isCharacterized = YES;
 
     NSTimeInterval duration = [[NSDate date] timeIntervalSinceDate:start];
-    [[Logger sharedLogger] info:[NSString stringWithFormat:@"RuntimeEnvironment: characterized in %.3fs | rootless=%@ | bootstrap=%@ | type=%@ | iOS=%@ | arch=%@",
+    [[Logger sharedLogger] info:[NSString stringWithFormat:@"RuntimeEnvironment: characterized in %.3fs | rootless=%@ | roothide=%@ | bootstrap=%@ | type=%@ | iOS=%@ | arch=%@",
                                  duration,
                                  _isRootless ? @"YES" : @"NO",
+                                 _isRootHide ? @"YES" : @"NO",
                                  _bootstrapPath ?: @"none",
                                  _jailbreakTypeName,
                                  _iosVersion,
                                  _architecture]];
 }
 
-#pragma mark - Bootstrap Path Detection
-
 - (NSString *)detectRootHideJBRoot {
-    const char *prefix = SPLibrootJBRoot();
-    if (prefix && prefix[0] != '\0') {
-        NSString *path = [NSString stringWithUTF8String:prefix];
-        if (path.length > 0 && [[NSFileManager defaultManager] fileExistsAtPath:path]) return path;
-    }
-    NSFileManager *fm = [NSFileManager defaultManager];
-    NSArray<NSString *> *parents = @[@"/var/containers/Bundle/Application", @"/var/containers/Shared/SystemGroup"];
-    for (NSString *parent in parents) {
-        NSArray<NSString *> *items = [fm contentsOfDirectoryAtPath:parent error:nil];
-        for (NSString *item in items) {
-            if (![item containsString:@".jbroot-"]) continue;
-            NSString *candidate = [parent stringByAppendingPathComponent:item];
-            BOOL isDir = NO;
-            if ([fm fileExistsAtPath:candidate isDirectory:&isDir] && isDir) {
-                if ([fm fileExistsAtPath:[candidate stringByAppendingPathComponent:@"usr/bin"]] || [fm fileExistsAtPath:[candidate stringByAppendingPathComponent:@"bin"]] || [fm fileExistsAtPath:[candidate stringByAppendingPathComponent:@"var/jb/usr/bin"]] || [fm fileExistsAtPath:[candidate stringByAppendingPathComponent:@"var/jb/bin"]]) return candidate;
-            }
-        }
-    }
-    return nil;
+    return SPIsRootHide() ? SPJBRootPath() : nil;
 }
 
 - (NSString *)detectBootstrapPath {
     NSFileManager *fm = [NSFileManager defaultManager];
 
-    // Priority 0: RootHide/libroot supplies the randomized jbroot directly.
     NSString *rootHidePath = [self detectRootHideJBRoot];
     if (rootHidePath.length > 0) return rootHidePath;
 
-    // Priority 1: Environment variables
     const char *procursusRoot = getenv("PROCURSUS_ROOT");
     if (procursusRoot) {
         NSString *path = [NSString stringWithUTF8String:procursusRoot];
@@ -123,9 +95,6 @@
         if ([fm fileExistsAtPath:path]) return path;
     }
 
-    // Priority 2: Signature files (strong indicators)
-    // Check Palera1n-specific indicators FIRST to avoid false positives
-    // when /var/jb exists alongside /var/LIY (common on Palera1n)
     NSArray<NSString *> *palera1nSignatures = @[
         @"/var/LIY/.installed_palera1n",
         @"/var/LIY/usr/share/palera1n",
@@ -150,15 +119,11 @@
         }
     }
 
-    // Priority 3: Executable presence (which dpkg is real?)
-    // If /usr/bin/dpkg exists and is executable, likely not rootless (or old-style)
-    // If /var/jb/usr/bin/dpkg exists and is executable, likely rootless Procursus
     NSString *liDpkg = @"/var/LIY/usr/bin/dpkg";
     NSString *jbDpkg = @"/var/jb/usr/bin/dpkg";
     NSString *optDpkg = @"/opt/procursus/bin/dpkg";
     NSString *usrDpkg = @"/usr/bin/dpkg";
 
-    // Check Palera1n first to avoid false positive from /var/jb
     if (access(liDpkg.fileSystemRepresentation, X_OK) == 0) {
         return @"/var/LIY";
     }
@@ -169,15 +134,12 @@
         return @"/opt/procursus";
     }
 
-    // Priority 4: Directory presence (weaker indicator)
-    // Check Palera1n first to avoid false positive from /var/jb
     if ([fm fileExistsAtPath:@"/var/LIY"]) {
         if ([fm fileExistsAtPath:@"/var/LIY/usr/bin"] || [fm fileExistsAtPath:@"/var/LIY/bin"]) {
             return @"/var/LIY";
         }
     }
     if ([fm fileExistsAtPath:@"/var/jb"]) {
-        // Additional check: does it look like a real bootstrap?
         if ([fm fileExistsAtPath:@"/var/jb/usr/bin"] || [fm fileExistsAtPath:@"/var/jb/bin"]) {
             return @"/var/jb";
         }
@@ -186,78 +148,71 @@
         return @"/opt/procursus";
     }
 
-    // Priority 5: Check if /usr/bin/dpkg exists but /var/jb does not
-    // This suggests an old-style (non-rootless) jailbreak
     if (access(usrDpkg.fileSystemRepresentation, X_OK) == 0) {
-        // Old-style jailbreak, no rootless bootstrap
         return nil;
     }
 
-    // No bootstrap detected
     return nil;
 }
-
-#pragma mark - Jailbreak Type Detection
 
 - (SpiderJailbreakType)detectJailbreakType {
     NSFileManager *fm = [NSFileManager defaultManager];
 
-    // Dopamine indicators
+    if (SPIsRootHide()) {
+        if ([fm fileExistsAtPath:SPJBPath(@"/.installed_dopamine")] ||
+            [fm fileExistsAtPath:SPJBPath(@"/basebin")] ||
+            [fm fileExistsAtPath:SPJBPath(@"/usr/share/dopamine")]) {
+            return SpiderJailbreakTypeDopamine;
+        }
+        return SpiderJailbreakTypeRelaxin;
+    }
+
     if ([fm fileExistsAtPath:@"/var/jb/.installed_dopamine"] ||
         [fm fileExistsAtPath:@"/var/jb/usr/share/dopamine"] ||
         [fm fileExistsAtPath:@"/usr/share/dopamine"]) {
         return SpiderJailbreakTypeDopamine;
     }
 
-    // Palera1n indicators
     if ([fm fileExistsAtPath:@"/var/LIY/.installed_palera1n"] ||
         [fm fileExistsAtPath:@"/var/LIY/usr/share/palera1n"]) {
         return SpiderJailbreakTypePalera1n;
     }
 
-    // Checkra1n indicators
     if ([fm fileExistsAtPath:@"/usr/lib/libhooker.dylib"] ||
         [fm fileExistsAtPath:@"/usr/lib/libsubstitute.dylib"] ||
         [fm fileExistsAtPath:@"/var/checkra1n"]) {
         return SpiderJailbreakTypeCheckra1n;
     }
 
-    // Unc0ver indicators
     if ([fm fileExistsAtPath:@"/usr/share/unc0ver"] ||
         [fm fileExistsAtPath:@"/var/unc0ver"]) {
         return SpiderJailbreakTypeUnc0ver;
     }
 
-    // Taurine/Odyssey indicators
     if ([fm fileExistsAtPath:@"/usr/share/libhooker"] ||
         [fm fileExistsAtPath:@"/var/libexec/libhooker"]) {
-        // Could be Taurine or Odyssey, check further
         if ([fm fileExistsAtPath:@"/usr/share/taurine"]) {
             return SpiderJailbreakTypeTaurine;
         }
         if ([fm fileExistsAtPath:@"/usr/share/odyssey"]) {
             return SpiderJailbreakTypeOdyssey;
         }
-        return SpiderJailbreakTypeTaurine; // Default to Taurine for libhooker
+        return SpiderJailbreakTypeTaurine;
     }
 
-    // XinaA15 indicators
     if ([fm fileExistsAtPath:@"/var/xina"] ||
         [fm fileExistsAtPath:@"/usr/share/xina"]) {
         return SpiderJailbreakTypeXinaA15;
     }
 
-    // Relaxin/RootHide uses a randomized jbroot and does not expose /var/jb.
     if ([self.bootstrapPath containsString:@".jbroot-"]) {
         return SpiderJailbreakTypeRelaxin;
     }
 
-    // If rootless but no specific type detected
     if (self.isRootless) {
         return SpiderJailbreakTypeOther;
     }
 
-    // If not rootless but dpkg exists, likely old-style jailbreak
     if (access("/usr/bin/dpkg", X_OK) == 0) {
         return SpiderJailbreakTypeOther;
     }
@@ -274,13 +229,11 @@
         case SpiderJailbreakTypeTaurine: return @"Taurine";
         case SpiderJailbreakTypeOdyssey: return @"Odyssey";
         case SpiderJailbreakTypeXinaA15: return @"XinaA15";
-        case SpiderJailbreakTypeRelaxin: return @"Relaxin/RootHide";
+        case SpiderJailbreakTypeRelaxin: return @"RootHide";
         case SpiderJailbreakTypeOther: return @"Other";
         case SpiderJailbreakTypeUnknown: return @"Unknown";
     }
 }
-
-#pragma mark - System Info
 
 - (NSString *)detectIOSVersion {
     NSOperatingSystemVersion version = [[NSProcessInfo processInfo] operatingSystemVersion];
@@ -292,15 +245,12 @@
     uname(&systemInfo);
     NSString *machine = [NSString stringWithUTF8String:systemInfo.machine];
 
-    // Map machine identifier to architecture
     if ([machine hasPrefix:@"iPhone"] || [machine hasPrefix:@"iPad"] || [machine hasPrefix:@"iPod"]) {
-        // Check CPU type via sysctl
         size_t size;
         cpu_type_t cpuType;
         size = sizeof(cpuType);
         if (sysctlbyname("hw.cputype", &cpuType, &size, NULL, 0) == 0) {
             if (cpuType == CPU_TYPE_ARM64) {
-                // Check for ARM64e
                 cpu_subtype_t cpuSubtype;
                 size = sizeof(cpuSubtype);
                 if (sysctlbyname("hw.cpusubtype", &cpuSubtype, &size, NULL, 0) == 0) {
@@ -313,15 +263,18 @@
         }
     }
 
-    return machine; // Fallback to raw machine identifier
+    return machine;
 }
-
-#pragma mark - Search Paths
 
 - (NSArray<NSString *> *)buildBinSearchPaths {
     NSMutableOrderedSet<NSString *> *paths = [NSMutableOrderedSet orderedSet];
 
-    // 1. PATH environment variable
+    if (self.isRootHide) {
+        for (NSString *dir in @[@"/usr/local/bin", @"/usr/bin", @"/bin", @"/usr/sbin", @"/sbin"]) {
+            [paths addObject:SPJBPath(dir)];
+        }
+    }
+
     const char *pathEnv = getenv("PATH");
     if (pathEnv) {
         NSString *pathStr = [NSString stringWithUTF8String:pathEnv];
@@ -330,33 +283,23 @@
         }
     }
 
-    // 2. Bootstrap binary paths (if detected)
     if (self.bootstrapPath) {
         [paths addObject:[self.bootstrapPath stringByAppendingPathComponent:@"usr/bin"]];
         [paths addObject:[self.bootstrapPath stringByAppendingPathComponent:@"bin"]];
         [paths addObject:[self.bootstrapPath stringByAppendingPathComponent:@"usr/local/bin"]];
-        [paths addObject:[self.bootstrapPath stringByAppendingPathComponent:@"var/jb/usr/bin"]];
-        [paths addObject:[self.bootstrapPath stringByAppendingPathComponent:@"var/jb/bin"]];
-
-        // RootHide: tools may reside in jbroot/var/jb/usr/bin or jbroot/usr/bin
-        if ([self.bootstrapPath rangeOfString:@".jbroot-"].location != NSNotFound) {
-            [paths addObject:[self.bootstrapPath stringByAppendingPathComponent:@"var/jb/usr/bin"]];
-            [paths addObject:[self.bootstrapPath stringByAppendingPathComponent:@"var/jb/bin"]];
-            NSLog(@"[Spider-Env] Added RootHide bin paths for %@", self.bootstrapPath);
-        }
     }
 
-    // 3. Standard paths
     [paths addObject:@"/usr/bin"];
     [paths addObject:@"/bin"];
     [paths addObject:@"/usr/local/bin"];
     [paths addObject:@"/opt/procursus/bin"];
 
-    // 4. Fallback rootless paths (in case bootstrap not detected but tools exist)
-    [paths addObject:@"/var/jb/usr/bin"];
-    [paths addObject:@"/var/jb/bin"];
-    [paths addObject:@"/var/LIY/usr/bin"];
-    [paths addObject:@"/var/LIY/bin"];
+    if (!self.isRootHide) {
+        [paths addObject:@"/var/jb/usr/bin"];
+        [paths addObject:@"/var/jb/bin"];
+        [paths addObject:@"/var/LIY/usr/bin"];
+        [paths addObject:@"/var/LIY/bin"];
+    }
 
     return paths.array;
 }
@@ -364,7 +307,6 @@
 - (NSArray<NSString *> *)buildLibrarySearchPaths {
     NSMutableOrderedSet<NSString *> *paths = [NSMutableOrderedSet orderedSet];
 
-    // 1. DYLD_LIBRARY_PATH
     const char *ldPath = getenv("DYLD_LIBRARY_PATH");
     if (ldPath) {
         NSString *pathStr = [NSString stringWithUTF8String:ldPath];
@@ -373,13 +315,11 @@
         }
     }
 
-    // 2. Bootstrap library paths
     if (self.bootstrapPath) {
         [paths addObject:[self.bootstrapPath stringByAppendingPathComponent:@"usr/lib"]];
         [paths addObject:[self.bootstrapPath stringByAppendingPathComponent:@"lib"]];
     }
 
-    // 3. Standard paths
     [paths addObject:@"/usr/lib"];
     [paths addObject:@"/usr/local/lib"];
     [paths addObject:@"/opt/procursus/lib"];
@@ -392,7 +332,6 @@
 - (NSDictionary<NSString *, NSString *> *)buildEnvironmentVariables {
     NSMutableDictionary<NSString *, NSString *> *env = [NSMutableDictionary dictionary];
 
-    // Start with current environment
     extern char **environ;
     for (char **ep = environ; *ep != NULL; ep++) {
         NSString *pair = [NSString stringWithUTF8String:*ep];
@@ -404,7 +343,8 @@
         }
     }
 
-    // Ensure PATH includes bootstrap paths
+    if (self.isRootHide) return env;
+
     NSMutableOrderedSet<NSString *> *pathSet = [NSMutableOrderedSet orderedSet];
     NSString *existingPath = env[@"PATH"];
     if (existingPath) {
@@ -417,7 +357,6 @@
     }
     env[@"PATH"] = [pathSet.array componentsJoinedByString:@":"];
 
-    // Ensure DYLD_LIBRARY_PATH includes bootstrap libraries
     NSMutableOrderedSet<NSString *> *ldSet = [NSMutableOrderedSet orderedSet];
     NSString *existingLD = env[@"DYLD_LIBRARY_PATH"];
     if (existingLD) {
@@ -435,38 +374,14 @@
     return env;
 }
 
-#pragma mark - Path Resolution
-
 - (NSString *)resolvePath:(NSString *)logicalPath {
-    if (!logicalPath || logicalPath.length == 0) return logicalPath;
-
-    // If path already starts with bootstrap path, return as-is
-    if (self.bootstrapPath && [logicalPath hasPrefix:self.bootstrapPath]) {
-        return logicalPath;
-    }
-
-    // If the logical path exists as-is, return it
-    if ([[NSFileManager defaultManager] fileExistsAtPath:logicalPath]) {
-        return logicalPath;
-    }
-
-    // If rootless, prepend bootstrap path
-    if (self.isRootless && self.bootstrapPath) {
-        NSString *resolved = [self.bootstrapPath stringByAppendingPathComponent:logicalPath];
-        if ([[NSFileManager defaultManager] fileExistsAtPath:resolved]) {
-            return resolved;
-        }
-    }
-
-    // Return original (caller will handle non-existence)
-    return logicalPath;
+    return SPJBPath(logicalPath);
 }
-
-#pragma mark - Diagnostics
 
 - (NSDictionary *)diagnosticSnapshot {
     return @{
         @"isRootless": @(self.isRootless),
+        @"isRootHide": @(self.isRootHide),
         @"bootstrapPath": self.bootstrapPath ?: @"none",
         @"jailbreakType": self.jailbreakTypeName,
         @"iosVersion": self.iosVersion,

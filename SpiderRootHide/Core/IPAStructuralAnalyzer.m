@@ -1,15 +1,3 @@
-//
-//  IPAStructuralAnalyzer.m
-//  IPAInstallerPro — Commit 1: Process Execution Abstraction
-//
-//  CHANGES:
-//  - Replaced raw posix_spawn/waitpid in runCmdOutput: with ProcessRunner.
-//  - FIXES BUG C-9: previously passed NULL environ to posix_spawn; now uses
-//    ProcessRunner which always passes environ.
-//  - Exit code, signal, stderr, and duration are now captured.
-//  - No public API changes.
-//
-
 #import "IPAStructuralAnalyzer.h"
 #import "IPAStructuralResult.h"
 #import "ProcessRunner.h"
@@ -49,15 +37,11 @@ extern char **environ;
     return self;
 }
 
-#pragma mark - Public API
-
 - (IPAStructuralResult *)analyzeIPAAtPath:(NSString *)path {
-    // Check cache
     __block IPAStructuralResult *cachedResult = nil;
     dispatch_sync(self.analysisQueue, ^{
         NSNumber *cached = self.cachedAnalyses[path];
         if (cached && cached.boolValue) {
-            // Return cached result if available
             cachedResult = [self cachedResultForPath:path];
         }
     });
@@ -67,10 +51,8 @@ extern char **environ;
     IPAStructuralResult *result = [[IPAStructuralResult alloc] init];
     result.ipaPath = path;
 
-    // Extract and analyze structure
     [self extractAndAnalyzeIPA:path result:result];
 
-    // Cache result
     dispatch_async(self.analysisQueue, ^{
         self.cachedAnalyses[path] = @YES;
         [self cacheResult:result forPath:path];
@@ -132,7 +114,6 @@ extern char **environ;
     NSString *plistContent = result.stdoutText;
     if (!plistContent || plistContent.length == 0) return nil;
 
-    // Write to temp file and parse
     NSString *tempPath = [NSTemporaryDirectory() stringByAppendingPathComponent:[[NSUUID UUID] UUIDString]];
     [plistContent writeToFile:tempPath atomically:YES encoding:NSUTF8StringEncoding error:nil];
 
@@ -149,7 +130,6 @@ extern char **environ;
 
     for (NSString *item in contents) {
         if ([item hasSuffix:@""] && ![item containsString:@"Frameworks/"] && ![item containsString:@"PlugIns/"]) {
-            // Potential main executable
             [executables addObject:item];
         }
     }
@@ -210,18 +190,13 @@ extern char **environ;
     NSDictionary *info = [self extractInfoPlistFromIPA:path];
     if (!info) return NO;
 
-    // Check for App Clips configuration
     return info[@"NSAppClip"] != nil;
 }
 
-#pragma mark - Private Methods
-
 - (void)extractAndAnalyzeIPA:(NSString *)path result:(IPAStructuralResult *)result {
-    // Create temporary extraction directory
     NSString *tempDir = [NSTemporaryDirectory() stringByAppendingPathComponent:[[NSUUID UUID] UUIDString]];
     [[NSFileManager defaultManager] createDirectoryAtPath:tempDir withIntermediateDirectories:YES attributes:nil error:nil];
 
-    // Extract IPA
     CommandResult *extractResult = [[ProcessRunner sharedRunner] runCommand:@"/usr/bin/unzip"
                                                                    arguments:@[@"-q", path, @"-d", tempDir]
                                                                      timeout:60.0];
@@ -233,7 +208,6 @@ extern char **environ;
         return;
     }
 
-    // Find Payload directory
     NSString *payloadPath = [tempDir stringByAppendingPathComponent:@"Payload"];
     NSArray *payloadContents = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:payloadPath error:nil];
 
@@ -245,7 +219,6 @@ extern char **environ;
         }
     }
 
-    // Clean up
     [[NSFileManager defaultManager] removeItemAtPath:tempDir error:nil];
 }
 
@@ -264,7 +237,6 @@ extern char **environ;
         result.executableName = execName;
     }
 
-    // FIX: Add main app bundle — Spider requires this
     IPAStructuralBundle *mainBundle = [[IPAStructuralBundle alloc] init];
     mainBundle.path = appPath;
     mainBundle.bundleType = @".app";
@@ -285,7 +257,6 @@ extern char **environ;
 
     [self findMachOBinariesInDirectory:appPath result:result];
 
-    // Analyze frameworks
     NSString *frameworksPath = [appPath stringByAppendingPathComponent:@"Frameworks"];
     if ([[NSFileManager defaultManager] fileExistsAtPath:frameworksPath]) {
         NSArray *frameworks = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:frameworksPath error:nil];
@@ -297,7 +268,6 @@ extern char **environ;
         }
     }
 
-    // Analyze plug-ins
     NSString *pluginsPath = [appPath stringByAppendingPathComponent:@"PlugIns"];
     if ([[NSFileManager defaultManager] fileExistsAtPath:pluginsPath]) {
         NSArray *plugins = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:pluginsPath error:nil];
@@ -353,7 +323,6 @@ extern char **environ;
     if (header.length < 4) return NO;
 
     const uint32_t *magic = header.bytes;
-    // MH_MAGIC_64 = 0xfeedfacf, MH_MAGIC = 0xfeedface, FAT_MAGIC = 0xcafebabe, FAT_MAGIC_64 = 0xcafebabf
     return (*magic == 0xfeedfacf || *magic == 0xfeedface ||
             *magic == 0xcafebabe || *magic == 0xcafebabf);
 }
@@ -382,12 +351,10 @@ extern char **environ;
 }
 
 - (IPAStructuralResult *)cachedResultForPath:(NSString *)path {
-    // Implementation would retrieve from persistent cache if implemented
     return nil;
 }
 
 - (void)cacheResult:(IPAStructuralResult *)result forPath:(NSString *)path {
-    // Implementation would store to persistent cache if implemented
 }
 
 - (void)addAnalyzedBinary:(NSString *)path result:(IPAStructuralResult *)result {
@@ -430,8 +397,6 @@ extern char **environ;
             }
             executable.slices = [slices copy];
 
-            // CRITICAL: Spider checks these two properties
-            // FIX(v3.0.19): Encrypted binaries are valid. The encryption is stripped by ldid.
             executable.machOValid = (analysis.parseStatus == MachOParseSuccess || analysis.parseStatus == MachOParsePartial || analysis.hasEncryptedSlice);
 
             BOOL hasArm64 = NO;
@@ -480,9 +445,5 @@ extern char **environ;
     for (IPAStructuralExecutable *e in result.executables) totalSlices += e.slices.count;
     result.sliceCount = totalSlices;
 }
-
-#pragma mark - Legacy runCmdOutput: (REMOVED)
-// The raw posix_spawn implementation previously here has been replaced by ProcessRunner.
-// FIXES BUG C-9: previously passed NULL environ; ProcessRunner always passes environ.
 
 @end

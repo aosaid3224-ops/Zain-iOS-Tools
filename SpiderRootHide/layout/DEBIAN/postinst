@@ -1,104 +1,34 @@
 #!/bin/bash
 set -e
 
-HELPER_NAME="ipainstallerpro_helper"
-RM_BIN=""
-for candidate_rm in /var/jb/bin/rm /var/jb/usr/bin/rm /bin/rm /usr/bin/rm; do
-    if [ -x "$candidate_rm" ]; then
-        RM_BIN="$candidate_rm"
-        break
-    fi
-done
-if [ -z "$RM_BIN" ]; then
-    RM_BIN=$(command -v rm 2>/dev/null || true)
-fi
-if [ -z "$RM_BIN" ]; then
-    echo "ERROR: no usable rootless rm binary was found" >&2
-    exit 127
-fi
+HELPER="/usr/bin/ipainstallerpro_helper"
 
-# Check all possible locations (rootless and rootful)
-POSSIBLE_PATHS=(
-    "/usr/bin/${HELPER_NAME}"
-    "/var/jb/usr/bin/${HELPER_NAME}"
-)
-
-INSTALLED_PATH=""
-
-# Remove only interrupted-install staging directories. The shell glob follows
-# an Applications symlink into the active Procursus root, while the exact name
-# pattern and direct-child scope prevent touching normal apps or user data.
-# This runs during package configuration, not during an active IPA transaction.
-STAGE_ROOTS=(
-    "/var/jb/Applications"
-    "/Applications"
-    "/var/jb/var/tmp/IPAInstallerPro-Staging"
-    "/var/tmp/IPAInstallerPro-Staging"
-)
-# uicache resolves /var/jb/Applications before enumerating it. Add the
-# physical target as well, because find/glob behavior differs across roots.
-for logical_root in "/var/jb/Applications" "/Applications" "/var/jb/var/tmp/IPAInstallerPro-Staging" "/var/tmp/IPAInstallerPro-Staging"; do
-    if [ -d "$logical_root" ]; then
-        physical_root=$(cd "$logical_root" 2>/dev/null && pwd -P || true)
-        if [ -n "$physical_root" ]; then
-            STAGE_ROOTS+=("$physical_root")
-        fi
-    fi
-done
-# Dopamine may expose /var/jb through a namespace while uicache reports the
-# backing path under /private/preboot/<uuid>/dopamine-*/procursus. Enumerate
-# that backing root explicitly; the glob is expanded by the shell and is not
-# passed to rm as a pattern.
-for physical_root in /private/preboot/*/dopamine-*/procursus/Applications; do
-    [ -d "$physical_root" ] || continue
-    STAGE_ROOTS+=("$physical_root")
-done
-for stage_root in "${STAGE_ROOTS[@]}"; do
+shopt -s nullglob
+for stage_root in "/Applications" "/var/tmp/IPAInstallerPro-Staging"; do
+    [ -d "$stage_root" ] || continue
     for stage_path in "$stage_root"/*.app.ipa-stage-*; do
         [ -d "$stage_path" ] || continue
-        "$RM_BIN" -rf -- "$stage_path" 2>/dev/null || true
+        rm -rf -- "$stage_path" 2>/dev/null || true
     done
 done
 
-for p in "${POSSIBLE_PATHS[@]}"; do
-    if [ -f "$p" ]; then
-        INSTALLED_PATH="$p"
-        break
-    fi
-done
-
-if [ -z "$INSTALLED_PATH" ]; then
-    echo "ERROR: ${HELPER_NAME} not found in expected locations"
-    echo "Searched:"
-    for p in "${POSSIBLE_PATHS[@]}"; do
-        echo "  - $p"
-    done
+if [ ! -f "$HELPER" ]; then
+    echo "ERROR: $HELPER not found inside the jailbreak root"
     exit 1
 fi
 
-# Set proper permissions for setuid root
-echo "Setting setuid root on ${INSTALLED_PATH}..."
-chmod 4755 "$INSTALLED_PATH"
-chown root:wheel "$INSTALLED_PATH"
+echo "Setting setuid root on ${HELPER}..."
+chown root:wheel "$HELPER"
+chmod 4755 "$HELPER"
 
-# Verify setuid bit is set
-if [ -u "$INSTALLED_PATH" ]; then
-    echo "✅ Helper setuid verified at ${INSTALLED_PATH}"
+if [ -u "$HELPER" ]; then
+    echo "✅ Helper setuid verified at ${HELPER}"
 else
-    echo "⚠️ WARNING: setuid bit not set on ${INSTALLED_PATH}"
-    echo "Attempting alternative method..."
-    # Try with explicit permission
-    chmod u+s "$INSTALLED_PATH"
-    if [ -u "$INSTALLED_PATH" ]; then
-        echo "✅ Helper setuid set via u+s"
-    else
-        echo "❌ FAILED: Could not set setuid bit"
-        exit 1
-    fi
+    echo "❌ FAILED: Could not set setuid bit on ${HELPER}"
+    exit 1
 fi
 
-# Verify helper is executable
-if [ -x "$INSTALLED_PATH" ]; then
+if [ -x "$HELPER" ]; then
     echo "✅ Helper is executable"
 else
     echo "❌ Helper is not executable"

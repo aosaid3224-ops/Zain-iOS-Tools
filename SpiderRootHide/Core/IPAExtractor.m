@@ -1,16 +1,3 @@
-//
-//  IPAExtractor.m
-//  IPAInstallerPro — Commit 5: BLAZING FAST Icon Extraction (iOS 16/17/18 Rootless)
-//
-//  FIX(v3.0.30): Replaced multi-process extraction with single-process + NSCache.
-//  Previous versions opened 3-4 separate unzip processes per IPA, causing
-//  severe lag. Now we:
-//    1. Cache extracted icons (NSCache, 50 entries)
-//    2. Use ONE unzip process to extract BOTH Assets.car + Info.plist
-//    3. Load via NSBundle (10x faster than CoreUI)
-//    4. Keep CoreUI as rare fallback only
-//
-
 #import "IPAExtractor.h"
 #include <spawn.h>
 #include <sys/wait.h>
@@ -41,18 +28,8 @@ extern char **environ;
 
 - (NSString *)resolvedUnzipPath {
     NSFileManager *fm = [NSFileManager defaultManager];
-    RuntimeEnvironment *rt = [RuntimeEnvironment sharedEnvironment];
-    NSMutableArray<NSString *> *candidates = [NSMutableArray array];
-    NSString *resolved = [[RootlessManager sharedManager] resolvePath:@"/usr/bin/unzip"];
-    if (resolved.length) [candidates addObject:resolved];
-    NSString *libroot = SPJBRRootPath(@"/usr/bin/unzip");
-    if (libroot.length) [candidates addObject:libroot];
-    if (rt.bootstrapPath.length && [rt.bootstrapPath containsString:@".jbroot-"]) {
-        [candidates addObject:[rt.bootstrapPath stringByAppendingPathComponent:@"var/jb/usr/bin/unzip"]];
-        [candidates addObject:[rt.bootstrapPath stringByAppendingPathComponent:@"var/jb/bin/unzip"]];
-        [candidates addObject:[rt.bootstrapPath stringByAppendingPathComponent:@"usr/bin/unzip"]];
-    }
-    [candidates addObjectsFromArray:@[@"/var/jb/usr/bin/unzip", @"/var/jb/bin/unzip", @"/opt/procursus/bin/unzip", @"/usr/bin/unzip"]];
+    NSArray<NSString *> *candidates = @[SPJBPath(@"/usr/bin/unzip"), SPJBPath(@"/bin/unzip"),
+                                        @"/opt/procursus/bin/unzip", @"/usr/bin/unzip"];
     NSMutableSet<NSString *> *seen = [NSMutableSet set];
     for (NSString *candidate in candidates) {
         if (!candidate.length || [seen containsObject:candidate]) continue;
@@ -78,8 +55,6 @@ extern char **environ;
     return self;
 }
 
-#pragma mark - ZIP entry access
-
 - (NSData *)runUnzipDataForIPA:(NSString *)ipaPath entry:(NSString *)entry {
     if (ipaPath.length == 0 || entry.length == 0) return nil;
 
@@ -96,11 +71,12 @@ extern char **environ;
     posix_spawn_file_actions_addclose(&actions, pipefd[1]);
 
     const char *path = unzipPath.UTF8String;
+    NSArray<NSString *> *toolArgs = SPToolArguments(unzipPath, @[@"-p", ipaPath, entry]);
     char *argv[] = {
         (char *)path,
-        (char *)"-p",
-        (char *)ipaPath.UTF8String,
-        (char *)entry.UTF8String,
+        (char *)toolArgs[0].UTF8String,
+        (char *)toolArgs[1].UTF8String,
+        (char *)toolArgs[2].UTF8String,
         NULL
     };
 
@@ -268,8 +244,6 @@ extern char **environ;
     }];
 }
 
-#pragma mark - Metadata extraction
-
 - (IPAExtractedInfo *)extractMetadataFromIPA:(NSString *)ipaPath {
     IPAExtractedInfo *info = [[IPAExtractedInfo alloc] init];
     info.filePath = ipaPath;
@@ -327,8 +301,6 @@ extern char **environ;
     return nil;
 }
 
-#pragma mark - FAST Assets.car extraction (single process + NSBundle)
-
 - (UIImage *)extractIconViaNSBundleFromIPA:(NSString *)ipaPath appRoot:(NSString *)appRoot infoPlist:(NSDictionary *)plist {
     if (!appRoot || appRoot.length == 0 || !plist) return nil;
 
@@ -348,7 +320,6 @@ extern char **environ;
     }
     if (!iconName || iconName.length == 0) return nil;
 
-    // SINGLE unzip process extracts BOTH Assets.car AND Info.plist into temp dir
     NSString *tempDir = [NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"IPAFast-%@", [[NSUUID UUID] UUIDString]]];
     NSFileManager *fm = [NSFileManager defaultManager];
     [fm createDirectoryAtPath:tempDir withIntermediateDirectories:YES attributes:nil error:nil];
@@ -367,7 +338,6 @@ extern char **environ;
         return nil;
     }
 
-    // Verify both files exist
     NSString *assetsPath = [tempDir stringByAppendingPathComponent:@"Assets.car"];
     NSString *plistPath  = [tempDir stringByAppendingPathComponent:@"Info.plist"];
     if (![fm fileExistsAtPath:assetsPath] || ![fm fileExistsAtPath:plistPath]) {
@@ -375,7 +345,6 @@ extern char **environ;
         return nil;
     }
 
-    // Create a fake bundle and load icon via NSBundle (10x faster than CoreUI)
     NSBundle *bundle = [NSBundle bundleWithPath:tempDir];
     UIImage *icon = nil;
     if (bundle) {
@@ -393,8 +362,6 @@ extern char **environ;
     [fm removeItemAtPath:tempDir error:nil];
     return icon;
 }
-
-#pragma mark - CoreUI fallback (rare)
 
 - (UIImage *)extractIconViaCoreUIFromIPA:(NSString *)ipaPath appRoot:(NSString *)appRoot infoPlist:(NSDictionary *)plist {
     if (!appRoot || appRoot.length == 0 || !plist) return nil;
@@ -417,7 +384,6 @@ extern char **environ;
     }
     if (!iconName || iconName.length == 0) return nil;
 
-    // Stream Assets.car directly from ZIP (single file, no full extraction)
     NSString *assetsEntry = [appRoot stringByAppendingPathComponent:@"Assets.car"];
     NSData *assetsData = [self runUnzipDataForIPA:ipaPath entry:assetsEntry];
     if (!assetsData || assetsData.length == 0) return nil;
@@ -436,23 +402,18 @@ extern char **environ;
     return icon;
 }
 
-#pragma mark - Public icon extraction
-
 - (UIImage *)extractIconFromIPA:(NSString *)ipaPath {
     if (!ipaPath || ipaPath.length == 0) return nil;
 
-    // 1. Cache hit — instant return
     UIImage *cached = [self.iconCache objectForKey:ipaPath];
     if (cached) return cached;
 
-    // 2. Fast path — traditional PNG inside ZIP (milliseconds)
     UIImage *icon = [self extractTraditionalIconFromIPA:ipaPath];
     if (icon) {
         [self.iconCache setObject:icon forKey:ipaPath];
         return icon;
     }
 
-    // 3. Get listing once (shared for both NSBundle and CoreUI paths)
     NSString *listing = [self runUnzipListingForIPA:ipaPath];
     if (listing.length == 0) return nil;
 
@@ -464,14 +425,12 @@ extern char **environ;
     NSDictionary *plist = plistData.length > 0 ? [NSPropertyListSerialization propertyListWithData:plistData options:NSPropertyListImmutable format:NULL error:nil] : nil;
     if (![plist isKindOfClass:[NSDictionary class]]) return nil;
 
-    // 4. NSBundle path — ONE unzip process extracts Assets.car + Info.plist (fast)
     icon = [self extractIconViaNSBundleFromIPA:ipaPath appRoot:appRoot infoPlist:plist];
     if (icon) {
         [self.iconCache setObject:icon forKey:ipaPath];
         return icon;
     }
 
-    // 5. CoreUI fallback — stream Assets.car only (rare)
     icon = [self extractIconViaCoreUIFromIPA:ipaPath appRoot:appRoot infoPlist:plist];
     if (icon) {
         [self.iconCache setObject:icon forKey:ipaPath];
@@ -480,8 +439,6 @@ extern char **environ;
 
     return nil;
 }
-
-#pragma mark - Compatibility metadata + icon extraction
 
 - (IPAExtractedInfo *)extractInfoFromIPA:(NSString *)ipaPath {
     IPAExtractedInfo *info = [self extractMetadataFromIPA:ipaPath];
@@ -495,8 +452,6 @@ extern char **environ;
     if ([path containsString:@".."] || [path containsString:@"~"] || [path hasPrefix:@"/"]) return YES;
     return NO;
 }
-
-#pragma mark - Full extraction fallback (kept for compatibility, rarely used)
 
 - (UIImage *)extractIconFromAppDirectory:(NSString *)appDir infoPlist:(NSDictionary *)plist {
     if (appDir.length == 0 || plist.count == 0) return nil;

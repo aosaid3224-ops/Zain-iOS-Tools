@@ -1,7 +1,3 @@
-//
-// SigningTarget.m
-//
-
 #import "SigningTarget.h"
 #import "EntitlementSet.h"
 

@@ -85,7 +85,6 @@
                 info.bundlePath = [[app performSelector:@selector(containerURL)] path];
             }
 
-            // Pass bundlePath directly to avoid recursion
             info.icon = [self iconForBundleID:info.bundleID bundlePath:info.bundlePath];
 
             [apps addObject:info];
@@ -112,7 +111,6 @@
     return nil;
 }
 
-// FIXED: No circular dependency — bundlePath passed directly from caller
 - (UIImage *)iconForBundleID:(NSString *)bundleID bundlePath:(NSString *)bundlePath {
     if (!bundleID) return nil;
     UIImage *cached = [self.iconCache objectForKey:bundleID];
@@ -120,7 +118,6 @@
 
     UIImage *icon = nil;
 
-    // Method 1: LSApplicationProxy (legacy, may fail on iOS 15+)
     @try {
         Class LSApplicationProxy_class = objc_getClass("LSApplicationProxy");
         if (LSApplicationProxy_class && [LSApplicationProxy_class respondsToSelector:@selector(applicationProxyForIdentifier:)]) {
@@ -140,7 +137,6 @@
         }
     } @catch (NSException *e) {}
 
-    // Method 2: Load from bundle path directly (fallback) — NO recursion!
     if (!icon && bundlePath.length > 0) {
         NSString *infoPath = [bundlePath stringByAppendingPathComponent:@"Info.plist"];
         NSDictionary *plist = [NSDictionary dictionaryWithContentsOfFile:infoPath];
@@ -173,7 +169,6 @@
     return icon;
 }
 
-// Legacy overload (avoids breaking existing callers)
 - (UIImage *)iconForBundleID:(NSString *)bundleID {
     if (!bundleID) return nil;
 

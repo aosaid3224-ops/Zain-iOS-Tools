@@ -1,8 +1,3 @@
-//
-// InstallationTransactionCoordinator.m
-// IPA Installer Pro — transaction ordering only
-//
-
 #import "InstallationTransactionCoordinator.h"
 
 static BOOL InstallationTransactionTransitionAllowed(InstallationTransactionState from, InstallationTransactionState to) {
@@ -71,8 +66,6 @@ NSString *InstallationTransactionStateName(InstallationTransactionState state) {
             self.states[transactionID] = @(InstallationTransactionStatePending);
             accepted = YES;
         } else if (existing.integerValue == InstallationTransactionStatePending) {
-            // prepareTransactionWithID may create the marker before the
-            // provider starts. The same transaction is allowed to claim it.
             accepted = YES;
         }
     });

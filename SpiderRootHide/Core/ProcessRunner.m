@@ -1,12 +1,7 @@
-//
-//  ProcessRunner.m
-//  IPAInstallerPro — Commit 2: Binary-safe output support
-//  FIX: stdoutData/stderrData now passed to CommandResult for binary-safe consumers.
-//
-
 #import "ProcessRunner.h"
 #import "CommandResult.h"
 #import "Logger.h"
+#import "SPRootHide.h"
 
 #include <spawn.h>
 #include <sys/wait.h>
@@ -38,8 +33,6 @@ extern char **environ;
     return self;
 }
 
-#pragma mark - Public API
-
 - (CommandResult *)runCommand:(NSString *)path
                     arguments:(NSArray<NSString *> *)arguments
                       timeout:(NSTimeInterval)timeout {
@@ -56,6 +49,8 @@ extern char **environ;
                                                    duration:0.0
                                                    timedOut:NO];
     }
+
+    arguments = SPToolArguments(path, arguments);
 
     NSDate *start = [NSDate date];
     int stdoutPipe[2] = {-1, -1};
@@ -117,7 +112,6 @@ extern char **environ;
                                                    timedOut:NO];
     }
 
-    // Read stdout and stderr concurrently using poll
     NSMutableData *stdoutData = [NSMutableData data];
     NSMutableData *stderrData = [NSMutableData data];
     BOOL finished = NO;
@@ -161,10 +155,8 @@ extern char **environ;
             if (n > 0) [stderrData appendBytes:buf length:(NSUInteger)n];
         }
 
-        // Check if process has exited (non-blocking)
         pid_t waited = waitpid(pid, &status, WNOHANG);
         if (waited == pid) {
-            // FIX: Drain remaining pipe data before finishing to prevent truncated stdout
             uint8_t drainBuf[4096];
             ssize_t drainN;
             while ((drainN = read(stdoutPipe[0], drainBuf, sizeof(drainBuf))) > 0) {
@@ -175,23 +167,20 @@ extern char **environ;
             }
             finished = YES;
         } else if (waited < 0 && errno != EINTR) {
-            // Unexpected waitpid failure
             break;
         }
     }
 
     if (timedOut) {
         kill(pid, SIGTERM);
-        usleep(100000); // 100ms grace
+        usleep(100000);
         waitpid(pid, &status, WNOHANG);
     }
 
     close(stdoutPipe[0]);
     close(stderrPipe[0]);
 
-    // Drain any remaining data
     if (!finished && !timedOut) {
-        // Process may have exited while we were closing pipes; try once more
         waitpid(pid, &status, 0);
         finished = YES;
     }

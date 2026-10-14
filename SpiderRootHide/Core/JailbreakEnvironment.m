@@ -1,15 +1,3 @@
-//
-//  JailbreakEnvironment.m
-//  IPAInstallerPro — Commit 4: Diagnostics Fix
-//
-//  CHANGES:
-//  - Added _applicationsPath, _usrBinPath, _mobileDocumentsPath.
-//  - Added _osVersion (alias to _iosVersion), _deviceModel.
-//  - Added _iosVersion and _architecture (from RuntimeEnvironment).
-//  - All paths now use RuntimeEnvironment.bootstrapPath dynamically.
-//  - No hardcoded /var/jb anywhere.
-//
-
 #import "JailbreakEnvironment.h"
 #import <UIKit/UIKit.h>
 #import "RuntimeEnvironment.h"
@@ -37,35 +25,28 @@
 
     RuntimeEnvironment *rt = [RuntimeEnvironment sharedEnvironment];
 
-    // Core detection (delegated to RuntimeEnvironment)
     _isRootless = rt.isRootless;
     _rootPath = rt.bootstrapPath ?: @"";
     _jailbreakType = rt.jailbreakTypeName;
     _isJailbroken = (rt.jailbreakType != SpiderJailbreakTypeUnknown) || rt.isRootless;
 
-    // System info (from RuntimeEnvironment)
     _iosVersion = rt.iosVersion;
     _architecture = rt.architecture;
-    _osVersion = _iosVersion; // backward compatibility alias
+    _osVersion = _iosVersion;
 
-    // Device model (from UIDevice — real, not hardcoded)
     _deviceModel = [UIDevice currentDevice].model ?: @"Unknown";
 
-    // Paths (dynamic, based on detected bootstrap)
     if (rt.bootstrapPath) {
         _applicationsPath = [rt.bootstrapPath stringByAppendingPathComponent:@"Applications"];
         _usrBinPath = [rt.bootstrapPath stringByAppendingPathComponent:@"usr/bin"];
     } else {
-        // Non-rootless fallback
         _applicationsPath = @"/Applications";
         _usrBinPath = @"/usr/bin";
     }
 
-    // Documents path (real path from system)
     NSArray *docPaths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
     _mobileDocumentsPath = docPaths.firstObject ?: @"N/A";
 
-    // Log discovery results
     NSTimeInterval duration = [[NSDate date] timeIntervalSinceDate:start];
     [[Logger sharedLogger] info:[NSString stringWithFormat:@"JailbreakEnvironment: detected in %.3fs | jailbroken=%@ | rootless=%@ | type=%@ | root=%@ | iOS=%@ | arch=%@ | device=%@ | apps=%@ | usrbin=%@",
                                  duration,

@@ -1,19 +1,11 @@
-//
-//  InstallationProgressViewController.m
-//  IPAInstallerPro
-//
-//  v2.2.0 — Event-Driven Live Installation UI + Raw Log Diagnostics
-//
-
 #import "InstallationProgressViewController.h"
+#import "SPRootHide.h"
 #import "InstallationEngine.h"
 #import "JailbreakEnvironment.h"
 #import "OperationLog.h"
 #import "LiveOperationStream.h"
 #import "IPTheme.h"
 #import <objc/runtime.h>
-
-#pragma mark - Phase Visual State
 
 typedef NS_ENUM(NSInteger, PhaseVisualState) {
     PhaseVisualStatePending = 0,
@@ -22,8 +14,6 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
     PhaseVisualStateFailed  = 3
 };
 
-#pragma mark - InstallPhaseView
-
 @interface InstallPhaseView : UIView
 @property (nonatomic, strong) UILabel *iconLabel;
 @property (nonatomic, strong) UILabel *titleLabel;
@@ -31,7 +21,6 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
 @property (nonatomic, strong) UIView  *pulsingDot;
 @property (nonatomic, assign) PhaseVisualState phaseState;
 - (void)setState:(PhaseVisualState)state animated:(BOOL)animated;
-
 
 @end
 
@@ -166,11 +155,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
     self.pulsingDot.alpha = 1.0;
 }
 
-
-
 @end
-
-#pragma mark - ViewController
 
 @interface InstallationProgressViewController ()
 @property (nonatomic, strong) NSString *installedBundleID;
@@ -189,14 +174,11 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
 @property (nonatomic, assign) NSInteger currentPhaseIndex;
 @property (nonatomic, assign) BOOL hasFailed;
 
-// Raw log diagnostics
 @property (nonatomic, strong) NSMutableString *rawLog;
 @property (nonatomic, strong) UIButton *showLogButton;
 @property (nonatomic, strong) UITextView *logTextView;
 @property (nonatomic, strong) UIView *logContainer;
 
-// Passive forensic stream: observes the same transaction without starting a
-// second install, signing pass, or registration pass.
 @property (nonatomic, strong) LiveOperationStream *liveStream;
 @property (nonatomic, assign) NSUInteger lastRenderedLiveSequence;
 @property (nonatomic, strong) UIView *liveOutputCard;
@@ -232,8 +214,6 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
     [[NSNotificationCenter defaultCenter] removeObserver:self];
     [self.liveStream close];
 }
-
-#pragma mark - Raw Log
 
 - (void)appendLog:(NSString *)text {
     if (!text) return;
@@ -308,12 +288,7 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
     }];
 }
 
-#pragma mark - OperationLog Notifications
-
 - (void)registerForOperationLogNotifications {
-    // LiveOperationStream is the only live source for this screen. The old
-    // OperationRecord notifications remain available to other screens, but
-    // are intentionally not subscribed here to prevent a second UI backlog.
 }
 
 - (NSInteger)uiPhaseIndexForOperationPhase:(OperationPhase)opPhase {
@@ -362,9 +337,6 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
     NSString *stage = event.stage.uppercaseString ?: @"";
     NSString *status = event.status.uppercaseString ?: @"";
     NSSet *criticalStages = [NSSet setWithArray:@[@"START", @"IPA_OPEN", @"IPA_EXTRACT", @"APP_IDENTIFY", @"FILE_COPY", @"UICACHE", @"VERIFY", @"LAUNCH", @"RUNTIME_MONITOR", @"CRASH_DIAGNOSTICS", @"COMPLETE"]];
-    // SIGN/FRAMEWORK/DYLIB/PERMISSION/CLEANUP can generate hundreds of
-    // records. Their full history stays in OperationLog; the UI keeps the
-    // latest normal event and a count, while failures always bypass coalescing.
     return [criticalStages containsObject:stage] || [status isEqualToString:@"FAILED"] ||
            ([status isEqualToString:@"SUCCESS"] && ![stage isEqualToString:@"SIGN"] && ![stage isEqualToString:@"FRAMEWORK"] && ![stage isEqualToString:@"DYLIB"] && ![stage isEqualToString:@"PERMISSION"] && ![stage isEqualToString:@"CLEANUP"]);
 }
@@ -377,9 +349,6 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
             return;
         }
         if (event.finalEvent) {
-            // The final line has priority over any presentation backlog. The
-            // complete OperationLog remains untouched; only UI pending items
-            // are discarded here.
             [self.pendingLiveCriticalEvents removeAllObjects];
             self.pendingLiveNormalLast = nil;
             self.pendingLiveNormalCount = 0;
@@ -463,7 +432,6 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
                          record.rawError ?: @"-"];
     [self appendLog:logLine];
 
-    // Show diagnostics report / rawOutput clearly in raw log
     if (record.rawOutput.length > 0) {
         [self appendLog:@"═══════════════════════════════════════════════════════════════"];
         [self appendLog:record.rawOutput];
@@ -492,8 +460,6 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
         }
     });
 }
-
-#pragma mark - UI Setup
 
 - (void)setupUI {
     _scrollView = [[UIScrollView alloc] init];
@@ -638,8 +604,6 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
     self.currentPhaseIndex = index;
 }
 
-#pragma mark - Installation
-
 - (void)startInstallation {
     if (!self.ipaPath) {
         [self showFinalState:NO message:@"\u0645\u0633\u0627\u0631 IPA \u063a\u064a\u0631 \u0635\u0627\u0644\u062d"];
@@ -673,8 +637,6 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
     }
 
     InstallationEngine *engine = [InstallationEngine sharedEngine];
-    // Clear only a completed/failed marker. A live installation is never
-    // interrupted and remains protected by the engine lock.
     [engine resetFailedInstallationState];
     if (engine.isInstalling) {
         [self showFinalState:NO message:@"\u062a\u062b\u0628\u064a\u062a \u0622\u062e\u0631 \u0645\u0627 \u0632\u0627\u0644 \u0642\u064a\u062f \u0627\u0644\u062a\u0646\u0641\u064a\u0630"];
@@ -721,9 +683,6 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
         [self.progressView setProgress:1.0 animated:YES];
         self.headerLabel.text = @"\u0627\u0643\u062a\u0645\u0644 \u0627\u0644\u062a\u062b\u0628\u064a\u062a \u2713";
         if (self.dismissOnDuplicateSuccess) {
-            // Duplicate owns this progress modal. Close the passive stream and
-            // release presentation state before notifying its parent. The
-            // ordinary install flow keeps the existing report-card behavior.
             [self.liveStream close];
             self.liveStream = nil;
             [self.pendingLiveCriticalEvents removeAllObjects];
@@ -750,8 +709,6 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
         [self showReportCard:result success:NO];
     });
 }
-
-#pragma mark - Report Card
 
 - (void)showReportCard:(InstallationResult *)result success:(BOOL)success {
     if (self.reportCard) [self.reportCard removeFromSuperview];
@@ -808,6 +765,8 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
     [self addSectionTitle:@"\u0627\u0644\u0628\u064a\u0626\u0629" toStack:stack];
     [self addItem:[NSString stringWithFormat:@"\u0627\u0644\u062c\u064a\u0644\u0628\u0631\u064a\u0643: %@", env.jailbreakType ?: @"\u063a\u064a\u0631 \u0645\u0639\u0631\u0648\u0641"] toStack:stack];
     [self addItem:[NSString stringWithFormat:@"Rootless: %@", env.isRootless ? @"\u0646\u0639\u0645" : @"\u0644\u0627"] toStack:stack];
+    [self addItem:[NSString stringWithFormat:@"RootHide: %@", SPIsRootHide() ? @"\u0646\u0639\u0645" : @"\u0644\u0627"] toStack:stack];
+    if (SPJBRootPath().length) [self addItem:[NSString stringWithFormat:@"jbroot: %@", SPJBRootPath()] toStack:stack];
 
     if (!success && result.message.length > 0) {
         [self addSectionTitle:@"\u062a\u0641\u0627\u0635\u064a\u0644 \u0627\u0644\u062e\u0637\u0623" toStack:stack];
@@ -819,7 +778,6 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
         [stack addArrangedSubview:errLabel];
     }
 
-    // Raw Log Button
     UIView *spacer = [[UIView alloc] init];
     [spacer.heightAnchor constraintEqualToConstant:8].active = YES;
     [stack addArrangedSubview:spacer];
@@ -919,8 +877,6 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
         : [UIColor colorWithRed:0.9 green:0.3 blue:0.3 alpha:1.0];
 }
 
-#pragma mark - Actions
-
 - (void)retryTapped:(UIButton *)sender {
     InstallationEngine *engine = [InstallationEngine sharedEngine];
     if (engine.isInstalling) {
@@ -931,12 +887,9 @@ typedef NS_ENUM(NSInteger, PhaseVisualState) {
 }
 
 - (void)doneTapped:(UIButton *)sender {
-    // Make dismissal idempotent: a failed/completed transaction must not leave
-    // a stale marker that blocks the next installation.
     [[InstallationEngine sharedEngine] resetFailedInstallationState];
     [self dismissViewControllerAnimated:YES completion:nil];
 }
-
 
 - (NSAttributedString *)coloredLogFromString:(NSString *)text {
     NSMutableAttributedString *attr = [[NSMutableAttributedString alloc] initWithString:text];

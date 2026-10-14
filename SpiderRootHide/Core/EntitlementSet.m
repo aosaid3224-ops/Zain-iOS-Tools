@@ -1,7 +1,3 @@
-//
-// EntitlementSet.m
-//
-
 #import "EntitlementSet.h"
 
 @implementation EntitlementSet
@@ -17,7 +13,6 @@
 
         NSMutableArray *special = [NSMutableArray array];
 
-        // Core jailbreak
         _hasPlatformApplication = [self boolForKey:@"platform-application"];
         _hasGetTaskAllow = [self boolForKey:@"get-task-allow"];
         _hasNoContainer = [self boolForKey:@"com.apple.private.security.no-container"];
@@ -25,7 +20,6 @@
         _hasSkipLibraryValidation = [self boolForKey:@"com.apple.private.skip-library-validation"];
         _hasRunUnsignedCode = [self boolForKey:@"run-unsigned-code"];
 
-        // Apple services
         _hasPushNotifications = [self boolForKey:@"aps-environment"];
         if (_hasPushNotifications) [special addObject:@"aps-environment"];
 
@@ -96,12 +90,7 @@
     return val != nil;
 }
 
-#pragma mark - Pre-built Sets
-
 + (NSDictionary *)genericJailbreakEntitlements {
-    // Keep the generic policy narrow. no-container/no-sandbox change the
-    // application's container semantics and are not safe defaults for a normal
-    // App Store or dumped user application.
     return @{
         @"platform-application": @YES,
         @"get-task-allow": @YES,
@@ -111,16 +100,12 @@
 }
 
 + (NSDictionary *)minimalEntitlements {
-    // Nested code does not need application-container entitlements. An empty
-    // set makes signTarget use ldid's no-entitlement signing path.
     return @{};
 }
 
 + (NSDictionary *)emptyEntitlements {
     return @{};
 }
-
-#pragma mark - Serialization
 
 - (NSDictionary *)dictionaryRepresentation {
     NSMutableDictionary *d = [NSMutableDictionary dictionary];

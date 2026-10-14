@@ -1,10 +1,3 @@
-//
-// OperationLog.m
-// IPA Installer Pro
-//
-// v2.1 — Complete implementation matching header with OperationRecord objects
-//
-
 #import "OperationLog.h"
 #import "Logger.h"
 
@@ -51,8 +44,6 @@ static NSString * const kLogFileName = @"IPAInstallerPro_OperationLog.plist";
     return self;
 }
 
-#pragma mark - Live subscription
-
 - (NSString *)subscribeLiveToTransactionID:(NSString *)transactionID handler:(OperationLogLiveHandler)handler {
     if (!transactionID.length || !handler) return @"";
     NSString *subscriptionID = [[NSUUID UUID] UUIDString];
@@ -67,8 +58,6 @@ static NSString * const kLogFileName = @"IPAInstallerPro_OperationLog.plist";
 
 - (void)unsubscribeLiveSubscription:(NSString *)subscriptionID {
     if (!subscriptionID.length) return;
-    // This is intentionally asynchronous because a live handler may close its
-    // stream while it is executing on logQueue.
     dispatch_async(self.logQueue, ^{
         [self.liveSubscriptions removeObjectForKey:subscriptionID];
     });
@@ -83,8 +72,6 @@ static NSString * const kLogFileName = @"IPAInstallerPro_OperationLog.plist";
         }
     }
 }
-
-#pragma mark - Transaction Lifecycle
 
 - (NSString *)beginTransactionForIPA:(NSString *)ipaPath {
     NSString *txnID = [[NSUUID UUID] UUIDString];
@@ -134,8 +121,6 @@ static NSString * const kLogFileName = @"IPAInstallerPro_OperationLog.plist";
     [self addRecord:rec];
 }
 
-#pragma mark - Phase Lifecycle
-
 - (NSString *)beginPhase:(OperationPhase)phase operation:(NSString *)operation target:(NSString *)target input:(NSString *)input transactionID:(NSString *)transactionID {
     NSString *recID = [[NSUUID UUID] UUIDString];
 
@@ -169,7 +154,6 @@ static NSString * const kLogFileName = @"IPAInstallerPro_OperationLog.plist";
         for (NSUInteger i = 0; i < self.records.count; i++) {
             OperationRecord *rec = self.records[i];
             if ([rec.recordID isEqualToString:recordID]) {
-                // Recreate with updated values (since properties are readonly)
                 OperationRecord *updated = [[OperationRecord alloc] init];
                 updated.recordID = rec.recordID;
                 updated.transactionID = rec.transactionID;
@@ -195,8 +179,6 @@ static NSString * const kLogFileName = @"IPAInstallerPro_OperationLog.plist";
         }
     });
 }
-
-#pragma mark - Record Management
 
 - (void)addRecord:(OperationRecord *)record {
     dispatch_async(self.logQueue, ^{
@@ -285,8 +267,6 @@ static NSString * const kLogFileName = @"IPAInstallerPro_OperationLog.plist";
     });
 }
 
-#pragma mark - Reports
-
 - (NSString *)transactionReport:(NSString *)txnID {
     if (!txnID) return @"";
     NSArray *records = [self recordsForTransaction:txnID];
@@ -345,8 +325,6 @@ static NSString * const kLogFileName = @"IPAInstallerPro_OperationLog.plist";
     return jsonData ? [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding] : @"{}";
 }
 
-#pragma mark - Helpers
-
 - (NSString *)resultName:(OperationResult)result {
     switch (result) {
         case OperationResultSuccess: return @"SUCCESS";
@@ -357,11 +335,7 @@ static NSString * const kLogFileName = @"IPAInstallerPro_OperationLog.plist";
     }
 }
 
-#pragma mark - Persistence
-
 - (void)saveLog {
-    // Snapshot on logQueue, persist asynchronously on a separate serial queue.
-    // Live subscribers must never wait for plist I/O.
     NSArray<OperationRecord *> *snapshot = [self.records copy];
     NSString *path = [self.logFilePath copy];
     dispatch_async(self.persistenceQueue, ^{
@@ -375,7 +349,6 @@ static NSString * const kLogFileName = @"IPAInstallerPro_OperationLog.plist";
     if ([[NSFileManager defaultManager] fileExistsAtPath:self.logFilePath]) {
         NSArray *loaded = [NSArray arrayWithContentsOfFile:self.logFilePath];
         if (loaded) {
-            // Convert dictionaries back to OperationRecord objects
             for (NSDictionary *dict in loaded) {
                 OperationRecord *rec = [[OperationRecord alloc] init];
                 rec.recordID = dict[@"recordID"] ?: @"";
@@ -398,8 +371,6 @@ static NSString * const kLogFileName = @"IPAInstallerPro_OperationLog.plist";
         }
     }
 }
-
-#pragma mark - NSNotificationCenter
 
 - (void)broadcastRecordAdded:(OperationRecord *)record {
     dispatch_async(dispatch_get_main_queue(), ^{

@@ -1,4 +1,5 @@
 #import "IPAArchiveExtractor.h"
+#import "SPRootHide.h"
 #import "RootlessManager.h"
 #import "Logger.h"
 #include <spawn.h>
@@ -102,7 +103,7 @@ extern char **environ;
     }
 
     NSMutableArray<NSString *> *argvStrings = [NSMutableArray arrayWithObject:path];
-    [argvStrings addObjectsFromArray:arguments ?: @[]];
+    [argvStrings addObjectsFromArray:SPToolArguments(path, arguments ?: @[])];
     char **argv = calloc(argvStrings.count + 1, sizeof(char *));
     for (NSUInteger i = 0; i < argvStrings.count; i++) argv[i] = (char *)argvStrings[i].UTF8String;
     argv[argvStrings.count] = NULL;

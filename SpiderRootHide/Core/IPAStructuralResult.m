@@ -1,11 +1,5 @@
-//
-// IPAStructuralResult.m
-// IPAInstallerPro — Phase 1: Universal IPA Structural Reader
-//
-
 #import "IPAStructuralResult.h"
 
-#pragma mark - Bundle
 @implementation IPAStructuralBundle
 - (NSDictionary *)dictionaryRepresentation {
     NSMutableDictionary *d = [NSMutableDictionary dictionary];
@@ -21,7 +15,6 @@
 }
 @end
 
-#pragma mark - Executable Slice
 @implementation IPAStructuralExecutableSlice
 - (NSDictionary *)dictionaryRepresentation {
     NSMutableDictionary *d = [NSMutableDictionary dictionary];
@@ -35,7 +28,6 @@
 }
 @end
 
-#pragma mark - Dependency
 @implementation IPAStructuralDependency
 - (NSDictionary *)dictionaryRepresentation {
     NSMutableDictionary *d = [NSMutableDictionary dictionary];
@@ -46,7 +38,6 @@
 }
 @end
 
-#pragma mark - RPath
 @implementation IPAStructuralRPath
 - (NSDictionary *)dictionaryRepresentation {
     NSMutableDictionary *d = [NSMutableDictionary dictionary];
@@ -56,7 +47,6 @@
 }
 @end
 
-#pragma mark - Load Command
 @implementation IPAStructuralLoadCommand
 - (NSDictionary *)dictionaryRepresentation {
     NSMutableDictionary *d = [NSMutableDictionary dictionary];
@@ -67,7 +57,6 @@
 }
 @end
 
-#pragma mark - Executable
 @implementation IPAStructuralExecutable
 - (NSDictionary *)dictionaryRepresentation {
     NSMutableDictionary *d = [NSMutableDictionary dictionary];
@@ -109,7 +98,6 @@
 }
 @end
 
-#pragma mark - Result
 @implementation IPAStructuralResult
 
 - (instancetype)init {
@@ -133,7 +121,6 @@
     if (self.analysisStartTime) d[@"analysisStartTime"] = [self isoStringFromDate:self.analysisStartTime];
     if (self.analysisEndTime) d[@"analysisEndTime"] = [self isoStringFromDate:self.analysisEndTime];
 
-    // Counters
     d[@"bundleCount"] = @(self.bundleCount);
     d[@"executableCount"] = @(self.executableCount);
     d[@"frameworkCount"] = @(self.frameworkCount);
@@ -144,7 +131,6 @@
     d[@"rpathCount"] = @(self.rpathCount);
     d[@"sliceCount"] = @(self.sliceCount);
 
-    // Arrays
     NSMutableArray *bundlesArr = [NSMutableArray array];
     for (IPAStructuralBundle *b in self.bundles) { [bundlesArr addObject:[b dictionaryRepresentation]]; }
     d[@"bundles"] = bundlesArr;

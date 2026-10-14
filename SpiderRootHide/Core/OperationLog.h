@@ -1,12 +1,3 @@
-//
-//  OperationLog.h
-//  IPAInstallerPro
-//
-//  Rigorous Installation Operation Audit Trail.
-//  Principle: START → Execute → Verify → Result.
-//  SUCCESS is never assumed. It must be proven by verification.
-//
-
 #import <Foundation/Foundation.h>
 
 typedef NS_ENUM(NSInteger, OperationResult) {
@@ -65,8 +56,6 @@ typedef void (^OperationLogLiveHandler)(OperationRecord *record, BOOL isUpdate);
 
 @interface OperationLog : NSObject
 + (instancetype)sharedLog;
-/** Subscribes to one transaction after each record is persisted. The callback
-    must be lightweight; it is invoked on the log's serial queue. */
 - (NSString *)subscribeLiveToTransactionID:(NSString *)transactionID handler:(OperationLogLiveHandler)handler;
 - (void)unsubscribeLiveSubscription:(NSString *)subscriptionID;
 - (NSString *)beginTransactionForIPA:(NSString *)ipaPath;

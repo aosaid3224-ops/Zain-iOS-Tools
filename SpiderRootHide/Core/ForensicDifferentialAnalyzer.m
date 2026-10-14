@@ -1,11 +1,3 @@
-//
-// ForensicDifferentialAnalyzer.m
-// IPA Installer Pro — Diagnostic/Forensic Mode
-//
-// Read-only comparison. No install, signing, registration, or filesystem mutation
-// of either IPA is performed here.
-//
-
 #import "ForensicDifferentialAnalyzer.h"
 #import "IPAStructuralAnalyzer.h"
 #import "IPAStructuralResult.h"
@@ -18,8 +10,6 @@
     dispatch_once(&onceToken, ^{ shared = [[self alloc] init]; });
     return shared;
 }
-
-#pragma mark - Normalization
 
 - (NSString *)normalizedPath:(NSString *)path {
     if (!path.length) return @"";
@@ -101,8 +91,6 @@
     }
     return indexed;
 }
-
-#pragma mark - Fact comparison
 
 - (void)addDifference:(NSMutableArray *)differences category:(NSString *)category key:(NSString *)key field:(NSString *)field working:(id)working crash:(id)crash {
     [differences addObject:@{
@@ -187,8 +175,6 @@
         @"warnings": @[]
     };
 }
-
-#pragma mark - Public API
 
 - (NSDictionary *)compareWorkingIPA:(NSString *)workingIPA crashIPA:(NSString *)crashIPA {
     NSDate *started = [NSDate date];

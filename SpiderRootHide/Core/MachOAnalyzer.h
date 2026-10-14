@@ -1,11 +1,3 @@
-//
-// MachOAnalyzer.h
-// IPAInstallerPro — Phase 1: Universal IPA Structural Reader
-//
-// Internal Mach-O parser. Primary source of truth.
-// External tools (lipo, otool) are fallback only.
-//
-
 #import <Foundation/Foundation.h>
 
 typedef NS_ENUM(NSInteger, MachOParseStatus) {
@@ -14,8 +6,6 @@ typedef NS_ENUM(NSInteger, MachOParseStatus) {
     MachOParsePartial = 2,
     MachOParseFailed = 3
 };
-
-#pragma mark - Mach-O Slice
 
 @interface MachOSlice : NSObject
 @property (nonatomic, assign) uint32_t cputype;
@@ -29,8 +19,6 @@ typedef NS_ENUM(NSInteger, MachOParseStatus) {
 - (NSDictionary *)dictionaryRepresentation;
 @end
 
-#pragma mark - Mach-O Dependency
-
 @interface MachODependency : NSObject
 @property (nonatomic, strong) NSString *rawInstallName;
 @property (nonatomic, assign) BOOL isWeak;
@@ -38,15 +26,11 @@ typedef NS_ENUM(NSInteger, MachOParseStatus) {
 - (NSDictionary *)dictionaryRepresentation;
 @end
 
-#pragma mark - Mach-O RPath
-
 @interface MachORPath : NSObject
 @property (nonatomic, strong) NSString *rawPath;
 @property (nonatomic, strong) NSString *sourceExecutablePath;
 - (NSDictionary *)dictionaryRepresentation;
 @end
-
-#pragma mark - Mach-O Load Command
 
 @interface MachOLoadCommand : NSObject
 @property (nonatomic, assign) uint32_t cmd;
@@ -54,8 +38,6 @@ typedef NS_ENUM(NSInteger, MachOParseStatus) {
 @property (nonatomic, strong) NSString *cmdDescription;
 - (NSDictionary *)dictionaryRepresentation;
 @end
-
-#pragma mark - Mach-O Analysis Result
 
 @interface MachOAnalysisResult : NSObject
 @property (nonatomic, strong) NSString *filePath;
@@ -82,11 +64,9 @@ typedef NS_ENUM(NSInteger, MachOParseStatus) {
 @property (nonatomic, assign) uint32_t codeSignatureSize;
 @property (nonatomic, assign) MachOParseStatus parseStatus;
 @property (nonatomic, strong) NSString *parseError;
-@property (nonatomic, strong) NSString *source; // "internal", "fallback"
+@property (nonatomic, strong) NSString *source;
 - (NSDictionary *)dictionaryRepresentation;
 @end
-
-#pragma mark - Mach-O Analyzer
 
 @interface MachOAnalyzer : NSObject
 + (instancetype)sharedAnalyzer;

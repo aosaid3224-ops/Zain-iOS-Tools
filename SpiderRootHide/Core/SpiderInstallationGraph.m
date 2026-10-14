@@ -41,7 +41,6 @@
         NSString *roleName = @"unknown";
         BOOL launchCritical = NO;
         if ([type isEqualToString:@".app"]) {
-            // The top-level .app is the only Home Screen launch contract.
             if (!hostBundle || bundle.nestingLevel < hostBundle.nestingLevel) hostBundle = bundle;
             role = SpiderBundleRoleHostApplication;
             roleName = @"host-app";
@@ -74,7 +73,6 @@
         [nodes addObject:node];
     }
 
-    // Mark exactly one host app as the launch-critical root.
     NSUInteger hostCount = 0;
     for (SpiderBundleNode *node in nodes) {
         if (node.role == SpiderBundleRoleHostApplication && [node.path isEqualToString:hostBundle.path]) {
@@ -87,8 +85,6 @@
     }
     if (hostCount != 1) [fatal addObject:[NSString stringWithFormat:@"expected exactly one top-level host app, found %lu", (unsigned long)hostCount]];
 
-    // Enrich nodes from executable records. A bundle can have one executable;
-    // the structural analyzer remains the source of truth for Mach-O facts.
     for (SpiderBundleNode *node in nodes) {
         IPAStructuralExecutable *match = nil;
         for (IPAStructuralExecutable *executable in result.executables) {
@@ -108,15 +104,11 @@
         node.encryptedArm64SliceCount = match ? match.encryptedArm64SliceCount : 0;
         node.arm64Compatible = NO;
         if (match.slices.count == 0) {
-            // FIX: MachOAnalyzer could not parse slices (encrypted or unreadable file).
-            // ldid will re-sign and the device loader will verify architecture at launch.
             node.arm64Compatible = YES;
         } else {
             for (IPAStructuralExecutableSlice *slice in match.slices) {
                 NSString *archName = slice.architectureName;
                 NSString *arch = (archName && archName.length > 0) ? archName.lowercaseString : @"";
-                // FIX(v3.0.19): Accept arm64, arm64e, armv7, armv7s, i386, x86_64
-                // All of these may be valid depending on device and iOS version.
                 if ([arch containsString:@"arm64"] || slice.cputype == 0x0100000c ||
                     [arch containsString:@"armv7"] || slice.cputype == 0x0000000c ||
                     [arch containsString:@"x86"] || slice.cputype == 0x01000007 || slice.cputype == 0x00000007) {
@@ -125,9 +117,6 @@
                 }
             }
         }
-        // FIX: Encrypted slices are common in App Store IPAs. ldid re-signing
-        // strips the old signature and replaces it; the encrypted payload is
-        // irrelevant after re-signing. Downgrade from fatal to warning.
         if (node.hasEncryptedArm64Slice && match != nil) {
             [nodeWarnings addObject:[NSString stringWithFormat:@"arm64 Mach-O slice is encrypted (cryptid!=0, slices=%u); will be re-signed by ldid", node.encryptedArm64SliceCount]];
         } else if (node.hasEncryptedSlice && match != nil) {
@@ -135,11 +124,6 @@
         }
         if (node.launchCritical || node.role == SpiderBundleRoleAppExtension || node.role == SpiderBundleRoleXPCService) {
             if (!node.executableExists) [nodeFatal addObject:@"required executable is missing"];
-            // FIX: machOValid may be NO for encrypted App Store IPAs. The executable
-            // still exists and is launchable after ldid re-signing. Only reject if
-            // the file is completely unrecognizable (no slices at all).
-            // FIX(v3.0.19): Encrypted binaries are valid - ldid strips encryption.
-            // Only fatal if the file is truly unrecognizable (not Mach-O at all).
             if (!node.machOValid && match != nil && match.slices.count == 0 && !node.hasEncryptedSlice) {
                 [nodeFatal addObject:@"required executable has no recognizable Mach-O slices"];
             } else if (!node.machOValid && match == nil) {
@@ -147,8 +131,6 @@
             } else if (!node.machOValid && node.hasEncryptedSlice) {
                 [nodeWarnings addObject:@"executable is encrypted; ldid will strip and re-sign"];
             }
-            // FIX(v3.0.19): Downgrade from fatal to warning. armv7/i386 apps may still
-            // work on older devices or via compatibility layers. Only extensions MUST be arm64.
             if (!node.arm64Compatible) {
                 if (node.role == SpiderBundleRoleAppExtension || node.role == SpiderBundleRoleXPCService) {
                     [nodeFatal addObject:@"required executable has no arm64-compatible slice"];

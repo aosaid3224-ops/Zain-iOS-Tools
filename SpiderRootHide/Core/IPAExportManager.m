@@ -1,4 +1,5 @@
 #import "IPAExportManager.h"
+#import "SPRootHide.h"
 #import "RootlessManager.h"
 #import <mach-o/fat.h>
 #import <mach-o/loader.h>
@@ -108,10 +109,10 @@ static NSString *IPAExportErrorDomain = @"com.aosaid.ipainstallerpro.export";
         spawnCommand = self.shellPath;
         argvStrings = [NSMutableArray arrayWithObjects:self.shellPath,
                        @"-c", @"cd \"$1\" && shift && exec \"$@\"",
-                       @"ipa-export", workingDirectory, command, nil];
-        [argvStrings addObjectsFromArray:args ?: @[]];
+                       @"ipa-export", SPToolPathForTool(self.shellPath, workingDirectory), SPToolPathForTool(self.shellPath, command), nil];
+        [argvStrings addObjectsFromArray:SPToolArguments(command, args ?: @[])];
     } else {
-        [argvStrings addObjectsFromArray:args ?: @[]];
+        [argvStrings addObjectsFromArray:SPToolArguments(command, args ?: @[])];
     }
 
     char **argv = calloc(argvStrings.count + 1, sizeof(char *));
@@ -143,7 +144,7 @@ static NSString *IPAExportErrorDomain = @"com.aosaid.ipainstallerpro.export";
         return NO;
     }
     NSMutableArray<NSString *> *argvStrings = [NSMutableArray arrayWithObjects:self.helperPath, command, nil];
-    [argvStrings addObjectsFromArray:args ?: @[]];
+    [argvStrings addObjectsFromArray:SPToolArguments(command, args ?: @[])];
     char **argv = calloc(argvStrings.count + 1, sizeof(char *));
     for (NSUInteger i = 0; i < argvStrings.count; i++) argv[i] = (char *)argvStrings[i].fileSystemRepresentation;
     argv[argvStrings.count] = NULL;
@@ -354,9 +355,6 @@ static NSString *IPAExportErrorDomain = @"com.aosaid.ipainstallerpro.export";
                             if (modernDecrypted) decryptedAny = YES;
                         }
 
-                        // Legacy tools are retained only as a compatibility fallback.
-                        // They share the old kernel-offset path and are never used
-                        // before the modern bundle-level backend.
                         if (!modernDecrypted) {
                             for (NSString *sourcePath in encryptedPaths) {
                                 NSString *decryptedPath = [sourcePath stringByAppendingString:@".decrypted"];

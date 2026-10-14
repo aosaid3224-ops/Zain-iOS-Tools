@@ -1,8 +1,3 @@
-//
-//  InstallationProvider.m
-//  IPAInstallerPro
-//
-
 #import "InstallationProvider.h"
 
 @implementation InstallationResult

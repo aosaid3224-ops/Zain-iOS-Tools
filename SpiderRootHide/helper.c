@@ -1,10 +1,3 @@
-//
-// helper.c
-// IPA Installer Pro Helper
-//
-// v2.3 — Robust root execution for Dopamine 3.0
-//
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -13,17 +6,20 @@
 #include <string.h>
 #include <copyfile.h>
 
+#if defined(THEOS_PACKAGE_SCHEME_ROOTHIDE) && __has_include(<roothide.h>)
+#include <roothide.h>
+#define SP_HELPER_ROOTHIDE 1
+#endif
+
 int main(int argc, char *argv[], char *envp[]) {
     if (argc < 2) {
         fprintf(stderr, "Usage: %s <command> [args...]\n", argv[0]);
         return 1;
     }
 
-    // Attempt to gain root privileges
     uid_t original_uid = getuid();
 
     if (setuid(0) != 0) {
-        // setuid failed — try seteuid for Dopamine 3.0
         if (seteuid(0) != 0) {
             fprintf(stderr, "Warning: Could not acquire root (errno=%d). Running as uid=%d\n", errno, original_uid);
         } else {
@@ -35,9 +31,6 @@ int main(int argc, char *argv[], char *envp[]) {
         setegid(0);
     }
 
-    // Never execute privileged installer commands unless the helper actually
-    // acquired effective UID 0. Returning success here would make the caller
-    // believe that signing/uicache/chown ran with root while it did not.
     uid_t current_uid = getuid();
     uid_t current_euid = geteuid();
     if (current_euid != 0) {
@@ -45,9 +38,6 @@ int main(int argc, char *argv[], char *envp[]) {
         return 126;
     }
 
-    // A verified tree-copy primitive for application bundles. This avoids
-    // relying on platform-specific cp recursion behavior for framework
-    // metadata/resources while keeping the operation inside the root helper.
     if (argc == 4 && strcmp(argv[1], "--copy-tree") == 0) {
         int copyFlags = COPYFILE_ALL | COPYFILE_RECURSIVE | COPYFILE_NOFOLLOW_SRC;
 #ifdef COPYFILE_CLONE
@@ -56,8 +46,6 @@ int main(int argc, char *argv[], char *envp[]) {
         int copyResult = copyfile(argv[2], argv[3], NULL, copyFlags);
         if (copyResult != 0) {
             int cloneError = errno;
-            // APFS clone is an optimization only. If the source/destination
-            // filesystem cannot clone, preserve the proven copyfile path.
             if (cloneError == ENOTSUP || cloneError == EINVAL || cloneError == EXDEV) {
                 fprintf(stderr, "copyfile clone unavailable; using regular copy errno=%d\n", cloneError);
                 copyResult = copyfile(argv[2], argv[3], NULL,
@@ -71,10 +59,14 @@ int main(int argc, char *argv[], char *envp[]) {
         return 0;
     }
 
-    // Execute target command with original environment
     execve(argv[1], &argv[1], envp);
+#ifdef SP_HELPER_ROOTHIDE
+    if (errno == ENOENT && argv[1][0] == '/') {
+        const char *real = jbroot(argv[1]);
+        if (real && strcmp(real, argv[1]) != 0) execve(real, &argv[1], envp);
+    }
+#endif
 
-    // If execve fails, report error and exit
     fprintf(stderr, "execve failed for %s: errno=%d\n", argv[1], errno);
     return 1;
 }

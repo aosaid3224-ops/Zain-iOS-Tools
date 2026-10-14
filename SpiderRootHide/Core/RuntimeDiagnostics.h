@@ -1,12 +1,3 @@
-//
-//  RuntimeDiagnostics.h
-//  IPAInstallerPro
-//
-//  Post-Install Runtime Observability Layer.
-//  Principle: OBSERVE → MEASURE → RECORD. Never assume.
-//  Isolated from Installation Pipeline. Uses same Transaction/Log system.
-//
-
 #import <Foundation/Foundation.h>
 
 @class OperationLog;

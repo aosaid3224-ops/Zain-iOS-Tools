@@ -1,11 +1,3 @@
-//
-// SignatureAnalyzer.h
-// IPAInstallerPro — Phase 2/3: Smart Signing System
-//
-// Analyzes code signature and extracts entitlements from binaries.
-// Uses ldid as primary, with fallback logic.
-//
-
 #import <Foundation/Foundation.h>
 
 @interface SignatureInfo : NSObject

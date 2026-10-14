@@ -1,11 +1,3 @@
-//
-//  InstallationProvider.h
-//  IPAInstallerPro
-//
-//  Unified Provider Contract v2.0
-//  Every provider MUST produce: Execution + Verification + Evidence = Result
-//
-
 #import <Foundation/Foundation.h>
 
 @class InstallationResult;
@@ -18,7 +10,6 @@
 - (BOOL)isAvailable;
 - (NSInteger)priority;
 
-// Unified install: provider receives OperationLog to record every real operation
 - (void)installIPA:(NSString *)ipaPath
       transactionID:(NSString *)txnID
        operationLog:(OperationLog *)opLog
@@ -30,9 +21,6 @@
                       completion:(void (^)(BOOL success, NSString *error))completion;
 @end
 
-// ============================================================
-// InstallationResult — MUST contain evidence, not just success flag
-// ============================================================
 @interface InstallationResult : NSObject
 @property (nonatomic, assign) BOOL success;
 @property (nonatomic, strong) NSString *message;
@@ -41,7 +29,7 @@
 @property (nonatomic, strong) NSString *providerName;
 @property (nonatomic, strong) NSString *transactionID;
 @property (nonatomic, strong) NSError *error;
-@property (nonatomic, strong) NSDictionary *evidence; // stat results, access checks, etc.
+@property (nonatomic, strong) NSDictionary *evidence;
 
 + (InstallationResult *)successResult:(NSString *)msg
                            provider:(NSString *)provider

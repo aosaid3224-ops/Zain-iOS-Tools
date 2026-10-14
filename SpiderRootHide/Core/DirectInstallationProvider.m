@@ -1,10 +1,5 @@
-// DirectInstallationProvider.m
-// IPA Installer Pro
-//
-// v2.2 — STANDALONE with rollback, safe delete order, symlink/traversal checks
-//
-
 #import "DirectInstallationProvider.h"
+#import "SPRootHide.h"
 #import "RootlessManager.h"
 #import "OperationLog.h"
 #import "InstallationTransactionCoordinator.h"
@@ -95,7 +90,6 @@ extern char **environ;
  self.chownPath = [rm resolvePath:@"/usr/sbin/chown"];
  self.rmPath = [rm resolvePath:@"/bin/rm"];
  if (![[NSFileManager defaultManager] isExecutableFileAtPath:self.rmPath]) {
-     // Build candidates dynamically from bootstrapPath
      RuntimeEnvironment *rt = [RuntimeEnvironment sharedEnvironment];
      NSMutableArray<NSString *> *rmCandidates = [NSMutableArray arrayWithObjects:
          @"/usr/bin/rm",
@@ -195,6 +189,7 @@ extern char **environ;
         if (recordID && opLog) [opLog endPhase:recordID exitCode:1 rawOutput:@"" rawError:@"Command path is empty" verification:@"Invalid command path" verified:NO duration:0 context:@{@"operation": operation ?: @"", @"spawned": @NO}];
         return NO;
     }
+    args = SPToolArguments(cmd, args);
     int outPipe[2] = {-1, -1}, errPipe[2] = {-1, -1};
     if (pipe(outPipe) != 0 || pipe(errPipe) != 0) {
         if (outPipe[0] >= 0) { close(outPipe[0]); close(outPipe[1]); }
@@ -263,7 +258,6 @@ extern char **environ;
         pid_t waited = waitpid(pid, &waitStatus, WNOHANG);
         if (waited == pid) {
             reaped = YES;
-            // Drain output produced before process exit without blocking.
             for (int fdIndex = 0; fdIndex < 2; fdIndex++) {
                 int fd = (fdIndex == 0) ? outPipe[0] : errPipe[0];
                 NSMutableData *sink = (fdIndex == 0) ? stdoutData : stderrData;
@@ -323,14 +317,13 @@ extern char **environ;
     return ok;
 }
 
-#pragma mark - Command Execution with OperationLog
-
 - (BOOL)runCmd:(NSString *)cmd args:(NSArray *)args opLog:(OperationLog *)opLog recordID:(NSString *)recID {
     NSDate *started = [NSDate date];
     if (!cmd.length) {
         if (recID && opLog) [opLog endPhase:recID exitCode:1 rawOutput:@"" rawError:@"Command path is empty" verification:@"Invalid command path" verified:NO duration:0];
         return NO;
     }
+    args = SPToolArguments(cmd, args);
     pid_t pid = 0;
     const char *c = cmd.fileSystemRepresentation;
     char **argv = calloc(args.count + 2, sizeof(char *));
@@ -361,7 +354,6 @@ extern char **environ;
         return [self runCmd:cmd args:args opLog:opLog recordID:recID];
     }
 
-    // FIX(v3.0.20): Capture stderr to diagnose root helper failures.
     int stdoutPipe[2], stderrPipe[2];
     if (pipe(stdoutPipe) != 0 || pipe(stderrPipe) != 0) {
         NSLog(@"[IPAInstallerPro] pipe() failed for root helper stderr capture");
@@ -377,6 +369,7 @@ extern char **environ;
     posix_spawn_file_actions_addclose(&actions, stdoutPipe[1]);
     posix_spawn_file_actions_addclose(&actions, stderrPipe[1]);
 
+    args = SPToolArguments(cmd, args);
     pid_t pid = 0;
     const char *helper = self.helperPath.fileSystemRepresentation;
     const char *command = cmd.fileSystemRepresentation;
@@ -404,7 +397,6 @@ extern char **environ;
     BOOL exited = reaped && WIFEXITED(waitStatus);
     int exitCode = exited ? WEXITSTATUS(waitStatus) : 124;
 
-    // Read captured stderr
     NSMutableString *stderrOutput = [NSMutableString string];
     char buffer[4096];
     ssize_t n;
@@ -471,6 +463,7 @@ extern char **environ;
 - (NSString *)runCmdOutput:(NSString *)cmd args:(NSArray *)args {
     int pipefd[2];
     if (!cmd.length || pipe(pipefd) != 0) return nil;
+    args = SPToolArguments(cmd, args);
     pid_t pid = 0;
     posix_spawn_file_actions_t actions;
     posix_spawn_file_actions_init(&actions);
@@ -528,19 +521,13 @@ extern char **environ;
     return [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
 }
 
-#pragma mark - Security Checks
-
 - (BOOL)containsDangerousPaths:(NSString *)path {
  if (!path) return YES;
- // Check for directory traversal
  if ([path containsString:@".."]) return YES;
  if ([path containsString:@"~"]) return YES;
- // Check for absolute paths that escape expected structure
  if ([path hasPrefix:@"/"]) {
- // Only allow /Payload/... and /Info.plist patterns inside IPA
  if (![path hasPrefix:@"Payload/"] && ![path isEqualToString:@"Payload"]) return YES;
  }
- // Check for symlinks in path
  if ([path containsString:@"->"]) return YES;
  return NO;
 }
@@ -548,7 +535,6 @@ extern char **environ;
 - (BOOL)validateIPAPathSafety:(NSString *)ipaPath opLog:(OperationLog *)opLog txnID:(NSString *)txnID {
  NSString *rec = [opLog beginPhase:OperationPhaseIPAOpen operation:@"pathSafetyCheck" target:ipaPath input:@"" transactionID:txnID];
 
- // Check file size (max 2GB)
  NSFileManager *fm = [NSFileManager defaultManager];
  NSDictionary *attrs = [fm attributesOfItemAtPath:ipaPath error:nil];
  long long size = attrs.fileSize;
@@ -558,7 +544,6 @@ extern char **environ;
  return NO;
  }
 
- // Check available space (need at least 3x IPA size)
  NSString *tmpDir = NSTemporaryDirectory();
  NSDictionary *fsAttrs = [fm attributesOfFileSystemForPath:tmpDir error:nil];
  long long freeSpace = [fsAttrs[NSFileSystemFreeSize] longLongValue];
@@ -578,35 +563,25 @@ extern char **environ;
   NSArray *items = [fm subpathsAtPath:path];
   for (NSString *item in items) {
     NSString *fullPath = [path stringByAppendingPathComponent:item];
-    // Check if it's a symlink
     NSDictionary *attrs = [fm attributesOfItemAtPath:fullPath error:nil];
     if (attrs.fileType == NSFileTypeSymbolicLink) {
       NSString *dest = [fm destinationOfSymbolicLinkAtPath:fullPath error:nil];
       if (!dest || dest.length == 0) continue;
 
-      // FIX(v3.0.19): Properly resolve and validate symlinks.
-      // Many valid apps (Cydia, etc.) contain symlinks inside the bundle.
-      // Only reject symlinks that escape the bundle AND point outside known safe areas.
       BOOL isSafe = NO;
 
-      // 1. Allow Mach-O rpaths (@executable_path, @loader_path, @rpath)
       if ([dest hasPrefix:@"@"]) { isSafe = YES; }
 
-      // 2. If absolute path, check if it stays within the bundle
       else if ([dest hasPrefix:@"/"]) {
-        // Normalize: resolve ".." components
         NSString *normalized = dest.stringByStandardizingPath;
         if ([normalized hasPrefix:path]) { isSafe = YES; }
-        // Also allow symlinks to system frameworks/libs (common in jailbreak apps)
         else if ([normalized hasPrefix:@"/System/"] ||
                  [normalized hasPrefix:@"/usr/lib/"] ||
                  [normalized hasPrefix:@"/var/tmp/"]) { isSafe = YES; }
-        // FIX(Palera1n): Check against dynamic bootstrapPath instead of hardcoded /var/jb
         RuntimeEnvironment *rtEnv = [RuntimeEnvironment sharedEnvironment];
-        if (rtEnv.bootstrapPath && [normalized hasPrefix:rtEnv.bootstrapPath]) { isSafe = YES; }
+        if ((rtEnv.bootstrapPath && [normalized hasPrefix:rtEnv.bootstrapPath]) || SPIsInsideJBRoot(normalized)) { isSafe = YES; }
       }
 
-      // 3. If relative path, resolve it relative to the symlink's parent directory
       else {
         NSString *parentDir = [fullPath stringByDeletingLastPathComponent];
         NSString *resolved = [parentDir stringByAppendingPathComponent:dest];
@@ -624,8 +599,6 @@ extern char **environ;
   }
   return YES;
 }
-
-#pragma mark - Verification Helpers
 
 - (BOOL)verifyStat:(NSString *)path mode:(mode_t *)outMode uid:(uid_t *)outUid gid:(gid_t *)outGid {
  struct stat st;
@@ -713,12 +686,9 @@ extern char **environ;
  return hasSig;
 }
 
-#pragma mark - Rollback
-
 - (BOOL)backupExistingApp:(NSString *)destApp to:(NSString *)backupPath opLog:(OperationLog *)opLog txnID:(NSString *)txnID {
  NSFileManager *fm = [NSFileManager defaultManager];
  if (![fm fileExistsAtPath:destApp]) {
-     // A stale backup must never be restored into a new installation.
      if ([fm fileExistsAtPath:backupPath]) {
          BOOL removedStale = [self hasRootHelper] ? [self runRoot:self.rmPath args:@[@"-rf", backupPath] opLog:opLog recordID:nil] : [fm removeItemAtPath:backupPath error:nil];
          if (!removedStale || [fm fileExistsAtPath:backupPath]) return NO;
@@ -728,19 +698,15 @@ extern char **environ;
 
  NSString *rec = [opLog beginPhase:OperationPhaseFileCopy operation:@"backupExisting" target:destApp input:backupPath transactionID:txnID];
 
- // Remove old backup if exists
  if ([fm fileExistsAtPath:backupPath]) {
  [fm removeItemAtPath:backupPath error:nil];
  }
 
-  // FIX(v3.0.20): Use helper --copy-tree for backup (same mechanism that succeeded in staging).
-  // cp -Rf fails silently on rootless jailbreaks; --copy-tree has already proven reliable.
   BOOL backedUp = NO;
   if ([self hasRootHelper]) {
       backedUp = [self runCmd:self.helperPath args:@[@"--copy-tree", destApp, backupPath] opLog:opLog recordID:rec];
       if (backedUp) {
           [self runRoot:self.rmPath args:@[@"-rf", destApp] opLog:opLog recordID:nil];
-          // FIX(v3.0.19): Strip quarantine and harmful xattrs after backup copy
           NSString *xattrPathB = [[ExecutableValidator sharedValidator] findExecutableNamed:@"xattr"];
           if (xattrPathB) {
               [self runRoot:xattrPathB args:@[@"-cr", backupPath] opLog:nil recordID:nil];
@@ -772,8 +738,6 @@ extern char **environ;
 - (void)restoreBackup:(NSString *)backupPath to:(NSString *)destApp opLog:(OperationLog *)opLog txnID:(NSString *)txnID {
  NSFileManager *fm = [NSFileManager defaultManager];
  if (![fm fileExistsAtPath:backupPath]) {
-     // There was no pre-existing installation. Never leave a partial bundle
-     // behind, otherwise the next cp -R may merge into it.
      if ([fm fileExistsAtPath:destApp]) {
          if ([self hasRootHelper]) [self runRoot:self.rmPath args:@[@"-rf", destApp] opLog:opLog recordID:nil];
          else [fm removeItemAtPath:destApp error:nil];
@@ -783,20 +747,16 @@ extern char **environ;
 
  NSString *rec = [opLog beginPhase:OperationPhaseFileCopy operation:@"restoreBackup" target:backupPath input:destApp transactionID:txnID];
 
- // Remove failed installation
  if ([fm fileExistsAtPath:destApp]) {
  if ([self hasRootHelper]) [self runRoot:self.rmPath args:@[@"-rf", destApp] opLog:opLog recordID:nil];
  else [fm removeItemAtPath:destApp error:nil];
  }
 
-  // FIX(v3.0.19): Use cp -R + rm -rf instead of mv for restore.
-  // In rootless jailbreaks, mv may fail with EXDEV (cross-device link).
   BOOL restored = NO;
   if ([self hasRootHelper]) {
       restored = [self runRoot:self.cpPath args:@[@"-Rf", backupPath, destApp] opLog:opLog recordID:rec];
       if (restored) {
           [self runRoot:self.rmPath args:@[@"-rf", backupPath] opLog:opLog recordID:nil];
-      // FIX(v3.0.19): Strip quarantine and harmful xattrs after restore copy
       NSString *xattrPathR = [[ExecutableValidator sharedValidator] findExecutableNamed:@"xattr"];
       if (xattrPathR) {
           [self runRoot:xattrPathR args:@[@"-cr", destApp] opLog:nil recordID:nil];
@@ -840,8 +800,6 @@ extern char **environ;
  }
 }
 
-#pragma mark - Diagnostics
-
 - (void)diagLog:(NSString *)fmt, ... {
     if (!self.diagnosticsLog) self.diagnosticsLog = [NSMutableString string];
     va_list args;
@@ -858,7 +816,6 @@ extern char **environ;
     [r appendFormat:@"📊 DIAGNOSTICS REPORT | Bundle: %@\n", bundleID ?: @"N/A"];
     [r appendString:@"═══════════════════════════════════════════════════════════════\n\n"];
 
-    // ─── [ENTITLEMENTS] ───
     [r appendString:@"[ENTITLEMENTS]\n"];
     if (self.diagnosticsLog && self.diagnosticsLog.length > 0) {
         [r appendString:self.diagnosticsLog];
@@ -866,7 +823,6 @@ extern char **environ;
         [r appendString:@"  ⚠️ No per-binary entitlement diagnostics captured\n"];
     }
 
-    // ─── [POST-SIGN VERIFICATION] ───
     if (self.lastInstalledAppPath) {
         NSFileManager *fm = [NSFileManager defaultManager];
         NSString *exeName = [[self.lastInstalledAppPath lastPathComponent] stringByDeletingPathExtension];
@@ -874,7 +830,6 @@ extern char **environ;
 
         [r appendString:@"\n[POST-SIGN VERIFICATION]\n"];
 
-        // Main executable entitlements
         if ([fm fileExistsAtPath:mainExe]) {
             NSString *mainEnts = [self runCmdOutput:self.ldidPath args:@[@"-e", mainExe]];
             if (mainEnts && mainEnts.length > 10) {
@@ -896,7 +851,6 @@ extern char **environ;
             }
         }
 
-        // Check all dylibs/frameworks signing
         NSString *fwDir = [self.lastInstalledAppPath stringByAppendingPathComponent:@"Frameworks"];
         if ([fm fileExistsAtPath:fwDir]) {
             NSUInteger fwCount = 0, fwSigned = 0;
@@ -914,12 +868,10 @@ extern char **environ;
         }
     }
 
-    // ─── [BUNDLE STRUCTURE — CRITICAL CHECKS] ───
     if (self.lastInstalledAppPath) {
         NSFileManager *fm = [NSFileManager defaultManager];
         [r appendString:@"\n[BUNDLE STRUCTURE — CRITICAL CHECKS]\n"];
 
-        // Check Info.plist keys
         NSString *infoPath = [self.lastInstalledAppPath stringByAppendingPathComponent:@"Info.plist"];
         NSDictionary *info = [NSDictionary dictionaryWithContentsOfFile:infoPath];
 
@@ -931,7 +883,6 @@ extern char **environ;
         [r appendFormat:@"  Info.plist UILaunchStoryboardName: %@\n", launchStoryboard ?: @"(not set)"];
         [r appendFormat:@"  Info.plist NSMainNibFile:          %@\n", mainNib ?: @"(not set)"];
 
-        // Check if referenced storyboards exist
         if (mainStoryboard) {
             NSString *sbPath = [self.lastInstalledAppPath stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.storyboardc", mainStoryboard]];
             BOOL exists = [fm fileExistsAtPath:sbPath];
@@ -943,7 +894,6 @@ extern char **environ;
             [r appendFormat:@"  LaunchScreen.storyboardc exists:   %@\n", exists ? @"✅ YES" : @"❌ NO"];
         }
 
-        // Check for .dylib files
         NSString *fwDir = [self.lastInstalledAppPath stringByAppendingPathComponent:@"Frameworks"];
         NSUInteger dylibCount = 0;
         if ([fm fileExistsAtPath:fwDir]) {
@@ -953,7 +903,6 @@ extern char **environ;
         }
         [r appendFormat:@"  .dylib files in Frameworks:       %lu\n", (unsigned long)dylibCount];
 
-        // List ALL files in bundle root (to see if anything is missing)
         [r appendString:@"\n  Bundle root contents:\n"];
         NSArray *rootItems = [fm contentsOfDirectoryAtPath:self.lastInstalledAppPath error:nil];
         for (NSString *item in rootItems) {
@@ -961,19 +910,16 @@ extern char **environ;
         }
     }
 
-    // ─── [SIGNING COVERAGE] ───
     [r appendString:@"\n[SIGNING COVERAGE]\n"];
     [r appendFormat:@"  Frameworks signed: %lu\n", (unsigned long)self.diagFrameworksSigned];
     [r appendFormat:@"  Dylibs signed:     %lu\n", (unsigned long)self.diagDylibsSigned];
     [r appendFormat:@"  AppEx signed:      %lu\n", (unsigned long)self.diagAppexSigned];
 
-    // ─── [DEEP COPY] ───
     [r appendString:@"\n[DEEP COPY]\n"];
     [r appendFormat:@"  Total files:       %lu\n", (unsigned long)self.diagDeepCopyTotal];
     [r appendFormat:@"  Missing:           %lu %@\n", (unsigned long)self.diagDeepCopyMissing, self.diagDeepCopyMissing > 0 ? @"❌" : @"✅"];
     [r appendFormat:@"  Size mismatch:     %lu %@\n", (unsigned long)self.diagDeepCopySizeMismatch, self.diagDeepCopySizeMismatch > 0 ? @"⚠️" : @"✅"];
 
-    // ─── [CRITICAL CHECKS] ───
     [r appendString:@"\n[CRITICAL CHECKS]\n"];
     if ([self.diagnosticsLog containsString:@"hasAppID=NO"]) [r appendString:@"  ❌ application-identifier MISSING — app may crash on launch\n"];
     if ([self.diagnosticsLog containsString:@"hasTeamID=NO"]) [r appendString:@"  ❌ team-identifier MISSING — app may crash on launch\n"];
@@ -984,7 +930,6 @@ extern char **environ;
     if (self.diagDeepCopyMissing > 0) [r appendString:@"  ❌ Deep copy MISSING files — installation incomplete\n"];
     if (self.diagFrameworksSigned == 0 && self.diagDylibsSigned == 0 && self.diagAppexSigned == 0) [r appendString:@"  ⚠️ NO binaries signed — signing may have failed silently\n"];
 
-    // ─── [CRASH REPORTS] ───
     [r appendString:@"\n[CRASH REPORTS]\n"];
     NSFileManager *fm = [NSFileManager defaultManager];
     NSString *crashDir = @"/var/mobile/Library/Logs/CrashReporter";
@@ -1024,7 +969,6 @@ extern char **environ;
  [transaction transitionTransaction:txnID toState:InstallationTransactionStateAnalyzing reason:@"IPA validation and structural analysis started"];
  BOOL hasH = [self hasRootHelper];
  NSString *bundleID = nil;
-  // Reset diagnostics counters for this installation
   self.diagnosticsLog = [NSMutableString string];
   self.diagFrameworksSigned = 0;
   self.diagDylibsSigned = 0;
@@ -1032,24 +976,18 @@ extern char **environ;
   self.diagDeepCopyTotal = 0;
   self.diagDeepCopyMissing = 0;
   self.diagDeepCopySizeMismatch = 0;
- // If txnID is provided by the engine, use it directly without creating a duplicate OperationLog entry
 
- // Remove only old, uniquely named staging directories left by an interrupted transaction.
- // This is intentionally age-bounded so an active installation is never touched.
  NSString *resolvedApplicationsPath = [[RootlessManager sharedManager] resolvePath:@"/Applications"];
  [self cleanupStaleStageDirectoriesAtRoot:resolvedApplicationsPath hasHelper:hasH opLog:opLog txnID:txnID];
 
- // PHASE 0: SAFETY CHECKS
  if (![self validateIPAPathSafety:ipaPath opLog:opLog txnID:txnID]) {
  NSLog(@"[IPAInstallerPro] EARLY FAIL: IPA safety check failed for: %@", ipaPath);
-  // Emit diagnostics report even on failure
   [self emitDiagnosticsReport:opLog txnID:txnID bundleID:bundleID];
  [opLog endTransaction:txnID finalResult:OperationResultFailed];
  if (completion) completion([InstallationResult failureResult:@"IPA safety check failed" provider:[self providerName] transaction:txnID error:nil evidence:nil]);
  return;
  }
 
- // PHASE 1: IPA_OPEN
  NSLog(@"[IPAInstallerPro] === PHASE 1: IPA_OPEN ===");
  NSString *rec1 = [opLog beginPhase:OperationPhaseIPAOpen operation:@"fileExistsAtPath" target:ipaPath input:ipaPath transactionID:txnID];
  BOOL ipaExists = [fm fileExistsAtPath:ipaPath];
@@ -1061,14 +999,12 @@ extern char **environ;
 
  if (!ipaExists || !ipaReadable) {
  NSLog(@"[IPAInstallerPro] EARLY FAIL: IPA not found or unreadable: %@ exists=%d readable=%d", ipaPath, ipaExists, ipaReadable);
-  // Emit diagnostics report even on failure
   [self emitDiagnosticsReport:opLog txnID:txnID bundleID:bundleID];
  [opLog endTransaction:txnID finalResult:OperationResultFailed];
  if (completion) completion([InstallationResult failureResult:@"IPA not found or unreadable" provider:[self providerName] transaction:txnID error:nil evidence:nil]);
  return;
  }
 
- // PHASE 2: IPA_EXTRACT
  NSLog(@"[IPAInstallerPro] === PHASE 2: IPA_EXTRACT ===");
  NSString *tmp = [NSTemporaryDirectory() stringByAppendingPathComponent:[[NSUUID UUID] UUIDString]];
  NSString *rec2 = [opLog beginPhase:OperationPhaseIPAExtract operation:@"createDirectoryAtPath" target:tmp input:@"" transactionID:txnID];
@@ -1078,7 +1014,6 @@ extern char **environ;
 
  if (!tmpCreated) {
  NSLog(@"[IPAInstallerPro] EARLY FAIL: Temp directory creation failed");
-  // Emit diagnostics report even on failure
   [self emitDiagnosticsReport:opLog txnID:txnID bundleID:bundleID];
  [opLog endTransaction:txnID finalResult:OperationResultFailed];
  if (completion) completion([InstallationResult failureResult:@"Temp directory creation failed" provider:[self providerName] transaction:txnID error:nil evidence:nil]);
@@ -1089,8 +1024,6 @@ extern char **environ;
  BOOL unzipOk = NO;
  NSString *payload = [tmp stringByAppendingPathComponent:@"Payload"];
 
- // Each extractor attempt gets its own record. A single reused record can
- // overwrite evidence and leave the UI showing only BEGIN for the first call.
  unzipOk = [self runCmdCapture:self.unzipPath args:@[@"-o", ipaPath, @"-d", tmp] opLog:opLog recordID:rec3 operation:@"unzip-primary"];
 
  if (!unzipOk || ![fm fileExistsAtPath:payload]) {
@@ -1119,16 +1052,12 @@ extern char **environ;
  if (!unzipOk || !payloadExists) {
  NSLog(@"[IPAInstallerPro] EARLY FAIL: Extraction postcondition failed (extractorOK=%d payloadExists=%d)", unzipOk, payloadExists);
  [fm removeItemAtPath:tmp error:nil];
-  // Each extractor attempt already has its own completed record with PID,
-  // stdout, stderr, exit status and timeout state. Do not overwrite it here.
   [self emitDiagnosticsReport:opLog txnID:txnID bundleID:bundleID];
  [opLog endTransaction:txnID finalResult:OperationResultFailed];
  if (completion) completion([InstallationResult failureResult:[NSString stringWithFormat:@"IPA extraction failed — extractorOK:%@ payload:%@", unzipOk ? @"YES" : @"NO", payloadExists ? @"YES" : @"NO"] provider:[self providerName] transaction:txnID error:nil evidence:@{ @"extractSummary": extractSummary ?: @"", @"payloadEntryCount": @(payloadEntryCount) }]);
  return;
  }
 
- // PHASE 3: APP_IDENTIFY + SECURITY CHECK
-// PHASE 3: APP_IDENTIFY + SECURITY CHECK
  NSString *rec4 = [opLog beginPhase:OperationPhaseAppIdentify operation:@"find .app in Payload" target:payload input:@"" transactionID:txnID];
  NSArray *items = [fm contentsOfDirectoryAtPath:payload error:nil];
  NSString *appFolder = nil;
@@ -1140,7 +1069,6 @@ extern char **environ;
  if (!appFound) {
  NSLog(@"[IPAInstallerPro] EARLY FAIL: No .app found in Payload");
  [fm removeItemAtPath:tmp error:nil];
-  // Emit diagnostics report even on failure
   [self emitDiagnosticsReport:opLog txnID:txnID bundleID:bundleID];
  [opLog endTransaction:txnID finalResult:OperationResultFailed];
  if (completion) completion([InstallationResult failureResult:@"No .app found" provider:[self providerName] transaction:txnID error:nil evidence:nil]);
@@ -1149,11 +1077,9 @@ extern char **environ;
 
  NSString *srcApp = [payload stringByAppendingPathComponent:appFolder];
 
- // Security: Check for dangerous symlinks
  if (![self checkForSymlinksInExtractedPath:srcApp opLog:opLog txnID:txnID]) {
  NSLog(@"[IPAInstallerPro] EARLY FAIL: Dangerous symlinks detected");
  [fm removeItemAtPath:tmp error:nil];
-  // Emit diagnostics report even on failure
   [self emitDiagnosticsReport:opLog txnID:txnID bundleID:bundleID];
  [opLog endTransaction:txnID finalResult:OperationResultFailed];
  if (completion) completion([InstallationResult failureResult:@"Dangerous symlinks detected in IPA" provider:[self providerName] transaction:txnID error:nil evidence:nil]);
@@ -1174,14 +1100,12 @@ extern char **environ;
  if (!infoHasKeys) {
  NSLog(@"[IPAInstallerPro] EARLY FAIL: Invalid Info.plist — bundleID=%@ exe=%@", bundleID, exeName);
  [fm removeItemAtPath:tmp error:nil];
-  // Emit diagnostics report even on failure
   [self emitDiagnosticsReport:opLog txnID:txnID bundleID:bundleID];
  [opLog endTransaction:txnID finalResult:OperationResultFailed];
  if (completion) completion([InstallationResult failureResult:@"Invalid Info.plist" provider:[self providerName] transaction:txnID error:nil evidence:nil]);
  return;
  }
 
-// PHASE 3.5: SMART SIGNING PLAN
  [transaction transitionTransaction:txnID toState:InstallationTransactionStatePreparing reason:@"structural preparation and signing plan"];
  NSString *recPlan = [opLog beginPhase:OperationPhaseAppIdentify operation:@"smart-signing-plan" target:srcApp input:@"analyzing structure" transactionID:txnID];
   __block SigningPlan *signingPlan = nil;
@@ -1193,9 +1117,6 @@ extern char **environ;
  NSString *spiderRecord = [opLog beginPhase:OperationPhaseAppIdentify operation:@"spider-bundle-graph" target:srcApp input:@"role-aware structural graph" transactionID:txnID];
  NSString *spiderSummary = [spiderGraph summary];
  NSString *spiderErrors = [spiderGraph.fatalFindings componentsJoinedByString:@" | "];
-  // FIX(v3.0.19): Spider warnings must NEVER block installation.
-  // In v3.0.7 there was no Spider graph — ldid + uicache handled everything.
-  // The spider is now a WARNING-ONLY diagnostic tool. Legacy signer is the fallback.
   if (!spiderGraph.coherent) {
       NSLog(@"[Spider] Structural warnings detected: %@", spiderErrors);
       NSLog(@"[Spider] Continuing with legacy signer fallback...");
@@ -1225,14 +1146,10 @@ extern char **environ;
      NSLog(@"[SmartSign] Structural plan unavailable due to parse failure; legacy signer will run with strict post-sign verification");
  }
  } @catch (NSException *e) {
-
  NSLog(@"[SmartSign] Plan failed: %@", e.reason);
  }
  [opLog endPhase:recPlan exitCode:0 rawOutput:planGenerated ? @"Smart signing plan generated" : @"Smart signing plan unavailable, using legacy fallback" rawError:@"" verification:@"smart signing plan" verified:YES duration:0];
 
- // Repair clearly non-portable build-host LC_RPATH values while the extracted
- // source is still writable. The repaired bytes are then copied and signed;
- // this avoids requiring the app process to write into the root-owned target.
  NSArray *changedRPaths = nil;
  NSString *rpathError = nil;
  NSString *rpathRecord = [opLog beginPhase:OperationPhaseVerify operation:@"mach-o rpath portability" target:srcApp input:@"repair build-host LC_RPATH" transactionID:txnID];
@@ -1247,7 +1164,6 @@ extern char **environ;
      return;
  }
 
- // PHASE 4: FILE_COPY (with backup/rollback)
  [transaction transitionTransaction:txnID toState:InstallationTransactionStateInstalling reason:@"verified source ready for promotion"];
  NSLog(@"[IPAInstallerPro] === PHASE 4: FILE_COPY ===");
  NSString *logicalDest = [@"/Applications" stringByAppendingPathComponent:appFolder];
@@ -1260,7 +1176,6 @@ extern char **environ;
  if (!destResolved) {
  NSLog(@"[IPAInstallerPro] EARLY FAIL: Could not resolve destination for: %@", logicalDest);
  [fm removeItemAtPath:tmp error:nil];
-  // Emit diagnostics report even on failure
   [self emitDiagnosticsReport:opLog txnID:txnID bundleID:bundleID];
  [opLog endTransaction:txnID finalResult:OperationResultFailed];
  if (completion) completion([InstallationResult failureResult:@"Could not resolve destination" provider:[self providerName] transaction:txnID error:nil evidence:nil]);
@@ -1268,7 +1183,6 @@ extern char **environ;
  }
  self.lastInstalledAppPath = destApp;
 
- // Ensure Applications directory exists
  NSString *appsDir = [destApp stringByDeletingLastPathComponent];
  if (![fm fileExistsAtPath:appsDir]) {
  NSString *recMkdir = [opLog beginPhase:OperationPhaseFileCopy operation:@"mkdir -p Applications" target:appsDir input:@"" transactionID:txnID];
@@ -1279,20 +1193,16 @@ extern char **environ;
  }
  }
 
- // BACKUP existing app (rollback support)
  NSString *backupPath = [destApp stringByAppendingString:@".backup"];
  if (![self backupExistingApp:destApp to:backupPath opLog:opLog txnID:txnID]) {
  NSLog(@"[IPAInstallerPro] EARLY FAIL: Backup failed for: %@", destApp);
  [fm removeItemAtPath:tmp error:nil];
-  // Emit diagnostics report even on failure
   [self emitDiagnosticsReport:opLog txnID:txnID bundleID:bundleID];
  [opLog endTransaction:txnID finalResult:OperationResultFailed];
  if (completion) completion([InstallationResult failureResult:@"Failed to backup existing app" provider:[self providerName] transaction:txnID error:nil evidence:nil]);
  return;
  }
 
- // Copy only into a fresh destination. cp -R merges when the target exists,
- // which can create extra stale files after a previous failed attempt.
  if ([fm fileExistsAtPath:destApp]) {
      NSString *clearRec = [opLog beginPhase:OperationPhaseFileCopy operation:@"clear destination before copy" target:destApp input:@"rm -rf" transactionID:txnID];
      BOOL cleared = hasH ? [self runRoot:self.rmPath args:@[@"-rf", destApp] opLog:opLog recordID:clearRec] : [fm removeItemAtPath:destApp error:nil];
@@ -1330,15 +1240,12 @@ extern char **environ;
   BOOL copied = NO;
  if (hasH && self.helperPath.length > 0) {
      NSString *rec9 = [opLog beginPhase:OperationPhaseFileCopy operation:@"copy app bundle to isolated staging" target:[NSString stringWithFormat:@"%@ -> %@", srcApp, stagedDest] input:@"root helper --copy-tree (copyfile)" transactionID:txnID];
-     // The root helper owns the copyfile call. This avoids platform-specific
-     // cp recursion behavior that can silently omit framework resources.
      copied = [self runCmd:self.helperPath args:@[@"--copy-tree", srcApp, stagedDest] opLog:opLog recordID:rec9];
  }
  if (!copied) {
      NSString *fallbackRec = [opLog beginPhase:OperationPhaseFileCopy operation:@"copyfile fallback into isolated staging" target:[NSString stringWithFormat:@"%@ -> %@", srcApp, stagedDest] input:@"COPYFILE_ALL|COPYFILE_RECURSIVE|COPYFILE_NOFOLLOW_SRC" transactionID:txnID];
      int rv = copyfile([srcApp UTF8String], [stagedDest UTF8String], NULL, COPYFILE_ALL | COPYFILE_RECURSIVE | COPYFILE_NOFOLLOW_SRC);
      copied = (rv == 0);
-     // FIX(iOS16+): Strip quarantine and other harmful xattrs that break rootless
      if (copied) {
          NSString *xattrPath = [[ExecutableValidator sharedValidator] findExecutableNamed:@"xattr"];
          if (xattrPath) {
@@ -1358,14 +1265,11 @@ extern char **environ;
  [fm removeItemAtPath:stagedDest error:nil];
  [self restoreBackup:backupPath to:destApp opLog:opLog txnID:txnID];
  [fm removeItemAtPath:tmp error:nil];
-  // Emit diagnostics report even on failure
   [self emitDiagnosticsReport:opLog txnID:txnID bundleID:bundleID];
  [opLog endTransaction:txnID finalResult:OperationResultFailed];
  if (completion) completion([InstallationResult failureResult:@"Copy failed — all methods exhausted, rollback attempted" provider:[self providerName] transaction:txnID error:nil evidence:nil]);
  return;
  }
- // Verify before promotion. The destination remains untouched until the
- // complete source tree passes topology, symlink and size verification.
  BOOL deepOk = [self verifyDeepCopy:srcApp dst:stagedDest opLog:opLog txnID:txnID];
  if (!deepOk) {
  NSLog(@"[IPAInstallerPro] Deep copy mismatch in isolated staging — rolling back installation");
@@ -1377,24 +1281,15 @@ extern char **environ;
  if (completion) completion([InstallationResult failureResult:[NSString stringWithFormat:@"Deep copy verification failed — missing/extra:%lu, mismatches:%lu — %@ — rollback executed", (unsigned long)self.diagDeepCopyMissing, (unsigned long)self.diagDeepCopySizeMismatch, self.diagDeepCopyDetail ?: @"no manifest details"] provider:[self providerName] transaction:txnID error:nil evidence:@{ @"sourceItems": @(self.diagDeepCopyTotal), @"missingOrExtra": @(self.diagDeepCopyMissing), @"mismatches": @(self.diagDeepCopySizeMismatch), @"manifest": self.diagDeepCopyDetail ?: @"" }]);
  return;
  }
-  // FIX(v3.0.19): Use cp -R + rm -rf instead of mv for promotion.
-  // In rootless jailbreaks, /var/tmp and /Applications (or /var/jb/Applications)
-  // may reside on different filesystems, causing mv to fail with EXDEV (cross-device link).
-  // cp -R works across filesystems and is the reliable method.
-  // FIX(v3.0.20): Use helper --copy-tree for promotion (same mechanism that succeeded in staging).
-  // cp -Rf fails silently on rootless jailbreaks; --copy-tree has already proven reliable.
   NSString *promoteRec = [opLog beginPhase:OperationPhaseFileCopy operation:@"promote verified staging bundle" target:[NSString stringWithFormat:@"%@ -> %@", stagedDest, destApp] input:@"helper --copy-tree" transactionID:txnID];
   BOOL promoted = [self runCmd:self.helperPath args:@[@"--copy-tree", stagedDest, destApp] opLog:opLog recordID:promoteRec];
   if (promoted) {
       [self runRoot:self.rmPath args:@[@"-rf", stagedDest] opLog:opLog recordID:nil];
-      // FIX(v3.0.19): Strip quarantine and harmful xattrs after promotion
       NSString *xattrPath2 = [[ExecutableValidator sharedValidator] findExecutableNamed:@"xattr"];
       if (xattrPath2) {
           [self runRoot:xattrPath2 args:@[@"-cr", destApp] opLog:nil recordID:nil];
       }
   }
-  // FIX: fileExistsAtPath may return NO for root-owned files even when cp succeeded.
-  // Use lstat() which checks filesystem reality regardless of current user permissions.
   struct stat promoteStat = {0};
   BOOL destActuallyExists = (lstat(destApp.fileSystemRepresentation, &promoteStat) == 0);
   if (!promoted || !destActuallyExists) {
@@ -1407,14 +1302,10 @@ extern char **environ;
       return;
   }
 
- // PHASE 5: PERMISSION
  NSLog(@"[IPAInstallerPro] === PHASE 5: PERMISSION ===");
  NSString *rec10a = [opLog beginPhase:OperationPhasePermission operation:@"preserve executable permissions" target:destApp input:@"u+rwX,go+rX" transactionID:txnID];
- // Do not make every resource executable. Preserve existing executable bits,
- // make directories traversable, and keep regular resources non-executable.
  [self runRoot:self.chmodPath args:@[@"-R", @"u+rwX,go+rX", destApp] opLog:opLog recordID:rec10a];
 
- // FIX(iOS16+): Ensure the main executable has +x (extracted IPAs often lose it)
  NSString *installedInfoPath = [destApp stringByAppendingPathComponent:@"Info.plist"];
  NSDictionary *installedInfo = [NSDictionary dictionaryWithContentsOfFile:installedInfoPath];
  NSString *execName = [installedInfo[@"CFBundleExecutable"] isKindOfClass:[NSString class]] ? installedInfo[@"CFBundleExecutable"] : nil;
@@ -1426,8 +1317,6 @@ extern char **environ;
      }
  }
 
- // FIX(rootless): Detect correct uid:gid from an existing app in /Applications
- // instead of hardcoding root:wheel (Palera1n uses 0:0 or 501:501 on some setups).
  NSString *ownerSpec = @"root:wheel";
  NSString *installedAppsDir = [destApp stringByDeletingLastPathComponent];
  NSArray *existingApps = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:installedAppsDir error:nil];
@@ -1444,9 +1333,6 @@ extern char **environ;
  NSString *rec10b = [opLog beginPhase:OperationPhasePermission operation:@"chown -R" target:destApp input:ownerSpec transactionID:txnID];
  [self runRoot:self.chownPath args:@[@"-R", ownerSpec, destApp] opLog:opLog recordID:rec10b];
 
- // Embedded framework binaries are executable code even when an IPA archive
- // preserved them as 0644. Set the execute bit only on Mach-O files; never
- // make images, plists, nibs, or other resources executable.
  NSString *rec10d = [opLog beginPhase:OperationPhasePermission operation:@"ensure Mach-O executable bits" target:destApp input:@"u+x on Mach-O only" transactionID:txnID];
  BOOL machoModesOk = [self ensureExecutablePermissionsForMachOAtPath:destApp hasHelper:hasH opLog:opLog txnID:txnID];
  [opLog endPhase:rec10d exitCode:machoModesOk ? 0 : 1 rawOutput:@"Mach-O executable permissions checked" rawError:machoModesOk ? @"" : @"Unable to set executable bit on one or more Mach-O files" verification:@"all Mach-O files executable" verified:machoModesOk duration:0];
@@ -1459,15 +1345,11 @@ extern char **environ;
      return;
  }
 
- // STAT verification (experimental branch only; Golden baseline is untouched)
  NSString *destExe = [destApp stringByAppendingPathComponent:exeName];
  mode_t mode = 0; uid_t uid = 0; gid_t gid = 0;
  BOOL statOk = [self verifyStat:destExe mode:&mode uid:&uid gid:&gid];
  mode_t appMode = 0; uid_t appUID = 0; gid_t appGID = 0;
  BOOL appStatOk = [self verifyStat:destApp mode:&appMode uid:&appUID gid:&appGID];
- // Validate the actual runtime access available to the installer/app user rather than
- // assuming a fixed uid/gid or requiring owner-only mode bits. Group/world write remains
- // forbidden, and the executable must have the same owner/group as its containing bundle.
  BOOL executableAccess = statOk && (access([destExe UTF8String], R_OK | X_OK) == 0);
  BOOL bundleAccess = appStatOk && (access([destApp UTF8String], R_OK | X_OK) == 0);
  BOOL secureMode = statOk && ((mode & (S_IWGRP | S_IWOTH)) == 0);
@@ -1480,10 +1362,8 @@ extern char **environ;
  verified:permissionVerified duration:0];
 
  if (!permissionVerified) {
- // ROLLBACK
  [self restoreBackup:backupPath to:destApp opLog:opLog txnID:txnID];
  [fm removeItemAtPath:tmp error:nil];
-  // Emit diagnostics report even on failure
   [self emitDiagnosticsReport:opLog txnID:txnID bundleID:bundleID];
  [opLog endTransaction:txnID finalResult:OperationResultFailed];
  if (completion) completion([InstallationResult failureResult:[NSString stringWithFormat:@"Permission postcondition failed: statOk=%@ mode=%o uid=%d gid=%d appUid=%d appGid=%d executableAccess=%@ bundleAccess=%@ secureMode=%@ ownershipMatchesBundle=%@", statOk ? @"YES" : @"NO", mode, uid, gid, appUID, appGID, executableAccess ? @"YES" : @"NO", bundleAccess ? @"YES" : @"NO", secureMode ? @"YES" : @"NO", ownershipMatchesBundle ? @"YES" : @"NO"]
@@ -1491,7 +1371,6 @@ extern char **environ;
  return;
  }
 
- // PHASE 6: AUTHORITATIVE SMART SIGNING
  [transaction transitionTransaction:txnID toState:InstallationTransactionStateSigning reason:@"installation promotion complete; signing installed targets"];
  NSLog(@"[IPAInstallerPro] === PHASE 6: SIGNING ===");
  NSString *rec11 = [opLog beginPhase:OperationPhaseSign operation:@"sign-execute" target:destApp input:@"authoritative per-target plan" transactionID:txnID];
@@ -1508,17 +1387,11 @@ extern char **environ;
      }
  }
 
- // Only use the old broad signer when no complete structural plan is available.
- // Never run it after a complete plan: that would overwrite preserved/minimal
- // entitlement policy and reintroduce launch regressions.
   if (!authoritativeSigning) {
       NSLog(@"[IPAInstallerPro] Structural plan unavailable/incomplete; using legacy fallback");
       [self signAllAt:destApp hasHelper:hasH opLog:opLog txnID:txnID];
       [self signExe:destExe hasHelper:hasH opLog:opLog txnID:txnID];
   } else {
-      // TrollStore performs a final recursive -s pass after assigning
-      // per-bundle entitlements. This signs CodeResources/nested code while
-      // leaving the planned container identity on the bundle executables.
       BOOL recursiveOK = [self signTarget:destApp withEntitlements:nil hasHelper:hasH opLog:opLog txnID:txnID];
       if (!recursiveOK) {
           NSLog(@"[IPAInstallerPro] Recursive bundle signing failed — rollback");
@@ -1535,9 +1408,6 @@ extern char **environ;
  BOOL sigOk = [self verifySignature:destExe opLog:opLog txnID:txnID];
  if (!sigOk) {
      if (authoritativeSigning) {
-         // A complete plan must never be replaced by the legacy signer after a
-         // failed verification. That would make the install report success with
-         // different entitlements than the plan that was analyzed.
          NSLog(@"[IPAInstallerPro] Planned signature verification failed — refusing legacy entitlement overwrite");
          [opLog endPhase:rec11 exitCode:1 rawOutput:@"" rawError:@"Planned signature verification failed" verification:@"authoritative signing" verified:NO duration:0];
          [self restoreBackup:backupPath to:destApp opLog:opLog txnID:txnID];
@@ -1560,7 +1430,6 @@ extern char **environ;
          return;
      }
  }
-  // PHASE 7: FRAMEWORK (legacy fallback only)
   NSString *dbgBefore = [opLog beginPhase:OperationPhaseSign operation:@"[DEBUG] BEFORE fixFrameworks" target:@"" input:@"" transactionID:txnID];
   [opLog endPhase:dbgBefore exitCode:0 rawOutput:@"[DEBUG] BEFORE fixFrameworks" rawError:@"" verification:@"debug" verified:YES duration:0];
 
@@ -1599,7 +1468,6 @@ extern char **environ;
   NSString *dbgExit = [opLog beginPhase:OperationPhaseSign operation:@"[DEBUG] EXITING POST-SIGN VERIFICATION" target:@"" input:@"" transactionID:txnID];
   [opLog endPhase:dbgExit exitCode:0 rawOutput:@"[DEBUG] EXITING POST-SIGN VERIFICATION" rawError:@"" verification:@"debug" verified:YES duration:0];
 
-  // INSTALLATION VERIFICATION MUST PRECEDE ANY REGISTRATION.
   [transaction transitionTransaction:txnID toState:InstallationTransactionStateVerifyingInstall reason:@"promotion, permissions, signatures and topology completed"];
   NSLog(@"[IPAInstallerPro] === VERIFY INSTALLATION BEFORE REGISTRATION ===");
   NSString *rec15 = [opLog beginPhase:OperationPhaseVerify operation:@"verify installation before registration" target:destApp input:bundleID transactionID:txnID];
@@ -1617,8 +1485,6 @@ extern char **environ;
       return;
   }
 
-  // REGISTRATION is a guarded transaction transition. A concurrent failure
-  // cannot pass this check because the coordinator serializes the state.
   if (![transaction beginRegistrationForTransaction:txnID reason:@"installation verification passed"] ) {
       [transaction markFailedForTransaction:txnID reason:@"registration rejected by transaction state"];
       [fm removeItemAtPath:tmp error:nil];
@@ -1627,7 +1493,6 @@ extern char **environ;
       return;
   }
 
-  // PHASE 8: UICACHE / REGISTRATION
   NSLog(@"[IPAInstallerPro] === PHASE 8: UICACHE REGISTRATION ===");
   NSString *rec14a = [opLog beginPhase:OperationPhaseUICache operation:@"uicache -p logical" target:logicalDest input:@"" transactionID:txnID];
   BOOL logicalRegistrationOK = [self runRoot:self.uicachePath args:@[@"-p", logicalDest] opLog:opLog recordID:rec14a];
@@ -1679,10 +1544,8 @@ extern char **environ;
       return;
   }
 
- // SUCCESS — cleanup backup and temp
  [self cleanupBackup:backupPath opLog:opLog txnID:txnID];
 
- // PHASE 10: CLEANUP
  NSLog(@"[IPAInstallerPro] === PHASE 10: CLEANUP ===");
  NSString *rec16 = [opLog beginPhase:OperationPhaseCleanup operation:@"remove temp" target:tmp input:@"" transactionID:txnID];
  [fm removeItemAtPath:tmp error:nil];
@@ -1690,9 +1553,7 @@ extern char **environ;
  [opLog endPhase:rec16 exitCode:tmpRemoved ? 0 : 1 rawOutput:@"" rawError:tmpRemoved ? @"" : @"Temp still exists"
  verification:[NSString stringWithFormat:@"removed=%@", tmpRemoved ? @"YES" : @"NO"] verified:tmpRemoved duration:0];
 
- // SUCCESS
  NSLog(@"[IPAInstallerPro] === INSTALLATION SUCCESS: %@ ===", bundleID);
-  // Emit diagnostics report before completing
   [self emitDiagnosticsReport:opLog txnID:txnID bundleID:bundleID];
  [opLog endTransaction:txnID finalResult:OperationResultSuccess];
  InstallationResult *result = [InstallationResult successResult:[NSString stringWithFormat:@"Installed %@", appFolder]
@@ -1841,7 +1702,6 @@ extern char **environ;
     [r appendString:@"POST-SIGN VERIFICATION\n"];
     [r appendString:@"═══════════════════════════════════════════════════════════════\n"];
 
-    // ─── [INFO.PLST] ───
     [r appendString:@"\n[INFO.PLST]\n"];
     NSString *infoPath = [destApp stringByAppendingPathComponent:@"Info.plist"];
     NSDictionary *info = [NSDictionary dictionaryWithContentsOfFile:infoPath];
@@ -1857,7 +1717,6 @@ extern char **environ;
         [r appendString:@"  ❌ Info.plist NOT READABLE\n"];
     }
 
-    // ─── [FILES] ───
     [r appendString:@"\n[FILES]\n"];
     NSString *exeName = info[@"CFBundleExecutable"] ?: [[destApp lastPathComponent] stringByDeletingPathExtension];
     NSString *mainExe = [destApp stringByAppendingPathComponent:exeName];
@@ -1872,10 +1731,8 @@ extern char **environ;
     NSString *launchSb = [destApp stringByAppendingPathComponent:@"LaunchScreen.storyboardc"];
     [r appendFormat:@"  LaunchScreen.storyboardc:  %@\n", [fm fileExistsAtPath:launchSb] ? @"FOUND" : @"MISSING"];
 
-    // ─── [SIGNATURE] ───
     [r appendString:@"\n[SIGNATURE]\n"];
 
-    // Runner signature
     NSString *runnerSig = [self runCmdOutput:self.ldidPath args:@[@"-h", mainExe]];
     BOOL runnerSigned = (runnerSig && runnerSig.length > 0);
     [r appendFormat:@"  Runner signature:          %@\n", runnerSigned ? @"VALID" : @"INVALID"];
@@ -1884,7 +1741,6 @@ extern char **environ;
         [r appendFormat:@"  Runner entitlements:       %@\n", (runnerEnt && runnerEnt.length > 10) ? @"FOUND" : @"MISSING"];
     }
 
-    // Frameworks count
     NSString *fwDir = [destApp stringByAppendingPathComponent:@"Frameworks"];
     NSUInteger fwTotal = 0, fwSigned = 0, fwFailed = 0;
     if ([fm fileExistsAtPath:fwDir]) {
@@ -1922,9 +1778,6 @@ extern char **environ;
     return allOk;
 }
 
-
-#pragma mark - Mach-O permission normalization
-
 - (BOOL)ensureExecutablePermissionsForMachOAtPath:(NSString *)appPath hasHelper:(BOOL)hasH opLog:(OperationLog *)opLog txnID:(NSString *)txnID {
     NSFileManager *fm = [NSFileManager defaultManager];
     NSDirectoryEnumerator *enumerator = [fm enumeratorAtPath:appPath];
@@ -1947,9 +1800,6 @@ extern char **environ;
             (access([fullPath UTF8String], R_OK | X_OK) == 0);
         if (alreadyAccessible) continue;
 
-        // chmod uses additive symbolic bits: it preserves existing write bits but
-        // makes every Mach-O readable and executable by the principals that must
-        // load/launch it. Non-Mach-O resources are never touched here.
         BOOL commandOK = [self runRoot:self.chmodPath args:@[@"a+rx", fullPath] opLog:opLog recordID:nil];
         struct stat after = {0};
         BOOL statAfter = (lstat([fullPath UTF8String], &after) == 0);
@@ -1966,8 +1816,6 @@ extern char **environ;
     NSLog(@"[IPAInstallerPro] Mach-O executable permission normalization: %lu files changed (postcondition checked)", (unsigned long)changed);
     return allOK;
 }
-
-#pragma mark - Signing
 
 - (void)signAllAt:(NSString *)path hasHelper:(BOOL)hasH opLog:(OperationLog *)opLog txnID:(NSString *)txnID {
  NSFileManager *fm = [NSFileManager defaultManager];
@@ -1987,7 +1835,6 @@ extern char **environ;
  } else if ([item hasSuffix:@".framework"]) {
  NSString *fn = [item stringByDeletingPathExtension];
  [self signBin:[fullPath stringByAppendingPathComponent:fn] hasHelper:hasH label:[@"fw:" stringByAppendingString:fn] opLog:opLog txnID:txnID];
- // Skip descending into framework bundles to avoid double-signing
  [enumerator skipDescendants];
  } else if ([item hasSuffix:@".appex"] || [item hasSuffix:@".xpc"]) {
  [self signBundleExecutableAtPath:fullPath
@@ -2007,12 +1854,10 @@ extern char **environ;
     return nil;
 }
 
-
 - (NSDictionary *)extractEntitlementsFromAppBundle:(NSString *)appPath {
     NSFileManager *fm = [NSFileManager defaultManager];
     if (!appPath || ![fm fileExistsAtPath:appPath]) return nil;
 
-    // 1. Try archived-expanded-entitlements.xcent (most common in IPAs)
     NSString *xcentPath = [appPath stringByAppendingPathComponent:@"archived-expanded-entitlements.xcent"];
     if ([fm fileExistsAtPath:xcentPath]) {
         NSDictionary *ents = [NSDictionary dictionaryWithContentsOfFile:xcentPath];
@@ -2022,14 +1867,12 @@ extern char **environ;
         }
     }
 
-    // 2. Try embedded.mobileprovision (extract entitlements from provisioning profile)
     NSString *provPath = [appPath stringByAppendingPathComponent:@"embedded.mobileprovision"];
     if ([fm fileExistsAtPath:provPath]) {
         NSData *provData = [NSData dataWithContentsOfFile:provPath];
         if (provData && provData.length > 0) {
             NSString *provStr = [[NSString alloc] initWithData:provData encoding:NSASCIIStringEncoding];
             if (provStr && provStr.length > 0) {
-                // Find Entitlements dict in the plist portion of .mobileprovision
                 NSRange entRange = [provStr rangeOfString:@"<key>Entitlements</key>"];
                 if (entRange.location != NSNotFound) {
                     NSString *sub = [provStr substringFromIndex:entRange.location];
@@ -2083,7 +1926,6 @@ extern char **environ;
      signedOK = hasH ? [self runRoot:self.ldidPath args:@[@"-s", executablePath] opLog:opLog recordID:rec] : [self runCmd:self.ldidPath args:@[@"-s", executablePath] opLog:opLog recordID:rec];
  }
  if (!signedOK) { signedOK = hasH ? [self runRoot:self.ldidPath args:@[@"-S", executablePath] opLog:opLog recordID:rec] : [self runCmd:self.ldidPath args:@[@"-S", executablePath] opLog:opLog recordID:rec]; }
- // DIAGNOSTICS: log extension signing result
  BOOL hasGTA = merged[@"get-task-allow"] != nil;
  BOOL hasPlatform = merged[@"platform-application"] != nil;
  BOOL hasNoSandbox = merged[@"com.apple.private.security.no-sandbox"] != nil;
@@ -2100,13 +1942,11 @@ extern char **environ;
  if (hasH) [self runRoot:self.chmodPath args:@[@"755", path] opLog:opLog recordID:nil];
  else [self runCmd:self.chmodPath args:@[@"755", path] opLog:opLog recordID:nil];
 
- // Extract original entitlements (for frameworks/dylibs)
  NSDictionary *origEnts = nil;
  if ([label hasPrefix:@"fw:"] || [label hasPrefix:@"dylib:"]) {
  origEnts = [self extractEntitlementsFromExecutable:path];
  }
 
- // Preserve source entitlements for nested code; otherwise use ldid's clean signing path.
  NSMutableDictionary *merged = origEnts ? [origEnts mutableCopy] : [NSMutableDictionary dictionary];
 
  NSString *ep = nil;
@@ -2124,13 +1964,11 @@ extern char **environ;
  }
 
  if (!ok) {
- // Fallback: blank signing
  ok = hasH ? [self runRoot:self.ldidPath args:@[@"-S", path] opLog:opLog recordID:rec]
  : [self runCmd:self.ldidPath args:@[@"-S", path] opLog:opLog recordID:rec];
  }
 
  if (!ok) {
- // Last resort: minimal entitlements
  NSString *ep2 = [NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"min_%@.ent", [NSUUID UUID].UUIDString]];
  NSDictionary *minimal = [EntitlementSet minimalEntitlements];
  [minimal writeToFile:ep2 atomically:YES];
@@ -2140,7 +1978,6 @@ extern char **environ;
  [[NSFileManager defaultManager] removeItemAtPath:ep2 error:nil];
  }
 
- // DIAGNOSTICS: log framework/dylib signing result
  BOOL hasGTA = merged[@"get-task-allow"] != nil;
  BOOL hasPlatform = merged[@"platform-application"] != nil;
  BOOL hasNoSandbox = merged[@"com.apple.private.security.no-sandbox"] != nil;
@@ -2262,7 +2099,6 @@ extern char **environ;
 
       NSString *afterAll = [opLog beginPhase:OperationPhaseSign operation:[NSString stringWithFormat:@"[TRACE] AFTER signAllAt: %@", fn] target:ip input:@"" transactionID:txnID];
       [opLog endPhase:afterAll exitCode:0 rawOutput:[NSString stringWithFormat:@"[TRACE] AFTER signAllAt: %@", fn] rawError:@"" verification:@"trace" verified:YES duration:0];
-
     } else if ([item hasSuffix:@".dylib"] || [item hasSuffix:@".so"]) {
       NSString *beforeDy = [opLog beginPhase:OperationPhaseSign operation:[NSString stringWithFormat:@"[TRACE] BEFORE SIGN dylib: %@", item] target:ip input:@"" transactionID:txnID];
       [opLog endPhase:beforeDy exitCode:0 rawOutput:[NSString stringWithFormat:@"[TRACE] BEFORE SIGN dylib: %@", item] rawError:@"" verification:@"trace" verified:YES duration:0];
@@ -2283,9 +2119,6 @@ extern char **environ;
   [opLog endPhase:exitRec exitCode:0 rawOutput:@"[TRACE] EXIT fixFrameworks" rawError:@"" verification:@"trace" verified:YES duration:0];
 }
 
-
-#pragma mark - Launch Readiness Gate
-
 - (BOOL)dependency:(NSString *)dependency resolvesForBinary:(NSString *)binaryPath appPath:(NSString *)appPath rpaths:(NSArray<MachORPath *> *)rpaths {
     if (!dependency.length) return NO;
     if ([dependency hasPrefix:@"/System/Library/"] || [dependency hasPrefix:@"/usr/lib/"] || [dependency hasPrefix:@"/usr/lib/swift/"]) return YES;
@@ -2303,8 +2136,6 @@ extern char **environ;
             else if ([base hasPrefix:@"@executable_path"]) base = [appPath stringByAppendingPathComponent:[base substringFromIndex:[@"@executable_path" length]]];
             [candidates addObject:[[base stringByAppendingPathComponent:leaf] stringByStandardizingPath]];
         }
-        // iOS binaries commonly use @rpath for embedded frameworks even when
-        // the load command does not retain an explicit app-local rpath.
         [candidates addObject:[[appPath stringByAppendingPathComponent:@"Frameworks"] stringByAppendingPathComponent:leaf]];
         if ([leaf hasPrefix:@"libswift"] && ![leaf containsString:@"/"]) return YES;
     } else if ([dependency hasPrefix:@"@loader_path/"]) {
@@ -2327,19 +2158,14 @@ extern char **environ;
 }
 
 - (BOOL)verifyLaunchReadinessAtPath:(NSString *)appPath bundleID:(NSString *)bundleID exeName:(NSString *)exeName opLog:(OperationLog *)opLog txnID:(NSString *)txnID reason:(NSString **)reason {
-    // This is a strict static gate. It proves that the installed bundle is
-    // structurally launchable; it cannot prove behavior inside the app process.
     NSFileManager *fm = [NSFileManager defaultManager];
     NSMutableArray<NSString *> *failures = [NSMutableArray array];
     NSDictionary *info = [NSDictionary dictionaryWithContentsOfFile:[appPath stringByAppendingPathComponent:@"Info.plist"]];
     if (![info isKindOfClass:[NSDictionary class]]) [failures addObject:@"Info.plist is unreadable"];
     if (![info[@"CFBundleIdentifier"] isEqual:bundleID]) [failures addObject:@"CFBundleIdentifier does not match the installation identity"];
-    // FIX(v3.0.19): Removed CFBundlePackageType check — not all valid apps have APPL
     if (!exeName.length || [exeName containsString:@"/"] || [exeName containsString:@".."] || [exeName containsString:@"~"]) [failures addObject:@"invalid CFBundleExecutable name"];
 
     NSString *mainBinary = [appPath stringByAppendingPathComponent:exeName ?: @""];
-    // FIX(v3.0.19): Relaxed X_OK check. On iOS 16+ with certain jailbreaks, access(X_OK)
-    // may fail due to sandbox restrictions even though the binary IS executable.
     BOOL mainExists = exeName.length > 0 && [fm fileExistsAtPath:mainBinary] && [fm isReadableFileAtPath:mainBinary];
     if (!mainExists) {
         [failures addObject:@"main executable is missing or unreadable"];
@@ -2349,7 +2175,6 @@ extern char **environ;
 
     NSArray<NSString *> *machOPaths = [self machOPathsAtPath:appPath];
     if (![machOPaths containsObject:mainBinary]) [failures addObject:@"main executable is not a recognizable Mach-O"];
-    // FIX(v3.0.19): Accept arm64, arm64e, armv7, armv7s, x86_64, i386
     for (NSString *binaryPath in machOPaths) {
         MachOAnalysisResult *analysis = [[MachOAnalyzer sharedAnalyzer] analyzeFileAtPath:binaryPath];
         if (!analysis || (analysis.parseStatus == MachOParseFailed && !analysis.hasEncryptedSlice) || analysis.slices.count == 0) {
@@ -2372,7 +2197,6 @@ extern char **environ;
     }
     if (machOPaths.count == 0) [failures addObject:@"bundle contains no Mach-O executable"];
 
-    // Every executable-bearing bundle must have a valid identity and executable.
     NSDirectoryEnumerator *enumerator = [fm enumeratorAtPath:appPath];
     NSString *relative = nil;
     while ((relative = [enumerator nextObject])) {
@@ -2397,12 +2221,8 @@ extern char **environ;
         } else if (!nestedMachO) {
             [failures addObject:[NSString stringWithFormat:@"nested executable is not a recognized Mach-O: %@", nestedExecutable.lastPathComponent]];
         } else if (isHostBundle && !nestedExecutableBit) {
-            // The host application's executable is the launch-critical contract.
             [failures addObject:[NSString stringWithFormat:@"main executable is not runnable: %@", nestedExecutable.lastPathComponent]];
         } else if (!nestedExecutableBit) {
-            // FIX(v3.0.19): All nested binaries lacking X_OK are warnings only.
-            // On iOS 16/17/18 with different jailbreaks, file permissions vary.
-            // ldid + uicache handle permission correction automatically.
             NSLog(@"[IPAInstallerPro] Nested executable lacks X_OK; retaining as warning: %@", nestedExecutable);
             NSString *warningRecord = [opLog beginPhase:OperationPhaseVerify operation:@"nested executable permission warning" target:nestedExecutable input:@"role-aware check" transactionID:txnID];
             [opLog endPhase:warningRecord exitCode:0 rawOutput:@"" rawError:@"" verification:@"child executable: permission warning only" verified:YES duration:0 context:@{ @"role": [lower hasSuffix:@".appex"] ? @"appex" : ([lower hasSuffix:@".xpc"] ? @"xpc" : @"nested") }];
@@ -2417,14 +2237,11 @@ extern char **environ;
     return ready;
 }
 
-#pragma mark - Verification
-
 - (BOOL)verifyInstallation:(NSString *)appPath bundleID:(NSString *)bid exeName:(NSString *)en opLog:(OperationLog *)opLog txnID:(NSString *)txnID {
  NSFileManager *fm = [NSFileManager defaultManager];
  BOOL ok = YES;
  NSString *ep = [appPath stringByAppendingPathComponent:en];
 
- // exe exists + readable + executable
  BOOL exeExists = [fm fileExistsAtPath:ep];
  BOOL exeReadable = [fm isReadableFileAtPath:ep];
  BOOL exeX_OK = (access([ep UTF8String], X_OK) == 0);
@@ -2435,7 +2252,6 @@ extern char **environ;
  verified:(exeExists && exeReadable && exeX_OK) duration:0];
  if (!exeExists || !exeReadable || !exeX_OK) ok = NO;
 
- // Info.plist
  NSString *ip = [appPath stringByAppendingPathComponent:@"Info.plist"];
  BOOL infoExists = [fm fileExistsAtPath:ip];
  NSString *recInfo = [opLog beginPhase:OperationPhaseVerify operation:@"verify Info.plist" target:ip input:@"" transactionID:txnID];
@@ -2443,11 +2259,9 @@ extern char **environ;
  verification:[NSString stringWithFormat:@"exists=%@", infoExists ? @"YES" : @"NO"] verified:infoExists duration:0];
  if (!infoExists) ok = NO;
 
- // Verify signature on main executable
  BOOL exeSigned = [self verifySignature:ep opLog:opLog txnID:txnID];
  if (!exeSigned) ok = NO;
 
- // Frameworks
  NSString *fwp = [appPath stringByAppendingPathComponent:@"Frameworks"];
  if ([fm fileExistsAtPath:fwp]) {
  for (NSString *item in [fm contentsOfDirectoryAtPath:fwp error:nil]) {
@@ -2457,9 +2271,6 @@ extern char **environ;
  BOOL dylibExecutableBit = (access([p UTF8String], X_OK) == 0);
  MachOAnalysisResult *dylibAnalysis = [[MachOAnalyzer sharedAnalyzer] analyzeFileAtPath:p];
  BOOL dylibMachOValid = (dylibAnalysis && dylibAnalysis.parseStatus == MachOParseSuccess && dylibAnalysis.machOType != 0);
- // Shared libraries are loaded by the host process and are not main
- // executables. Their X_OK bit is recorded as evidence but is not a failure
- // condition; readability and valid Mach-O metadata remain mandatory.
  BOOL dylibValid = dylibReadable && dylibMachOValid;
  NSString *recFw = [opLog beginPhase:OperationPhaseVerify operation:[NSString stringWithFormat:@"verify dylib %@", item] target:p input:@"" transactionID:txnID];
  [opLog endPhase:recFw exitCode:dylibValid ? 0 : 1 rawOutput:@"" rawError:dylibValid ? @"" : [NSString stringWithFormat:@"readable=%@ machoValid=%@", dylibReadable ? @"YES" : @"NO", dylibMachOValid ? @"YES" : @"NO"]
@@ -2470,12 +2281,9 @@ extern char **environ;
  }
  }
 
- // Embedded extensions are separate code bundles. A main executable can pass
- // verification while an unsigned appex/xpc crashes the host at launch.
  BOOL embeddedSignaturesOK = [self verifyEmbeddedBundleSignaturesAtPath:appPath opLog:opLog txnID:txnID];
  if (!embeddedSignaturesOK) ok = NO;
 
- // Check if app is registered in LSApplicationWorkspace (best effort, non-blocking)
  Class LS = objc_getClass("LSApplicationWorkspace");
  if (LS) {
  id ws = [LS performSelector:@selector(defaultWorkspace)];
@@ -2491,11 +2299,10 @@ extern char **environ;
  }
  }
 
- // Dopamine-specific: verify app is in correct rootless path (warning only)
-  // FIX(Palera1n): Use dynamic bootstrapPath instead of hardcoded /var/jb
   RuntimeEnvironment *rtEnv2 = [RuntimeEnvironment sharedEnvironment];
   NSString *expectedPrefix = rtEnv2.bootstrapPath ? [rtEnv2.bootstrapPath stringByAppendingPathComponent:@"Applications/"] : @"/var/jb/Applications/";
-  if (![appPath hasPrefix:expectedPrefix] && ![appPath hasPrefix:@"/Applications/"]) {
+  BOOL inJailbreakApplications = [appPath hasPrefix:expectedPrefix] || [SPJBRelativePath(appPath) hasPrefix:@"/Applications/"];
+  if (!inJailbreakApplications && ![appPath hasPrefix:@"/Applications/"]) {
   NSString *recPath = [opLog beginPhase:OperationPhaseVerify operation:@"rootlessPathCheck" target:appPath input:@"" transactionID:txnID];
  [opLog endPhase:recPath exitCode:0 rawOutput:@"" rawError:@""
  verification:[NSString stringWithFormat:@"path=%@ (non-standard but allowed)", appPath] verified:YES duration:0];
@@ -2538,7 +2345,6 @@ extern char **environ;
  NSFileManager *fm = [NSFileManager defaultManager];
  NSString *appPath = nil;
 
- // ─── PHASE 1: Resolve app path via LSApplicationWorkspace ───
  Class LS = objc_getClass("LSApplicationWorkspace");
  if (LS) {
  id ws = [LS performSelector:@selector(defaultWorkspace)];
@@ -2561,8 +2367,6 @@ extern char **environ;
  }
  }
 
- // ─── PHASE 2: Scan Applications directories for matching Info.plist ───
-  // FIX(Palera1n): Use dynamic bootstrapPath for Applications directory
   RuntimeEnvironment *rtEnv3 = [RuntimeEnvironment sharedEnvironment];
   NSMutableArray *searchDirs = [NSMutableArray arrayWithObjects:@"/Applications", @"/var/mobile/Applications", nil];
   if (rtEnv3.bootstrapPath) {
@@ -2596,7 +2400,6 @@ extern char **environ;
 
  NSLog(@"[IPAInstallerPro] Resolved app path for %@: %@", bundleID, appPath);
 
- // ─── PHASE 3: Try LSApplicationWorkspace uninstall API (but verify!) ───
  if (LS) {
  id ws = [LS performSelector:@selector(defaultWorkspace)];
  if (ws) {
@@ -2616,11 +2419,8 @@ extern char **environ;
  }
  }
 
- // ─── PHASE 4: Force remove via root helper ───
- // Unregister from SpringBoard first
  [self runRoot:self.uicachePath args:@[@"-p", appPath] opLog:nil recordID:nil];
 
- // Delete the app bundle
  BOOL removed = NO;
  if ([self hasRootHelper]) {
  removed = [self runRoot:self.rmPath args:@[@"-rf", appPath] opLog:nil recordID:nil];
@@ -2632,9 +2432,7 @@ extern char **environ;
  }
  }
 
- // ─── PHASE 5: Verify deletion actually happened ───
  if (removed && [fm fileExistsAtPath:appPath]) {
- // Still there — try once more with helper
  removed = [self runRoot:self.rmPath args:@[@"-rf", appPath] opLog:nil recordID:nil];
  }
 
@@ -2646,15 +2444,12 @@ extern char **environ;
  }
 }
 
-#pragma mark - App Icon Extraction
-
 - (NSString *)iconPathForAppAtPath:(NSString *)appPath {
  NSFileManager *fm = [NSFileManager defaultManager];
  NSString *infoPath = [appPath stringByAppendingPathComponent:@"Info.plist"];
  NSDictionary *info = [NSDictionary dictionaryWithContentsOfFile:infoPath];
  if (!info) return nil;
 
- // Try CFBundleIcons (iOS 5+)
  NSDictionary *iconsDict = info[@"CFBundleIcons"];
  if (!iconsDict) iconsDict = info[@"CFBundleIcons~ipad"];
 
@@ -2664,12 +2459,10 @@ extern char **environ;
  if (primary) iconFiles = primary[@"CFBundleIconFiles"];
  }
 
- // Fallback to CFBundleIconFiles
  if (!iconFiles || iconFiles.count == 0) {
  iconFiles = info[@"CFBundleIconFiles"];
  }
 
- // Fallback to CFBundleIconFile (single)
  if (!iconFiles || iconFiles.count == 0) {
  NSString *singleIcon = info[@"CFBundleIconFile"];
  if (singleIcon) iconFiles = @[singleIcon];
@@ -2677,22 +2470,18 @@ extern char **environ;
 
  if (!iconFiles || iconFiles.count == 0) return nil;
 
- // Find the best icon (largest, @2x or @3x preferred)
  NSString *bestIcon = nil;
  for (NSString *iconName in iconFiles) {
  NSString *baseName = [iconName stringByDeletingPathExtension];
  NSString *ext = [iconName pathExtension];
  if (ext.length == 0) ext = @"png";
 
- // Try @3x first
  NSString *icon3x = [appPath stringByAppendingPathComponent:[NSString stringWithFormat:@"%@@3x.%@", baseName, ext]];
  if ([fm fileExistsAtPath:icon3x]) { bestIcon = icon3x; break; }
 
- // Try @2x
  NSString *icon2x = [appPath stringByAppendingPathComponent:[NSString stringWithFormat:@"%@@2x.%@", baseName, ext]];
  if ([fm fileExistsAtPath:icon2x]) { bestIcon = icon2x; break; }
 
- // Try base
  NSString *iconBase = [appPath stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.%@", baseName, ext]];
  if ([fm fileExistsAtPath:iconBase]) { bestIcon = iconBase; break; }
  }
@@ -2720,21 +2509,16 @@ extern char **environ;
     return (validTargets == plan.targets.count && validTargets > 0);
 }
 
-#pragma mark - Uninstall
-
 - (void)uninstallAppAtPath:(NSString *)appPath bundleID:(NSString *)bundleID completion:(void (^)(BOOL, NSString *))completion {
  if (!appPath || appPath.length == 0 || !bundleID || bundleID.length == 0) {
  [self uninstallAppWithBundleID:bundleID completion:completion];
  return;
  }
 
- // Unregister from SpringBoard first
  [self runRoot:self.uicachePath args:@[@"-p", appPath] opLog:nil recordID:nil];
 
- // Delete via root helper
  BOOL removed = [self runRoot:self.rmPath args:@[@"-rf", appPath] opLog:nil recordID:nil];
 
- // Verify actually gone
  if (removed && ![[NSFileManager defaultManager] fileExistsAtPath:appPath]) {
  [self runRoot:self.uicachePath args:@[@"-a"] opLog:nil recordID:nil];
  if (completion) completion(YES, nil);
@@ -2742,7 +2526,6 @@ extern char **environ;
  if (completion) completion(NO, @"Failed to remove application files");
  }
 }
-#pragma mark - Smart Signing Plan Execution
 
 - (NSUInteger)executeSigningPlan:(SigningPlan *)plan atAppPath:(NSString *)appPath hasHelper:(BOOL)hasH opLog:(OperationLog *)opLog txnID:(NSString *)txnID {
  if (!plan || !plan.isViable || plan.targets.count == 0) {
@@ -2796,7 +2579,6 @@ extern char **environ;
   } else {
       signedCount++;
   }
-
  }
  NSLog(@"[SmartSign] Total signed: %lu / %lu targets", (unsigned long)signedCount, (unsigned long)ordered.count);
  return signedCount;
@@ -2820,14 +2602,11 @@ extern char **environ;
              : [self runCmd:self.ldidPath args:@[sf, path] opLog:opLog recordID:recordID];
  [fm removeItemAtPath:entPath error:nil];
  } else {
-  // Match TrollStore's no-entitlement path: -s recursively signs the
-  // bundle without fabricating an empty -S argument.
   ok = hasH ? [self runRoot:self.ldidPath args:@[@"-s", path] opLog:opLog recordID:recordID]
              : [self runCmd:self.ldidPath args:@[@"-s", path] opLog:opLog recordID:recordID];
  }
  [opLog endPhase:recordID exitCode:ok ? 0 : 1 rawOutput:@"" rawError:ok ? @"" : @"Smart sign failed" verification:@"smart ldid" verified:ok duration:0];
  return ok;
 }
-
 
 @end

@@ -1,8 +1,3 @@
-//
-//  CommandResult.m
-//  IPAInstallerPro — Commit 2: Binary-safe output support
-//
-
 #import "CommandResult.h"
 
 @implementation CommandResult

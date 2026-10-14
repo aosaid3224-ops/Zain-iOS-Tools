@@ -1,8 +1,3 @@
-//
-//  OperationRecord.m
-//  IPAInstallerPro
-//
-
 #import "OperationLog.h"
 
 @implementation OperationRecord

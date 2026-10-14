@@ -1,8 +1,3 @@
-//
-//  SettingsViewController.m
-//  IPAInstallerPro — Edge-to-Edge Settings UI
-//
-
 #import "SettingsViewController.h"
 #import "CapabilityManager.h"
 #import "JailbreakEnvironment.h"
@@ -18,8 +13,6 @@
 
 @implementation SettingsViewController
 
-#pragma mark - Lifecycle
-
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.title = SPText(@"settings");
@@ -31,8 +24,6 @@
     [super viewWillAppear:animated];
     [self refreshData];
 }
-
-#pragma mark - UI Setup
 
 - (void)setupUI {
     self.scrollView = [[UIScrollView alloc] init];
@@ -64,8 +55,6 @@
         [self.contentStack.widthAnchor constraintEqualToAnchor:self.scrollView.widthAnchor]
     ]];
 }
-
-#pragma mark - Row Builders
 
 - (UIView *)infoRowWithIcon:(NSString *)iconName label:(NSString *)label value:(NSString *)value {
     UIView *row = [[UIView alloc] init];
@@ -273,7 +262,6 @@
     return v;
 }
 
-#pragma mark - Language
 - (UIView *)languageRow {
     UIView *row = [[UIView alloc] init];
     row.translatesAutoresizingMaskIntoConstraints = NO;
@@ -315,7 +303,6 @@
     [self presentViewController:alert animated:YES completion:nil];
 }
 
-#pragma mark - Data Refresh
 - (void)refreshData {
     JailbreakEnvironment *env = [JailbreakEnvironment sharedEnvironment];
     CapabilityManager *cap = [CapabilityManager sharedManager];
@@ -324,7 +311,6 @@
     [self.contentStack addArrangedSubview:[self languageRow]];
     [self.contentStack addArrangedSubview:[self sectionDivider]];
 
-    // ─── Environment Rows ───
     NSDictionary *envItems = @{
         @"حالة الجلبريك": @[env.jailbreakType ?: @"غير معروف", @"checkmark.circle.fill"],
         @"الجهاز": @[env.deviceModel ?: @"غير معروف", @"iphone"],
@@ -344,16 +330,13 @@
         [self.contentStack addArrangedSubview:row];
     }
 
-    // Divider
     [self.contentStack addArrangedSubview:[self sectionDivider]];
 
-    // ─── Tool Rows ───
     for (Capability *c in [cap allCapabilities]) {
         UIView *row = [self toolRowWithName:c.name path:c.path available:c.isAvailable];
         [self.contentStack addArrangedSubview:row];
     }
 
-    // ─── About ───
     [self.contentStack addArrangedSubview:[self sectionDivider]];
     [self.contentStack addArrangedSubview:[self aboutRow]];
 }
@@ -365,8 +348,6 @@
         [v removeFromSuperview];
     }
 }
-
-#pragma mark - Actions
 
 - (void)showAbout {
     NSString *message = @"هذه الأداة متاحة حاليًا كنسخة تجريبية وليست الإصدار النهائي.\n\nقد تواجه بعض الأخطاء أو المشاكل أثناء الاستخدام، ونهدف من خلال هذه المرحلة إلى اختبار الأداة وتحسين استقرارها وتطوير ميزاتها.\n\nإذا واجهت أي خلل، أو لديك ملاحظة أو اقتراح لتحسين الأداة، نرجو منك مشاركة تجربتك معنا. ملاحظاتك تساعدنا على اكتشاف المشاكل ومعالجتها قبل إطلاق الإصدار النهائي.\n\nللتواصل والإبلاغ عن المشاكل:\nX: @Zainqkvd";

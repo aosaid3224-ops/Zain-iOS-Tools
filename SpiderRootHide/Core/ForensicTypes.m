@@ -1,8 +1,3 @@
-//
-// ForensicTypes.m
-// IPA Installer Pro — Diagnostic/Forensic Mode
-//
-
 #import "ForensicTypes.h"
 
 static NSString *ForensicDateString(NSDate *date) {

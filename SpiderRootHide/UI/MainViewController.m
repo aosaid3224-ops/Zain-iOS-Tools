@@ -5,26 +5,27 @@
 #import "Core/Logger.h"
 #import "GlassIPACell.h"
 #import "RuntimeEnvironment.h"
+#import "IPTheme.h"
+#import "IPComponents.h"
 
 @interface MainViewController () <UIDocumentPickerDelegate>
 @property (nonatomic, strong) UIView *toastView;
 @property (nonatomic, strong) UILabel *toastLabel;
 @property (nonatomic, strong) UIView *dashboardHeader;
 @property (nonatomic, assign) BOOL hasShownAutoAbout;
-@property (nonatomic, strong) UILabel *trustedCountLabel;
-@property (nonatomic, strong) UILabel *installedCountLabel;
 @property (nonatomic, strong) UIView *importOverlayView;
 @property (nonatomic, strong) UIActivityIndicatorView *importSpinner;
 @property (nonatomic, strong) UILabel *importLabel;
+@property (nonatomic, strong) UIStackView *skeletonStack;
 @end
 
 @implementation MainViewController
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    self.title = @"";
-    self.navigationItem.title = @"";
-    self.view.backgroundColor = [UIColor colorWithRed:0.025 green:0.026 blue:0.030 alpha:1.0];
+    // لا تضبط self.title هنا: UIKit ينسخه إلى tabBarItem فيمحو عنوان التبويب "ملفات IPA"
+    // الترويسة المخصصة (dashboardHeader) تكفي، وشريط التنقل يبقى فارغاً بلا عنوان
+    self.view.backgroundColor = [IPTheme backgroundColor];
     self.ipaFiles = [NSMutableArray array];
     self.isLoading = NO;
     self.ipaMetadataCache = [NSMutableDictionary dictionary];
@@ -71,6 +72,7 @@
 }
 
 - (void)setupNavigationBar {
+    [IPTheme applyToNavigationController:self.navigationController];
     self.navigationController.navigationBar.prefersLargeTitles = NO;
     self.navigationItem.largeTitleDisplayMode = UINavigationItemLargeTitleDisplayModeNever;
     self.navigationController.navigationBarHidden = YES;
@@ -91,39 +93,54 @@
     [self.view addSubview:self.tableView];
 
     self.refreshControl = [[UIRefreshControl alloc] init];
-    self.refreshControl.tintColor = [UIColor colorWithWhite:0.5 alpha:1.0];
+    self.refreshControl.tintColor = [IPTheme textSecondaryColor];
     [self.refreshControl addTarget:self action:@selector(refreshPulled:) forControlEvents:UIControlEventValueChanged];
     self.tableView.refreshControl = self.refreshControl;
 }
 
 - (void)setupDashboardHeader {
     CGFloat width = self.view.bounds.size.width;
-    self.dashboardHeader = [[UIView alloc] initWithFrame:CGRectMake(0, 0, width, 220.0)];
-    self.dashboardHeader.backgroundColor = UIColor.clearColor; self.dashboardHeader.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-    UILabel *title = [[UILabel alloc] initWithFrame:CGRectMake(8, 27, width - 16, 40)];
-    NSMutableAttributedString *styledTitle = [[NSMutableAttributedString alloc] initWithString:@"ملفات IPA" attributes:@{NSFontAttributeName:[UIFont systemFontOfSize:27 weight:UIFontWeightBold], NSForegroundColorAttributeName:UIColor.whiteColor}];
-    [styledTitle addAttribute:NSForegroundColorAttributeName value:[UIColor colorWithRed:1.0 green:0.22 blue:0.18 alpha:1.0] range:NSMakeRange(6, 3)]; title.attributedText = styledTitle; title.textAlignment = NSTextAlignmentCenter; title.autoresizingMask = UIViewAutoresizingFlexibleWidth; [self.dashboardHeader addSubview:title];
-    UIButton *add = [UIButton buttonWithType:UIButtonTypeSystem]; add.frame = CGRectMake(width - 64, 34, 44, 44); add.layer.cornerRadius = 15; add.layer.borderWidth = 0.7; add.layer.borderColor = [UIColor colorWithWhite:1 alpha:.16].CGColor; add.backgroundColor = [UIColor colorWithWhite:1 alpha:.025]; [add setImage:[UIImage systemImageNamed:@"plus"] forState:UIControlStateNormal]; add.tintColor = [UIColor colorWithRed:1 green:.20 blue:.16 alpha:1]; [add addTarget:self action:@selector(addIPATapped:) forControlEvents:UIControlEventTouchUpInside]; [self.dashboardHeader addSubview:add];
-    UIButton *viewMode = [UIButton buttonWithType:UIButtonTypeSystem]; viewMode.frame = CGRectMake(24, 34, 48, 48); viewMode.layer.cornerRadius = 17; viewMode.layer.borderWidth = 1; viewMode.layer.borderColor = [UIColor colorWithWhite:1 alpha:.14].CGColor; [viewMode setImage:[UIImage systemImageNamed:@"list.bullet"] forState:UIControlStateNormal]; viewMode.tintColor = [UIColor colorWithRed:1 green:.20 blue:.16 alpha:1]; [viewMode addTarget:self action:@selector(toggleViewMode:) forControlEvents:UIControlEventTouchUpInside]; [self.dashboardHeader addSubview:viewMode];
-    UIView *stats = [[UIView alloc] initWithFrame:CGRectMake(8, 139, MAX(width - 16, 1), 74)]; stats.autoresizingMask = UIViewAutoresizingFlexibleWidth; stats.backgroundColor = [UIColor colorWithRed:.065 green:.066 blue:.075 alpha:1]; stats.layer.cornerRadius = 17; stats.layer.borderWidth = 1; stats.layer.borderColor = [UIColor colorWithRed:.42 green:.08 blue:.09 alpha:.65].CGColor; [self.dashboardHeader addSubview:stats];
-    NSArray *icons = @[@"cube", @"chart.pie", @"shield", @"arrow.down.circle"]; NSArray *labels = @[@"التطبيقات", @"إجمالي الحجم", @"موثوقة", @"تم التثبيت"]; NSMutableArray *values = [NSMutableArray array];
-    for (NSInteger i = 0; i < 4; i++) { CGFloat x = stats.bounds.size.width / 4.0 * i; if (i) { UIView *d = [[UIView alloc] initWithFrame:CGRectMake(x, 14, 1, 46)]; d.backgroundColor = [UIColor colorWithWhite:1 alpha:.08]; [stats addSubview:d]; } UIImageView *iv = [[UIImageView alloc] initWithFrame:CGRectMake(x + (stats.bounds.size.width / 4.0 - 22) / 2.0, 7, 22, 22)]; iv.image = [UIImage systemImageNamed:icons[i]]; iv.tintColor = [UIColor colorWithRed:1 green:.22 blue:.18 alpha:1]; iv.contentMode = UIViewContentModeScaleAspectFit; [stats addSubview:iv]; UILabel *v = [[UILabel alloc] initWithFrame:CGRectMake(x + 3, 30, stats.bounds.size.width / 4.0 - 6, 22)]; v.textAlignment = NSTextAlignmentCenter; v.font = [UIFont systemFontOfSize:17 weight:UIFontWeightBold]; v.textColor = UIColor.whiteColor; [stats addSubview:v]; [values addObject:v]; UILabel *c = [[UILabel alloc] initWithFrame:CGRectMake(x + 1, 54, stats.bounds.size.width / 4.0 - 2, 16)]; c.text = labels[i]; c.textAlignment = NSTextAlignmentCenter; c.font = [UIFont systemFontOfSize:10 weight:UIFontWeightMedium]; c.textColor = [UIColor colorWithWhite:.68 alpha:1]; [stats addSubview:c]; }
-    self.appsCountLabel = values[0]; self.totalSizeLabel = values[1]; self.trustedCountLabel = values[2]; self.installedCountLabel = values[3];
-    self.totalSizeLabel.adjustsFontSizeToFitWidth = YES; self.totalSizeLabel.minimumScaleFactor = 0.45; self.totalSizeLabel.numberOfLines = 1;
+    self.dashboardHeader = [[UIView alloc] initWithFrame:CGRectMake(0, 0, width, 100.0)];
+    self.dashboardHeader.backgroundColor = UIColor.clearColor;
+    self.dashboardHeader.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+
+    // Quiet title — one weight, one color. The canvas carries the screen.
+    UILabel *title = [[UILabel alloc] initWithFrame:CGRectMake(8, 24, width - 16, 38)];
+    title.text = @"ملفات IPA";
+    title.font = [UIFont systemFontOfSize:26 weight:UIFontWeightBold];
+    title.textColor = [IPTheme textPrimaryColor];
+    title.textAlignment = NSTextAlignmentCenter;
+    title.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+    [self.dashboardHeader addSubview:title];
+
+    // Primary action — bare plus symbol, no background circle.
+    UIButton *add = [UIButton buttonWithType:UIButtonTypeSystem];
+    add.frame = CGRectMake(width - 62, 30, 42, 42);
+    add.backgroundColor = UIColor.clearColor;
+    [add setImage:[UIImage systemImageNamed:@"plus"] forState:UIControlStateNormal];
+    add.tintColor = [IPTheme textPrimaryColor];
+    [add addTarget:self action:@selector(addIPATapped:) forControlEvents:UIControlEventTouchUpInside];
+    [self.dashboardHeader addSubview:add];
+
+    // View-mode toggle — quiet, secondary.
+    UIButton *viewMode = [UIButton buttonWithType:UIButtonTypeSystem];
+    viewMode.frame = CGRectMake(20, 30, 42, 42);
+    viewMode.layer.cornerRadius = 21;
+    viewMode.backgroundColor = [IPTheme surfaceSubtleColor];
+    [viewMode setImage:[UIImage systemImageNamed:@"list.bullet"] forState:UIControlStateNormal];
+    viewMode.tintColor = [IPTheme textSecondaryColor];
+    [viewMode addTarget:self action:@selector(toggleViewMode:) forControlEvents:UIControlEventTouchUpInside];
+    [self.dashboardHeader addSubview:viewMode];
+
     self.tableView.tableHeaderView = self.dashboardHeader;
 }
 
-- (void)updateDashboardStatistics {
-    NSUInteger trusted = 0; unsigned long long total = 0; for (IPAExtractedInfo *info in self.ipaFiles) { total += info.fileSize.unsignedLongLongValue; if (info.teamIdentifier.length > 0 && ![info.teamIdentifier isEqualToString:@"غير معروف"]) trusted++; }
-    NSUInteger installed = 0; NSFileManager *fm = [NSFileManager defaultManager]; RuntimeEnvironment *rt = [RuntimeEnvironment sharedEnvironment]; NSMutableArray *appRoots = [NSMutableArray arrayWithObject:@"/Applications"]; if (rt.bootstrapPath) { [appRoots addObject:[rt.bootstrapPath stringByAppendingPathComponent:@"Applications"]]; } else { [appRoots addObject:@"/var/jb/Applications"]; } for (NSString *root in appRoots) { for (NSString *item in [fm contentsOfDirectoryAtPath:root error:nil]) if ([item.pathExtension.lowercaseString isEqualToString:@"app"]) installed++; }
-    self.appsCountLabel.text = [NSString stringWithFormat:@"%lu", (unsigned long)self.ipaFiles.count]; self.totalSizeLabel.text = [[IPAExtractor sharedExtractor] formatFileSize:(long long)total]; self.trustedCountLabel.text = [NSString stringWithFormat:@"%lu", (unsigned long)trusted]; self.installedCountLabel.text = [NSString stringWithFormat:@"%lu", (unsigned long)installed];
-}
 
 - (void)setupEmptyState {
     self.emptyLabel = [[UILabel alloc] init];
     self.emptyLabel.text = @"لا توجد ملفات IPA\nاضغط + لإضافة ملف";
-    self.emptyLabel.textColor = [UIColor colorWithWhite:0.3 alpha:1.0];
-    self.emptyLabel.font = [UIFont systemFontOfSize:16 weight:UIFontWeightMedium];
+    self.emptyLabel.textColor = [IPTheme textQuaternaryColor];
+    self.emptyLabel.font = [UIFont systemFontOfSize:15 weight:UIFontWeightRegular];
     self.emptyLabel.textAlignment = NSTextAlignmentCenter;
     self.emptyLabel.numberOfLines = 0;
     self.emptyLabel.hidden = YES;
@@ -134,38 +151,58 @@
     UIBarButtonItem *addBtn = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAdd
                                                                               target:self
                                                                               action:@selector(addIPATapped:)];
-    addBtn.tintColor = [UIColor colorWithRed:0.82 green:0.12 blue:0.15 alpha:0.96];
+    addBtn.tintColor = [IPTheme accentColor];
     self.navigationItem.rightBarButtonItem = addBtn;
 }
 
 - (void)setupToast {
-    self.toastView = [[UIView alloc] initWithFrame:CGRectMake(20, -60, self.view.bounds.size.width - 40, 50)];
-    self.toastView.backgroundColor = [UIColor colorWithRed:0.15 green:0.15 blue:0.18 alpha:0.95];
-    self.toastView.layer.cornerRadius = 12;
-    self.toastView.layer.masksToBounds = YES;
+    self.toastView = [[UIView alloc] initWithFrame:CGRectMake(20, -60, self.view.bounds.size.width - 40, 48)];
+    self.toastView.backgroundColor = [IPTheme surfaceColor];
+    self.toastView.layer.cornerRadius = [IPTheme radiusMedium];
+    self.toastView.layer.borderWidth = 0.5;
+    self.toastView.layer.borderColor = [IPTheme separatorStrongColor].CGColor;
     self.toastView.alpha = 0;
     [self.view addSubview:self.toastView];
 
-    self.toastLabel = [[UILabel alloc] initWithFrame:CGRectMake(16, 0, self.toastView.bounds.size.width - 32, 50)];
-    self.toastLabel.textColor = [UIColor whiteColor];
-    self.toastLabel.font = [UIFont systemFontOfSize:14 weight:UIFontWeightMedium];
+    self.toastLabel = [[UILabel alloc] initWithFrame:CGRectMake(16, 0, self.toastView.bounds.size.width - 32, 48)];
+    self.toastLabel.textColor = [IPTheme textPrimaryColor];
+    self.toastLabel.font = [UIFont systemFontOfSize:13 weight:UIFontWeightMedium];
     self.toastLabel.textAlignment = NSTextAlignmentCenter;
     [self.toastView addSubview:self.toastLabel];
 }
 
 - (void)setupLoadingIndicator {
     self.loadingIndicator = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleLarge];
-    self.loadingIndicator.color = [UIColor colorWithWhite:0.5 alpha:1.0];
+    self.loadingIndicator.color = [IPTheme textSecondaryColor];
     self.loadingIndicator.center = CGPointMake(self.view.bounds.size.width / 2, self.view.bounds.size.height / 2 - 40);
     self.loadingIndicator.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin;
     self.loadingIndicator.hidden = YES;
     [self.view addSubview:self.loadingIndicator];
+
+    // Skeleton — progressive, never a bare spinner.
+    self.skeletonStack = [[UIStackView alloc] init];
+    self.skeletonStack.translatesAutoresizingMaskIntoConstraints = NO;
+    self.skeletonStack.axis = UILayoutConstraintAxisVertical;
+    self.skeletonStack.spacing = 0;
+    [self.view addSubview:self.skeletonStack];
+    for (NSInteger k = 0; k < 6; k++) {
+        IPSkeletonView *sk = [[IPSkeletonView alloc] initWithFrame:CGRectZero];
+        sk.translatesAutoresizingMaskIntoConstraints = NO;
+        [self.skeletonStack addArrangedSubview:sk];
+        [sk.heightAnchor constraintEqualToConstant:76].active = YES;
+    }
+    self.skeletonStack.hidden = YES;
+    [NSLayoutConstraint activateConstraints:@[
+        [self.skeletonStack.topAnchor constraintEqualToAnchor:self.tableView.topAnchor constant:8],
+        [self.skeletonStack.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:[IPTheme pageMargin]],
+        [self.skeletonStack.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor constant:-[IPTheme pageMargin]],
+    ]];
 }
 
 - (void)setupImportOverlay {
     self.importOverlayView = [[UIView alloc] initWithFrame:self.view.bounds];
     self.importOverlayView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-    self.importOverlayView.backgroundColor = [UIColor colorWithRed:0.0 green:0.0 blue:0.0 alpha:0.55];
+    self.importOverlayView.backgroundColor = [UIColor.blackColor colorWithAlphaComponent:0.55];
     self.importOverlayView.alpha = 0.0;
     self.importOverlayView.hidden = YES;
     [self.view addSubview:self.importOverlayView];
@@ -173,21 +210,21 @@
     UIView *card = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 220, 120)];
     card.center = CGPointMake(self.importOverlayView.bounds.size.width / 2, self.importOverlayView.bounds.size.height / 2);
     card.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin;
-    card.backgroundColor = [UIColor colorWithRed:0.08 green:0.08 blue:0.10 alpha:1.0];
+    card.backgroundColor = [IPTheme surfaceColor];
     card.layer.cornerRadius = 20;
     card.layer.borderWidth = 0.8;
-    card.layer.borderColor = [UIColor colorWithWhite:1 alpha:0.12].CGColor;
+    card.layer.borderColor = [IPTheme separatorColor].CGColor;
     [self.importOverlayView addSubview:card];
 
     self.importSpinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleMedium];
     self.importSpinner.center = CGPointMake(card.bounds.size.width / 2, 38);
-    self.importSpinner.color = [UIColor colorWithRed:1 green:.22 blue:.18 alpha:1];
+    self.importSpinner.color = [IPTheme errorColor];
     [card addSubview:self.importSpinner];
 
     self.importLabel = [[UILabel alloc] initWithFrame:CGRectMake(10, 64, 200, 40)];
     self.importLabel.textAlignment = NSTextAlignmentCenter;
     self.importLabel.font = [UIFont systemFontOfSize:13 weight:UIFontWeightMedium];
-    self.importLabel.textColor = [UIColor colorWithWhite:0.75 alpha:1.0];
+    self.importLabel.textColor = [IPTheme textPrimaryColor];
     self.importLabel.text = @"جارٍ استيراد الملفات...";
     [card addSubview:self.importLabel];
 }
@@ -215,24 +252,26 @@
     dispatch_async(dispatch_get_main_queue(), ^{
         self.toastLabel.text = message;
         self.toastView.backgroundColor = isError
-            ? [UIColor colorWithRed:0.8 green:0.25 blue:0.2 alpha:0.95]
-            : [UIColor colorWithRed:0.15 green:0.15 blue:0.18 alpha:0.95];
+            ? [[IPTheme errorColor] colorWithAlphaComponent:0.16]
+            : [IPTheme surfaceColor];
+        self.toastLabel.textColor = isError ? [IPTheme errorColor] : [IPTheme textPrimaryColor];
+        self.toastView.layer.borderColor = (isError
+            ? [[IPTheme errorColor] colorWithAlphaComponent:0.5]
+            : [IPTheme separatorStrongColor]).CGColor;
 
-        [UIView animateWithDuration:0.3 animations:^{
+        [UIView animateWithDuration:[IPTheme durationStandard] animations:^{
             self.toastView.alpha = 1;
-            self.toastView.frame = CGRectMake(20, 60, self.view.bounds.size.width - 40, 50);
+            self.toastView.frame = CGRectMake(20, 58, self.view.bounds.size.width - 40, 48);
         } completion:^(BOOL finished) {
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                [UIView animateWithDuration:0.3 animations:^{
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.4 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                [UIView animateWithDuration:[IPTheme durationStandard] animations:^{
                     self.toastView.alpha = 0;
-                    self.toastView.frame = CGRectMake(20, -60, self.view.bounds.size.width - 40, 50);
+                    self.toastView.frame = CGRectMake(20, -60, self.view.bounds.size.width - 40, 48);
                 }];
             });
         }];
     });
 }
-
-#pragma mark - Cache Keys
 
 - (NSString *)ipaCacheKeyForPath:(NSString *)path attributes:(NSDictionary *)attrs {
     if (path.length == 0 || !attrs) return nil;
@@ -245,8 +284,6 @@
 - (NSString *)iconCacheKeyForPath:(NSString *)path key:(NSString *)cacheKey {
     return [NSString stringWithFormat:@"%@|%@", path, cacheKey];
 }
-
-#pragma mark - Persistent Cache (v3.0.35)
 
 static NSString * const kPersistentCacheKey = @"IPAInstallerPro.PersistentMetadataCache.v1";
 
@@ -360,7 +397,9 @@ static NSString * const kPersistentCacheKey = @"IPAInstallerPro.PersistentMetada
 
     dispatch_async(dispatch_get_main_queue(), ^{
         self.loadingIndicator.hidden = NO;
-        [self.loadingIndicator startAnimating];
+        self.skeletonStack.hidden = YES;
+    [self.loadingIndicator stopAnimating];
+    self.skeletonStack.hidden = NO;
         self.emptyLabel.hidden = YES;
     });
 
@@ -394,7 +433,6 @@ static NSString * const kPersistentCacheKey = @"IPAInstallerPro.PersistentMetada
                 NSDictionary *attrs = [fm attributesOfItemAtPath:path error:nil];
                 NSString *cacheKey = [self ipaCacheKeyForPath:path attributes:attrs];
 
-                // 1. Check memory cache first
                 __block NSDictionary *cachedRecord = nil;
                 dispatch_sync(self.ipaCacheQueue, ^{
                     cachedRecord = self.ipaMetadataCache[path];
@@ -405,11 +443,9 @@ static NSString * const kPersistentCacheKey = @"IPAInstallerPro.PersistentMetada
                     continue;
                 }
 
-                // 2. Check persistent cache (disk)
                 IPAExtractedInfo *persistentInfo = [self loadPersistentCacheForPath:path cacheKey:cacheKey];
                 if (persistentInfo) {
                     [foundFiles addObject:persistentInfo];
-                    // Warm memory cache
                     dispatch_sync(self.ipaCacheQueue, ^{
                         self.ipaMetadataCache[path] = @{@"key": cacheKey, @"info": persistentInfo};
                     });
@@ -420,31 +456,28 @@ static NSString * const kPersistentCacheKey = @"IPAInstallerPro.PersistentMetada
                     continue;
                 }
 
-                // 3. No cache — use placeholder and queue for extraction
                 IPAExtractedInfo *placeholder = [self placeholderInfoForIPAPath:path size:attrs[NSFileSize]];
                 [foundFiles addObject:placeholder];
                 [pending addObject:@{@"path": path, @"key": cacheKey ?: @"", @"index": @(foundFiles.count - 1)}];
             }
         }
 
-        // Phase 1 UI commit: show cached data / placeholders immediately
         dispatch_async(dispatch_get_main_queue(), ^{
             if (loadGeneration != self.ipaLoadGeneration) return;
             [self.ipaFiles removeAllObjects];
             [self.ipaFiles addObjectsFromArray:foundFiles];
             [self.tableView reloadData];
-            [self updateDashboardStatistics];
             self.emptyLabel.hidden = (self.ipaFiles.count > 0);
             self.emptyLabel.frame = CGRectMake(20, self.view.bounds.size.height / 2 - 40, self.view.bounds.size.width - 40, 80);
             [self.refreshControl endRefreshing];
-            [self.loadingIndicator stopAnimating];
+            self.skeletonStack.hidden = YES;
+    [self.loadingIndicator stopAnimating];
             self.loadingIndicator.hidden = YES;
             self.isLoading = NO;
         });
 
         if (pending.count == 0) return;
 
-        // Phase 2: metadata enrichment (limited concurrency, no icons)
         dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
             dispatch_semaphore_t metaSem = dispatch_semaphore_create(4);
             dispatch_group_t metaGroup = dispatch_group_create();
@@ -465,9 +498,7 @@ static NSString * const kPersistentCacheKey = @"IPAInstallerPro.PersistentMetada
                             NSDictionary *currentAttrs = [fm attributesOfItemAtPath:path error:nil];
                             NSString *currentKey = [self ipaCacheKeyForPath:path attributes:currentAttrs];
                             if ([currentKey isEqualToString:originalKey]) {
-                                // Save to persistent cache
                                 [self persistCacheForPath:path info:parsed cacheKey:originalKey];
-                                // Save to memory cache
                                 dispatch_sync(self.ipaCacheQueue, ^{
                                     self.ipaMetadataCache[path] = @{@"key": originalKey, @"info": parsed};
                                 });
@@ -514,10 +545,8 @@ static NSString * const kPersistentCacheKey = @"IPAInstallerPro.PersistentMetada
                     [batchLock unlock];
                     [self.tableView reloadRowsAtIndexPaths:toReload withRowAnimation:UITableViewRowAnimationNone];
                 }
-                [self updateDashboardStatistics];
             });
 
-            // Phase 3: icon enrichment (background, limited concurrency)
             dispatch_async(dispatch_get_global_queue(QOS_CLASS_BACKGROUND, 0), ^{
                 dispatch_semaphore_t iconSem = dispatch_semaphore_create(2);
                 dispatch_group_t iconGroup = dispatch_group_create();
@@ -534,7 +563,6 @@ static NSString * const kPersistentCacheKey = @"IPAInstallerPro.PersistentMetada
                             NSString *iconCacheKey = [self iconCacheKeyForPath:path key:originalKey];
                             UIImage *icon = [self.ipaIconCache objectForKey:iconCacheKey];
 
-                            // 1. Check persistent icon cache on disk
                             if (!icon) {
                                 NSString *iconPath = [self persistentIconPathForIPAPath:path];
                                 if ([[NSFileManager defaultManager] fileExistsAtPath:iconPath]) {
@@ -543,11 +571,9 @@ static NSString * const kPersistentCacheKey = @"IPAInstallerPro.PersistentMetada
                                 }
                             }
 
-                            // 2. Extract from IPA if not cached
                             if (!icon) {
                                 icon = [[IPAExtractor sharedExtractor] extractIconFromIPA:path];
                                 if (icon) {
-                                    // Save to persistent cache
                                     NSString *iconPath = [self persistentIconPathForIPAPath:path];
                                     NSData *pngData = UIImagePNGRepresentation(icon);
                                     if (pngData) [pngData writeToFile:iconPath atomically:YES];
@@ -606,8 +632,6 @@ static NSString * const kPersistentCacheKey = @"IPAInstallerPro.PersistentMetada
     picker.modalPresentationStyle = UIModalPresentationFormSheet;
     [self presentViewController:picker animated:YES completion:nil];
 }
-
-#pragma mark - UIDocumentPickerDelegate
 
 - (void)documentPicker:(UIDocumentPickerViewController *)controller didPickDocumentsAtURLs:(NSArray *)urls {
     if (urls.count == 0) return;
@@ -702,8 +726,6 @@ static NSString * const kPersistentCacheKey = @"IPAInstallerPro.PersistentMetada
     [self showImportOverlay:NO];
 }
 
-#pragma mark - UITableViewDataSource
-
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView { return 1; }
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section { return self.ipaFiles.count; }
 
@@ -741,11 +763,10 @@ static NSString * const kPersistentCacheKey = @"IPAInstallerPro.PersistentMetada
         });
         [self clearPersistentCacheForPath:info.filePath];
         [self.ipaFiles removeObjectAtIndex:indexPath.row];
-        [self updateDashboardStatistics];
         [tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
         completionHandler(YES);
     }];
-    deleteAction.backgroundColor = [UIColor colorWithRed:0.8 green:0.25 blue:0.2 alpha:1.0];
+    deleteAction.backgroundColor = [IPTheme errorColor];
 
     return [UISwipeActionsConfiguration configurationWithActions:@[deleteAction]];
 }

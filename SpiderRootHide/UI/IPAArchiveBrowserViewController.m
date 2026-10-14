@@ -23,7 +23,7 @@
     [super viewDidLoad];
     self.view.backgroundColor = [IPTheme backgroundColor];
     self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(doneTapped:)];
-    self.navigationItem.leftBarButtonItem.tintColor = [UIColor whiteColor];
+    self.navigationItem.leftBarButtonItem.tintColor = [IPTheme textPrimaryColor];
     self.tableView = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStylePlain];
     self.tableView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     self.tableView.backgroundColor = UIColor.clearColor;
@@ -119,7 +119,7 @@
         return;
     }
     UIViewController *viewer = [[UIViewController alloc] init];
-    viewer.view.backgroundColor = [UIColor colorWithRed:0.02 green:0.02 blue:0.04 alpha:1.0];
+    viewer.view.backgroundColor = [IPTheme backgroundColor];
     viewer.title = title;
     UITextView *textView = [[UITextView alloc] initWithFrame:viewer.view.bounds];
     textView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
@@ -148,7 +148,7 @@
     cell.textLabel.textColor = UIColor.whiteColor;
     cell.textLabel.font = [UIFont systemFontOfSize:15 weight:UIFontWeightMedium];
     cell.detailTextLabel.text = directory ? @"مجلد" : [NSString stringWithFormat:@"%@ بايت", item[@"size"]];
-    cell.imageView.image = [[UIImage systemImageNamed:directory ? @"folder.fill" : @"doc"] imageWithTintColor:directory ? [UIColor colorWithRed:0.4 green:0.5 blue:0.9 alpha:1.0] : [UIColor colorWithWhite:0.55 alpha:1.0]];
+    cell.imageView.image = [[UIImage systemImageNamed:directory ? @"folder.fill" : @"doc"] imageWithTintColor:directory ? [IPTheme accentColor] : [IPTheme textSecondaryColor]];
     cell.accessoryType = directory ? UITableViewCellAccessoryDisclosureIndicator : UITableViewCellAccessoryNone;
     return cell;
 }

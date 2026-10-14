@@ -1,8 +1,3 @@
-//
-// InstallationTransactionCoordinator.h
-// IPA Installer Pro — transaction ordering only
-//
-
 #import <Foundation/Foundation.h>
 
 typedef NS_ENUM(NSInteger, InstallationTransactionState) {

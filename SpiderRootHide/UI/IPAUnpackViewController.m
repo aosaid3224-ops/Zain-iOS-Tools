@@ -14,7 +14,6 @@
 @property (nonatomic, assign) BOOL restoringItems;
 @property (nonatomic, assign) BOOL hasLoadedPersistedItems;
 
-// New UI v3.0.35
 @property (nonatomic, strong) UIView *customHeader;
 @property (nonatomic, strong) UISearchBar *searchBar;
 @property (nonatomic, strong) UIView *sectionHeaderView;
@@ -36,8 +35,6 @@ static NSString * const kIPAExtractorPersistedItemsKey = @"IPAExtractor.Persiste
         }
     }
 }
-
-#pragma mark - Lifecycle
 
 - (void)viewDidLoad {
     [super viewDidLoad];
@@ -73,8 +70,6 @@ static NSString * const kIPAExtractorPersistedItemsKey = @"IPAExtractor.Persiste
     self.navigationController.navigationBarHidden = NO;
     [self persistItems];
 }
-
-#pragma mark - Helpers
 
 - (NSURL *)urlForItem:(NSDictionary *)item {
     id value = item[@"url"];
@@ -169,8 +164,6 @@ static NSString * const kIPAExtractorPersistedItemsKey = @"IPAExtractor.Persiste
     return [NSString stringWithFormat:@"\u2066%@\u2069", text ?: @""];
 }
 
-#pragma mark - UI Setup v3.0.35 (Auto Layout + Safe Area)
-
 - (void)setupNavigationBar {
     self.navigationController.navigationBar.prefersLargeTitles = NO;
     self.navigationItem.largeTitleDisplayMode = UINavigationItemLargeTitleDisplayModeNever;
@@ -183,7 +176,6 @@ static NSString * const kIPAExtractorPersistedItemsKey = @"IPAExtractor.Persiste
     self.customHeader.backgroundColor = UIColor.clearColor;
     [self.view addSubview:self.customHeader];
 
-    // Settings button
     UIButton *settingsBtn = [UIButton buttonWithType:UIButtonTypeSystem];
     settingsBtn.translatesAutoresizingMaskIntoConstraints = NO;
     [settingsBtn setImage:[UIImage systemImageNamed:@"gear"] forState:UIControlStateNormal];
@@ -191,7 +183,6 @@ static NSString * const kIPAExtractorPersistedItemsKey = @"IPAExtractor.Persiste
     [settingsBtn addTarget:self action:@selector(settingsTapped:) forControlEvents:UIControlEventTouchUpInside];
     [self.customHeader addSubview:settingsBtn];
 
-    // Title
     UILabel *title = [[UILabel alloc] init];
     title.translatesAutoresizingMaskIntoConstraints = NO;
     title.text = @"فك حزمة IPA";
@@ -348,8 +339,6 @@ static NSString * const kIPAExtractorPersistedItemsKey = @"IPAExtractor.Persiste
     ]];
 }
 
-#pragma mark - Actions
-
 - (void)settingsTapped:(id)sender {
     UIAlertController *sheet = [UIAlertController alertControllerWithTitle:@"إعدادات فك الحزمة" message:nil preferredStyle:UIAlertControllerStyleActionSheet];
     sheet.view.semanticContentAttribute = UISemanticContentAttributeForceRightToLeft;
@@ -392,8 +381,6 @@ static NSString * const kIPAExtractorPersistedItemsKey = @"IPAExtractor.Persiste
     if ([NSThread isMainThread]) presentPicker();
     else dispatch_async(dispatch_get_main_queue(), presentPicker);
 }
-
-#pragma mark - UIDocumentPickerDelegate
 
 - (void)documentPicker:(UIDocumentPickerViewController *)controller didPickDocumentsAtURLs:(NSArray<NSURL *> *)urls {
     NSArray<NSURL *> *pickedURLs = [urls copy] ?: @[];
@@ -484,8 +471,6 @@ static NSString * const kIPAExtractorPersistedItemsKey = @"IPAExtractor.Persiste
 - (void)documentPickerWasCancelled:(UIDocumentPickerViewController *)controller {
 }
 
-#pragma mark - Display & Filtering
-
 - (NSArray<NSDictionary *> *)displayRows {
     NSString *query = self.searchText.lowercaseString ?: @"";
     NSArray *visibleItems = [self.items filteredArrayUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(NSDictionary *item, NSDictionary *bindings) {
@@ -522,8 +507,6 @@ static NSString * const kIPAExtractorPersistedItemsKey = @"IPAExtractor.Persiste
     NSArray *rows = [self displayRows];
     return indexPath.row < rows.count ? rows[indexPath.row] : nil;
 }
-
-#pragma mark - Extraction Logic
 
 - (void)confirmExtractionForItem:(NSMutableDictionary *)item indexPath:(NSIndexPath *)indexPath {
     if ([item[@"extracting"] boolValue] || self.activeTask) return;
@@ -703,22 +686,18 @@ static NSString * const kIPAExtractorPersistedItemsKey = @"IPAExtractor.Persiste
     CGSize size = CGSizeMake(52, 52);
     UIGraphicsImageRenderer *renderer = [[UIGraphicsImageRenderer alloc] initWithSize:size];
     return [renderer imageWithActions:^(UIGraphicsImageRendererContext *context) {
-        // Background rounded rect
         CGRect bgRect = CGRectMake(2, 2, 48, 48);
         UIBezierPath *bgPath = [UIBezierPath bezierPathWithRoundedRect:bgRect cornerRadius:10];
         [[UIColor colorWithRed:0.15 green:0.25 blue:0.40 alpha:1.0] setFill];
         [bgPath fill];
-        // White page icon
         CGRect pageRect = CGRectMake(16, 10, 20, 26);
         UIBezierPath *pagePath = [UIBezierPath bezierPathWithRoundedRect:pageRect cornerRadius:3];
         [[UIColor whiteColor] setFill];
         [pagePath fill];
-        // Green badge
         CGRect badgeRect = CGRectMake(10, 32, 32, 14);
         UIBezierPath *badgePath = [UIBezierPath bezierPathWithRoundedRect:badgeRect cornerRadius:4];
         [[UIColor colorWithRed:0.22 green:0.75 blue:0.48 alpha:1.0] setFill];
         [badgePath fill];
-        // IPA text
         NSDictionary *attrs = @{ NSFontAttributeName: [UIFont systemFontOfSize:8 weight:UIFontWeightBold], NSForegroundColorAttributeName: UIColor.whiteColor };
         [@"IPA" drawInRect:CGRectMake(10, 34, 32, 10) withAttributes:attrs];
     }];
@@ -828,8 +807,6 @@ static NSString * const kIPAExtractorPersistedItemsKey = @"IPAExtractor.Persiste
     }];
 }
 
-#pragma mark - UITableViewDataSource
-
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
     return [self displayRows].count;
 }
@@ -907,8 +884,6 @@ static NSString * const kIPAExtractorPersistedItemsKey = @"IPAExtractor.Persiste
     }];
     return [UISwipeActionsConfiguration configurationWithActions:@[action]];
 }
-
-#pragma mark - UISearchBarDelegate
 
 - (void)searchBar:(UISearchBar *)searchBar textDidChange:(NSString *)searchText {
     self.searchText = searchText ?: @"";

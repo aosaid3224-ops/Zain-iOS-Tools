@@ -1,10 +1,3 @@
-//
-//  DiagnosticEngine.h
-//  IPAInstallerPro
-//
-//  Evidence-based diagnostic system for IPA installation failures
-//
-
 #import <Foundation/Foundation.h>
 
 @interface DiagnosticReport : NSObject

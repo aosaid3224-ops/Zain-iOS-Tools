@@ -11,10 +11,6 @@
 @property (nonatomic, strong) UIActivityIndicatorView *loadingIndicator;
 @property (nonatomic, strong) UILabel *emptyLabel;
 @property (nonatomic, strong) UIView *dashboardView;
-@property (nonatomic, strong) UILabel *appsCountLabel;
-@property (nonatomic, strong) UILabel *totalSizeLabel;
-@property (nonatomic, strong) UILabel *trustedLabel;
-@property (nonatomic, strong) UILabel *installedLabel;
 @property (nonatomic, assign) BOOL isLoading;
 @property (nonatomic, assign) NSUInteger ipaLoadGeneration;
 @end

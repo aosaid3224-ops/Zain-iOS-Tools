@@ -1,10 +1,3 @@
-//
-// SigningPlan.h
-// IPAInstallerPro — Phase 2/3: Smart Signing System
-//
-// A complete signing strategy for an entire IPA.
-//
-
 #import <Foundation/Foundation.h>
 @class SigningTarget;
 

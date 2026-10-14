@@ -1,5 +1,3 @@
 #!/bin/bash
-# Pre-remove script for IPA Installer Pro
-# Cleanup if needed
 
 exit 0

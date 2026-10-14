@@ -1,10 +1,3 @@
-//
-//  InstallationEngine.m
-//  IPAInstallerPro
-//
-//  v2.1 — Standalone engine with OperationLog as source of truth
-//
-
 #import "InstallationEngine.h"
 #import "DirectInstallationProvider.h"
 #import "OperationLog.h"
@@ -111,7 +104,6 @@
 - (void)installIPA:(NSString *)ipaPath
      progressBlock:(void (^)(InstallationStage stage, NSString *statusMessage, float progress))progressBlock
         completion:(void (^)(InstallationResult *result))completion {
-
     [self.installLock lock];
     if (self.isInstalling) {
         [self.installLock unlock];

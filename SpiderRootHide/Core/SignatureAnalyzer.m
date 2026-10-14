@@ -1,8 +1,5 @@
-//
-// SignatureAnalyzer.m
-//
-
 #import "SignatureAnalyzer.h"
+#import "SPRootHide.h"
 #import "RootlessManager.h"
 #import <spawn.h>
 #import <sys/wait.h>
@@ -46,7 +43,7 @@
     if (self) {
         _ldidPath = [[RootlessManager sharedManager] resolvePath:@"/usr/bin/ldid"];
         if (![[NSFileManager defaultManager] fileExistsAtPath:_ldidPath]) {
-            _ldidPath = @"ldid"; // fallback to PATH only when the rootless path is unavailable
+            _ldidPath = @"ldid";
         }
     }
     return self;
@@ -58,7 +55,7 @@
 
 - (NSString *)runCommand:(NSString *)cmd args:(NSArray *)args {
     NSMutableArray *cArgs = [NSMutableArray arrayWithObject:cmd ?: @""];
-    [cArgs addObjectsFromArray:args ?: @[]];
+    [cArgs addObjectsFromArray:SPToolArguments(cmd ?: @"", args ?: @[])];
     char **argv = calloc(cArgs.count + 1, sizeof(char *));
     for (NSUInteger i = 0; i < cArgs.count; i++) argv[i] = strdup([cArgs[i] fileSystemRepresentation]);
     pid_t pid = 0;
@@ -123,14 +120,10 @@
     return [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
 }
 
-#pragma mark - Signature Analysis
-
 - (SignatureInfo *)analyzeSignatureAtPath:(NSString *)path {
     SignatureInfo *info = [[SignatureInfo alloc] init];
     info.source = @"ldid";
 
-    // ldid -d prints only cryptid; it is not a signature-presence check.
-    // ldid -h reports CodeDirectory, CDHash and Authority information.
     NSString *output = [self runLdid:@"-h" target:path];
     if (!output || output.length == 0) {
         info.isSigned = NO;
@@ -141,7 +134,6 @@
     info.isSigned = YES;
     info.signatureStatus = @"signed";
 
-    // Parse ldid -h output, which uses key=value (not key: value).
     NSArray *lines = [output componentsSeparatedByString:@"\n"];
     for (NSString *line in lines) {
         NSString *trimmed = [line stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
@@ -155,7 +147,6 @@
         } else if ([key isEqualToString:@"TeamIdentifier"]) {
             info.teamID = value;
         } else if ([key isEqualToString:@"Authority"]) {
-            // ldid emits one Authority line per certificate; retain the leaf authority.
             if (!info.authority.length) info.authority = value;
             if ([value rangeOfString:@"adhoc" options:NSCaseInsensitiveSearch].location != NSNotFound ||
                 [value rangeOfString:@"AdHoc" options:NSCaseInsensitiveSearch].location != NSNotFound) {
@@ -164,8 +155,6 @@
         }
     }
 
-    // A valid ad-hoc signature may have no Authority lines; do not invent
-    // certificate data, but retain the signed state reported by ldid -h.
     if (!info.authority && info.isSigned) {
         info.isAdHocSigned = YES;
         info.authority = @"AdHoc";
@@ -174,15 +163,10 @@
     return info;
 }
 
-#pragma mark - Entitlement Extraction
-
 - (NSDictionary *)extractEntitlementsAtPath:(NSString *)path {
     NSString *output = [self runLdid:@"-e" target:path];
     if (!output || output.length < 10) return nil;
 
-    // ldid may write diagnostics before the plist because this helper captures
-    // stdout and stderr together. Isolate the plist payload instead of treating
-    // the whole mixed stream as a property list.
     NSString *plistPayload = output;
     NSRange xmlStart = [output rangeOfString:@"<?xml"];
     NSRange plistEnd = [output rangeOfString:@"</plist>" options:NSBackwardsSearch];

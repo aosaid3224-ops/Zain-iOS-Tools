@@ -1,8 +1,3 @@
-//
-//  InstalledAppsViewController.m
-//  IPAInstallerPro — v3.0.35: Arabic Smart Search in Installed Apps
-//
-
 #import "InstalledAppsViewController.h"
 #import "ApplicationManager.h"
 #import "AppDetailsViewController.h"
@@ -50,8 +45,6 @@
     [super viewWillAppear:animated];
     [self loadApps];
 }
-
-#pragma mark - UI Setup
 
 - (void)setupSegmentControl {
     _segmentControl = [[UISegmentedControl alloc] initWithItems:@[@"\u0627\u0644\u0643\u0644", @"\u0645\u0633\u062a\u062e\u062f\u0645", @"\u0646\u0638\u0627\u0645"]];
@@ -156,8 +149,6 @@
     ]];
 }
 
-#pragma mark - Data Loading
-
 - (void)loadApps {
     [self.activityIndicator startAnimating];
     self.tableView.hidden = YES;
@@ -202,8 +193,6 @@
     });
 }
 
-#pragma mark - Filtering (Segment + Search)
-
 - (void)segmentChanged:(UISegmentedControl *)sender {
     [self filterApps];
     [self.tableView reloadData];
@@ -212,14 +201,12 @@
 - (void)filterApps {
     NSArray<AppInfo *> *segmented = self.apps;
 
-    // 1. Apply segment filter
     if (self.segmentControl.selectedSegmentIndex == 1) {
         segmented = [segmented filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"isSystemApp == NO"]];
     } else if (self.segmentControl.selectedSegmentIndex == 2) {
         segmented = [segmented filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"isSystemApp == YES"]];
     }
 
-    // 2. Apply search filter (Arabic smart search)
     NSString *query = [self.searchText stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
     if (query.length == 0) {
         self.filteredApps = segmented;
@@ -228,7 +215,6 @@
 
     NSMutableArray<AppInfo *> *results = [NSMutableArray array];
 
-    // Phase 1: Exact prefix match (name or bundleID starts with query)
     for (AppInfo *app in segmented) {
         NSString *name = app.name ?: @"";
         NSString *bundleID = app.bundleID ?: @"";
@@ -237,7 +223,6 @@
         }
     }
 
-    // Phase 2: Contains match (name, bundleID, or version contains query)
     for (AppInfo *app in segmented) {
         if ([results containsObject:app]) continue;
         NSString *name = app.name ?: @"";
@@ -252,8 +237,6 @@
 
     self.filteredApps = results;
 }
-
-#pragma mark - UITableViewDataSource
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
     return self.filteredApps.count;
@@ -295,15 +278,11 @@
     return img;
 }
 
-#pragma mark - UITableViewDelegate
-
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     AppInfo *app = self.filteredApps[indexPath.row];
     AppDetailsViewController *detail = [[AppDetailsViewController alloc] initWithAppInfo:app];
     [self.navigationController pushViewController:detail animated:YES];
 }
-
-#pragma mark - UISearchBarDelegate (Arabic Smart Search)
 
 - (void)searchBar:(UISearchBar *)searchBar textDidChange:(NSString *)searchText {
     self.searchText = searchText ?: @"";

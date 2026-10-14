@@ -1,8 +1,3 @@
-//
-// ForensicInstallationPipeline.m
-// IPA Installer Pro — Diagnostic/Forensic Mode
-//
-
 #import "ForensicInstallationPipeline.h"
 #import "ForensicInstallationObserver.h"
 #import "ForensicRegistrationProbe.h"
@@ -61,8 +56,6 @@
        installationResult:(InstallationResult *)installationResult
              runtimeResult:(RuntimeDiagnosticsResult *)runtimeResult {
     OperationLog *log = [OperationLog sharedLog];
-    // recordsForTransaction uses the log's serial queue and therefore drains
-    // pending record updates before the observer is finalized.
     NSString *txnID = observer.currentReport.transactionID;
     [log recordsForTransaction:txnID];
     ForensicTransactionReport *report = [observer finishObservation];

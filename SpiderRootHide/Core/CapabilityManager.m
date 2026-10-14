@@ -1,15 +1,3 @@
-//
-//  CapabilityManager.m
-//  IPAInstallerPro — Commit 4c: Fix canWriteToApplicationsDirectory
-//
-//  CHANGES:
-//  - canWriteToApplicationsDirectory now checks path existence + isDirectory,
-//    NOT isWritableFileAtPath (which checks current user permissions only).
-//    In Rootless, /var/jb/Applications is owned by root; actual writes happen
-//    via root helper / setuid. The correct check is: does the path exist and
-//    is it a directory? The installation engine handles privilege escalation.
-//
-
 #import "CapabilityManager.h"
 #import "ExecutableValidator.h"
 #import "ExecutableCapability.h"
@@ -44,7 +32,7 @@
     return ([[ExecutableValidator sharedValidator] validateUICache].status == ExecutableCapabilityStatusReady);
 }
 
-- (NSString *)resolvedRootHelperPath {
+- (BOOL)isRootHelperAvailable {
     RuntimeEnvironment *rt = [RuntimeEnvironment sharedEnvironment];
     NSMutableOrderedSet<NSString *> *candidates = [NSMutableOrderedSet orderedSet];
     if (rt.bootstrapPath.length > 0) {
@@ -59,13 +47,9 @@
     ]];
     NSFileManager *fm = [NSFileManager defaultManager];
     for (NSString *path in candidates) {
-        if ([fm isExecutableFileAtPath:path]) return path;
+        if ([fm isExecutableFileAtPath:path]) return YES;
     }
-    return nil;
-}
-
-- (BOOL)isRootHelperAvailable {
-    return ([self resolvedRootHelperPath] != nil);
+    return NO;
 }
 
 - (BOOL)isSystemInstallationAvailable {
@@ -146,7 +130,7 @@
     helper.name = @"Root Helper"; helper.identifier = @"root_helper";
     helper.isAvailable = [self isRootHelperAvailable];
     helper.statusMessage = helper.isAvailable ? @"مُفعّل" : @"غير موجود";
-    helper.path = [self resolvedRootHelperPath] ?: @"/usr/bin/ipainstallerpro_helper";
+    helper.path = @"/usr/bin/ipainstallerpro_helper";
     [caps addObject:helper];
 
     self.cachedCapabilities = caps;
@@ -238,8 +222,6 @@
     return [self capabilityStatusDescription];
 }
 
-#pragma mark - Internal Helpers
-
 - (ExecutableCapability *)validateDPKG {
     return [[ExecutableValidator sharedValidator] validateExecutableNamed:@"dpkg"];
 }
@@ -249,9 +231,6 @@
 }
 
 - (BOOL)canWriteToApplicationsDirectory {
-    // Rootless installations are performed by the privileged helper. The mobile
-    // process must not require direct write permission, nor must it assume that
-    // every jailbreak exposes the same Applications directory spelling.
     RuntimeEnvironment *rt = [RuntimeEnvironment sharedEnvironment];
     NSMutableOrderedSet<NSString *> *candidateDirs = [NSMutableOrderedSet orderedSet];
     if (rt.bootstrapPath.length > 0) {
@@ -267,8 +246,6 @@
         BOOL isDir = NO;
         if ([fm fileExistsAtPath:path isDirectory:&isDir] && isDir) return YES;
     }
-    // A rootless bootstrap may create/redirect the target during installation;
-    // the helper is the authoritative capability in that case.
     if (rt.isRootless && [self isRootHelperAvailable]) return YES;
     [[Logger sharedLogger] warning:[NSString stringWithFormat:@"CapabilityManager: no Applications directory and no root helper (rootless=%@, bootstrap=%@)", rt.isRootless ? @"YES" : @"NO", rt.bootstrapPath ?: @"none"]];
     return NO;

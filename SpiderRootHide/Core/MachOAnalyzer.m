@@ -1,21 +1,7 @@
-//
-// MachOAnalyzer.m
-// IPAInstallerPro — Phase 1: Universal IPA Structural Reader
-//
-// Internal Mach-O parser supporting:
-//   MH_MAGIC, MH_MAGIC_64, FAT_MAGIC, FAT_CIGAM, FAT_MAGIC_64, FAT_CIGAM_64
-//
-// Reads load commands: LC_LOAD_DYLIB, LC_LOAD_WEAK_DYLIB, LC_RPATH,
-// LC_ID_DYLIB, LC_UUID, LC_CODE_SIGNATURE, LC_BUILD_VERSION
-//
-
 #import "MachOAnalyzer.h"
 #import <sys/stat.h>
 #include <string.h>
 
-// ============================================
-// Mach-O Constants (local definitions to avoid header conflicts)
-// ============================================
 #define MH_MAGIC        0xfeedface
 #define MH_MAGIC_64     0xfeedfacf
 #define MH_CIGAM        0xcefaedfe
@@ -62,9 +48,6 @@
 #define PLATFORM_TVOS       3
 #define PLATFORM_WATCHOS    4
 
-// ============================================
-// Minimal Mach-O Structures
-// ============================================
 struct mach_header {
     uint32_t magic;
     uint32_t cputype;
@@ -143,9 +126,6 @@ struct build_version_command {
     uint32_t ntools;
 };
 
-// ============================================
-// Byte Swapping Helpers
-// ============================================
 static inline uint32_t swap32(uint32_t v) {
     return ((v & 0xFF000000) >> 24) |
            ((v & 0x00FF0000) >> 8)  |
@@ -164,9 +144,6 @@ static inline uint64_t swap64(uint64_t v) {
            ((v & 0x00000000000000FFULL) << 56);
 }
 
-// ============================================
-// Implementation: MachOSlice
-// ============================================
 @implementation MachOSlice
 - (NSDictionary *)dictionaryRepresentation {
     NSMutableDictionary *d = [NSMutableDictionary dictionary];
@@ -182,9 +159,6 @@ static inline uint64_t swap64(uint64_t v) {
 }
 @end
 
-// ============================================
-// Implementation: MachODependency
-// ============================================
 @implementation MachODependency
 - (NSDictionary *)dictionaryRepresentation {
     NSMutableDictionary *d = [NSMutableDictionary dictionary];
@@ -195,9 +169,6 @@ static inline uint64_t swap64(uint64_t v) {
 }
 @end
 
-// ============================================
-// Implementation: MachORPath
-// ============================================
 @implementation MachORPath
 - (NSDictionary *)dictionaryRepresentation {
     NSMutableDictionary *d = [NSMutableDictionary dictionary];
@@ -207,9 +178,6 @@ static inline uint64_t swap64(uint64_t v) {
 }
 @end
 
-// ============================================
-// Implementation: MachOLoadCommand
-// ============================================
 @implementation MachOLoadCommand
 - (NSDictionary *)dictionaryRepresentation {
     NSMutableDictionary *d = [NSMutableDictionary dictionary];
@@ -220,9 +188,6 @@ static inline uint64_t swap64(uint64_t v) {
 }
 @end
 
-// ============================================
-// Implementation: MachOAnalysisResult
-// ============================================
 @implementation MachOAnalysisResult
 - (NSDictionary *)dictionaryRepresentation {
     NSMutableDictionary *d = [NSMutableDictionary dictionary];
@@ -268,9 +233,6 @@ static inline uint64_t swap64(uint64_t v) {
 }
 @end
 
-// ============================================
-// Private Interface
-// ============================================
 @interface MachOAnalyzer ()
 - (NSString *)architectureNameForCputype:(uint32_t)cputype subtype:(uint32_t)subtype;
 - (NSString *)machOTypeName:(uint32_t)filetype;
@@ -283,9 +245,6 @@ static inline uint64_t swap64(uint64_t v) {
                  isSwap:(BOOL)isSwap;
 @end
 
-// ============================================
-// Implementation: MachOAnalyzer
-// ============================================
 @implementation MachOAnalyzer
 
 + (instancetype)sharedAnalyzer {
@@ -296,8 +255,6 @@ static inline uint64_t swap64(uint64_t v) {
     });
     return shared;
 }
-
-#pragma mark - Architecture Name
 
 - (NSString *)architectureNameForCputype:(uint32_t)cputype subtype:(uint32_t)subtype {
     switch (cputype) {
@@ -315,8 +272,6 @@ static inline uint64_t swap64(uint64_t v) {
     }
 }
 
-#pragma mark - Mach-O Type Name
-
 - (NSString *)machOTypeName:(uint32_t)filetype {
     switch (filetype) {
         case MH_EXECUTE: return @"MH_EXECUTE";
@@ -326,8 +281,6 @@ static inline uint64_t swap64(uint64_t v) {
         default: return [NSString stringWithFormat:@"unknown(%u)", filetype];
     }
 }
-
-#pragma mark - Platform Name
 
 - (NSString *)platformName:(uint32_t)platform {
     switch (platform) {
@@ -339,8 +292,6 @@ static inline uint64_t swap64(uint64_t v) {
     }
 }
 
-#pragma mark - Version String
-
 - (NSString *)versionStringFromUint32:(uint32_t)version {
     uint32_t major = (version >> 16) & 0xFFFF;
     uint32_t minor = (version >> 8) & 0xFF;
@@ -348,8 +299,6 @@ static inline uint64_t swap64(uint64_t v) {
     if (patch == 0) return [NSString stringWithFormat:@"%u.%u", major, minor];
     return [NSString stringWithFormat:@"%u.%u.%u", major, minor, patch];
 }
-
-#pragma mark - Main Analysis Entry Point
 
 - (MachOAnalysisResult *)analyzeFileAtPath:(NSString *)path {
     MachOAnalysisResult *result = [[MachOAnalysisResult alloc] init];
@@ -361,7 +310,6 @@ static inline uint64_t swap64(uint64_t v) {
     result.rpaths = @[];
     result.loadCommands = @[];
 
-    // Get file size
     struct stat st;
     if (stat(path.UTF8String, &st) != 0) {
         result.parseStatus = MachOParseFailed;
@@ -376,7 +324,6 @@ static inline uint64_t swap64(uint64_t v) {
         return result;
     }
 
-    // Read first 4 bytes for magic
     NSFileHandle *fh = [NSFileHandle fileHandleForReadingAtPath:path];
     if (!fh) {
         result.parseStatus = MachOParseFailed;
@@ -397,7 +344,6 @@ static inline uint64_t swap64(uint64_t v) {
     [magicData getBytes:&magic length:4];
     result.magic = magic;
 
-    // Map magic to name
     switch (magic) {
         case MH_MAGIC:      result.magicName = @"MH_MAGIC"; break;
         case MH_MAGIC_64:   result.magicName = @"MH_MAGIC_64"; break;
@@ -413,7 +359,6 @@ static inline uint64_t swap64(uint64_t v) {
             return result;
     }
 
-    // Read entire file into memory for parsing
     NSData *fileData = [NSData dataWithContentsOfFile:path options:NSDataReadingMappedIfSafe error:nil];
     if (!fileData || fileData.length == 0) {
         result.parseStatus = MachOParseFailed;
@@ -424,32 +369,26 @@ static inline uint64_t swap64(uint64_t v) {
     const void *data = fileData.bytes;
     size_t length = fileData.length;
 
-    // Determine if byte swapping is needed
     BOOL isSwap = (magic == MH_CIGAM || magic == MH_CIGAM_64 ||
                    magic == FAT_CIGAM || magic == FAT_CIGAM_64);
 
     if (magic == MH_MAGIC || magic == MH_MAGIC_64 ||
         magic == MH_CIGAM || magic == MH_CIGAM_64) {
-        // Single architecture
         [self parseMachOHeader:data length:length offset:0 result:result isSwap:isSwap];
     }
     else if (magic == FAT_MAGIC || magic == FAT_CIGAM ||
              magic == FAT_MAGIC_64 || magic == FAT_CIGAM_64) {
-        // FAT binary
         [self parseFatBinary:data length:length result:result isSwap:isSwap];
     }
 
     return result;
 }
 
-#pragma mark - Parse Single Mach-O Header
-
 - (void)parseMachOHeader:(const void *)data
                   length:(size_t)length
                   offset:(uint64_t)offset
                   result:(MachOAnalysisResult *)result
                   isSwap:(BOOL)isSwap {
-
     if (length < offset + sizeof(struct mach_header)) {
         result.parseStatus = MachOParsePartial;
         if (!result.parseError) result.parseError = @"Data too short for mach_header";
@@ -468,12 +407,11 @@ static inline uint64_t swap64(uint64_t v) {
     result.machOType = filetype;
     result.machOTypeName = [self machOTypeName:filetype];
 
-    // Create slice info
     MachOSlice *slice = [[MachOSlice alloc] init];
     slice.cputype = cputype;
     slice.cpusubtype = cpusubtype;
     slice.offset = offset;
-    slice.size = length; // For single arch, size is entire file
+    slice.size = length;
     slice.architectureName = [self architectureNameForCputype:cputype subtype:cpusubtype];
     slice.encrypted = NO;
     slice.encryptionID = 0;
@@ -482,7 +420,6 @@ static inline uint64_t swap64(uint64_t v) {
     [slices addObject:slice];
     result.slices = slices;
 
-    // Parse load commands
     uint64_t lcOffset = offset + (is64 ? sizeof(struct mach_header_64) : sizeof(struct mach_header));
     NSMutableArray *deps = [NSMutableArray array];
     NSMutableArray *rpaths = [NSMutableArray array];
@@ -511,7 +448,6 @@ static inline uint64_t swap64(uint64_t v) {
                 if (nameOffset < cmdsize && lcOffset + nameOffset < length) {
                     const char *namePtr = (const char *)lc + nameOffset;
                     uint32_t maxLen = cmdsize - nameOffset;
-                    // Find null terminator within bounds
                     uint32_t actualLen = 0;
                     for (uint32_t j = 0; j < maxLen; j++) {
                         if (namePtr[j] == '\0') { actualLen = j; break; }
@@ -570,9 +506,6 @@ static inline uint64_t swap64(uint64_t v) {
             }
             case LC_ENCRYPTION_INFO:
             case LC_ENCRYPTION_INFO_64: {
-                // cryptid is the fifth uint32 field in both encryption-info
-                // commands. A non-zero value means FairPlay-encrypted content
-                // remains in this slice; signing cannot decrypt it.
                 if (cmdsize >= 20) {
                     const uint8_t *cryptidBytes = (const uint8_t *)lc + 16;
                     uint32_t cryptid = 0;
@@ -632,9 +565,6 @@ static inline uint64_t swap64(uint64_t v) {
     result.rpaths = rpaths;
     result.loadCommands = lcs;
 
-    // FIX(v3.0.19): Encrypted binaries are valid Mach-O files. The encryption
-    // only affects the __TEXT segment payload, not the header or load commands.
-    // ldid will strip and re-sign, making the binary runnable. Do NOT fail.
     if (slice.encrypted) {
         result.parseStatus = MachOParseSuccess;
         result.parseError = nil;
@@ -645,13 +575,10 @@ static inline uint64_t swap64(uint64_t v) {
     }
 }
 
-#pragma mark - Parse FAT Binary
-
 - (void)parseFatBinary:(const void *)data
                 length:(size_t)length
                 result:(MachOAnalysisResult *)result
                 isSwap:(BOOL)isSwap {
-
     if (length < sizeof(struct fat_header)) {
         result.parseStatus = MachOParseFailed;
         result.parseError = @"Data too short for fat_header";
@@ -703,12 +630,10 @@ static inline uint64_t swap64(uint64_t v) {
             continue;
         }
 
-        // Parse this slice's Mach-O header
         const uint8_t *sliceData = (const uint8_t *)data + offset;
         uint32_t sliceMagic = *(uint32_t *)sliceData;
         BOOL sliceIsSwap = (sliceMagic == MH_CIGAM || sliceMagic == MH_CIGAM_64);
 
-        // Create a temporary result for this slice
         MachOAnalysisResult *sliceResult = [[MachOAnalysisResult alloc] init];
         sliceResult.filePath = result.filePath;
         [self parseMachOHeader:data length:length offset:offset result:sliceResult isSwap:sliceIsSwap];
@@ -736,7 +661,6 @@ static inline uint64_t swap64(uint64_t v) {
             if (sliceResult.hasEncryptedArm64Slice) result.hasEncryptedArm64Slice = YES;
             result.encryptedArm64SliceCount += sliceResult.encryptedArm64SliceCount;
 
-            // Use first successful slice for global values
             if (!result.machOTypeName) {
                 result.machOType = sliceResult.machOType;
                 result.machOTypeName = sliceResult.machOTypeName;
@@ -762,9 +686,6 @@ static inline uint64_t swap64(uint64_t v) {
         result.parseStatus = firstError ? MachOParsePartial : MachOParseSuccess;
         if (firstError) result.parseError = firstError;
     } else if (slices.count > 0) {
-        // FIX(v3.0.19): All slices were encrypted (parseMachOHeader returned success
-        // but we didn't count it as "anySuccess" because of logic mismatch). If we
-        // have slices, the FAT is valid.
         result.parseStatus = MachOParseSuccess;
         result.parseError = nil;
     } else {

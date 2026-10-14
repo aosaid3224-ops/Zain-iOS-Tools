@@ -1,10 +1,4 @@
-//
-//  ExecutableCapability.m
-//  IPAInstallerPro — Commit 4b: Fix Arabic text
-//
-
 #import "ExecutableCapability.h"
-#import "SPStrings.h"
 
 @implementation ExecutableCapability
 
@@ -81,27 +75,14 @@
 }
 
 - (NSString *)localizedStatusDescription {
-    if (SPUsesChinese()) {
-        switch (_status) {
-            case ExecutableCapabilityStatusReady: return @"已启用";
-            case ExecutableCapabilityStatusNotFound: return @"未找到";
-            case ExecutableCapabilityStatusNotExecutable: return @"不可执行";
-            case ExecutableCapabilityStatusPermissionDenied: return @"权限被拒绝";
-            case ExecutableCapabilityStatusProcessFailed: return @"运行失败";
-            case ExecutableCapabilityStatusInvalidOutput: return @"输出无效";
-            case ExecutableCapabilityStatusTimeout: return @"运行超时";
-            case ExecutableCapabilityStatusUnknownError: return @"未知错误";
-            default: return @"未知状态";
-        }
-    }
     switch (_status) {
-        case ExecutableCapabilityStatusReady: return @"مُفعّل";
-        case ExecutableCapabilityStatusNotFound: return @"غير موجود";
+        case ExecutableCapabilityStatusReady:      return @"مُفعّل";
+        case ExecutableCapabilityStatusNotFound:   return @"غير موجود";
         case ExecutableCapabilityStatusNotExecutable: return @"غير قابل للتنفيذ";
         case ExecutableCapabilityStatusPermissionDenied: return @"تم رفض الصلاحية";
         case ExecutableCapabilityStatusProcessFailed: return @"فشل التشغيل";
         case ExecutableCapabilityStatusInvalidOutput: return @"خرج غير صالح";
-        case ExecutableCapabilityStatusTimeout: return @"انتهت المهلة";
+        case ExecutableCapabilityStatusTimeout:    return @"انتهت المهلة";
         case ExecutableCapabilityStatusUnknownError: return @"خطأ غير معروف";
         default: return @"حالة غير معروفة";
     }

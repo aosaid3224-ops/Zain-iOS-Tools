@@ -1,9 +1,5 @@
-//
-// ForensicRegistrationProbe.m
-// IPA Installer Pro — Diagnostic/Forensic Mode
-//
-
 #import "ForensicRegistrationProbe.h"
+#import "SPRootHide.h"
 #import "OperationLog.h"
 #import "RootlessManager.h"
 #import <objc/message.h>
@@ -65,10 +61,9 @@ extern char **environ;
     }
 
     NSMutableArray<NSString *> *argvStrings = [NSMutableArray arrayWithObject:path];
-    [argvStrings addObjectsFromArray:arguments ?: @[]];
-    NSMutableArray<NSString *> *argv = [NSMutableArray arrayWithCapacity:argvStrings.count + 1];
+    [argvStrings addObjectsFromArray:SPToolArguments(path, arguments ?: @[])];
+    NSMutableArray<NSString *> *argv = [NSMutableArray arrayWithCapacity:argvStrings.count];
     for (NSString *value in argvStrings) [argv addObject:value ?: @""];
-    [argv addObject:@""];
 
     posix_spawn_file_actions_t actions;
     posix_spawn_file_actions_init(&actions);
@@ -79,8 +74,9 @@ extern char **environ;
 
     NSMutableArray<NSValue *> *cArguments = [NSMutableArray arrayWithCapacity:argv.count];
     for (NSString *value in argv) [cArguments addObject:[NSValue valueWithPointer:(void *)value.UTF8String]];
-    char **cArgv = calloc(cArguments.count, sizeof(char *));
+    char **cArgv = calloc(cArguments.count + 1, sizeof(char *));
     for (NSUInteger i = 0; i < cArguments.count; i++) cArgv[i] = (char *)cArguments[i].pointerValue;
+    cArgv[cArguments.count] = NULL;
 
     pid_t pid = 0;
     int spawnError = posix_spawn(&pid, path.fileSystemRepresentation, &actions, NULL, cArgv, environ);
@@ -137,8 +133,6 @@ extern char **environ;
     if (workspaceClass && [workspaceClass respondsToSelector:@selector(defaultWorkspace)]) {
         @try { workspace = [workspaceClass performSelector:@selector(defaultWorkspace)]; } @catch (__unused NSException *exception) { workspace = nil; }
     }
-    // FIX(iOS16+): allInstalledApplications is deprecated/removed on iOS 16+.
-    // Use allApplications instead for cross-version compatibility.
     SEL allAppsSel = nil;
     if (@available(iOS 16.0, *)) {
         allAppsSel = @selector(allApplications);

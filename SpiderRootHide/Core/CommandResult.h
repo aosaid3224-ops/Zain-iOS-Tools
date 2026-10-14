@@ -1,11 +1,3 @@
-//
-//  CommandResult.h
-//  IPAInstallerPro — Commit 2: Binary-safe output support
-//
-//  Unified result model for every external command execution.
-//  Now preserves raw NSData for binary-safe callers (e.g. plist extraction).
-//
-
 #import <Foundation/Foundation.h>
 
 @interface CommandResult : NSObject

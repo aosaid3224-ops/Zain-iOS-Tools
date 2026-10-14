@@ -1,50 +1,13 @@
 #!/bin/bash
 set -e
 
-# The uikittools trigger runs after package configuration. Remove only
-# interrupted IPA Installer Pro staging directories before that trigger can
-# enumerate them as applications. The private/preboot glob covers the backing
-# Procursus root reported by uicache on Dopamine rootless.
 shopt -s nullglob
 
-RM_BIN=""
-for candidate_rm in /var/jb/bin/rm /var/jb/usr/bin/rm /bin/rm /usr/bin/rm; do
-    if [ -x "$candidate_rm" ]; then
-        RM_BIN="$candidate_rm"
-        break
-    fi
-done
-if [ -z "$RM_BIN" ]; then
-    RM_BIN=$(command -v rm 2>/dev/null || true)
-fi
-if [ -z "$RM_BIN" ]; then
-    echo "ERROR: no usable rootless rm binary was found" >&2
-    exit 127
-fi
-
-STAGE_ROOTS=(
-    "/var/jb/Applications"
-    "/Applications"
-    "/var/jb/var/tmp/IPAInstallerPro-Staging"
-    "/var/tmp/IPAInstallerPro-Staging"
-)
-
-for logical_root in "/var/jb/Applications" "/Applications" "/var/jb/var/tmp/IPAInstallerPro-Staging" "/var/tmp/IPAInstallerPro-Staging"; do
-    if [ -d "$logical_root" ]; then
-        physical_root=$(cd "$logical_root" 2>/dev/null && pwd -P || true)
-        [ -n "$physical_root" ] && STAGE_ROOTS+=("$physical_root")
-    fi
-done
-
-for physical_root in /private/preboot/*/dopamine-*/procursus/Applications /private/preboot/*/dopamine-*/procursus/var/tmp/IPAInstallerPro-Staging; do
-    [ -d "$physical_root" ] || continue
-    STAGE_ROOTS+=("$physical_root")
-done
-
-for stage_root in "${STAGE_ROOTS[@]}"; do
+for stage_root in "/Applications" "/var/tmp/IPAInstallerPro-Staging"; do
+    [ -d "$stage_root" ] || continue
     for stage_path in "$stage_root"/*.app.ipa-stage-*; do
         [ -d "$stage_path" ] || continue
-        "$RM_BIN" -rf -- "$stage_path"
+        rm -rf -- "$stage_path"
         [ ! -e "$stage_path" ] || {
             echo "ERROR: unable to remove stale IPA staging path: $stage_path" >&2
             exit 1

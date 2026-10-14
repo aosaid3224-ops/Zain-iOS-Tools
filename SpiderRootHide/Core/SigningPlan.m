@@ -1,7 +1,3 @@
-//
-// SigningPlan.m
-//
-
 #import "SigningPlan.h"
 #import "SigningTarget.h"
 #import "EntitlementSet.h"

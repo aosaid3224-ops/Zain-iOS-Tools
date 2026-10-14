@@ -1,8 +1,3 @@
-//
-// ForensicInstallationObserver.m
-// IPA Installer Pro — Diagnostic/Forensic Mode
-//
-
 #import "ForensicInstallationObserver.h"
 #import "ForensicTypes.h"
 #import "OperationLog.h"
@@ -77,8 +72,6 @@
 
 - (ForensicTransactionReport *)finishObservation {
     if (self.observing && self.operationLog && self.currentReport.transactionID.length > 0) {
-        // Drain the OperationLog queue and project its final records before
-        // removing observers, so the live report never loses the last END event.
         NSArray<OperationRecord *> *finalRecords = [self.operationLog recordsForTransaction:self.currentReport.transactionID];
         for (OperationRecord *record in finalRecords) [self consumeRecord:record];
     }
@@ -103,15 +96,11 @@
     if ([record isKindOfClass:[OperationRecord class]]) [self consumeRecord:record];
 }
 
-#pragma mark - Record projection
-
 - (BOOL)recordBelongsToCurrentTransaction:(OperationRecord *)record {
     return self.observing && record.transactionID.length > 0 && [record.transactionID isEqualToString:self.currentReport.transactionID];
 }
 
 - (ForensicInstallState)stateForRecord:(OperationRecord *)record result:(ForensicEventResult *)resultOut {
-    // FIX(v3.0.19): Detect stale pending records. If a record has been pending
-    // for >10 minutes, or if it's a Complete phase with exitCode -1, treat as failed.
     BOOL isStalePending = NO;
     if (record.result == OperationResultPending && record.timestamp) {
         if ([[NSDate date] timeIntervalSinceDate:record.timestamp] > 600) isStalePending = YES;
@@ -132,8 +121,6 @@
     else if (record.phase == OperationPhaseIPAExtract) state = successful ? ForensicInstallStateExtracted : ForensicInstallStateFailed;
     else if (record.phase == OperationPhaseAppIdentify) state = successful ? ForensicInstallStateBundleDiscovered : ForensicInstallStateFailed;
     else if (record.phase == OperationPhaseFileCopy) {
-        // INSTALLED is proven only by the provider's verified promotion step;
-        // extraction, backup, and deep-copy verification are not installation.
         if ([op containsString:@"promote"] && successful) state = ForensicInstallStateInstalled;
         else if (!successful) state = ForensicInstallStateFailed;
     } else if (record.phase == OperationPhaseFramework || record.phase == OperationPhaseDylib) {
@@ -142,8 +129,6 @@
         if (!successful) state = ForensicInstallStateFailed;
         else if (state < ForensicInstallStateMachOAnalyzed) state = ForensicInstallStateMachOAnalyzed;
     } else if (record.phase == OperationPhaseUICache) {
-        // A read-only forensic query (-i) is evidence only; only the provider's
-        // registration operation may advance the state to REGISTERED.
         if ([op hasPrefix:@"forensic "]) state = self.currentState;
         else state = successful ? ForensicInstallStateRegistered : ForensicInstallStateFailed;
     } else if (record.phase == OperationPhaseVerify) {

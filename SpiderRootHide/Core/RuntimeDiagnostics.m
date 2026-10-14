@@ -1,12 +1,5 @@
-//
-//  RuntimeDiagnostics.m
-//  IPAInstallerPro
-//
-//  Post-Install Runtime Observability Layer — Implementation.
-//  OBSERVE → MEASURE → RECORD. Never assume. Never fix without data.
-//
-
 #import "RuntimeDiagnostics.h"
+#import "SPRootHide.h"
 #import "OperationLog.h"
 #import "RootlessManager.h"
 #import "ExecutableValidator.h"
@@ -20,11 +13,9 @@
 #import <sys/sysctl.h>
 #import "RuntimeEnvironment.h"
 
-// ─── ProcessInfo Implementation ───
 @implementation ProcessInfo
 @end
 
-// ─── RuntimeDiagnosticsResult Implementation ───
 @implementation RuntimeDiagnosticsResult
 
 - (NSString *)detailedReport {
@@ -58,7 +49,6 @@
 
 @end
 
-// ─── RuntimeDiagnostics Implementation ───
 @interface RuntimeDiagnostics ()
 - (NSString *)findCrashReportForBundleID:(NSString *)bundleID processName:(NSString *)processName afterDate:(NSDate *)afterDate;
 @end
@@ -82,13 +72,10 @@
     return self;
 }
 
-#pragma mark - Main Diagnostic Entry
-
 - (void)diagnoseAppLaunch:(NSString *)bundleID
            transactionID:(NSString *)txnID
             operationLog:(OperationLog *)opLog
               completion:(void (^)(RuntimeDiagnosticsResult *result))completion {
-
     NSDate *overallStart = [NSDate date];
     RuntimeDiagnosticsResult *result = [[RuntimeDiagnosticsResult alloc] init];
     result.bundleID = bundleID;
@@ -98,7 +85,6 @@
 
     NSLog(@"[RuntimeDiagnostics] Starting diagnosis for %@", bundleID);
 
-    // PHASE 1: LAUNCH
     NSString *recLaunch = [opLog beginPhase:OperationPhaseLaunch
                                   operation:@"launchApp"
                                      target:bundleID
@@ -125,7 +111,6 @@
         return;
     }
 
-    // PHASE 2: PROCESS DETECTION
     NSString *recDetect = [opLog beginPhase:OperationPhaseLaunch
                                   operation:@"processDetection"
                                      target:bundleID
@@ -176,7 +161,6 @@
         return;
     }
 
-    // PHASE 3: RUNTIME MONITORING
     NSString *recMonitor = [opLog beginPhase:OperationPhaseRuntimeMonitor
                                    operation:@"runtimeMonitor"
                                       target:bundleID
@@ -191,30 +175,19 @@
     NSTimeInterval monitorDuration = [[NSDate date] timeIntervalSinceDate:monitorStart] * 1000.0;
 
     if (!stillAlive) {
-        // Process exited during monitoring
         result.processRemainedAlive = NO;
         result.processExitAt = [NSDate date];
         result.processLifetimeMs = monitorDuration;
 
-        // Determine termination reason from actual data
         NSString *terminationReason = [self determineTerminationReason:result.pid
                                                                bundleID:bundleID
                                                               processName:proc.name
                                                               exitStatus:exitStatus
                                                                signalNum:signalNum];
         result.terminationReason = terminationReason;
-        // A launched app is not our child, so waitpid may return no signal and
-        // leave exitStatus at its initial value. A fresh crash report is stronger
-        // evidence than that missing wait status and must drive classification.
         NSString *crashEvidencePath = [self findCrashReportForBundleID:bundleID processName:proc.name afterDate:result.launchRequestedAt];
         BOOL crashEvidenceFound = (crashEvidencePath.length > 0);
         if (crashEvidenceFound) result.crashReportPath = crashEvidencePath;
-        // ─── STATE CLASSIFICATION ───
-        // RUNNING: stayed alive for full window
-        // EXITED_NORMAL: exited with status 0 (no crash signal)
-        // CRASHED: terminated by crash signal (SIGABRT, SIGSEGV, SIGBUS, SIGILL, SIGTRAP)
-        // KILLED_JETSAM: terminated by SIGKILL (OOM or system kill)
-        // UNKNOWN: cannot determine reason
         
         NSString *state;
         NSString *terminationType;
@@ -273,7 +246,6 @@
         
         NSLog(@"[RuntimeDiagnostics] Process %@ after %.0f ms (exit=%d signal=%d)", state, monitorDuration, exitStatus, signalNum);
 
-        // ─── PHASE 4: COMPREHENSIVE CRASH DIAGNOSTICS ───
         NSString *recCrash = [opLog beginPhase:OperationPhaseCrashDiagnostics
                                       operation:@"crashDiagnostics"
                                          target:bundleID
@@ -282,7 +254,6 @@
 
         NSMutableString *diagnosticOutput = [NSMutableString string];
 
-        // 4a. Crash Reporter (.ips files)
         NSString *crashPath = [self findCrashReportForBundleID:bundleID processName:proc.name afterDate:result.launchRequestedAt];
         if (crashPath) {
             result.crashReportPath = crashPath;
@@ -292,31 +263,26 @@
             }
         }
 
-        // 4b. Jetsam Events (out-of-memory kills)
         NSString *jetsamInfo = [self findJetsamEventForProcessName:proc.name bundleID:bundleID];
         if (jetsamInfo) {
             [diagnosticOutput appendFormat:@"=== Jetsam Event ===\n%@\n\n", jetsamInfo];
         }
 
-        // 4c. Syslog entries
         NSString *syslogEntries = [self getSyslogForProcess:proc.name pid:result.pid bundleID:bundleID];
         if (syslogEntries) {
             [diagnosticOutput appendFormat:@"=== Syslog Entries ===\n%@\n\n", syslogEntries];
         }
 
-        // 4d. Launchd logs
         NSString *launchdLog = [self getLaunchdLogForBundleID:bundleID];
         if (launchdLog) {
             [diagnosticOutput appendFormat:@"=== Launchd Log ===\n%@\n\n", launchdLog];
         }
 
-        // 4e. Unified logs (log show)
         NSString *unifiedLog = [self getUnifiedLogForBundleID:bundleID processName:proc.name];
         if (unifiedLog) {
             [diagnosticOutput appendFormat:@"=== Unified Log ===\n%@\n\n", unifiedLog];
         }
 
-        // 4f. Process exit status analysis
         NSString *exitAnalysis = [self analyzeExitStatus:exitStatus signalNum:signalNum];
         [diagnosticOutput appendFormat:@"=== Exit Status Analysis ===\n%@\n", exitAnalysis];
 
@@ -332,9 +298,7 @@
                duration:0];
 
         NSLog(@"[RuntimeDiagnostics] Crash diagnostics complete. Sources found: %@", hasAnyDiagnostic ? @"YES" : @"NO");
-
     } else {
-        // Process remained alive for full monitoring window
         result.processRemainedAlive = YES;
         result.processLifetimeMs = monitorDuration;
         result.state = @"RUNNING";
@@ -358,8 +322,6 @@
 
     if (completion) completion(result);
 }
-
-#pragma mark - Launch
 
 - (BOOL)launchAppWithBundleID:(NSString *)bundleID {
     @try {
@@ -393,8 +355,6 @@
         return NO;
     }
 }
-
-#pragma mark - Process Detection
 
 - (ProcessInfo *)detectProcessForBundleID:(NSString *)bundleID timeout:(NSTimeInterval)timeout {
     NSDate *start = [NSDate date];
@@ -445,7 +405,6 @@
 }
 
 - (ProcessInfo *)findProcessMatchingBundleID:(NSString *)bundleID exeName:(NSString *)exeName {
-    // FIX(rootless): Use ExecutableValidator to find ps dynamically instead of hardcoding /var/jb
     NSString *psPath = [[ExecutableValidator sharedValidator] findExecutableNamed:@"ps"];
     NSString *psOutput = nil;
     if (psPath) psOutput = [self runCmdOutput:psPath args:@[@"-eo", @"pid,uid,gid,comm"]];
@@ -483,8 +442,6 @@
     return nil;
 }
 
-#pragma mark - Process Monitoring with Exit Status
-
 - (BOOL)monitorProcess:(pid_t)pid duration:(NSTimeInterval)duration exitStatus:(int *)exitStatus signalNum:(int *)signalNum {
     NSDate *start = [NSDate date];
     *exitStatus = 0;
@@ -492,7 +449,6 @@
 
     while ([[NSDate date] timeIntervalSinceDate:start] < duration) {
         if (![self isProcessAlive:pid]) {
-            // Process exited - try to get exit status via waitpid with WNOHANG
             int status;
             pid_t result = waitpid(pid, &status, WNOHANG);
             if (result == pid) {
@@ -514,18 +470,14 @@
     return (kill(pid, 0) == 0);
 }
 
-#pragma mark - Termination Reason Determination
-
 - (NSString *)determineTerminationReason:(pid_t)pid bundleID:(NSString *)bundleID processName:(NSString *)processName exitStatus:(int)exitStatus signalNum:(int)signalNum {
     NSMutableString *reason = [NSMutableString string];
 
-    // Check signal first
     if (signalNum != 0) {
         NSString *signalName = [self signalName:signalNum];
         [reason appendFormat:@"Terminated by signal %d (%@). ", signalNum, signalName];
 
         if (signalNum == SIGKILL) {
-            // SIGKILL could be jetsam (OOM) or manual kill
             NSString *jetsam = [self findJetsamEventForProcessName:processName bundleID:bundleID];
             if (jetsam) {
                 [reason appendFormat:@"SIGKILL detected — possible Jetsam/OOM kill. %@", jetsam];
@@ -554,7 +506,6 @@
         [reason appendString:@"Exited with status 0 (normal exit) — but process terminated unexpectedly during monitoring."];
     }
 
-    // Check for crash report regardless
     NSString *crashPath = [self findCrashReportForBundleID:bundleID processName:processName];
     if (crashPath) {
         [reason appendFormat:@" Crash report found at: %@", crashPath];
@@ -581,8 +532,6 @@
         default: return @"UNKNOWN";
     }
 }
-
-#pragma mark - Crash Report Search
 
 - (NSString *)findCrashReportForBundleID:(NSString *)bundleID processName:(NSString *)processName {
     return [self findCrashReportForBundleID:bundleID processName:processName afterDate:nil];
@@ -630,8 +579,6 @@
     return latestPath;
 }
 
-#pragma mark - Jetsam Event Search
-
 - (NSString *)findJetsamEventForProcessName:(NSString *)processName bundleID:(NSString *)bundleID {
     NSFileManager *fm = [NSFileManager defaultManager];
     NSString *jetsamPath = @"/var/mobile/Library/Logs/CrashReporter/JetsamEvent";
@@ -666,7 +613,6 @@
     if (latestMatch) {
         NSString *content = [NSString stringWithContentsOfFile:latestMatch encoding:NSUTF8StringEncoding error:nil];
         if (content) {
-            // Extract relevant lines mentioning the process
             NSArray *lines = [content componentsSeparatedByString:@"\n"];
             NSMutableString *relevant = [NSMutableString string];
             for (NSString *line in lines) {
@@ -683,15 +629,11 @@
     return nil;
 }
 
-#pragma mark - Syslog Search
-
 - (NSString *)getSyslogForProcess:(NSString *)processName pid:(pid_t)pid bundleID:(NSString *)bundleID {
-    // Try to read syslog
     NSString *syslogPath = @"/var/log/syslog";
     NSFileManager *fm = [NSFileManager defaultManager];
 
     if (![fm fileExistsAtPath:syslogPath]) {
-        // Try alternative paths using dynamic bootstrapPath
         RuntimeEnvironment *rt = [RuntimeEnvironment sharedEnvironment];
         if (rt.bootstrapPath) {
             syslogPath = [rt.bootstrapPath stringByAppendingPathComponent:@"var/log/syslog"];
@@ -703,7 +645,6 @@
         }
     }
 
-    // Use tail to get last 50 lines, then grep for process
     NSString *tailPath = [[ExecutableValidator sharedValidator] findExecutableNamed:@"tail"];
     if (!tailPath) tailPath = @"/usr/bin/tail";
     NSString *tailOutput = [self runCmdOutput:tailPath args:@[@"-n", @"50", syslogPath]];
@@ -722,8 +663,6 @@
 
     return relevant.length > 0 ? relevant : nil;
 }
-
-#pragma mark - Launchd Log
 
 - (NSString *)getLaunchdLogForBundleID:(NSString *)bundleID {
     NSString *launchdLog = @"/var/log/launchd.log";
@@ -750,14 +689,10 @@
     return relevant.length > 0 ? relevant : nil;
 }
 
-#pragma mark - Unified Log (log show)
-
 - (NSString *)getUnifiedLogForBundleID:(NSString *)bundleID processName:(NSString *)processName {
-    // Try to use log command (may not work on all jailbreaks)
     NSString *logOutput = [self runCmdOutput:@"/usr/bin/log" args:@[@"show", @"--last", @"2m", @"--predicate", [NSString stringWithFormat:@"subsystem == \"%@\" OR process == \"%@\"", bundleID, processName ?: bundleID]]];
 
     if (!logOutput || logOutput.length == 0) {
-        // Try alternative: log stream with timeout
         logOutput = [self runCmdOutput:@"/usr/bin/log" args:@[@"show", @"--last", @"1m"]];
     }
 
@@ -765,7 +700,6 @@
         return nil;
     }
 
-    // Filter for relevant lines
     NSArray *lines = [logOutput componentsSeparatedByString:@"\n"];
     NSMutableString *relevant = [NSMutableString string];
 
@@ -777,8 +711,6 @@
 
     return relevant.length > 0 ? relevant : nil;
 }
-
-#pragma mark - Exit Status Analysis
 
 - (NSString *)analyzeExitStatus:(int)exitStatus signalNum:(int)signalNum {
     NSMutableString *analysis = [NSMutableString string];
@@ -812,10 +744,9 @@
     return analysis;
 }
 
-#pragma mark - Command Execution
-
 - (NSString *)runCmdOutput:(NSString *)cmd args:(NSArray *)args {
     if (!cmd || cmd.length == 0) return nil;
+    args = SPToolArguments(cmd, args);
 
     int outPipe[2];
     if (pipe(outPipe) != 0) return nil;

@@ -1,4 +1,5 @@
 #import "IPAMultiInstancePreparer.h"
+#import "SPRootHide.h"
 #import "ApplicationManager.h"
 #import "RootlessManager.h"
 #import <spawn.h>
@@ -52,8 +53,6 @@ extern char **environ;
     NSMutableArray<NSString *> *argvStrings = nil;
     NSString *spawnPath = path;
     if (directory.length) {
-        // iOS does not expose posix_spawn_file_actions_addchdir_np. Use sh only as
-        // an argv transport; every user argument remains a separate quoted argv item.
         NSString *shell = self.shellPath;
         BOOL shellExists = [fm fileExistsAtPath:shell];
         BOOL shellExecutable = [fm isExecutableFileAtPath:shell];
@@ -62,12 +61,13 @@ extern char **environ;
             if (error) *error = [self errorWithCode:14 description:[NSString stringWithFormat:@"tool=sh resolvedPath=%@ exists=%@ executable=%@ errno=2", shell, shellExists ? @"YES" : @"NO", shellExecutable ? @"YES" : @"NO"]];
             return NO;
         }
-        argvStrings = [NSMutableArray arrayWithObjects:shell, @"-c", @"cd \"$1\" && shift 1 && exec \"$@\"", @"ipa-multi-instance", directory, path, nil];
-        [argvStrings addObjectsFromArray:arguments ?: @[]];
+        argvStrings = [NSMutableArray arrayWithObjects:shell, @"-c", @"cd \"$1\" && shift 1 && exec \"$@\"", @"ipa-multi-instance",
+                       SPToolPathForTool(shell, directory), SPToolPathForTool(shell, path), nil];
+        [argvStrings addObjectsFromArray:SPToolArguments(path, arguments ?: @[])];
         spawnPath = shell;
     } else {
         argvStrings = [NSMutableArray arrayWithObject:path];
-        [argvStrings addObjectsFromArray:arguments ?: @[]];
+        [argvStrings addObjectsFromArray:SPToolArguments(path, arguments ?: @[])];
     }
     char **argv = calloc(argvStrings.count + 1, sizeof(char *));
     for (NSUInteger index = 0; index < argvStrings.count; index++) argv[index] = (char *)argvStrings[index].fileSystemRepresentation;

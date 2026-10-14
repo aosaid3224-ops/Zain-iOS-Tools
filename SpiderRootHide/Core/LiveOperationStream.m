@@ -1,8 +1,3 @@
-//
-// LiveOperationStream.m
-// IPA Installer Pro — UI/Event Pipeline only
-//
-
 #import "LiveOperationStream.h"
 
 @interface LiveOperationStream ()
@@ -90,8 +85,6 @@
     if (handler) handler(event);
     if (event.finalEvent) {
         self.finalDelivered = YES;
-        // The final event is delivered before the subscription is closed.
-        // Any later callback is rejected at the stream boundary.
         [self close];
     }
 }

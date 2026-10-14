@@ -1,11 +1,3 @@
-//
-// IPAStructuralResult.h
-// IPAInstallerPro — Phase 1: Universal IPA Structural Reader
-//
-// Structured result model for IPA structural analysis.
-// All data is factual. No decisions. No strategies.
-//
-
 #import <Foundation/Foundation.h>
 
 typedef NS_ENUM(NSInteger, IPAStructuralParseStatus) {
@@ -15,11 +7,9 @@ typedef NS_ENUM(NSInteger, IPAStructuralParseStatus) {
     IPAStructuralParseFailed = 3
 };
 
-#pragma mark - Bundle
-
 @interface IPAStructuralBundle : NSObject
 @property (nonatomic, strong) NSString *path;
-@property (nonatomic, strong) NSString *bundleType;       // .app, .appex, .xpc, .framework, .bundle
+@property (nonatomic, strong) NSString *bundleType;
 @property (nonatomic, strong) NSString *bundleIdentifier;
 @property (nonatomic, strong) NSString *executableName;
 @property (nonatomic, strong) NSString *executablePath;
@@ -28,8 +18,6 @@ typedef NS_ENUM(NSInteger, IPAStructuralParseStatus) {
 @property (nonatomic, assign) NSInteger nestingLevel;
 - (NSDictionary *)dictionaryRepresentation;
 @end
-
-#pragma mark - Executable Slice
 
 @interface IPAStructuralExecutableSlice : NSObject
 @property (nonatomic, assign) uint32_t cputype;
@@ -41,8 +29,6 @@ typedef NS_ENUM(NSInteger, IPAStructuralParseStatus) {
 - (NSDictionary *)dictionaryRepresentation;
 @end
 
-#pragma mark - Dependency
-
 @interface IPAStructuralDependency : NSObject
 @property (nonatomic, strong) NSString *rawInstallName;
 @property (nonatomic, assign) BOOL isWeak;
@@ -50,15 +36,11 @@ typedef NS_ENUM(NSInteger, IPAStructuralParseStatus) {
 - (NSDictionary *)dictionaryRepresentation;
 @end
 
-#pragma mark - RPath
-
 @interface IPAStructuralRPath : NSObject
 @property (nonatomic, strong) NSString *rawPath;
 @property (nonatomic, strong) NSString *sourceExecutablePath;
 - (NSDictionary *)dictionaryRepresentation;
 @end
-
-#pragma mark - Load Command
 
 @interface IPAStructuralLoadCommand : NSObject
 @property (nonatomic, assign) uint32_t cmd;
@@ -66,8 +48,6 @@ typedef NS_ENUM(NSInteger, IPAStructuralParseStatus) {
 @property (nonatomic, strong) NSString *cmdDescription;
 - (NSDictionary *)dictionaryRepresentation;
 @end
-
-#pragma mark - Executable
 
 @interface IPAStructuralExecutable : NSObject
 @property (nonatomic, strong) NSString *path;
@@ -96,12 +76,9 @@ typedef NS_ENUM(NSInteger, IPAStructuralParseStatus) {
 - (NSDictionary *)dictionaryRepresentation;
 @end
 
-#pragma mark - Result
-
 @interface IPAStructuralResult : NSObject
 @property (nonatomic, strong) NSString *ipaPath;
 @property (nonatomic, strong) NSString *extractPath;
-// Compatibility summary fields used by the existing analyzer/UI contract.
 @property (nonatomic, strong) NSString *error;
 @property (nonatomic, strong) NSString *bundleID;
 @property (nonatomic, strong) NSString *bundleName;
@@ -117,7 +94,6 @@ typedef NS_ENUM(NSInteger, IPAStructuralParseStatus) {
 @property (nonatomic, strong) NSDate *analysisEndTime;
 @property (nonatomic, assign) BOOL success;
 
-// Summary counters (raw facts)
 @property (nonatomic, assign) NSInteger bundleCount;
 @property (nonatomic, assign) NSInteger executableCount;
 @property (nonatomic, assign) NSInteger frameworkCount;

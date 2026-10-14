@@ -1,17 +1,3 @@
-//
-//  ExecutableValidator.m
-//  IPAInstallerPro — Commit 5: CoreTrust-aware ldid validation
-//
-//  FIX(iOS16+): validateLDID now verifies CoreTrust support by checking
-//  version string (procursus builds) or performing a live signing test.
-//  Old ldid (pre-2022) signs binaries that iOS 16+ rejects at runtime.
-//
-//  CHANGES:
-//  - buildSearchPathsForName: now consumes RuntimeEnvironment instead of hardcoding.
-//  - Search paths are dynamically built from detected bootstrap + PATH.
-//  - No other changes.
-//
-
 #import "ExecutableValidator.h"
 #import "ExecutableCapability.h"
 #import "ProcessRunner.h"
@@ -47,8 +33,6 @@
     return self;
 }
 
-#pragma mark - Public API
-
 - (ExecutableCapability *)validateExecutableNamed:(NSString *)name {
     if (name.length == 0) {
         ExecutableCapability *cap = [[ExecutableCapability alloc] initWithExecutableName:@"" searchedPaths:@[]];
@@ -56,7 +40,6 @@
         return cap;
     }
 
-    // Check cache (valid for 60 seconds)
     __block ExecutableCapability *cached = nil;
     dispatch_sync(self.validationQueue, ^{
         cached = self.cache[name];
@@ -69,11 +52,9 @@
 
     if (cached) return cached;
 
-    // Build search paths from RuntimeEnvironment
     NSArray<NSString *> *searchPaths = [self buildSearchPathsForName:name];
     ExecutableCapability *cap = [[ExecutableCapability alloc] initWithExecutableName:name searchedPaths:searchPaths];
 
-    // Phase 1: Discovery — find first existing and executable path
     NSString *foundPath = nil;
     BOOL foundExists = NO;
     BOOL foundExecutable = NO;
@@ -89,7 +70,7 @@
             [cap markFoundAtPath:candidate exists:foundExists executable:foundExecutable];
 
             if (foundExecutable) {
-                break; // Found a candidate we can try to run
+                break;
             }
         }
     }
@@ -110,7 +91,6 @@
         return cap;
     }
 
-    // Phase 2: Invocation test — actually run the binary
     ExecutableCapability *testedCap = [self runInvocationTestForExecutable:name
                                                                       atPath:foundPath
                                                             startingCapability:cap];
@@ -121,9 +101,7 @@
 - (ExecutableCapability *)validateLDID {
     ExecutableCapability *cap = [self validateExecutableNamed:@"ldid"];
 
-    // If basic validation succeeded, do ldid-specific tests
     if (cap.status == ExecutableCapabilityStatusReady) {
-        // Test 1: ldid -v (version flag)
         CommandResult *vResult = [[ProcessRunner sharedRunner] runCommand:cap.resolvedPath
                                                                 arguments:@[@"-v"]
                                                                   timeout:5.0];
@@ -133,8 +111,6 @@
                              [versionOutput containsString:@"Usage"] ||
                              [versionOutput containsString:@"usage"];
 
-        // FIX(iOS16+): Verify ldid supports CoreTrust (procursus build or v2.1.5+)
-        // Old ldid (pre-2022) signs binaries that iOS 16+ rejects via CoreTrust.
         BOOL supportsCoreTrust = NO;
         if (looksLikeLDID) {
             supportsCoreTrust = [versionOutput containsString:@"procursus"] ||
@@ -143,7 +119,6 @@
                                 [versionOutput containsString:@"2.1.7"] ||
                                 [versionOutput containsString:@"2.2"] ||
                                 [versionOutput containsString:@"2.3"];
-            // If version string is ambiguous, test actual signing capability
             if (!supportsCoreTrust) {
                 NSString *tmpFile = [NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"ldid_test_%@", [[NSUUID UUID] UUIDString]]];
                 [@"#!/bin/sh\nexit 0\n" writeToFile:tmpFile atomically:YES encoding:NSUTF8StringEncoding error:nil];
@@ -167,7 +142,6 @@
             return cap;
         }
 
-        // Test 2: ldid without args (should print usage to stderr)
         CommandResult *bareResult = [[ProcessRunner sharedRunner] runCommand:cap.resolvedPath
                                                                    arguments:@[]
                                                                      timeout:5.0];
@@ -177,7 +151,6 @@
             return cap;
         }
 
-        // If we get here, the binary runs but doesn't behave like ldid
         [cap markStatus:ExecutableCapabilityStatusInvalidOutput
            errorMessage:@"الأداة تعمل لكنها لا تُنتج خرجًا متوقعًا (قد تكون نسخة غير متوافقة)"];
         [[Logger sharedLogger] warning:[NSString stringWithFormat:@"ExecutableValidator: ldid INVALID_OUTPUT at %@ | stdout=%@ | stderr=%@",
@@ -218,31 +191,21 @@
     return [self buildSearchPathsForName:@""];
 }
 
-#pragma mark - Private
-
 - (NSArray<NSString *> *)buildSearchPathsForName:(NSString *)name {
     NSMutableOrderedSet<NSString *> *paths = [NSMutableOrderedSet orderedSet];
 
-    // 1. Use RuntimeEnvironment binSearchPaths (dynamic discovery)
     RuntimeEnvironment *rt = [RuntimeEnvironment sharedEnvironment];
     for (NSString *p in rt.binSearchPaths) {
         if (p.length > 0) [paths addObject:p];
     }
 
-    // 2. Fallback: standard Unix paths (in case RuntimeEnvironment missed something)
     [paths addObject:@"/usr/bin"];
     [paths addObject:@"/bin"];
     [paths addObject:@"/usr/local/bin"];
 
-    // 3. Fallback: known rootless paths (for environments not yet characterized)
     if (rt.bootstrapPath) {
         [paths addObject:[rt.bootstrapPath stringByAppendingPathComponent:@"usr/bin"]];
         [paths addObject:[rt.bootstrapPath stringByAppendingPathComponent:@"bin"]];
-        // RootHide compatibility paths
-        if ([rt.bootstrapPath rangeOfString:@".jbroot-"].location != NSNotFound) {
-            [paths addObject:[rt.bootstrapPath stringByAppendingPathComponent:@"var/jb/usr/bin"]];
-            [paths addObject:[rt.bootstrapPath stringByAppendingPathComponent:@"var/jb/bin"]];
-        }
     } else {
         [paths addObject:@"/var/jb/usr/bin"];
         [paths addObject:@"/var/jb/bin"];
@@ -260,7 +223,6 @@
                                           startingCapability:(ExecutableCapability *)cap {
     NSDate *start = [NSDate date];
 
-    // Try "name -v" first (version flag is common)
     CommandResult *result = [[ProcessRunner sharedRunner] runCommand:path
                                                            arguments:@[@"-v"]
                                                              timeout:5.0];
@@ -273,7 +235,6 @@
                                    duration:duration];
 
     if (result.spawnError != 0) {
-        // Invocation failed at spawn level
         return cap;
     }
 
@@ -283,12 +244,9 @@
         return cap;
     }
 
-    // spawn succeeded — check if output is reasonable
     NSString *combined = [NSString stringWithFormat:@"%@ %@", result.stdoutText, result.stderrText];
     BOOL outputLooksValid = (combined.length > 0) || (result.exitCode == 0);
 
-    // For most tools, -v either succeeds (exit 0) or prints version info (exit may be 0 or non-zero)
-    // If -v produced no output and exit was non-zero, try without args
     if (!outputLooksValid && result.exitCode != 0) {
         NSDate *bareStart = [NSDate date];
         CommandResult *bareResult = [[ProcessRunner sharedRunner] runCommand:path
@@ -323,7 +281,6 @@
         return cap;
     }
 
-    // All checks passed
     [cap markReadyWithPath:path output:combined duration:duration];
     [[Logger sharedLogger] info:[NSString stringWithFormat:@"ExecutableValidator: %@ READY at %@ (%.3fs)", name, path, duration]];
     return cap;

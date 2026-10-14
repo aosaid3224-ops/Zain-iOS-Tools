@@ -1,11 +1,3 @@
-//
-// ForensicTypes.h
-// IPA Installer Pro — Diagnostic/Forensic Mode
-//
-// Diagnostic-only evidence contract. This file does not change the production
-// installation path and intentionally contains no signing or entitlement policy.
-//
-
 #import <Foundation/Foundation.h>
 #include <sys/types.h>
 
