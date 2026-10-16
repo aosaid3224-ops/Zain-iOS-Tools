@@ -28,7 +28,7 @@ jobs:
         run: |
           cd DeltaGuardIOS
           mkdir -p layout/usr/libexec
-          xcrun clang -target arm64-apple-ios15.0 -isysroot "$(xcrun --sdk iphoneos --show-sdk-path)" -O2 Helper/deltaguard_helper.c -framework CommonCrypto -o layout/usr/libexec/deltaguard_helper
+          xcrun clang -target arm64-apple-ios15.0 -isysroot "$(xcrun --sdk iphoneos --show-sdk-path)" -O2 Helper/deltaguard_helper.c -o layout/usr/libexec/deltaguard_helper
           chmod 755 layout/usr/libexec/deltaguard_helper
           ldid -S layout/usr/libexec/deltaguard_helper
       - name: Build package

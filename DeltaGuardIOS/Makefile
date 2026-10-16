@@ -24,6 +24,6 @@ TOOL_NAME = deltaguard_helper
 deltaguard_helper_FILES = Helper/deltaguard_helper.c
 deltaguard_helper_INSTALL_PATH = /usr/libexec
 deltaguard_helper_CFLAGS = -O2
-deltaguard_helper_LDFLAGS = -framework CommonCrypto
+deltaguard_helper_LDFLAGS =
 
 include $(THEOS_MAKE_PATH)/tool.mk
