@@ -18,6 +18,7 @@ static NSUInteger DGFrameCount;
 static NSUInteger DGFPS;
 static NSTimer *DGStatsTimer;
 static BOOL DG90Enabled=NO;
+static NSInteger DGRealMaxFPS=60; /* قدرة الشاشة الحقيقية (تُلتقط قبل السوازل) */
 static NSString *const DG90Key=@"DG90Enabled";
 
 static NSString *DGMemoryString(void){
@@ -26,13 +27,16 @@ static NSString *DGMemoryString(void){
 #if defined(TASK_VM_INFO_REV3)
         return [NSString stringWithFormat:@"%.1f MB",info.phys_footprint/1048576.0];
 #else
-        return [NSString stringWithFormat:@"%.1f MB",info.internal+info.compressed/2.0/1048576.0];
+        return [NSString stringWithFormat:@"%.1f MB",(info.internal+info.compressed/2)/1048576.0]; /* إصلاح: القسمة على البايت كامل */
 #endif
     }
     return @"غير متاح";
 }
 
-// ===== 90 FPS: السوازل (تُركّب عند الحقن قبل ما اللعبة تقرأ أي قيمة) =====
+/* هل الشاشة تقدر تعرض أكثر من 60 فعلياً؟ */
+static BOOL DGCanUnlock(void){ return DGRealMaxFPS>=90; }
+
+// ===== 90 FPS: السوازل — تشتغل فقط إذا العتاد يقدر يعرض =====
 
 static void DGSwizzle(Class c, SEL a, SEL b){
     if(!c) return;
@@ -44,7 +48,7 @@ static void DGSwizzle(Class c, SEL a, SEL b){
 @end
 @implementation UIScreen (DG90)
 - (NSInteger)dg_maximumFramesPerSecond{
-    if(DG90Enabled){
+    if(DG90Enabled && DGCanUnlock()){
         NSInteger real=[self dg_maximumFramesPerSecond];
         return real<120?120:real;
     }
@@ -56,16 +60,16 @@ static void DGSwizzle(Class c, SEL a, SEL b){
 @end
 @implementation CADisplayLink (DG90)
 - (void)dg_setPreferredFramesPerSecond:(NSInteger)fps{
-    if(DG90Enabled && fps<90) fps=90;
+    if(DG90Enabled && DGCanUnlock() && fps<90) fps=90;
     [self dg_setPreferredFramesPerSecond:fps];
 }
 - (NSInteger)dg_preferredFramesPerSecond{
     NSInteger fps=[self dg_preferredFramesPerSecond];
-    if(DG90Enabled && fps<90) return 90;
+    if(DG90Enabled && DGCanUnlock() && fps<90) return 90;
     return fps;
 }
 - (void)dg_setPreferredFrameRateRange:(DGFrameRateRange)r{
-    if(DG90Enabled){
+    if(DG90Enabled && DGCanUnlock()){
         if(r.maximum<90) r.maximum=90;
         if(r.preferred<90) r.preferred=90;
         if(r.minimum>r.maximum) r.minimum=r.maximum;
@@ -74,7 +78,7 @@ static void DGSwizzle(Class c, SEL a, SEL b){
 }
 - (DGFrameRateRange)dg_preferredFrameRateRange{
     DGFrameRateRange r=[self dg_preferredFrameRateRange];
-    if(DG90Enabled){
+    if(DG90Enabled && DGCanUnlock()){
         if(r.maximum<90) r.maximum=90;
         if(r.preferred<90) r.preferred=90;
     }
@@ -162,7 +166,7 @@ static void DGSwizzleFPS(void){
 
     DGStatsLabel=[[UILabel alloc] initWithFrame:CGRectMake(10,40,240,60)];
     DGStatsLabel.textColor=[UIColor colorWithRed:0.4 green:1 blue:0.6 alpha:1];
-    DGStatsLabel.font=[UIFont monospacedSystemFontOfSize:12 weight:UIFontWeightRegular];
+    DGStatsLabel.font=[UIFont monospacedSystemFontOfSize:11 weight:UIFontWeightRegular];
     DGStatsLabel.numberOfLines=3;
     DGStatsLabel.textAlignment=NSTextAlignmentCenter;
     [DGPanel addSubview:DGStatsLabel];
@@ -206,8 +210,13 @@ static void DGSwizzleFPS(void){
 }
 
 + (void)update90Button{
-    [DG90Button setTitle:DG90Enabled?@"⚡ 90 FPS: مفعّل ✅":@"⚡ تفعيل 90 FPS" forState:UIControlStateNormal];
-    DG90Button.tintColor=DG90Enabled?[UIColor systemGreenColor]:[UIColor labelColor];
+    NSString *title;
+    UIColor *color=[UIColor labelColor];
+    if(!DG90Enabled) title=@"⚡ تفعيل 90 FPS";
+    else if(DGCanUnlock()){ title=@"⚡ 90 FPS: مفعّل ✅"; color=[UIColor systemGreenColor]; }
+    else { title=@"⚡ 90 FPS: غير متاح — شاشتك 60Hz"; color=[UIColor systemYellowColor]; }
+    [DG90Button setTitle:title forState:UIControlStateNormal];
+    DG90Button.tintColor=color;
 }
 
 + (void)frame:(CADisplayLink *)l{ DGFrameCount++; }
@@ -215,9 +224,12 @@ static void DGSwizzleFPS(void){
 
 + (NSString *)statsText{
     NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
-    return [NSString stringWithFormat:@"FPS: %lu | الذاكرة: %@\nمدة التشغيل: %02d:%02d | 90FPS: %@",
-        (unsigned long)DGFPS,DGMemoryString(),(int)(up/60),((int)up)%60,
-        DG90Enabled?@"مفعّل":@"متوقف"];
+    NSString *mode;
+    if(!DG90Enabled) mode=@"متوقف";
+    else if(DGCanUnlock()) mode=@"مفعّل ✅";
+    else mode=@"مفعّل — بلا فائدة (60Hz)";
+    return [NSString stringWithFormat:@"إطارات الشاشة: %ld Hz | الذاكرة: %@\nمدة التشغيل: %02d:%02d | 90FPS: %@",
+        (long)DGRealMaxFPS,DGMemoryString(),(int)(up/60),((int)up)%60,mode];
 }
 
 + (void)togglePanel{ DGPanel.hidden=!DGPanel.isHidden; }
@@ -230,6 +242,7 @@ static void DGSwizzleFPS(void){
 
 __attribute__((constructor)) static void DGEntry(void){
     @autoreleasepool{
+        DGRealMaxFPS=[UIScreen mainScreen].maximumFramesPerSecond; /* الحقيقة قبل السوازل */
         DG90Enabled=[[NSUserDefaults standardUserDefaults] boolForKey:DG90Key];
         DGSwizzleFPS();
         [DGMenu install];
