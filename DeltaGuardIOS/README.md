@@ -53,3 +53,8 @@ make package THEOS_PACKAGE_SCHEME=rootless FINALPACKAGE=1
 - قياس معدل تحديث الشاشة الحقيقي قبل تفعيل 90 FPS.
 - عدم تزوير 90 FPS على شاشات 60Hz لتجنب التقطيع واستنزاف البطارية.
 - عرض حالة الشاشة والقدرة الفعلية داخل اللوحة العائمة.
+
+## 0.3.10
+- إصلاح كراش تشغيل اللعبة والشاشة السوداء الناتج عن استدعاء UIKit من constructor.
+- تأجيل تهيئة UIScreen وswizzling إلى UIApplicationDidBecomeActive.
+- حماية التهيئة من التكرار عبر DGStarted.

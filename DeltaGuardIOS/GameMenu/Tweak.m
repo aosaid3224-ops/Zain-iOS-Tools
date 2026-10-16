@@ -20,6 +20,7 @@ static NSTimer *DGStatsTimer;
 static BOOL DG90Enabled=NO;
 static NSInteger DGRealMaxFPS=60; /* قدرة الشاشة الحقيقية (تُلتقط قبل السوازل) */
 static NSString *const DG90Key=@"DG90Enabled";
+static BOOL DGStarted=NO;
 
 static NSString *DGMemoryString(void){
     task_vm_info_data_t info; mach_msg_type_number_t count=TASK_VM_INFO_COUNT;
@@ -121,9 +122,19 @@ static void DGSwizzleFPS(void){
 
 @interface DGMenu : NSObject
 + (void)install;
++ (void)start;
 @end
 
 @implementation DGMenu
+
++ (void)start{
+    if(DGStarted) return;
+    DGStarted=YES;
+    DGRealMaxFPS=[UIScreen mainScreen].maximumFramesPerSecond;
+    DG90Enabled=[[NSUserDefaults standardUserDefaults] boolForKey:DG90Key];
+    DGSwizzleFPS();
+    [self install];
+}
 
 + (void)install{
     if(DGWindow) return;
@@ -242,9 +253,19 @@ static void DGSwizzleFPS(void){
 
 __attribute__((constructor)) static void DGEntry(void){
     @autoreleasepool{
-        DGRealMaxFPS=[UIScreen mainScreen].maximumFramesPerSecond; /* الحقيقة قبل السوازل */
-        DG90Enabled=[[NSUserDefaults standardUserDefaults] boolForKey:DG90Key];
-        DGSwizzleFPS();
-        [DGMenu install];
+        /* لا نستدعي UIKit من constructor: UIScreen غير مهيأ بعد وقد يسبب deadlock في iOS 18. */
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidBecomeActiveNotification
+                                                               object:nil
+                                                                queue:[NSOperationQueue mainQueue]
+                                                           usingBlock:^(NSNotification *note){
+                (void)note;
+                [DGMenu start];
+            }];
+            UIApplication *app=[UIApplication sharedApplication];
+            if(app.applicationState==UIApplicationStateActive || app.applicationState==UIApplicationStateInactive){
+                [DGMenu start];
+            }
+        });
     }
 }
