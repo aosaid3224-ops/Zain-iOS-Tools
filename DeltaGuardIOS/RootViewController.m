@@ -9,6 +9,7 @@
 #import <CommonCrypto/CommonDigest.h>
 #import <sys/socket.h>
 #import <sys/un.h>
+#import <sys/time.h>
 
 static NSString * const DGStateChanged = @"com.aosaid.deltaguard.state.changed";
 static UIColor *DGBackground(void){ return [UIColor colorWithRed:.055 green:.055 blue:.075 alpha:1]; }
@@ -17,9 +18,17 @@ static UIColor *DGText(void){ return [UIColor colorWithWhite:.94 alpha:1]; }
 static UIColor *DGMuted(void){ return [UIColor colorWithWhite:.62 alpha:1]; }
 static UIColor *DGPrimary(void){ return [UIColor colorWithRed:.16 green:.68 blue:.82 alpha:1]; }
 static NSString *DGSelectedServer(void){ return [[NSUserDefaults standardUserDefaults] stringForKey:@"DGSelectedServer"] ?: @"com.garena.game.df"; }
+static NSString *DGTimestamp(void){
+    static NSDateFormatter *f; static dispatch_once_t t;
+    dispatch_once(&t,^{ f=[NSDateFormatter new];
+        f.calendar=[[NSCalendar alloc]initWithCalendarIdentifier:NSCalendarIdentifierGregorian];
+        f.locale=[NSLocale localeWithLocaleIdentifier:@"en_US_POSIX"];
+        f.dateFormat=@"yyyy-MM-dd HH:mm:ss"; });
+    return [f stringFromDate:[NSDate date]];
+}
 static void DGLog(NSString *line){
     NSUserDefaults *d=[NSUserDefaults standardUserDefaults]; NSMutableArray *a=[[d arrayForKey:@"DGLog"] mutableCopy] ?: [NSMutableArray array];
-    NSString *entry=[NSString stringWithFormat:@"%@ — %@", [[NSDate date] descriptionWithLocale:nil], line]; [a insertObject:entry atIndex:0]; if(a.count>80)[a removeObjectsInRange:NSMakeRange(80,a.count-80)]; [d setObject:a forKey:@"DGLog"]; [d synchronize]; [[NSNotificationCenter defaultCenter] postNotificationName:DGStateChanged object:nil];
+    NSString *entry=[NSString stringWithFormat:@"%@ — %@", DGTimestamp(), line]; [a insertObject:entry atIndex:0]; if(a.count>80)[a removeObjectsInRange:NSMakeRange(80,a.count-80)]; [d setObject:a forKey:@"DGLog"]; [d synchronize]; [[NSNotificationCenter defaultCenter] postNotificationName:DGStateChanged object:nil];
 }
 static id DGWorkspace(void){ Class c=NSClassFromString(@"LSApplicationWorkspace"); if(!c)return nil; SEL s=NSSelectorFromString(@"defaultWorkspace"); if(![c respondsToSelector:s])return nil; return ((id(*)(id,SEL))objc_msgSend)(c,s); }
 static NSArray *DGInstalledApplications(void){ id ws=DGWorkspace(); if(!ws)return @[]; SEL s=NSSelectorFromString(@"allApplications"); if(![ws respondsToSelector:s])return @[]; id apps=((id(*)(id,SEL))objc_msgSend)(ws,s); return [apps isKindOfClass:[NSArray class]]?apps:@[]; }
@@ -33,14 +42,14 @@ static BOOL DGHasBundle(NSString *bundleID){ return DGAppForBundle(bundleID)!=ni
 static BOOL DGLaunchBundle(NSString *bundleID){ id ws=DGWorkspace(); SEL s=NSSelectorFromString(@"openApplicationWithBundleID:"); if(ws && [ws respondsToSelector:s]) return ((BOOL(*)(id,SEL,id))objc_msgSend)(ws,s,bundleID); return NO; }
 static NSString *DGHelperFingerprint(NSString *path);
 static NSString *DGExecutableFingerprint(NSString *bundleID){
-    NSString *path=DGBundlePathForBundle(bundleID); if(!path.length)return @"غير متاح"; NSDictionary *info=[NSDictionary dictionaryWithContentsOfFile:[path stringByAppendingPathComponent:@"Info.plist"]]; NSString *name=info[@"CFBundleExecutable"]; if(!name.length)return @"غير متاح"; NSString *full=[path stringByAppendingPathComponent:name]; NSString *helper=DGHelperFingerprint(full); if(![helper hasPrefix:@"Root helper"] && ![helper isEqualToString:@"Root helper غير متاح"])return helper; NSData *data=[NSData dataWithContentsOfFile:full options:NSDataReadingMappedIfSafe error:nil]; if(!data)return helper; unsigned char digest[CC_SHA256_DIGEST_LENGTH]; CC_SHA256(data.bytes,(CC_LONG)data.length,digest); NSMutableString *hex=[NSMutableString stringWithCapacity:16]; for(int i=0;i<8;i++) [hex appendFormat:@"%02x",digest[i]]; return hex;
+    NSString *path=DGBundlePathForBundle(bundleID); if(!path.length)return @"غير متاح"; NSDictionary *info=[NSDictionary dictionaryWithContentsOfFile:[path stringByAppendingPathComponent:@"Info.plist"]]; NSString *name=info[@"CFBundleExecutable"]; if(!name.length)return @"غير متاح"; return DGHelperFingerprint([path stringByAppendingPathComponent:name]);
 }
 static NSDictionary *DGAppDetails(NSString *bundleID){
     NSString *path=DGBundlePathForBundle(bundleID); if(!path.length)return @{}; NSDictionary *info=[NSDictionary dictionaryWithContentsOfFile:[path stringByAppendingPathComponent:@"Info.plist"]] ?: @{}; NSString *exe=info[@"CFBundleExecutable"] ?: @""; NSString *fp=DGExecutableFingerprint(bundleID); unsigned long long total=0; NSDirectoryEnumerator *it=[[NSFileManager defaultManager]enumeratorAtPath:path]; for(NSString *rel in it){ NSDictionary *a=[[NSFileManager defaultManager]attributesOfItemAtPath:[path stringByAppendingPathComponent:rel] error:nil]; total += [a fileSize]; } return @{ @"path":path, @"version":info[@"CFBundleShortVersionString"] ?: info[@"CFBundleVersion"] ?: @"غير معروف", @"build":info[@"CFBundleVersion"] ?: @"غير معروف", @"executable":exe, @"fingerprint":fp, @"size":@(total) };
 }
 static NSString *DGExpectedFingerprint(NSString *bundleID){ return [bundleID isEqualToString:@"com.garena.game.df"] ? @"175b75f14edcdd40" : @"غير محددة"; }
 static NSString *DGHelperFingerprint(NSString *path){
-    if(!path.length)return @"غير متاح"; int fd=socket(AF_UNIX,SOCK_STREAM,0); if(fd<0)return @"Root helper غير متاح"; struct sockaddr_un a; memset(&a,0,sizeof(a)); a.sun_family=AF_UNIX; strlcpy(a.sun_path,"/var/jb/var/run/com.aosaid.deltaguard.helper.sock",sizeof(a.sun_path)); if(connect(fd,(struct sockaddr *)&a,sizeof(a))!=0){close(fd);return @"Root helper غير متاح";} NSString *request=[NSString stringWithFormat:@"HASH %@\n",path]; write(fd,request.UTF8String,[request lengthOfBytesUsingEncoding:NSUTF8StringEncoding]); char response[256]={0}; ssize_t n=read(fd,response,sizeof(response)-1); close(fd); if(n<=0)return @"Root helper بلا استجابة"; response[n]='\0'; if(strncmp(response,"OK ",3)!=0)return [NSString stringWithFormat:@"Root helper: %s",response+4]; char hash[17]={0}; if(sscanf(response+3,"%16s",hash)==1)return [NSString stringWithUTF8String:hash]; return @"Root helper نتيجة غير صالحة";
+    if(!path.length)return @"غير متاح"; int fd=socket(AF_UNIX,SOCK_STREAM,0); if(fd<0)return @"Root helper غير متاح"; struct timeval tv={3,0}; setsockopt(fd,SOL_SOCKET,SO_RCVTIMEO,&tv,sizeof(tv)); setsockopt(fd,SOL_SOCKET,SO_SNDTIMEO,&tv,sizeof(tv)); struct sockaddr_un a; memset(&a,0,sizeof(a)); a.sun_family=AF_UNIX; strlcpy(a.sun_path,"/var/jb/var/run/com.aosaid.deltaguard.helper.sock",sizeof(a.sun_path)); if(connect(fd,(struct sockaddr *)&a,sizeof(a))!=0){close(fd);return @"Root helper غير متاح";} NSString *request=[NSString stringWithFormat:@"HASH %@\n",path]; write(fd,request.UTF8String,[request lengthOfBytesUsingEncoding:NSUTF8StringEncoding]); char response[256]={0}; ssize_t n=read(fd,response,sizeof(response)-1); close(fd); if(n<=0)return @"Root helper بلا استجابة"; response[n]='\0'; if(strncmp(response,"OK ",3)!=0)return [NSString stringWithFormat:@"Root helper: %s",response+4]; char hash[17]={0}; if(sscanf(response+3,"%16s",hash)==1)return [NSString stringWithUTF8String:hash]; return @"Root helper نتيجة غير صالحة";
 }
 
 
@@ -93,7 +102,7 @@ static NSDictionary *DGEnvironment(void){
 @implementation DGServerViewController
 - (void)viewDidLoad{[super viewDidLoad];[self buildPage:@"اختيار الخادم" subtitle:@"يتحقق DeltaGuard من وجود التطبيق ويستطيع تشغيله فعليًا"];UIView *c=[self card];UIStackView *s=[UIStackView new];s.axis=UILayoutConstraintAxisVertical;s.spacing=8;s.layoutMargins=UIEdgeInsetsMake(8,0,8,0);s.layoutMarginsRelativeArrangement=YES;NSDictionary *servers=@{@"الخادم الصيني\ncom.tencent.tmgp.dfm":@"com.tencent.tmgp.dfm",@"الخادم الدولي\ncom.proxima.dfm":@"com.proxima.dfm",@"الخادم التايواني\ncom.garena.game.df":@"com.garena.game.df"};for(NSString *title in servers){UIButton *b=[self button:title];b.backgroundColor=UIColor.clearColor;[b setTitleColor:DGText() forState:UIControlStateNormal];b.contentHorizontalAlignment=UIControlContentHorizontalAlignmentRight;b.contentEdgeInsets=UIEdgeInsetsMake(15,20,15,20);b.accessibilityIdentifier=servers[title];[b addTarget:self action:@selector(selectServer:) forControlEvents:UIControlEventTouchUpInside];[s addArrangedSubview:b];} [c addSubview:s];s.translatesAutoresizingMaskIntoConstraints=NO;[NSLayoutConstraint activateConstraints:@[[s.topAnchor constraintEqualToAnchor:c.topAnchor],[s.bottomAnchor constraintEqualToAnchor:c.bottomAnchor],[s.leadingAnchor constraintEqualToAnchor:c.leadingAnchor],[s.trailingAnchor constraintEqualToAnchor:c.trailingAnchor]]];[self.stack addArrangedSubview:c];self.selected=[self label:@"" size:15 color:DGMuted()];[self.stack addArrangedSubview:self.selected];[self refresh];}
 - (void)selectServer:(UIButton *)b{[[NSUserDefaults standardUserDefaults]setObject:b.accessibilityIdentifier forKey:@"DGSelectedServer"];[[NSUserDefaults standardUserDefaults]synchronize];DGLog([NSString stringWithFormat:@"تم اختيار الخادم %@",b.accessibilityIdentifier]);[self refresh];}
-- (void)refresh{NSString *bid=DGSelectedServer();BOOL installed=DGHasBundle(bid);NSDictionary *d=installed?DGAppDetails(bid):@{};double gb=[d[@"size"] unsignedLongLongValue]/(1024.0*1024.0*1024.0);self.selected.text=installed?[NSString stringWithFormat:@"المحدد: %@\nالإصدار: %@\nالحجم: %.2f GB\nالمسار: %@",bid,d[@"version"] ?: @"غير معروف",gb,d[@"path"] ?: @"غير متاح"]:[NSString stringWithFormat:@"المحدد: %@\nالحالة: التطبيق غير مثبت على الجهاز",bid];self.selected.textColor=installed?[UIColor systemGreenColor]:[UIColor systemOrangeColor];}
+- (void)refresh{dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY,0),^{NSString *bid=DGSelectedServer();BOOL installed=DGHasBundle(bid);NSDictionary *d=installed?DGAppDetails(bid):@{};double gb=[d[@"size"] unsignedLongLongValue]/(1024.0*1024.0*1024.0);dispatch_async(dispatch_get_main_queue(),^{self.selected.text=installed?[NSString stringWithFormat:@"المحدد: %@\nالإصدار: %@\nالحجم: %.2f GB\nالمسار: %@",bid,d[@"version"] ?: @"غير معروف",gb,d[@"path"] ?: @"غير متاح"]:[NSString stringWithFormat:@"المحدد: %@\nالحالة: التطبيق غير مثبت على الجهاز",bid];self.selected.textColor=installed?[UIColor systemGreenColor]:[UIColor systemOrangeColor];});});}
 @end
 
 @interface DGSettingsViewController:DGBaseViewController@property(nonatomic,strong)UISwitch *dark;@end
