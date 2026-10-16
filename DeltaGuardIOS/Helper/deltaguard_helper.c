@@ -46,6 +46,6 @@ int main(void) {
     int server = socket(AF_UNIX, SOCK_STREAM, 0); if (server < 0) return 10;
     struct sockaddr_un address; memset(&address, 0, sizeof(address)); address.sun_family = AF_UNIX; strlcpy(address.sun_path, SOCKET_PATH, sizeof(address.sun_path));
     if (bind(server, (struct sockaddr *)&address, sizeof(address)) != 0) return 11; chmod(SOCKET_PATH, 0666); if (listen(server, 8) != 0) return 12;
-    for (;;) { int client = accept(server, NULL, NULL); if (client < 0) { if (errno == EINTR) continue; break; } handle_client(client); close(client); }
+    for (;;) { int client = accept(server, NULL, NULL); if (client < 0) { if (errno == EINTR) continue; break; } struct timeval htv = { 5, 0 }; setsockopt(client, SOL_SOCKET, SO_RCVTIMEO, &htv, sizeof(htv)); setsockopt(client, SOL_SOCKET, SO_SNDTIMEO, &htv, sizeof(htv)); handle_client(client); close(client); }
     close(server); unlink(SOCKET_PATH); return 0;
 }
