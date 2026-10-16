@@ -59,18 +59,22 @@ def validate_repo(repo_root):
     # 2. Check .deb exists in pool
     print()
     print("[validate-repo] Checking .deb package...")
-    deb_dir = os.path.join(repo_root, 'pool', 'main', 'iphoneos-arm64')
+    deb_dirs = [
+        os.path.join(repo_root, 'pool', 'main', 'iphoneos-arm64'),
+        os.path.join(repo_root, 'pool', 'main', 'iphoneos-arm64e'),
+    ]
     debs = []
-    if os.path.isdir(deb_dir):
-        debs = sorted(f for f in os.listdir(deb_dir) if f.endswith('.deb'))
+    for deb_dir in deb_dirs:
+        if os.path.isdir(deb_dir):
+            debs.extend((deb_dir, f) for f in os.listdir(deb_dir) if f.endswith('.deb'))
 
     if not debs:
         errors += 1
-        fail(f"No .deb found in {deb_dir}")
+        fail(f"No .deb found in {', '.join(deb_dirs)}")
         return 1
 
-    deb_path = os.path.join(deb_dir, debs[0])
-    ok(f"Found .deb: {debs[0]} ({file_size(deb_path)} bytes)")
+    deb_path = os.path.join(debs[0][0], debs[0][1])
+    ok(f"Found .deb: {debs[0][1]} ({file_size(deb_path)} bytes)")
 
     # Calculate actual hashes of the .deb
     actual_size = file_size(deb_path)
@@ -95,7 +99,7 @@ def validate_repo(repo_root):
         checks = [
             ('Package field', r'^Package:\s+\S+'),
             ('Version field', r'^Version:\s+\S+'),
-            ('Architecture field', r'^Architecture:\s+iphoneos-arm64'),
+            ('Architecture field', r'^Architecture:\s+iphoneos-arm64e?'),
             ('Maintainer field', r'^Maintainer:\s+\S+'),
             ('Filename field', r'^Filename:\s+pool/main/iphoneos-arm64/'),
             ('Size field', r'^Size:\s+[1-9]\d*'),
@@ -131,8 +135,11 @@ def validate_repo(repo_root):
         else:
             for entry in entries:
                 filename = entry.get('Filename', '')
-                expected_prefix = 'pool/main/iphoneos-arm64/'
-                if not filename.startswith(expected_prefix):
+                valid_prefixes = (
+                    'pool/main/iphoneos-arm64/',
+                    'pool/main/iphoneos-arm64e/',
+                )
+                if not filename.startswith(valid_prefixes):
                     errors += 1
                     fail(f"Unsafe or invalid Filename field: {filename}")
                     continue
