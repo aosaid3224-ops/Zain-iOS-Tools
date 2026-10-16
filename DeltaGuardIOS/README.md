@@ -36,3 +36,9 @@ make package THEOS_PACKAGE_SCHEME=rootless FINALPACKAGE=1
 ```
 
 الإصدار الحالي `0.3.6`، والحد الأدنى iOS 15 مع Rootless.
+
+## 0.3.7
+- إضافة مفتاح ⚡ لتفعيل 90 FPS داخل اللوحة العائمة.
+- حفظ الحالة عبر NSUserDefaults.
+- ضبط CADisplayLink وUIScreen عبر swizzling عند الحقن.
+- عرض حالة 90 FPS داخل عداد الإحصاءات.
