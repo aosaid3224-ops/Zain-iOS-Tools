@@ -1,4 +1,4 @@
-# DeltaGuard iOS 0.2.5
+# DeltaGuard iOS 0.2.6
 
 نسخة iOS أصلية من واجهة حارس دلتا، مع طبقة وظائف حقيقية تعمل على جهاز Rootless/jailbroken بدل محاكاة نجاح Android.
 
@@ -26,4 +26,4 @@ make clean
 make package THEOS_PACKAGE_SCHEME=rootless FINALPACKAGE=1
 ```
 
-الإصدار الحالي `0.2.5`، والحد الأدنى iOS 15 مع Rootless.
+الإصدار الحالي `0.2.6`، والحد الأدنى iOS 15 مع Rootless.

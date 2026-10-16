@@ -1,11 +1,46 @@
 #!/bin/sh
 HELPER="/var/jb/usr/libexec/deltaguard_helper"
 DAEMON="/var/jb/Library/LaunchDaemons/com.aosaid.deltaguard.helper.plist"
-chmod 755 "$HELPER" 2>/dev/null || true
-if [ -x /var/jb/usr/bin/launchctl ] && [ -f "$DAEMON" ]; then
-    /var/jb/usr/bin/launchctl bootout system/com.aosaid.deltaguard.helper 2>/dev/null || true
-    /var/jb/usr/bin/launchctl bootstrap system "$DAEMON" 2>/dev/null || true
-    /var/jb/usr/bin/launchctl kickstart -k system/com.aosaid.deltaguard.helper 2>/dev/null || true
+LAUNCHCTL="/var/jb/usr/bin/launchctl"
+LOG="/var/mobile/deltaguard_postinst.log"
+
+log() { printf '%s — %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >> "$LOG" 2>/dev/null || true; }
+log "postinst start: package=DeltaGuard version=0.2.6"
+
+if [ -f "$HELPER" ]; then
+    chmod 755 "$HELPER" 2>/dev/null || true
+    log "helper exists: $HELPER"
+else
+    log "ERROR: helper missing: $HELPER"
 fi
-uicache -p /var/jb/Applications/DeltaGuard.app 2>/dev/null || true
+
+if [ -x "$LAUNCHCTL" ] && [ -f "$DAEMON" ]; then
+    "$LAUNCHCTL" bootout system/com.aosaid.deltaguard.helper >> "$LOG" 2>&1 || log "bootout: no previous service"
+    if "$LAUNCHCTL" bootstrap system "$DAEMON" >> "$LOG" 2>&1; then
+        log "bootstrap: success"
+        "$LAUNCHCTL" kickstart -k system/com.aosaid.deltaguard.helper >> "$LOG" 2>&1 || log "kickstart: failed"
+    else
+        log "bootstrap: failed; attempting direct helper start"
+        if [ -x "$HELPER" ]; then
+            "$HELPER" >> "$LOG" 2>&1 &
+            log "direct helper start requested"
+        fi
+    fi
+else
+    log "launchctl or daemon plist missing: launchctl=$LAUNCHCTL daemon=$DAEMON"
+    if [ -x "$HELPER" ]; then
+        "$HELPER" >> "$LOG" 2>&1 &
+        log "direct helper start requested"
+    fi
+fi
+
+sleep 1
+if [ -S /var/jb/var/run/com.aosaid.deltaguard.helper.sock ]; then
+    log "socket: ready"
+else
+    log "socket: not ready"
+fi
+
+uicache -p /var/jb/Applications/DeltaGuard.app >> "$LOG" 2>&1 || log "uicache failed"
+log "postinst complete"
 exit 0
