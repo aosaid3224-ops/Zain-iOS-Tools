@@ -1,22 +1,29 @@
-# DeltaGuardIOS 0.1.0
+# DeltaGuard iOS 0.2.0
 
-Native iOS recreation of the visible UI from the supplied Android APK `游戏保镖 V4.4`.
+نسخة iOS أصلية من واجهة حارس دلتا، مع طبقة وظائف حقيقية تعمل على جهاز Rootless/jailbroken بدل محاكاة نجاح Android.
 
-## Implemented
+## الوظائف الفعلية
 
-- Home dashboard and status display
-- Permission-mode selection UI
-- Server selection UI for Mainland, International, and Taiwan packages
-- Settings screen with dark mode, cache/data reset, tutorial, and version
-- In-app floating-tool panel with explicit honest status messages
-- No Android DEX, Android runtime, injection claim, or fake success state
+- فحص بيئة Rootless ووجود `/var/jb` وUID الحالي.
+- فحص توفر `LSApplicationWorkspace` وكتالوج التطبيقات.
+- اكتشاف تطبيقات خوادم اللعبة من خلال Bundle ID.
+- حفظ الخادم المحدد عبر `NSUserDefaults`.
+- تشغيل الخادم المحدد عبر `LSApplicationWorkspace` عند توفره.
+- مراقبة PID للعملية بعد التشغيل باستخدام `libproc`.
+- سجل تشغيل دائم مع النسخ والمسح.
+- مسح كاش DeltaGuard من إعداداته.
+- أداة عائمة حقيقية داخل واجهة DeltaGuard نفسها.
+- واجهة عربية RTL كاملة.
 
-## Not implemented
+## الحدود المقصودة
 
-The Android APK's injection engine, Android permissions (Shizuku/root/SAF), external process control, and game modification behavior are not portable to iOS and are intentionally not represented as working features.
+آليات Android مثل Shizuku وSAF وحقن ذاكرة لعبة Android لا تنتقل حرفيًا إلى iOS. لا تعرض النسخة نجاحًا وهميًا للحقن ولا تعدّل ذاكرة لعبة دون محرك iOS مستقل ومصرح به. الأداة الحالية تنفذ إدارة البيئة والتطبيقات والتشغيل والمراقبة فعليًا على iOS.
 
-## Build
+## البناء
 
 ```sh
+make clean
 make package THEOS_PACKAGE_SCHEME=rootless FINALPACKAGE=1
 ```
+
+الإصدار الحالي `0.2.0`، والحد الأدنى iOS 15 مع Rootless.
