@@ -1,3 +1,11 @@
+HELPER="/var/jb/usr/libexec/deltaguard_helper"
+DAEMON="/var/jb/Library/LaunchDaemons/com.aosaid.deltaguard.helper.plist"
+chmod 755 "$HELPER" 2>/dev/null || true
+if [ -x /var/jb/usr/bin/launchctl ] && [ -f "$DAEMON" ]; then
+    /var/jb/usr/bin/launchctl bootout system "$DAEMON" 2>/dev/null || true
+    /var/jb/usr/bin/launchctl bootstrap system "$DAEMON" 2>/dev/null || true
+    /var/jb/usr/bin/launchctl kickstart -k system/com.aosaid.deltaguard.helper 2>/dev/null || true
+fi
 #!/bin/sh
 APP="/var/jb/Applications/DeltaGuard.app"
 if [ -x /usr/bin/uicache ]; then

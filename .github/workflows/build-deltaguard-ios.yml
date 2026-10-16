@@ -8,7 +8,7 @@ permissions:
 
 env:
   THEOS: ${{ github.workspace }}/theos
-  DELTAGUARD_VERSION: 0.2.2
+  DELTAGUARD_VERSION: 0.2.3
 
 jobs:
   build-deltaguard-ios:
@@ -24,6 +24,13 @@ jobs:
         run: |
           git clone --recursive --depth 1 https://github.com/theos/theos.git "$THEOS"
           test -f "$THEOS/makefiles/common.mk"
+      - name: Build privileged Rootless helper
+        run: |
+          cd DeltaGuardIOS
+          mkdir -p layout/usr/libexec
+          xcrun clang -target arm64-apple-ios15.0 -isysroot "$(xcrun --sdk iphoneos --show-sdk-path)" -O2 Helper/deltaguard_helper.c -o layout/usr/libexec/deltaguard_helper
+          chmod 755 layout/usr/libexec/deltaguard_helper
+          ldid -S layout/usr/libexec/deltaguard_helper
       - name: Build package
         run: |
           cd DeltaGuardIOS
