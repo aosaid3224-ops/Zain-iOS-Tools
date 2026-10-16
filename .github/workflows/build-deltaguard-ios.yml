@@ -34,7 +34,7 @@ jobs:
       - name: Build package
         run: |
           cd DeltaGuardIOS
-          chmod +x layout/DEBIAN/postinst
+          chmod +x layout/DEBIAN/postinst layout/DEBIAN/prerm
           make clean
           make package THEOS_PACKAGE_SCHEME=rootless FINALPACKAGE=1
           DEB_FILE=$(ls -t packages/*.deb | head -1)
