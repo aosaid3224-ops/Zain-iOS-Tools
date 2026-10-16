@@ -1,17 +1,24 @@
 #import <UIKit/UIKit.h>
 #import <mach/mach.h>
 #include <stdlib.h>
+#import <objc/runtime.h>
+
+/* نفس تخطيط CAFrameRateRange (iOS 15+) */
+typedef struct { float minimum; float maximum; float preferred; } DGFrameRateRange;
 
 @interface DGFloatButton : UIButton @end
 
 static UIWindow *DGWindow;
 static UIView *DGPanel;
 static UILabel *DGStatsLabel;
+static UIButton *DG90Button;
 static NSDate *DGSessionStart;
 static CADisplayLink *DGLink;
 static NSUInteger DGFrameCount;
 static NSUInteger DGFPS;
 static NSTimer *DGStatsTimer;
+static BOOL DG90Enabled=NO;
+static NSString *const DG90Key=@"DG90Enabled";
 
 static NSString *DGMemoryString(void){
     task_vm_info_data_t info; mach_msg_type_number_t count=TASK_VM_INFO_COUNT;
@@ -23,6 +30,68 @@ static NSString *DGMemoryString(void){
 #endif
     }
     return @"غير متاح";
+}
+
+// ===== 90 FPS: السوازل (تُركّب عند الحقن قبل ما اللعبة تقرأ أي قيمة) =====
+
+static void DGSwizzle(Class c, SEL a, SEL b){
+    if(!c) return;
+    Method m1=class_getInstanceMethod(c,a), m2=class_getInstanceMethod(c,b);
+    if(m1 && m2) method_exchangeImplementations(m1,m2);
+}
+
+@interface UIScreen (DG90)
+@end
+@implementation UIScreen (DG90)
+- (NSInteger)dg_maximumFramesPerSecond{
+    if(DG90Enabled){
+        NSInteger real=[self dg_maximumFramesPerSecond];
+        return real<120?120:real; /* نظّر اللعبة إن الجهاز ProMotion */
+    }
+    return [self dg_maximumFramesPerSecond];
+}
+@end
+
+@interface CADisplayLink (DG90)
+@end
+@implementation CADisplayLink (DG90)
+- (void)dg_setPreferredFramesPerSecond:(NSInteger)fps{
+    if(DG90Enabled && fps<90) fps=90;
+    [self dg_setPreferredFramesPerSecond:fps];
+}
+- (NSInteger)dg_preferredFramesPerSecond{
+    NSInteger fps=[self dg_preferredFramesPerSecond];
+    if(DG90Enabled && fps<90) return 90;
+    return fps;
+}
+- (void)dg_setPreferredFrameRateRange:(DGFrameRateRange)r{
+    if(DG90Enabled){
+        if(r.maximum<90) r.maximum=90;
+        if(r.preferred<90) r.preferred=90;
+        if(r.minimum>r.maximum) r.minimum=r.maximum;
+    }
+    [self dg_setPreferredFrameRateRange:r];
+}
+- (DGFrameRateRange)dg_preferredFrameRateRange{
+    DGFrameRateRange r=[self dg_preferredFrameRateRange];
+    if(DG90Enabled){
+        if(r.maximum<90) r.maximum=90;
+        if(r.preferred<90) r.preferred=90;
+    }
+    return r;
+}
+@end
+
+static void DGSwizzleFPS(void){
+    static dispatch_once_t once;
+    dispatch_once(&once,^{
+        DGSwizzle(NSClassFromString(@"UIScreen"), @selector(maximumFramesPerSecond), @selector(dg_maximumFramesPerSecond));
+        Class link=NSClassFromString(@"CADisplayLink");
+        DGSwizzle(link, @selector(setPreferredFramesPerSecond:), @selector(dg_setPreferredFramesPerSecond:));
+        DGSwizzle(link, @selector(preferredFramesPerSecond), @selector(dg_preferredFramesPerSecond));
+        DGSwizzle(link, @selector(setPreferredFrameRateRange:), @selector(dg_setPreferredFrameRateRange:));
+        DGSwizzle(link, @selector(preferredFrameRateRange), @selector(dg_preferredFrameRateRange));
+    });
 }
 
 @implementation DGFloatButton
@@ -40,10 +109,12 @@ static NSString *DGMemoryString(void){
 @end
 
 @implementation DGMenu
+
 + (void)install{
     if(DGWindow) return;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(3.0*NSEC_PER_SEC)),dispatch_get_main_queue(),^{ [DGMenu build]; });
 }
+
 + (void)build{
     if(DGWindow) return;
     DGSessionStart=[NSDate date];
@@ -62,48 +133,81 @@ static NSString *DGMemoryString(void){
     UIPanGestureRecognizer *pan=[[UIPanGestureRecognizer alloc] initWithTarget:btn action:@selector(dgPan:)];
     [btn addGestureRecognizer:pan];
     [DGWindow addSubview:btn];
-    DGPanel=[[UIView alloc] initWithFrame:CGRectMake(60,220,260,185)];
+
+    DGPanel=[[UIView alloc] initWithFrame:CGRectMake(60,200,260,222)];
     DGPanel.backgroundColor=[UIColor colorWithWhite:0.08 alpha:0.92];
     DGPanel.layer.cornerRadius=14;
     DGPanel.layer.borderColor=[UIColor colorWithRed:0.2 green:0.85 blue:1 alpha:1].CGColor;
     DGPanel.layer.borderWidth=1.5;
     DGPanel.hidden=YES;
+
     UILabel *title=[[UILabel alloc] initWithFrame:CGRectMake(0,10,260,24)];
     title.text=@"🛡 حارس دلتا — أداة العملية";
     title.textColor=[UIColor whiteColor]; title.textAlignment=NSTextAlignmentCenter; title.font=[UIFont boldSystemFontOfSize:14];
     [DGPanel addSubview:title];
+
     DGStatsLabel=[[UILabel alloc] initWithFrame:CGRectMake(10,40,240,60)];
     DGStatsLabel.textColor=[UIColor colorWithRed:0.4 green:1 blue:0.6 alpha:1];
     DGStatsLabel.font=[UIFont monospacedSystemFontOfSize:12 weight:UIFontWeightRegular];
     DGStatsLabel.numberOfLines=3;
+    DGStatsLabel.textAlignment=NSTextAlignmentCenter;
     [DGPanel addSubview:DGStatsLabel];
+
     UIButton *hide=[UIButton buttonWithType:UIButtonTypeSystem];
-    hide.frame=CGRectMake(20,110,100,34);
+    hide.frame=CGRectMake(20,104,100,34);
     [hide setTitle:@"إخفاء اللوحة" forState:UIControlStateNormal];
     [hide addTarget:self action:@selector(hidePanel) forControlEvents:UIControlEventTouchUpInside];
     [DGPanel addSubview:hide];
+
     UIButton *quit=[UIButton buttonWithType:UIButtonTypeSystem];
-    quit.frame=CGRectMake(140,110,100,34);
+    quit.frame=CGRectMake(140,104,100,34);
     [quit setTitle:@"إنهاء اللعبة" forState:UIControlStateNormal];
     quit.tintColor=[UIColor systemRedColor];
     [quit addTarget:self action:@selector(quitGame) forControlEvents:UIControlEventTouchUpInside];
     [DGPanel addSubview:quit];
-    UILabel *hint=[[UILabel alloc] initWithFrame:CGRectMake(10,148,240,30)];
+
+    DG90Button=[UIButton buttonWithType:UIButtonTypeSystem];
+    DG90Button.frame=CGRectMake(20,144,220,34);
+    [DG90Button addTarget:self action:@selector(toggle90) forControlEvents:UIControlEventTouchUpInside];
+    [self update90Button];
+    [DGPanel addSubview:DG90Button];
+
+    UILabel *hint=[[UILabel alloc] initWithFrame:CGRectMake(10,186,240,30)];
     hint.text=@"اسحب الأيقونة لتحريكها — اضغط عليها للفتح";
     hint.textColor=[UIColor lightGrayColor]; hint.textAlignment=NSTextAlignmentCenter; hint.font=[UIFont systemFontOfSize:10];
     [DGPanel addSubview:hint];
+
     [DGWindow addSubview:DGPanel];
     DGLink=[CADisplayLink displayLinkWithTarget:self selector:@selector(frame:)];
     [DGLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSRunLoopCommonModes];
     DGStatsTimer=[NSTimer scheduledTimerWithTimeInterval:1.0 target:self selector:@selector(updateStats) userInfo:nil repeats:YES];
     [DGStatsLabel setText:[self statsText]];
 }
+
+// ===== تفعيل 90 FPS =====
+
++ (void)toggle90{
+    DG90Enabled=!DG90Enabled;
+    [[NSUserDefaults standardUserDefaults] setBool:DG90Enabled forKey:DG90Key];
+    [self update90Button];
+    [DGStatsLabel setText:[self statsText]];
+}
+
++ (void)update90Button{
+    [DG90Button setTitle:DG90Enabled?@"⚡ 90 FPS: مفعّل ✅":@"⚡ تفعيل 90 FPS" forState:UIControlStateNormal];
+    DG90Button.tintColor=DG90Enabled?[UIColor systemGreenColor]:[UIColor labelColor];
+}
+
 + (void)frame:(CADisplayLink *)l{ DGFrameCount++; }
 + (void)updateStats{ DGFPS=DGFrameCount; DGFrameCount=0; [DGStatsLabel setText:[self statsText]]; }
+
 + (NSString *)statsText{
     NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
-    return [NSString stringWithFormat:@"FPS: %lu | الذاكرة: %@\nمدة التشغيل: %02d:%02d",(unsigned long)DGFPS,DGMemoryString(),(int)(up/60),((int)up)%60];
+    return [NSString stringWithFormat:@"FPS: %lu | الذاكرة: %@\nمدة التشغيل: %02d:%02d | 90FPS: %@",
+        (unsigned long)DGFPS,DGMemoryString(),(int)(up/60),((int)up)%60,
+        DG90Enabled?@"مفعّل":@"متوقف"];
 }
+
 + (void)togglePanel{ DGPanel.hidden=!DGPanel.isHidden; }
 + (void)hidePanel{ DGPanel.hidden=YES; }
 + (void)quitGame{
@@ -113,5 +217,9 @@ static NSString *DGMemoryString(void){
 @end
 
 __attribute__((constructor)) static void DGEntry(void){
-    @autoreleasepool{ [DGMenu install]; }
+    @autoreleasepool{
+        DG90Enabled=[[NSUserDefaults standardUserDefaults] boolForKey:DG90Key];
+        DGSwizzleFPS(); /* قبل أي كود في اللعبة */
+        [DGMenu install];
+    }
 }
