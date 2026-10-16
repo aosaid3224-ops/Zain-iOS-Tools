@@ -46,7 +46,7 @@ static void DGSwizzle(Class c, SEL a, SEL b){
 - (NSInteger)dg_maximumFramesPerSecond{
     if(DG90Enabled){
         NSInteger real=[self dg_maximumFramesPerSecond];
-        return real<120?120:real; /* نظّر اللعبة إن الجهاز ProMotion */
+        return real<120?120:real;
     }
     return [self dg_maximumFramesPerSecond];
 }
@@ -94,6 +94,17 @@ static void DGSwizzleFPS(void){
     });
 }
 
+// ===== نافذة Pass-Through: اللمس يمر للعبة إلا على عناصرنا =====
+
+@interface DGPassThroughWindow : UIWindow @end
+@implementation DGPassThroughWindow
+- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event{
+    UIView *hit=[super hitTest:point withEvent:event];
+    if(!hit || hit==self || hit==self.rootViewController.view) return nil;
+    return hit;
+}
+@end
+
 @implementation DGFloatButton
 - (void)dgPan:(UIPanGestureRecognizer *)g{
     CGPoint t=[g translationInView:DGWindow];
@@ -118,9 +129,12 @@ static void DGSwizzleFPS(void){
 + (void)build{
     if(DGWindow) return;
     DGSessionStart=[NSDate date];
-    DGWindow=[[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
+    DGWindow=[[DGPassThroughWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
     DGWindow.windowLevel=UIWindowLevelStatusBar+100;
+    DGWindow.rootViewController=[UIViewController new];
+    DGWindow.rootViewController.view.backgroundColor=[UIColor clearColor];
     DGWindow.hidden=NO;
+    UIView *root=DGWindow.rootViewController.view;
     DGFloatButton *btn=[DGFloatButton buttonWithType:UIButtonTypeCustom];
     btn.frame=CGRectMake(20,140,52,52);
     btn.layer.cornerRadius=26;
@@ -132,7 +146,7 @@ static void DGSwizzleFPS(void){
     [btn addTarget:self action:@selector(togglePanel) forControlEvents:UIControlEventTouchUpInside];
     UIPanGestureRecognizer *pan=[[UIPanGestureRecognizer alloc] initWithTarget:btn action:@selector(dgPan:)];
     [btn addGestureRecognizer:pan];
-    [DGWindow addSubview:btn];
+    [root addSubview:btn];
 
     DGPanel=[[UIView alloc] initWithFrame:CGRectMake(60,200,260,222)];
     DGPanel.backgroundColor=[UIColor colorWithWhite:0.08 alpha:0.92];
@@ -177,14 +191,12 @@ static void DGSwizzleFPS(void){
     hint.textColor=[UIColor lightGrayColor]; hint.textAlignment=NSTextAlignmentCenter; hint.font=[UIFont systemFontOfSize:10];
     [DGPanel addSubview:hint];
 
-    [DGWindow addSubview:DGPanel];
+    [root addSubview:DGPanel];
     DGLink=[CADisplayLink displayLinkWithTarget:self selector:@selector(frame:)];
     [DGLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSRunLoopCommonModes];
     DGStatsTimer=[NSTimer scheduledTimerWithTimeInterval:1.0 target:self selector:@selector(updateStats) userInfo:nil repeats:YES];
     [DGStatsLabel setText:[self statsText]];
 }
-
-// ===== تفعيل 90 FPS =====
 
 + (void)toggle90{
     DG90Enabled=!DG90Enabled;
@@ -219,7 +231,7 @@ static void DGSwizzleFPS(void){
 __attribute__((constructor)) static void DGEntry(void){
     @autoreleasepool{
         DG90Enabled=[[NSUserDefaults standardUserDefaults] boolForKey:DG90Key];
-        DGSwizzleFPS(); /* قبل أي كود في اللعبة */
+        DGSwizzleFPS();
         [DGMenu install];
     }
 }
