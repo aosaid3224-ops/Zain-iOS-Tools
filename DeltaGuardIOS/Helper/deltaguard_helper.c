@@ -48,12 +48,14 @@ static void handle_client(int fd) {
     if (input < 0) { write_error(fd, "open-failed"); return; }
     CC_SHA256_CTX ctx;
     CC_SHA256_Init(&ctx);
-    unsigned char buf[1024 * 1024];
-    ssize_t got;
-    while ((got = read(input, buf, sizeof(buf))) > 0) CC_SHA256_Update(&ctx, buf, (CC_LONG)got);
+    size_t buffer_size = 64 * 1024;
+    unsigned char *buf = malloc(buffer_size);
+    ssize_t got = 0;
+    if (buf) while ((got = read(input, buf, buffer_size)) > 0) CC_SHA256_Update(&ctx, buf, (CC_LONG)got);
     int saved_errno = errno;
+    free(buf);
     close(input);
-    if (got < 0) { errno = saved_errno; write_error(fd, "read-failed"); return; }
+    if (!buf || got < 0) { errno = saved_errno; write_error(fd, "read-failed"); return; }
     unsigned char digest[CC_SHA256_DIGEST_LENGTH];
     CC_SHA256_Final(digest, &ctx);
     char hex[CC_SHA256_DIGEST_LENGTH * 2 + 1];
