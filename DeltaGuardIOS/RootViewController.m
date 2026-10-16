@@ -5,7 +5,7 @@
 #import <sys/types.h>
 #import <sys/stat.h>
 #import <unistd.h>
-#import <libproc.h>
+#import <sys/sysctl.h>
 
 static NSString * const DGStateChanged = @"com.aosaid.deltaguard.state.changed";
 static UIColor *DGBackground(void){ return [UIColor colorWithRed:.055 green:.055 blue:.075 alpha:1]; }
@@ -25,9 +25,9 @@ static BOOL DGLaunchBundle(NSString *bundleID){ id ws=DGWorkspace(); SEL s=NSSel
 static pid_t DGPIDForBundle(NSString *bundleID){
     if(!bundleID.length)return 0; id target=nil; for(id app in DGInstalledApplications()){ if([[app valueForKey:@"applicationIdentifier"] isEqualToString:bundleID]){target=app;break;} }
     NSString *path=nil; if(target){ id url=[target valueForKey:@"bundleURL"]; path=[url respondsToSelector:@selector(path)]?[url path]:nil; }
-    if(!path.length)return 0; NSString *execName=nil; NSDictionary *info=[NSDictionary dictionaryWithContentsOfFile:[path stringByAppendingPathComponent:@"Info.plist"]]; execName=info[@"CFBundleExecutable"]; if(!execName.length)execName=bundleID.lastPathComponent;
-    int bytes=proc_listpids(PROC_ALL_PIDS,0,NULL,0); if(bytes<=0)return 0; pid_t *pids=calloc((size_t)bytes,1); int used=proc_listpids(PROC_ALL_PIDS,0,pids,bytes); pid_t found=0;
-    for(int i=0;i<used/(int)sizeof(pid_t);i++){ if(!pids[i])continue; char buf[PROC_PIDPATHINFO_MAXSIZE]={0}; if(proc_pidpath(pids[i],buf,sizeof(buf))>0){ NSString *p=[NSString stringWithUTF8String:buf]; if([p.lastPathComponent isEqualToString:execName] || [p hasPrefix:path]){found=pids[i];break;} } } free(pids); return found;
+    if(!path.length)return 0; NSDictionary *info=[NSDictionary dictionaryWithContentsOfFile:[path stringByAppendingPathComponent:@"Info.plist"]]; NSString *execName=info[@"CFBundleExecutable"]; if(!execName.length)execName=bundleID.lastPathComponent;
+    int mib[4]={CTL_KERN,KERN_PROC,KERN_PROC_ALL,0}; size_t size=0; if(sysctl(mib,4,NULL,&size,NULL,0)!=0 || size==0)return 0; struct kinfo_proc *procs=calloc(1,size); if(!procs)return 0; if(sysctl(mib,4,procs,&size,NULL,0)!=0){free(procs);return 0;}
+    pid_t found=0; NSUInteger count=size/sizeof(struct kinfo_proc); for(NSUInteger i=0;i<count;i++){ pid_t pid=procs[i].kp_proc.p_pid; if(!pid)continue; NSString *comm=[NSString stringWithUTF8String:procs[i].kp_proc.p_comm] ?: @""; if([comm isEqualToString:execName] || [execName hasPrefix:comm]){found=pid;break;} } free(procs); return found;
 }
 static NSDictionary *DGEnvironment(void){
     BOOL rootless=access("/var/jb",F_OK)==0; BOOL writable=access("/var/jb",W_OK)==0; BOOL workspace=DGWorkspace()!=nil; NSString *os=[UIDevice currentDevice].systemVersion; NSString *model=[UIDevice currentDevice].model;
