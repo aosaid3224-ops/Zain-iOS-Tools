@@ -55,7 +55,14 @@ static NSString *DGExecutableFingerprint(NSString *bundleID){
     NSString *path=DGBundlePathForBundle(bundleID); if(!path.length)return @"غير متاح"; NSDictionary *info=[NSDictionary dictionaryWithContentsOfFile:[path stringByAppendingPathComponent:@"Info.plist"]]; NSString *name=info[@"CFBundleExecutable"]; if(!name.length)return @"غير متاح"; return DGHelperFingerprint([path stringByAppendingPathComponent:name]);
 }
 static NSDictionary *DGAppDetails(NSString *bundleID){
-    NSString *path=DGBundlePathForBundle(bundleID); if(!path.length)return @{}; NSDictionary *info=[NSDictionary dictionaryWithContentsOfFile:[path stringByAppendingPathComponent:@"Info.plist"]] ?: @{}; NSString *exe=info[@"CFBundleExecutable"] ?: @""; NSString *fp=DGExecutableFingerprint(bundleID); unsigned long long total=0; NSDirectoryEnumerator *it=[[NSFileManager defaultManager]enumeratorAtPath:path]; for(NSString *rel in it){ NSDictionary *a=[[NSFileManager defaultManager]attributesOfItemAtPath:[path stringByAppendingPathComponent:rel] error:nil]; total += [a fileSize]; } return @{ @"path":path, @"version":info[@"CFBundleShortVersionString"] ?: info[@"CFBundleVersion"] ?: @"غير معروف", @"build":info[@"CFBundleVersion"] ?: @"غير معروف", @"executable":exe, @"fingerprint":fp, @"size":@(total) };
+    NSString *path=DGBundlePathForBundle(bundleID); if(!path.length)return @{};
+    NSDictionary *info=[NSDictionary dictionaryWithContentsOfFile:[path stringByAppendingPathComponent:@"Info.plist"]] ?: @{};
+    NSString *exe=info[@"CFBundleExecutable"] ?: @"";
+    // Never enumerate an installed game recursively during launch; it can be many GB and trigger watchdog/memory pressure.
+    NSDictionary *rootAttrs=[[NSFileManager defaultManager]attributesOfItemAtPath:path error:nil];
+    unsigned long long total=[rootAttrs fileSize];
+    NSString *fp=DGExecutableFingerprint(bundleID);
+    return @{ @"path":path, @"version":info[@"CFBundleShortVersionString"] ?: info[@"CFBundleVersion"] ?: @"غير معروف", @"build":info[@"CFBundleVersion"] ?: @"غير معروف", @"executable":exe, @"fingerprint":fp ?: @"غير متاح", @"size":@(total) };
 }
 static NSString *DGExpectedFingerprint(NSString *bundleID){ return [bundleID isEqualToString:@"com.garena.game.df"] ? @"175b75f14edcdd40" : @"غير محددة"; }
 static NSDictionary *DGHelperDiagnostics(void){
@@ -71,8 +78,9 @@ static NSString *DGHelperFingerprint(NSString *path){
     int lastError=ENOENT;
     for(NSString *socketPath in socketPaths){
         int fd=socket(AF_UNIX,SOCK_STREAM,0); if(fd<0) break;
-        struct timeval tv={3,0}; setsockopt(fd,SOL_SOCKET,SO_RCVTIMEO,&tv,sizeof(tv)); setsockopt(fd,SOL_SOCKET,SO_SNDTIMEO,&tv,sizeof(tv));
+        struct timeval tv={0,500000}; setsockopt(fd,SOL_SOCKET,SO_RCVTIMEO,&tv,sizeof(tv)); setsockopt(fd,SOL_SOCKET,SO_SNDTIMEO,&tv,sizeof(tv));
         struct sockaddr_un a; memset(&a,0,sizeof(a)); a.sun_family=AF_UNIX; strlcpy(a.sun_path,socketPath.UTF8String,sizeof(a.sun_path));
+        if(![[NSFileManager defaultManager] fileExistsAtPath:socketPath]){ close(fd); continue; }
         if(connect(fd,(struct sockaddr *)&a,sizeof(a))!=0){ lastError=errno; close(fd); continue; }
         NSString *request=[NSString stringWithFormat:@"HASH %@\n",path];
         if(write(fd,request.UTF8String,[request lengthOfBytesUsingEncoding:NSUTF8StringEncoding])<=0){ close(fd); break; }
