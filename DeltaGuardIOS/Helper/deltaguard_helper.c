@@ -40,6 +40,16 @@ static void handle_client(int fd) {
     ssize_t n = read(fd, line, sizeof(line) - 1);
     if (n <= 0) return;
     line[n] = '\0';
+    if (strncmp(line, "PING", 4) == 0) { dprintf(fd, "OK pong\n"); return; }
+    if (strncmp(line, "STAT ", 5) == 0) {
+        char *spath = line + 5;
+        spath[strcspn(spath, "\r\n")] = '\0';
+        if (!allowed_path(spath)) { write_error(fd, "path-not-allowed"); return; }
+        struct stat sst;
+        if (stat(spath, &sst) != 0) { write_error(fd, "stat-failed"); return; }
+        dprintf(fd, "OK %lld %lld\n", (long long)sst.st_size, (long long)sst.st_mtimespec.tv_sec);
+        return;
+    }
     if (strncmp(line, "HASH ", 5) != 0) { write_error(fd, "unsupported-request"); return; }
     char *path = line + 5;
     path[strcspn(path, "\r\n")] = '\0';
