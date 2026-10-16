@@ -25,8 +25,10 @@ static const char *active_socket = NULL;
 static int allowed_path(const char *path) {
     if (!path || path[0] != '/') return 0;
     if (strstr(path, "..")) return 0;
-    return strncmp(path, "/private/var/containers/Bundle/Application/", 43) == 0 ||
-           strncmp(path, "/var/containers/Bundle/Application/", 38) == 0;
+    static const char prefix_store[] = "/private/var/containers/Bundle/Application/";
+    static const char prefix_short[] = "/var/containers/Bundle/Application/";
+    return strncmp(path, prefix_store, sizeof(prefix_store) - 1) == 0 ||
+           strncmp(path, prefix_short, sizeof(prefix_short) - 1) == 0;
 }
 
 static void write_error(int fd, const char *reason) {
