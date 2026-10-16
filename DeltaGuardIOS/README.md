@@ -1,4 +1,4 @@
-# DeltaGuard iOS 0.3.3
+# DeltaGuard iOS 0.3.4
 
 نسخة iOS أصلية من واجهة حارس دلتا، مع طبقة وظائف حقيقية تعمل على جهاز Rootless/jailbroken بدل محاكاة نجاح Android.
 
@@ -15,7 +15,7 @@
 - أداة عائمة حقيقية داخل واجهة DeltaGuard نفسها.
 - واجهة عربية RTL كاملة.
 
-## سجل 0.3.3
+## سجل 0.3.4
 
 - إصلاح قاتل في فلتر مسارات الهيلبر (`sizeof(prefix)-1`) — كانت كل طلبات HASH تُرفض دائمًا بـ `path-not-allowed`.
 - مهلة قراءة socket للبصمة من 0.5 ثانية إلى 300 ثانية — حساب البصمة عبر Root helper أصبح فعليًا.
@@ -35,4 +35,4 @@ make clean
 make package THEOS_PACKAGE_SCHEME=rootless FINALPACKAGE=1
 ```
 
-الإصدار الحالي `0.3.3`، والحد الأدنى iOS 15 مع Rootless.
+الإصدار الحالي `0.3.4`، والحد الأدنى iOS 15 مع Rootless.
