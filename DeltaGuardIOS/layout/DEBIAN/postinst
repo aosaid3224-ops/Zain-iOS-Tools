@@ -5,7 +5,7 @@ LAUNCHCTL="/var/jb/usr/bin/launchctl"
 LOG="/var/mobile/deltaguard_postinst.log"
 
 log() { printf '%s — %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >> "$LOG" 2>/dev/null || true; }
-log "postinst start: package=DeltaGuard version=0.2.6"
+log "postinst start: package=DeltaGuard version=0.2.7"
 
 if [ -f "$HELPER" ]; then
     chmod 755 "$HELPER" 2>/dev/null || true
@@ -35,11 +35,11 @@ else
 fi
 
 sleep 1
-if [ -S /var/jb/var/run/com.aosaid.deltaguard.helper.sock ]; then
-    log "socket: ready"
-else
-    log "socket: not ready"
-fi
+SOCKET=""
+for candidate in /var/jb/var/run/com.aosaid.deltaguard.helper.sock /private/var/jb/var/run/com.aosaid.deltaguard.helper.sock /var/run/com.aosaid.deltaguard.helper.sock; do
+    if [ -S "$candidate" ]; then SOCKET="$candidate"; break; fi
+done
+if [ -n "$SOCKET" ]; then log "socket: ready at $SOCKET"; else log "socket: not ready"; fi
 
 uicache -p /var/jb/Applications/DeltaGuard.app >> "$LOG" 2>&1 || log "uicache failed"
 log "postinst complete"
