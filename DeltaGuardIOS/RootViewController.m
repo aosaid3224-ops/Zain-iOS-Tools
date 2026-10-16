@@ -32,12 +32,12 @@ static NSString *DGTimestamp(void){
 }
 static void DGLog(NSString *line){
     NSUserDefaults *d=[NSUserDefaults standardUserDefaults]; NSMutableArray *a=[NSMutableArray array];
-    for(NSString *old in ([d arrayForKey:@"DGLog"] ?: @[])) if([old isKindOfClass:[NSString class]] && ![old containsString:@"0000+"] && ![old hasPrefix:@"0000"]) [a addObject:old];
-    NSString *entry=[NSString stringWithFormat:@"%@ — %@", DGTimestamp(), line]; [a insertObject:entry atIndex:0]; if(a.count>80)[a removeObjectsInRange:NSMakeRange(80,a.count-80)]; [d setObject:a forKey:@"DGLog"]; [d synchronize]; [[NSNotificationCenter defaultCenter] postNotificationName:DGStateChanged object:nil];
+    for(NSString *old in ([d arrayForKey:@"DGLog"] ?: @[])) if([old isKindOfClass:[NSString class]] && ![old containsString:@"+0000"] && ![old containsString:@"0000+"]) [a addObject:old];
+    NSString *entry=[NSString stringWithFormat:@"\u202A%@\u202C — %@", DGTimestamp(), line]; [a insertObject:entry atIndex:0]; if(a.count>80)[a removeObjectsInRange:NSMakeRange(80,a.count-80)]; [d setObject:a forKey:@"DGLog"]; dispatch_async(dispatch_get_global_queue(QOS_CLASS_BACKGROUND,0),^{ [d synchronize]; }); [[NSNotificationCenter defaultCenter] postNotificationName:DGStateChanged object:nil];
 }
 static NSArray *DGVisibleLog(void){
     NSUserDefaults *d=[NSUserDefaults standardUserDefaults]; NSMutableArray *clean=[NSMutableArray array];
-    for(NSString *old in ([d arrayForKey:@"DGLog"] ?: @[])) if([old isKindOfClass:[NSString class]] && ![old containsString:@"0000+"] && ![old hasPrefix:@"0000"]) [clean addObject:old];
+    for(NSString *old in ([d arrayForKey:@"DGLog"] ?: @[])) if([old isKindOfClass:[NSString class]] && ![old containsString:@"+0000"] && ![old containsString:@"0000+"]) [clean addObject:old];
     [d setObject:clean forKey:@"DGLog"]; return clean;
 }
 static id DGWorkspace(void){ Class c=NSClassFromString(@"LSApplicationWorkspace"); if(!c)return nil; SEL s=NSSelectorFromString(@"defaultWorkspace"); if(![c respondsToSelector:s])return nil; return ((id(*)(id,SEL))objc_msgSend)(c,s); }
@@ -50,19 +50,19 @@ static id DGAppForBundle(NSString *bundleID){ for(id app in DGInstalledApplicati
 static NSString *DGBundlePathForBundle(NSString *bundleID){ id app=DGAppForBundle(bundleID); if(!app)return nil; for(NSString *key in @[@"bundleURL",@"bundlePath"]){ SEL sel=NSSelectorFromString(key); if([app respondsToSelector:sel]){ id value=((id(*)(id,SEL))objc_msgSend)(app,sel); NSString *path=[value respondsToSelector:@selector(path)]?[value path]:([value isKindOfClass:[NSString class]]?value:nil); if(path.length)return path; } } return nil; }
 static BOOL DGHasBundle(NSString *bundleID){ return DGAppForBundle(bundleID)!=nil; }
 static BOOL DGLaunchBundle(NSString *bundleID){ id ws=DGWorkspace(); SEL s=NSSelectorFromString(@"openApplicationWithBundleID:"); if(ws && [ws respondsToSelector:s]) return ((BOOL(*)(id,SEL,id))objc_msgSend)(ws,s,bundleID); return NO; }
-static NSString *DGHelperFingerprint(NSString *path);
-static NSString *DGExecutableFingerprint(NSString *bundleID){
-    NSString *path=DGBundlePathForBundle(bundleID); if(!path.length)return @"غير متاح"; NSDictionary *info=[NSDictionary dictionaryWithContentsOfFile:[path stringByAppendingPathComponent:@"Info.plist"]]; NSString *name=info[@"CFBundleExecutable"]; if(!name.length)return @"غير متاح"; return DGHelperFingerprint([path stringByAppendingPathComponent:name]);
-}
+static NSString *DGExecutableFingerprint(NSString *bundleID);
+static NSString *DGHelperQueryFingerprint(NSString *path);
+static NSString *DGLocalFingerprintPrefix(NSString *path);
+static BOOL DGHelperReachable(void);
+
 static NSDictionary *DGAppDetails(NSString *bundleID){
     NSString *path=DGBundlePathForBundle(bundleID); if(!path.length)return @{};
     NSDictionary *info=[NSDictionary dictionaryWithContentsOfFile:[path stringByAppendingPathComponent:@"Info.plist"]] ?: @{};
     NSString *exe=info[@"CFBundleExecutable"] ?: @"";
-    // Never enumerate an installed game recursively during launch; it can be many GB and trigger watchdog/memory pressure.
+    // Never enumerate an installed game recursively; it can be many GB and trigger watchdog/memory pressure.
     NSDictionary *rootAttrs=[[NSFileManager defaultManager]attributesOfItemAtPath:path error:nil];
     unsigned long long total=[rootAttrs fileSize];
-    NSString *fp=DGExecutableFingerprint(bundleID);
-    return @{ @"path":path, @"version":info[@"CFBundleShortVersionString"] ?: info[@"CFBundleVersion"] ?: @"غير معروف", @"build":info[@"CFBundleVersion"] ?: @"غير معروف", @"executable":exe, @"fingerprint":fp ?: @"غير متاح", @"size":@(total) };
+    return @{ @"path":path, @"version":info[@"CFBundleShortVersionString"] ?: info[@"CFBundleVersion"] ?: @"غير معروف", @"build":info[@"CFBundleVersion"] ?: @"غير معروف", @"executable":exe, @"size":@(total) };
 }
 static NSString *DGExpectedFingerprint(NSString *bundleID){ return [bundleID isEqualToString:@"com.garena.game.df"] ? @"175b75f14edcdd40" : @"غير محددة"; }
 static NSDictionary *DGHelperDiagnostics(void){
@@ -72,27 +72,77 @@ static NSDictionary *DGHelperDiagnostics(void){
     NSString *active=nil; for(NSString *candidate in paths) if([[NSFileManager defaultManager] fileExistsAtPath:candidate]) { active=candidate; break; }
     return @{ @"binary":@(binaryPath!=nil), @"socket":@(active!=nil), @"binaryPath":binaryPath ?: @"غير موجود", @"path":active ?: DGHelperSocketPath };
 }
-static NSString *DGHelperFingerprint(NSString *path){
-    if(!path.length)return @"غير متاح";
-    NSArray *socketPaths=@[DGHelperSocketPath,@"/private/var/jb/var/run/com.aosaid.deltaguard.helper.sock",@"/var/run/com.aosaid.deltaguard.helper.sock"];
-    int lastError=ENOENT;
-    for(NSString *socketPath in socketPaths){
-        int fd=socket(AF_UNIX,SOCK_STREAM,0); if(fd<0) break;
-        struct timeval tv={0,500000}; setsockopt(fd,SOL_SOCKET,SO_RCVTIMEO,&tv,sizeof(tv)); setsockopt(fd,SOL_SOCKET,SO_SNDTIMEO,&tv,sizeof(tv));
+
+static NSArray *DGSocketPaths(void){ return @[DGHelperSocketPath,@"/private/var/jb/var/run/com.aosaid.deltaguard.helper.sock",@"/var/run/com.aosaid.deltaguard.helper.sock"]; }
+
+static BOOL DGHelperReachable(void){
+    for(NSString *socketPath in DGSocketPaths()){
+        if(![[NSFileManager defaultManager] fileExistsAtPath:socketPath]) continue;
+        int fd=socket(AF_UNIX,SOCK_STREAM,0); if(fd<0) return NO;
+        struct timeval tv={2,0}; setsockopt(fd,SOL_SOCKET,SO_RCVTIMEO,&tv,sizeof(tv)); setsockopt(fd,SOL_SOCKET,SO_SNDTIMEO,&tv,sizeof(tv));
         struct sockaddr_un a; memset(&a,0,sizeof(a)); a.sun_family=AF_UNIX; strlcpy(a.sun_path,socketPath.UTF8String,sizeof(a.sun_path));
-        if(![[NSFileManager defaultManager] fileExistsAtPath:socketPath]){ close(fd); continue; }
-        if(connect(fd,(struct sockaddr *)&a,sizeof(a))!=0){ lastError=errno; close(fd); continue; }
-        NSString *request=[NSString stringWithFormat:@"HASH %@\n",path];
-        if(write(fd,request.UTF8String,[request lengthOfBytesUsingEncoding:NSUTF8StringEncoding])<=0){ close(fd); break; }
-        char response[256]={0}; ssize_t n=read(fd,response,sizeof(response)-1); close(fd); if(n<=0) break;
-        response[n]='\0'; if(strncmp(response,"OK ",3)==0){ char hash[17]={0}; if(sscanf(response+3,"%16s",hash)==1)return [NSString stringWithUTF8String:hash]; }
+        BOOL ok=connect(fd,(struct sockaddr *)&a,sizeof(a))==0; close(fd); if(ok) return YES;
     }
-    // The executable is already readable by the app in the installed bundle. Keep the feature usable
-    // when launchd has not started the optional helper, while reporting the helper state separately.
-    int input=open(path.fileSystemRepresentation,O_RDONLY); if(input>=0){ CC_SHA256_CTX ctx; CC_SHA256_Init(&ctx); size_t bufferSize=64*1024; unsigned char *buf=malloc(bufferSize); ssize_t got=0; if(buf){ while((got=read(input,buf,bufferSize))>0) CC_SHA256_Update(&ctx,buf,(CC_LONG)got); free(buf); } close(input); if(buf && got>=0){ unsigned char digest[CC_SHA256_DIGEST_LENGTH]; CC_SHA256_Final(digest,&ctx); char hex[17]={0}; for(int i=0;i<8;i++) snprintf(hex+i*2,3,"%02x",digest[i]); return [NSString stringWithFormat:@"%@ (محلي)", [NSString stringWithUTF8String:hex]]; } }
-    return [NSString stringWithFormat:@"Root helper: connect errno=%d (%s)",lastError,strerror(lastError)];
+    return NO;
 }
 
+static NSString *DGHelperQueryFingerprint(NSString *path){
+    if(!path.length) return nil;
+    for(NSString *socketPath in DGSocketPaths()){
+        if(![[NSFileManager defaultManager] fileExistsAtPath:socketPath]) continue;
+        int fd=socket(AF_UNIX,SOCK_STREAM,0); if(fd<0) continue;
+        // Hashing a multi-GB executable takes time; allow up to 5 minutes.
+        struct timeval tv={300,0}; setsockopt(fd,SOL_SOCKET,SO_RCVTIMEO,&tv,sizeof(tv)); setsockopt(fd,SOL_SOCKET,SO_SNDTIMEO,&tv,sizeof(tv));
+        struct sockaddr_un a; memset(&a,0,sizeof(a)); a.sun_family=AF_UNIX; strlcpy(a.sun_path,socketPath.UTF8String,sizeof(a.sun_path));
+        if(connect(fd,(struct sockaddr *)&a,sizeof(a))!=0){ close(fd); continue; }
+        NSString *request=[NSString stringWithFormat:@"HASH %@\n",path];
+        if(write(fd,request.UTF8String,[request lengthOfBytesUsingEncoding:NSUTF8StringEncoding])<=0){ close(fd); continue; }
+        char response[256]={0}; ssize_t n=read(fd,response,sizeof(response)-1); close(fd); if(n<=0) continue;
+        response[n]='\0'; if(strncmp(response,"OK ",3)==0){ char hash[17]={0}; if(sscanf(response+3,"%16s",hash)==1 && strlen(hash)>=16) return [NSString stringWithUTF8String:hash]; }
+    }
+    return nil;
+}
+
+static NSString *DGLocalFingerprintPrefix(NSString *path){
+    int input=open(path.fileSystemRepresentation,O_RDONLY); if(input<0) return nil;
+    CC_SHA256_CTX ctx; CC_SHA256_Init(&ctx); size_t bufferSize=256*1024; unsigned char *buf=malloc(bufferSize); ssize_t got=0;
+    if(buf){ while((got=read(input,buf,bufferSize))>0) CC_SHA256_Update(&ctx,buf,(CC_LONG)got); free(buf); }
+    close(input); if(!buf || got<0) return nil;
+    unsigned char digest[CC_SHA256_DIGEST_LENGTH]; CC_SHA256_Final(digest,&ctx);
+    char hex[17]={0}; for(int i=0;i<8;i++) snprintf(hex+i*2,3,"%02x",digest[i]); return [NSString stringWithUTF8String:hex];
+}
+
+static NSDictionary *DGFPCacheRead(NSString *path){
+    if(!path.length) return nil; NSDictionary *all=[[NSUserDefaults standardUserDefaults] dictionaryForKey:@"DGFP"]; NSDictionary *e=all[path];
+    if(![e isKindOfClass:[NSDictionary class]]) return nil;
+    struct stat st; if(stat(path.fileSystemRepresentation,&st)!=0) return nil;
+    if([e[@"mtime"] longLongValue]!=(long long)st.st_mtimespec.tv_sec || [e[@"size"] longLongValue]!=(long long)st.st_size) return nil;
+    NSString *h=e[@"hash"]; return ([h isKindOfClass:[NSString class]] && h.length)?e:nil;
+}
+static void DGFPCacheWrite(NSString *path,NSString *hash,BOOL viaHelper){
+    if(!path.length||!hash.length) return; struct stat st; if(stat(path.fileSystemRepresentation,&st)!=0) return;
+    NSMutableDictionary *all=[[[NSUserDefaults standardUserDefaults] dictionaryForKey:@"DGFP"] mutableCopy]; if(!all) all=[NSMutableDictionary new];
+    all[path]=@{@"hash":hash,@"mtime":@(st.st_mtimespec.tv_sec),@"size":@(st.st_size),@"viaHelper":@(viaHelper)};
+    [[NSUserDefaults standardUserDefaults] setObject:all forKey:@"DGFP"];
+}
+
+static NSString *DGExecutableFingerprint(NSString *bundleID){
+    NSString *path=DGBundlePathForBundle(bundleID); if(!path.length) return @"غير متاح";
+    NSDictionary *info=[NSDictionary dictionaryWithContentsOfFile:[path stringByAppendingPathComponent:@"Info.plist"]] ?: @{};
+    NSString *name=info[@"CFBundleExecutable"]; if(!name.length) return @"غير متاح";
+    NSString *full=[path stringByAppendingPathComponent:name];
+    BOOL helperUp=DGHelperReachable();
+    NSDictionary *cached=DGFPCacheRead(full);
+    if(cached && ([cached[@"viaHelper"] boolValue] || !helperUp)){
+        NSString *h=cached[@"hash"]; return [cached[@"viaHelper"] boolValue]?h:[h stringByAppendingString:@" (محلي)"];
+    }
+    if(helperUp){
+        NSString *h=DGHelperQueryFingerprint(full); if(h){ DGFPCacheWrite(full,h,YES); return h; }
+    }
+    NSString *local=DGLocalFingerprintPrefix(full); if(local){ DGFPCacheWrite(full,local,NO); return [local stringByAppendingString:@" (محلي)"]; }
+    if(cached){ NSString *h=cached[@"hash"]; return [cached[@"viaHelper"] boolValue]?h:[h stringByAppendingString:@" (محلي)"]; }
+    return @"غير متاح";
+}
 
 static pid_t DGPIDForBundle(NSString *bundleID){
     if(!bundleID.length)return 0; NSString *path=DGBundlePathForBundle(bundleID);
@@ -121,7 +171,7 @@ static NSDictionary *DGEnvironment(void){
 @implementation DGHomeViewController
 - (void)viewDidLoad{[super viewDidLoad];[self buildPage:@"حارس ألعاب دلتا" subtitle:@"نسخة iOS أصلية — إدارة وتشغيل ومراقبة فعلية"];
  UIView *c=[self card];UIStackView *s=[UIStackView new];s.axis=UILayoutConstraintAxisVertical;s.spacing=8;s.layoutMargins=UIEdgeInsetsMake(18,18,18,18);s.layoutMarginsRelativeArrangement=YES;[s addArrangedSubview:[self label:@"حالة البيئة" size:13 color:DGMuted()]];self.status=[self label:@"" size:17 color:DGText()];self.status.font=[UIFont boldSystemFontOfSize:17];[s addArrangedSubview:self.status];self.selected=[self label:@"" size:13 color:DGMuted()];[s addArrangedSubview:self.selected];[c addSubview:s];s.translatesAutoresizingMaskIntoConstraints=NO;[NSLayoutConstraint activateConstraints:@[[s.topAnchor constraintEqualToAnchor:c.topAnchor],[s.bottomAnchor constraintEqualToAnchor:c.bottomAnchor],[s.leadingAnchor constraintEqualToAnchor:c.leadingAnchor],[s.trailingAnchor constraintEqualToAnchor:c.trailingAnchor]]];[self.stack addArrangedSubview:c];
- UIStackView *actions=[UIStackView new];actions.axis=UILayoutConstraintAxisHorizontal;actions.spacing=10;actions.distribution=UIStackViewDistributionFillEqually;UIButton *refresh=[self button:@"فحص الآن"];UIButton *launch=[self button:@"فتح التطبيق"];[refresh addTarget:self action:@selector(refreshState) forControlEvents:UIControlEventTouchUpInside];[launch addTarget:self action:@selector(launchSelected) forControlEvents:UIControlEventTouchUpInside];[actions addArrangedSubview:refresh];[actions addArrangedSubview:launch];[self.stack addArrangedSubview:actions];
+ UIStackView *actions=[UIStackView new];actions.axis=UILayoutConstraintAxisHorizontal;actions.spacing=10;actions.distribution=UIStackViewDistributionFillEqually;UIButton *refresh=[self button:@"فحص الآن"];UIButton *launch=[self button:@"فتح اللعبة"];[refresh addTarget:self action:@selector(refreshState) forControlEvents:UIControlEventTouchUpInside];[launch addTarget:self action:@selector(launchSelected) forControlEvents:UIControlEventTouchUpInside];[actions addArrangedSubview:refresh];[actions addArrangedSubview:launch];[self.stack addArrangedSubview:actions];
  UIButton *floating=[self button:@"تشغيل الأداة العائمة داخل التطبيق"];[floating addTarget:self action:@selector(showFloating) forControlEvents:UIControlEventTouchUpInside];[self.stack addArrangedSubview:floating];
  UIView *logCard=[self card];UIStackView *ls=[UIStackView new];ls.axis=UILayoutConstraintAxisVertical;ls.spacing=8;ls.layoutMargins=UIEdgeInsetsMake(16,16,16,16);ls.layoutMarginsRelativeArrangement=YES;UILabel *lh=[self label:@"سجل التشغيل" size:14 color:DGText()];lh.font=[UIFont boldSystemFontOfSize:14];[ls addArrangedSubview:lh];self.log=[self label:@"" size:12 color:DGMuted()];self.log.font=[UIFont monospacedSystemFontOfSize:11 weight:UIFontWeightRegular];[ls addArrangedSubview:self.log];UIStackView *lr=[UIStackView new];lr.axis=UILayoutConstraintAxisHorizontal;UIButton *copy=[self button:@"نسخ السجل"];UIButton *clear=[self button:@"مسح السجل"];copy.titleLabel.font=clear.titleLabel.font=[UIFont systemFontOfSize:13];[copy addTarget:self action:@selector(copyLog) forControlEvents:UIControlEventTouchUpInside];[clear addTarget:self action:@selector(clearLog) forControlEvents:UIControlEventTouchUpInside];[lr addArrangedSubview:copy];[lr addArrangedSubview:clear];[ls addArrangedSubview:lr];[logCard addSubview:ls];ls.translatesAutoresizingMaskIntoConstraints=NO;[NSLayoutConstraint activateConstraints:@[[ls.topAnchor constraintEqualToAnchor:logCard.topAnchor],[ls.bottomAnchor constraintEqualToAnchor:logCard.bottomAnchor],[ls.leadingAnchor constraintEqualToAnchor:logCard.leadingAnchor],[ls.trailingAnchor constraintEqualToAnchor:logCard.trailingAnchor]]];[self.stack addArrangedSubview:logCard];self.status.text=@"جاهز — اضغط فحص الآن لبدء الفحص"; self.status.textColor=DGMuted(); NSArray *initialLog=DGVisibleLog(); self.log.text=initialLog.count?[initialLog componentsJoinedByString:@"\n"]:@"لا توجد أحداث بعد.";}
 - (void)refreshState{
@@ -135,13 +185,20 @@ static NSDictionary *DGEnvironment(void){
             @try {
                 NSDictionary *e=DGEnvironment(); NSString *server=DGSelectedServer(); BOOL installed=DGHasBundle(server);
                 if(!installed){ for(NSString *candidate in @[@"com.garena.game.df",@"com.proxima.dfm",@"com.tencent.tmgp.dfm"]){ if(DGHasBundle(candidate)){ server=candidate; [[NSUserDefaults standardUserDefaults]setObject:server forKey:@"DGSelectedServer"]; installed=YES; break; } } }
-                pid_t pid=installed?DGPIDForBundle(server):0; NSDictionary *details=installed?DGAppDetails(server):@{};
-                NSString *fingerprint=details[@"fingerprint"]?:@"غير متاح"; NSString *expected=DGExpectedFingerprint(server);
-                NSString *comparison=([fingerprint containsString:expected]&&! [expected isEqualToString:@"غير محددة"])?([fingerprint containsString:@"(محلي)"]?@"مطابقة محلية — helper غير متاح":@"مطابقة"):([fingerprint hasPrefix:@"Root helper"]?@"Root helper مطلوب":@"غير متحقق");
+                pid_t pid=installed?DGPIDForBundle(server):0;
+                dispatch_async(dispatch_get_main_queue(),^{
+                    if(!self.viewIfLoaded.window){ self.scanInFlight=NO; return; }
+                    self.status.text=[NSString stringWithFormat:@"Rootless: %@  |  UID: %@\nالخادم: %@\nالتطبيق: %@%@\nجاري حساب البصمة…",[e[@"rootless"]boolValue]?@"مكتشف":@"غير مكتشف",e[@"uid"],server,installed?@"مثبت":@"غير مثبت",pid?[NSString stringWithFormat:@" — يعمل PID %d",pid]:@" — غير مشغل"];
+                    self.status.textColor=DGMuted();
+                });
+                NSDictionary *details=installed?DGAppDetails(server):@{};
+                NSString *fingerprint=installed?DGExecutableFingerprint(server):@"غير متاح";
+                NSString *expected=DGExpectedFingerprint(server);
+                NSString *comparison=([fingerprint containsString:expected]&&![expected isEqualToString:@"غير محددة"])?([fingerprint containsString:@"(محلي)"]?@"مطابقة محلية — helper غير متاح":@"مطابقة"):([fingerprint hasPrefix:@"Root helper"]?@"Root helper مطلوب":@"غير متحقق");
                 dispatch_async(dispatch_get_main_queue(),^{
                     if(!self.viewIfLoaded.window){ self.scanInFlight=NO; return; }
                     self.status.text=[NSString stringWithFormat:@"Rootless: %@  |  UID: %@\nالخادم: %@\nالتطبيق: %@%@\nالإصدار: %@\nالملف التنفيذي: %@\nالبصمة: %@\nالمرجع: %@ — %@",[e[@"rootless"]boolValue]?@"مكتشف":@"غير مكتشف",e[@"uid"],server,installed?@"مثبت":@"غير مثبت",pid?[NSString stringWithFormat:@" — يعمل PID %d",pid]:@" — غير مشغل",details[@"version"]?:@"غير متاح",details[@"executable"]?:@"غير متاح",fingerprint,expected,comparison];
-                    self.status.textColor=([comparison isEqualToString:@"مطابقة"]||[comparison hasPrefix:@"مطابقة محلية"])?[UIColor systemGreenColor]:([fingerprint hasPrefix:@"Root helper"]?[UIColor systemRedColor]:[UIColor systemOrangeColor]);
+                    self.status.textColor=([comparison isEqualToString:@"مطابقة"]||[comparison hasPrefix:@"مطابقة محلية"])?[UIColor systemGreenColor]:[UIColor systemOrangeColor];
                     self.selected.text=[NSString stringWithFormat:@"iOS %@ — %@ — %@",e[@"os"],e[@"model"],[e[@"workspace"]boolValue]?@"كتالوج التطبيقات متاح":@"كتالوج التطبيقات غير متاح"];
                     NSArray *a=DGVisibleLog(); self.log.text=a.count?[a componentsJoinedByString:@"\n"]:@"لا توجد أحداث بعد."; self.scanInFlight=NO;
                 });
@@ -151,10 +208,10 @@ static NSDictionary *DGEnvironment(void){
         }
     });
 }
-- (void)launchSelected{NSString *bid=DGSelectedServer();DGLog([NSString stringWithFormat:@"طلب تشغيل %@",bid]);if(!DGLaunchBundle(bid)){UIAlertController *a=[UIAlertController alertControllerWithTitle:@"تعذر التشغيل" message:@"التطبيق غير مثبت أو رفض النظام فتحه." preferredStyle:UIAlertControllerStyleAlert];[a addAction:[UIAlertAction actionWithTitle:@"حسنًا" style:UIAlertActionStyleDefault handler:nil]];[self presentViewController:a animated:YES completion:nil];}}
+- (void)launchSelected{NSString *bid=DGSelectedServer();DGLog([NSString stringWithFormat:@"طلب فتح اللعبة %@",bid]);if(!DGLaunchBundle(bid)){UIAlertController *a=[UIAlertController alertControllerWithTitle:@"تعذر التشغيل" message:@"اللعبة غير مثبتة أو رفض النظام فتحها." preferredStyle:UIAlertControllerStyleAlert];[a addAction:[UIAlertAction actionWithTitle:@"حسنًا" style:UIAlertActionStyleDefault handler:nil]];[self presentViewController:a animated:YES completion:nil];}else{DGLog(@"تم إرسال طلب فتح اللعبة بنجاح");dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(3.5*NSEC_PER_SEC)),dispatch_get_main_queue(),^{ [self refreshState]; });}}
 - (void)copyLog{[UIPasteboard generalPasteboard].string=self.log.text;DGLog(@"تم نسخ السجل");}
 - (void)clearLog{[[NSUserDefaults standardUserDefaults]removeObjectForKey:@"DGLog"];DGLog(@"تم مسح السجل");[self refreshState];}
-- (void)showFloating{UIView *overlay=[UIView new];overlay.tag=913;overlay.backgroundColor=[DGSurface() colorWithAlphaComponent:.98];overlay.layer.cornerRadius=18;overlay.layer.borderWidth=1;overlay.layer.borderColor=[DGPrimary() colorWithAlphaComponent:.7].CGColor;overlay.translatesAutoresizingMaskIntoConstraints=NO;UILabel *t=[self label:@"أداة دلتا العائمة" size:17 color:DGText()];t.font=[UIFont boldSystemFontOfSize:17];UIButton *close=[self button:@"إغلاق"];UIButton *scan=[self button:@"فحص العملية"];UIButton *open=[self button:@"فتح التطبيق"];[close addTarget:self action:@selector(removeFloating:) forControlEvents:UIControlEventTouchUpInside];[scan addTarget:self action:@selector(refreshState) forControlEvents:UIControlEventTouchUpInside];[open addTarget:self action:@selector(launchSelected) forControlEvents:UIControlEventTouchUpInside];UIStackView *s=[UIStackView new];s.axis=UILayoutConstraintAxisVertical;s.spacing=10;s.layoutMargins=UIEdgeInsetsMake(16,16,16,16);s.layoutMarginsRelativeArrangement=YES;[s addArrangedSubview:t];[s addArrangedSubview:scan];[s addArrangedSubview:open];[s addArrangedSubview:close];[overlay addSubview:s];s.translatesAutoresizingMaskIntoConstraints=NO;[NSLayoutConstraint activateConstraints:@[[s.topAnchor constraintEqualToAnchor:overlay.topAnchor],[s.bottomAnchor constraintEqualToAnchor:overlay.bottomAnchor],[s.leadingAnchor constraintEqualToAnchor:overlay.leadingAnchor],[s.trailingAnchor constraintEqualToAnchor:overlay.trailingAnchor]]];[self.view addSubview:overlay];[NSLayoutConstraint activateConstraints:@[[overlay.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:22],[overlay.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor constant:-22],[overlay.bottomAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.bottomAnchor constant:-18]]];DGLog(@"تم فتح الأداة العائمة داخل DeltaGuard");}
+- (void)showFloating{UIView *overlay=[UIView new];overlay.tag=913;overlay.backgroundColor=[DGSurface() colorWithAlphaComponent:.98];overlay.layer.cornerRadius=18;overlay.layer.borderWidth=1;overlay.layer.borderColor=[DGPrimary() colorWithAlphaComponent:.7].CGColor;overlay.translatesAutoresizingMaskIntoConstraints=NO;UILabel *t=[self label:@"أداة دلتا العائمة" size:17 color:DGText()];t.font=[UIFont boldSystemFontOfSize:17];UIButton *close=[self button:@"إغلاق"];UIButton *scan=[self button:@"فحص العملية"];UIButton *open=[self button:@"فتح اللعبة"];[close addTarget:self action:@selector(removeFloating:) forControlEvents:UIControlEventTouchUpInside];[scan addTarget:self action:@selector(refreshState) forControlEvents:UIControlEventTouchUpInside];[open addTarget:self action:@selector(launchSelected) forControlEvents:UIControlEventTouchUpInside];UIStackView *s=[UIStackView new];s.axis=UILayoutConstraintAxisVertical;s.spacing=10;s.layoutMargins=UIEdgeInsetsMake(16,16,16,16);s.layoutMarginsRelativeArrangement=YES;[s addArrangedSubview:t];[s addArrangedSubview:scan];[s addArrangedSubview:open];[s addArrangedSubview:close];[overlay addSubview:s];s.translatesAutoresizingMaskIntoConstraints=NO;[NSLayoutConstraint activateConstraints:@[[s.topAnchor constraintEqualToAnchor:overlay.topAnchor],[s.bottomAnchor constraintEqualToAnchor:overlay.bottomAnchor],[s.leadingAnchor constraintEqualToAnchor:overlay.leadingAnchor],[s.trailingAnchor constraintEqualToAnchor:overlay.trailingAnchor]]];[self.view addSubview:overlay];[NSLayoutConstraint activateConstraints:@[[overlay.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:22],[overlay.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor constant:-22],[overlay.bottomAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.bottomAnchor constant:-18]]];DGLog(@"تم فتح الأداة العائمة داخل DeltaGuard");}
 - (void)removeFloating:(UIButton *)b{[b.superview.superview removeFromSuperview];DGLog(@"تم إغلاق الأداة العائمة");}
 @end
 
@@ -167,14 +224,15 @@ static NSDictionary *DGEnvironment(void){
 
 @interface DGServerViewController:DGBaseViewController@property(nonatomic,strong)UILabel *selected;@end
 @implementation DGServerViewController
-- (void)viewDidLoad{[super viewDidLoad];[self buildPage:@"اختيار الخادم" subtitle:@"يتحقق DeltaGuard من وجود التطبيق ويستطيع تشغيله فعليًا"];UIView *c=[self card];UIStackView *s=[UIStackView new];s.axis=UILayoutConstraintAxisVertical;s.spacing=8;s.layoutMargins=UIEdgeInsetsMake(8,0,8,0);s.layoutMarginsRelativeArrangement=YES;NSDictionary *servers=@{@"الخادم الصيني\ncom.tencent.tmgp.dfm":@"com.tencent.tmgp.dfm",@"الخادم الدولي\ncom.proxima.dfm":@"com.proxima.dfm",@"الخادم التايواني\ncom.garena.game.df":@"com.garena.game.df"};for(NSString *title in servers){UIButton *b=[self button:title];b.backgroundColor=UIColor.clearColor;[b setTitleColor:DGText() forState:UIControlStateNormal];b.contentHorizontalAlignment=UIControlContentHorizontalAlignmentRight;b.contentEdgeInsets=UIEdgeInsetsMake(15,20,15,20);b.accessibilityIdentifier=servers[title];[b addTarget:self action:@selector(selectServer:) forControlEvents:UIControlEventTouchUpInside];[s addArrangedSubview:b];} [c addSubview:s];s.translatesAutoresizingMaskIntoConstraints=NO;[NSLayoutConstraint activateConstraints:@[[s.topAnchor constraintEqualToAnchor:c.topAnchor],[s.bottomAnchor constraintEqualToAnchor:c.bottomAnchor],[s.leadingAnchor constraintEqualToAnchor:c.leadingAnchor],[s.trailingAnchor constraintEqualToAnchor:c.trailingAnchor]]];[self.stack addArrangedSubview:c];self.selected=[self label:@"" size:15 color:DGMuted()];[self.stack addArrangedSubview:self.selected];[self refresh];}
+- (void)viewDidLoad{[super viewDidLoad];[self buildPage:@"اختيار الخادم" subtitle:@"يتحقق DeltaGuard من وجود التطبيق ويستطيع تشغيله فعليًا"];UIView *c=[self card];UIStackView *s=[UIStackView new];s.axis=UILayoutConstraintAxisVertical;s.spacing=8;s.layoutMargins=UIEdgeInsetsMake(8,0,8,0);s.layoutMarginsRelativeArrangement=YES;NSDictionary *servers=@{@"الخادم الصيني\ncom.tencent.tmgp.dfm":@"com.tencent.tmgp.dfm",@"الخادم الدولي\ncom.proxima.dfm":@"com.proxima.dfm",@"الخادم التايواني\ncom.garena.game.df":@"com.garena.game.df"};for(NSString *title in servers){UIButton *b=[self button:title];b.backgroundColor=UIColor.clearColor;[b setTitleColor:DGText() forState:UIControlStateNormal];b.contentHorizontalAlignment=UIControlContentHorizontalAlignmentRight;b.contentEdgeInsets=UIEdgeInsetsMake(15,20,15,20);b.accessibilityIdentifier=servers[title];[b addTarget:self action:@selector(selectServer:) forControlEvents:UIControlEventTouchUpInside];[s addArrangedSubview:b];} [c addSubview:s];s.translatesAutoresizingMaskIntoConstraints=NO;[NSLayoutConstraint activateConstraints:@[[s.topAnchor constraintEqualToAnchor:c.topAnchor],[s.bottomAnchor constraintEqualToAnchor:c.bottomAnchor],[s.leadingAnchor constraintEqualToAnchor:c.leadingAnchor],[s.trailingAnchor constraintEqualToAnchor:c.trailingAnchor]]];[self.stack addArrangedSubview:c];self.selected=[self label:@"" size:15 color:DGMuted()];[self.stack addArrangedSubview:self.selected];UIButton *launchNow=[self button:@"🚀 فتح اللعبة الآن"];[launchNow addTarget:self action:@selector(launchServer) forControlEvents:UIControlEventTouchUpInside];[self.stack addArrangedSubview:launchNow];[self refresh];}
 - (void)selectServer:(UIButton *)b{[[NSUserDefaults standardUserDefaults]setObject:b.accessibilityIdentifier forKey:@"DGSelectedServer"];[[NSUserDefaults standardUserDefaults]synchronize];DGLog([NSString stringWithFormat:@"تم اختيار الخادم %@",b.accessibilityIdentifier]);[self refresh];}
 - (void)refresh{dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY,0),^{NSString *bid=DGSelectedServer();BOOL installed=DGHasBundle(bid);NSDictionary *d=installed?DGAppDetails(bid):@{};double gb=[d[@"size"] unsignedLongLongValue]/(1024.0*1024.0*1024.0);dispatch_async(dispatch_get_main_queue(),^{self.selected.text=installed?[NSString stringWithFormat:@"المحدد: %@\nالإصدار: %@\nالحجم: %.2f GB\nالمسار: %@",bid,d[@"version"] ?: @"غير معروف",gb,d[@"path"] ?: @"غير متاح"]:[NSString stringWithFormat:@"المحدد: %@\nالحالة: التطبيق غير مثبت على الجهاز",bid];self.selected.textColor=installed?[UIColor systemGreenColor]:[UIColor systemOrangeColor];});});}
+- (void)launchServer{NSString *bid=DGSelectedServer();DGLog([NSString stringWithFormat:@"طلب فتح اللعبة %@",bid]);if(!DGLaunchBundle(bid)){UIAlertController *a=[UIAlertController alertControllerWithTitle:@"تعذر التشغيل" message:@"اللعبة غير مثبتة أو رفض النظام فتحها." preferredStyle:UIAlertControllerStyleAlert];[a addAction:[UIAlertAction actionWithTitle:@"حسنًا" style:UIAlertActionStyleDefault handler:nil]];[self presentViewController:a animated:YES completion:nil];}else{DGLog(@"تم إرسال طلب فتح اللعبة بنجاح");}}
 @end
 
 @interface DGSettingsViewController:DGBaseViewController@property(nonatomic,strong)UISwitch *dark;@end
 @implementation DGSettingsViewController
-- (void)viewDidLoad{[super viewDidLoad];[self buildPage:@"الإعدادات" subtitle:@"إعدادات DeltaGuard الفعلية على iOS"];UIView *c=[self card];UIStackView *s=[UIStackView new];s.axis=UILayoutConstraintAxisVertical;s.spacing=8;s.layoutMargins=UIEdgeInsetsMake(14,18,14,18);s.layoutMarginsRelativeArrangement=YES;UIStackView *row=[UIStackView new];row.axis=UILayoutConstraintAxisHorizontal;UILabel *l=[self label:@"الوضع الداكن داخل التطبيق" size:16 color:DGText()];self.dark=[UISwitch new];self.dark.on=![[NSUserDefaults standardUserDefaults]objectForKey:@"DGDark"]||[[NSUserDefaults standardUserDefaults]boolForKey:@"DGDark"];[self.dark addTarget:self action:@selector(toggleDark:) forControlEvents:UIControlEventValueChanged];[row addArrangedSubview:l];[row addArrangedSubview:self.dark];[s addArrangedSubview:row];for(NSString *title in @[@"مسح سجل DeltaGuard",@"مسح كاش DeltaGuard",@"معلومات البيئة",@"التعليمات"]){UIButton *b=[self button:title];b.backgroundColor=UIColor.clearColor;[b setTitleColor:DGText() forState:UIControlStateNormal];b.contentHorizontalAlignment=UIControlContentHorizontalAlignmentRight;[b addTarget:self action:@selector(action:) forControlEvents:UIControlEventTouchUpInside];[s addArrangedSubview:b];}UILabel *v=[self label:@"الإصدار 0.2.8 — iOS native functional layer" size:13 color:DGMuted()];[s addArrangedSubview:v];[c addSubview:s];s.translatesAutoresizingMaskIntoConstraints=NO;[NSLayoutConstraint activateConstraints:@[[s.topAnchor constraintEqualToAnchor:c.topAnchor],[s.bottomAnchor constraintEqualToAnchor:c.bottomAnchor],[s.leadingAnchor constraintEqualToAnchor:c.leadingAnchor],[s.trailingAnchor constraintEqualToAnchor:c.trailingAnchor]]];[self.stack addArrangedSubview:c];}
+- (void)viewDidLoad{[super viewDidLoad];[self buildPage:@"الإعدادات" subtitle:@"إعدادات DeltaGuard الفعلية على iOS"];UIView *c=[self card];UIStackView *s=[UIStackView new];s.axis=UILayoutConstraintAxisVertical;s.spacing=8;s.layoutMargins=UIEdgeInsetsMake(14,18,14,18);s.layoutMarginsRelativeArrangement=YES;UIStackView *row=[UIStackView new];row.axis=UILayoutConstraintAxisHorizontal;UILabel *l=[self label:@"الوضع الداكن داخل التطبيق" size:16 color:DGText()];self.dark=[UISwitch new];self.dark.on=![[NSUserDefaults standardUserDefaults]objectForKey:@"DGDark"]||[[NSUserDefaults standardUserDefaults]boolForKey:@"DGDark"];[self.dark addTarget:self action:@selector(toggleDark:) forControlEvents:UIControlEventValueChanged];[row addArrangedSubview:l];[row addArrangedSubview:self.dark];[s addArrangedSubview:row];for(NSString *title in @[@"مسح سجل DeltaGuard",@"مسح كاش DeltaGuard",@"معلومات البيئة",@"التعليمات"]){UIButton *b=[self button:title];b.backgroundColor=UIColor.clearColor;[b setTitleColor:DGText() forState:UIControlStateNormal];b.contentHorizontalAlignment=UIControlContentHorizontalAlignmentRight;[b addTarget:self action:@selector(action:) forControlEvents:UIControlEventTouchUpInside];[s addArrangedSubview:b];}UILabel *v=[self label:@"الإصدار 0.3.3 — iOS native functional layer" size:13 color:DGMuted()];[s addArrangedSubview:v];[c addSubview:s];s.translatesAutoresizingMaskIntoConstraints=NO;[NSLayoutConstraint activateConstraints:@[[s.topAnchor constraintEqualToAnchor:c.topAnchor],[s.bottomAnchor constraintEqualToAnchor:c.bottomAnchor],[s.leadingAnchor constraintEqualToAnchor:c.leadingAnchor],[s.trailingAnchor constraintEqualToAnchor:c.trailingAnchor]]];[self.stack addArrangedSubview:c];}
 - (void)toggleDark:(UISwitch *)sw{[[NSUserDefaults standardUserDefaults]setBool:sw.isOn forKey:@"DGDark"];DGLog(sw.isOn?@"تم تفعيل الوضع الداكن":@"تم تعطيل الوضع الداكن");}
 - (void)action:(UIButton *)b{NSString *t=b.titleLabel.text;if([t containsString:@"السجل"]){[[NSUserDefaults standardUserDefaults]removeObjectForKey:@"DGLog"];DGLog(@"تم مسح سجل DeltaGuard");}else if([t containsString:@"كاش"]){NSString *p=NSSearchPathForDirectoriesInDomains(NSCachesDirectory,NSUserDomainMask,YES).firstObject;for(NSString *f in [[NSFileManager defaultManager]contentsOfDirectoryAtPath:p error:nil])[[NSFileManager defaultManager]removeItemAtPath:[p stringByAppendingPathComponent:f] error:nil];DGLog(@"تم مسح كاش DeltaGuard");}else{NSString *msg=[t containsString:@"البيئة"]?[[DGEnvironment() description] stringByReplacingOccurrencesOfString:@";" withString:@"\n"]:@"هذه النسخة تستخدم واجهات iOS أصلية لفحص Rootless والتطبيقات المثبتة وتشغيل الخادم ومراقبة PID. لا يتم الادعاء بتنفيذ حقن أو تعديل ذاكرة دون محرك مخول.";UIAlertController *a=[UIAlertController alertControllerWithTitle:t message:msg preferredStyle:UIAlertControllerStyleAlert];[a addAction:[UIAlertAction actionWithTitle:@"حسنًا" style:UIAlertActionStyleDefault handler:nil]];[self presentViewController:a animated:YES completion:nil];}}
 @end
