@@ -81,7 +81,7 @@ static NSString *DGHelperFingerprint(NSString *path){
     }
     // The executable is already readable by the app in the installed bundle. Keep the feature usable
     // when launchd has not started the optional helper, while reporting the helper state separately.
-    int input=open(path,O_RDONLY); if(input>=0){ CC_SHA256_CTX ctx; CC_SHA256_Init(&ctx); unsigned char buf[1024*1024]; ssize_t got; while((got=read(input,buf,sizeof(buf)))>0) CC_SHA256_Update(&ctx,buf,(CC_LONG)got); close(input); if(got>=0){ unsigned char digest[CC_SHA256_DIGEST_LENGTH]; CC_SHA256_Final(digest,&ctx); char hex[17]={0}; for(int i=0;i<8;i++) snprintf(hex+i*2,3,"%02x",digest[i]); return [NSString stringWithFormat:@"%@ (محلي)", [NSString stringWithUTF8String:hex]]; } }
+    int input=open(path.fileSystemRepresentation,O_RDONLY); if(input>=0){ CC_SHA256_CTX ctx; CC_SHA256_Init(&ctx); unsigned char buf[1024*1024]; ssize_t got; while((got=read(input,buf,sizeof(buf)))>0) CC_SHA256_Update(&ctx,buf,(CC_LONG)got); close(input); if(got>=0){ unsigned char digest[CC_SHA256_DIGEST_LENGTH]; CC_SHA256_Final(digest,&ctx); char hex[17]={0}; for(int i=0;i<8;i++) snprintf(hex+i*2,3,"%02x",digest[i]); return [NSString stringWithFormat:@"%@ (محلي)", [NSString stringWithUTF8String:hex]]; } }
     return [NSString stringWithFormat:@"Root helper: connect errno=%d (%s)",lastError,strerror(lastError)];
 }
 
