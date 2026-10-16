@@ -42,3 +42,8 @@ make package THEOS_PACKAGE_SCHEME=rootless FINALPACKAGE=1
 - حفظ الحالة عبر NSUserDefaults.
 - ضبط CADisplayLink وUIScreen عبر swizzling عند الحقن.
 - عرض حالة 90 FPS داخل عداد الإحصاءات.
+
+## 0.3.8
+- إصلاح نافذة الواجهة العائمة باستخدام Pass-Through hitTest.
+- تمرير اللمسات غير الموجهة للزر أو اللوحة إلى اللعبة.
+- الحفاظ على زر 90 FPS والوظائف السابقة.
