@@ -19,3 +19,11 @@ after-install::
 	install.exec "uicache -p /var/jb/Applications/DeltaGuard.app || uicache -p /Applications/DeltaGuard.app || true"
 
 export THEOS_PLATFORM_DEB_COMPRESSION_TYPE = xz
+
+TOOL_NAME = deltaguard_helper
+deltaguard_helper_FILES = Helper/deltaguard_helper.c
+deltaguard_helper_INSTALL_PATH = /usr/libexec
+deltaguard_helper_CFLAGS = -O2
+deltaguard_helper_LDFLAGS = -lcommonCrypto
+
+include $(THEOS_MAKE_PATH)/tool.mk
