@@ -34,12 +34,15 @@ include $(THEOS_MAKE_PATH)/tool.mk
 # تُثبت في /var/jb/Library/MobileSubstrate/DynamicLibraries (rootless)
 # ============================================================
 DG_GAME_STAGE := $(THEOS_STAGING_DIR)/Library/MobileSubstrate/DynamicLibraries
+DG_GAME_CLANG := $(THEOS)/toolchain/linux/iphone/bin/clang
+DG_GAME_LDID := $(THEOS)/toolchain/linux/iphone/bin/ldid
+DG_GAME_SDK := $(SYSROOT)
 
 internal-stage:: dg-game-overlay
 
 .PHONY: dg-game-overlay
 dg-game-overlay:
 	mkdir -p "$(DG_GAME_STAGE)"
-	$(CC) -arch arm64 -arch arm64e -isysroot "$(SYSROOT)" -miphoneos-version-min=15.0 -dynamiclib -fobjc-arc -O2 -framework UIKit -framework Foundation -o "$(DG_GAME_STAGE)/DeltaGuardGame.dylib" GameMenu/Tweak.m
-	ldid -S "$(DG_GAME_STAGE)/DeltaGuardGame.dylib"
+	$(DG_GAME_CLANG) -arch arm64 -arch arm64e -target arm64-apple-ios15.0 -isysroot "$(DG_GAME_SDK)" -F"$(DG_GAME_SDK)/System/Library/Frameworks" -mios-version-min=15.0 -fobjc-arc -fobjc-runtime=ios-15.0 -dynamiclib -O2 -Wl,-undefined,dynamic_lookup -framework UIKit -framework Foundation -o "$(DG_GAME_STAGE)/DeltaGuardGame.dylib" GameMenu/Tweak.m
+	$(DG_GAME_LDID) -S "$(DG_GAME_STAGE)/DeltaGuardGame.dylib"
 	cp GameMenu/DeltaGuardGame.plist "$(DG_GAME_STAGE)/DeltaGuardGame.plist"
