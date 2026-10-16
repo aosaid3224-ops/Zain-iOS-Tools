@@ -1,0 +1,3 @@
+#!/bin/sh
+/var/jb/usr/bin/launchctl bootout system/com.aosaid.deltaguard.helper 2>/dev/null || true
+exit 0
