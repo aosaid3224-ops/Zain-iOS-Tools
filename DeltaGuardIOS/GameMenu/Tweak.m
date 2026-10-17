@@ -775,26 +775,39 @@ static FILE *DGOpenUE4Log(void){
     return fopen([path UTF8String],"w");
 }
 
-static int DGTryLayout(const uint8_t *buf, uint64_t q, uint64_t *objectsOut,
-                       uint32_t *numOut, uint32_t *maxOut, uint32_t *ncOut, uint32_t *mcOut){
-    uint64_t objects; uint32_t v10,v14,v18,v1c;
-    memcpy(&objects,buf+q,8);
-    memcpy(&v10,buf+q+16,4); memcpy(&v14,buf+q+20,4);
-    memcpy(&v18,buf+q+24,4); memcpy(&v1c,buf+q+28,4);
-    if(!objects||objects%8) return 0;
-    /* تخطيط A (4.26): +0x10=Max +0x14=Num +0x18=MaxChunks +0x1C=NumChunks */
-    if(v10>=0x40000&&v10<=0x10000000&&v14>=100&&v14<v10&&v18>=8&&v18<=65536&&v1c>=1&&v1c<=v18&&(v10%v18)==0){
-        uint32_t per=v10/v18; if(per>=128&&per<=65536){
-            *objectsOut=objects;*numOut=v14;*maxOut=v10;*mcOut=v18;*ncOut=v1c; return 1;
+static uint64_t *DGRegions=0; static uint32_t DGRegionCount=0;
+static void DGCollectRegions(void){
+    if(DGRegions) return;
+    DGRegions=(uint64_t*)malloc(sizeof(uint64_t)*2*8192);
+    mach_vm_address_t addr=0x100000000;
+    while(DGRegionCount<8192){
+        mach_vm_size_t size=0; vm_region_basic_info_data_64_t info;
+        mach_msg_type_number_t cnt=VM_REGION_BASIC_INFO_COUNT_64; mach_port_t obj=MACH_PORT_NULL;
+        if(mach_vm_region(mach_task_self(),&addr,&size,VM_REGION_BASIC_INFO_64,(vm_region_info_t)&info,&cnt,&obj)!=KERN_SUCCESS) break;
+        if(obj!=MACH_PORT_NULL) mach_port_deallocate(mach_task_self(),obj);
+        if((info.protection&VM_PROT_READ)&&size>0){
+            DGRegions[DGRegionCount*2]=(uint64_t)addr;
+            DGRegions[DGRegionCount*2+1]=(uint64_t)addr+size;
+            DGRegionCount++;
         }
+        addr+=size;
+        if(addr<0x100000000) break;
     }
-    /* تخطيط B (UE5-style): +0x10=Num +0x14=Max +0x18=MaxChunks +0x1C=NumChunks */
-    if(v14>=0x40000&&v14<=0x10000000&&v10>=100&&v10<v14&&v18>=8&&v18<=65536&&v1c>=1&&v1c<=v18&&(v14%v18)==0){
-        uint32_t per=v14/v18; if(per>=128&&per<=65536){
-            *objectsOut=objects;*numOut=v10;*maxOut=v14;*mcOut=v18;*ncOut=v1c; return 2;
-        }
-    }
-    return 0;
+}
+static BOOL DGInRegions(uint64_t p){
+    if(!DGRegionCount||p<0x1000) return NO;
+    uint32_t lo=0,hi=DGRegionCount;
+    while(lo<hi){ uint32_t mid=(lo+hi)>>1; if(p<DGRegions[mid*2]) hi=mid; else lo=mid+1; }
+    if(lo==0) return NO;
+    return p<DGRegions[(lo-1)*2+1];
+}
+static BOOL DGObjOk(uint64_t item,uint64_t *objOut){
+    uint64_t o=0,v=0;
+    if(!DGReadQ(item,&o)||!DGInRegions(o)||(o&7)) return NO;
+    if(!DGReadQ(o,&v)) return NO;
+    if(!(DGGameTextLo<=v&&v<DGGameTextHi)) return NO;
+    if(objOut) *objOut=o;
+    return YES;
 }
 
 static void DGUE4Scan(void){
@@ -805,63 +818,70 @@ static void DGUE4Scan(void){
     if(now-lastTry<30.0) return;
     lastTry=now;
     DGUE4ScanCount++;
-    snprintf(DGUE4Stat,sizeof(DGUE4Stat),"محاولة %d: يفحص الآن...",DGUE4ScanCount);
+    snprintf(DGUE4Stat,sizeof(DGUE4Stat),"محاولة %d: فحص جدول الشانكات...",DGUE4ScanCount);
     DGInitGameRanges();
+    DGCollectRegions();
     NSString *outp=[NSTemporaryDirectory() stringByAppendingPathComponent:@"deltaguard_ue4.txt"];
     FILE *dbg=fopen([outp UTF8String],"w");
     #define DLOG(...) do{ if(dbg){fprintf(__VA_ARGS__);fflush(dbg);} }while(0)
-    DLOG(dbg,"scan v0.7.4 start data=0x%llx-0x%llx text=0x%llx-0x%llx\n",
-        (unsigned long long)DGGameDataLo,(unsigned long long)DGGameDataHi,
+    DLOG(dbg,"scan v0.7.6 chunk-table regions=%u data=0x%llx-0x%llx text=0x%llx-0x%llx\n",
+        DGRegionCount,(unsigned long long)DGGameDataLo,(unsigned long long)DGGameDataHi,
         (unsigned long long)DGGameTextLo,(unsigned long long)DGGameTextHi);
-    if(!DGGameTextLo||!DGGameDataLo){
-        snprintf(DGUE4Stat,sizeof(DGUE4Stat),"محاولة %d: يفحص الآن...",DGUE4ScanCount);
-        DLOG(dbg,"FAIL: game ranges\n");
-        if(dbg)fclose(dbg);
-        return;
-    }
-    int nearMiss=0, verified=0;
+    if(!DGGameTextLo){ DLOG(dbg,"FAIL ranges\n"); if(dbg)fclose(dbg); return; }
+    int cheapHits=0, verified=0;
     uint64_t cursor=DGGameDataLo;
     while(cursor<DGGameDataHi){
         uint64_t want=DGGameDataHi-cursor; if(want>33554432) want=33554432;
         uint64_t got=0;
         uint8_t *buf=DGSafeRead(cursor,want,&got);
-        if(!buf){ DLOG(dbg,"read fail @0x%llx\n",(unsigned long long)cursor); cursor+=want; continue; }
-        uint64_t lim=got>=32?got-32:0;
+        if(!buf){ cursor+=want; continue; }
+        uint64_t lim=got-24;
         for(uint64_t q=0;q<lim;q+=8){
-            uint64_t objects; uint32_t num,max,nc,mc;
-            int lay=DGTryLayout(buf,q,&objects,&num,&max,&nc,&mc);
-            if(!lay) continue;
-            if(!DGPtrMapped(objects)) continue;
-            int score=DGVerifyUObjectChain(objects,nc);
-            if(score>=3){
-                found=YES; DGUE4FoundFlag=YES;
-                snprintf(DGUE4Stat,sizeof(DGUE4Stat),"تم العثور: GUObjectArray @ 0x%llx (layout %c) - يمكنك الخروج",(unsigned long long)(cursor+q),lay==1?'A':'B');
-                snprintf(DGUE4FoundAddr,sizeof(DGUE4FoundAddr),"0x%llx",(unsigned long long)(cursor+q));
-                dispatch_async(dispatch_get_main_queue(),^{ DGHaptic(); DGHaptic(); });
-                DLOG(dbg,"FOUND layout=%c\n",lay==1?'A':'B');
-                DLOG(dbg,"GUObjectArray @ 0x%llx\n",(unsigned long long)(cursor+q));
-                DLOG(dbg,"NumElements=%u MaxElements=%u NumChunks=%u MaxChunks=%u\n",num,max,nc,mc);
-                DLOG(dbg,"verifyScore=%d\n",score);
-                if(dbg)fclose(dbg);
-                DGFreeRead(buf,got);
-                return;
+            uint64_t table; memcpy(&table,buf+q,8);
+            if(!table||(table&7)||!DGInRegions(table)) continue;
+            uint64_t c0=0,c1=0,c2=0;
+            if(!DGReadQ(table,&c0)||!DGInRegions(c0)) continue;
+            if(!DGReadQ(table+8,&c1)||!DGInRegions(c1)) continue;
+            long long stride=(long long)(c1-c0);
+            if(stride<0x8000||stride>0x800000) continue;
+            if(DGReadQ(table+16,&c2)&&DGInRegions(c2)){
+                long long s2=(long long)(c2-c1);
+                if(s2<0x8000||s2>0x800000||s2<stride-0x4000||s2>stride+0x4000) continue;
             }
-            verified++;
-            /* عينة Near-Miss: تخطيط يطابق لكن السلسلة فشلت */
-            if(nearMiss<10){
-                DLOG(dbg,"NEAR-MISS @ 0x%llx layout=%c num=%u max=%u score=%d raw=",
-                    (unsigned long long)(cursor+q),lay==1?'A':'B',num,max,score);
-                for(int k=0;k<32;k++) DLOG(dbg,"%02x",buf[q+k]);
+            cheapHits++;
+            int score=0; uint64_t sample=0;
+            if(DGObjOk(c0,&sample)) score++;
+            if(DGObjOk(c0+0x18,0)) score++;
+            if(DGObjOk(c1,&sample)) score++;
+            if(score>=2){
+                verified++;
+                /* اقرأ ترويسة البنية قبل الجدول */
+                uint8_t hdr[96]; uint64_t hg=0;
+                uint8_t *hb=DGSafeRead(table-96>0x1000?table-96:0x1000,96,&hg);
+                if(hb){ memcpy(hdr,hb,96); DGFreeRead(hb,hg); } else memset(hdr,0,96);
+                DLOG(dbg,"TABLE @ 0x%llx stride=0x%llx score=%d header96=",
+                    (unsigned long long)table,(unsigned long long)stride,score);
+                for(int k=0;k<96;k++) DLOG(dbg,"%02x",hdr[k]);
                 DLOG(dbg,"\n");
-                nearMiss++;
+                if(verified>=3||score>=3){
+                    found=YES; DGUE4FoundFlag=YES;
+                    snprintf(DGUE4Stat,sizeof(DGUE4Stat),"تم: جدول الشانكات @ 0x%llx — يمكنك الخروج",(unsigned long long)table);
+                    snprintf(DGUE4FoundAddr,sizeof(DGUE4FoundAddr),"0x%llx",(unsigned long long)table);
+                    dispatch_async(dispatch_get_main_queue(),^{ DGHaptic(); DGHaptic(); });
+                    DLOG(dbg,"VERIFIED TABLE @ 0x%llx\n",(unsigned long long)table);
+                    DGFreeRead(buf,got);
+                    if(dbg)fclose(dbg);
+                    #undef DLOG
+                    return;
+                }
             }
         }
         DGFreeRead(buf,got);
         cursor+=got?got:want;
         if(!got) cursor+=want;
     }
-    if(!DGUE4FoundFlag) snprintf(DGUE4Stat,sizeof(DGUE4Stat),"لم يجد بعد (محاولة %d) - يعيد خلال 30 ثانية | NEAR-MISS: %d",DGUE4ScanCount,nearMiss);
-    DLOG(dbg,"END: layoutMatches=%d nearMissSamples=%d\n",verified,nearMiss);
+    if(!DGUE4FoundFlag) snprintf(DGUE4Stat,sizeof(DGUE4Stat),"لم يجد (محاولة %d) — cheap=%d verified=%d | يعيد خلال 30ث",DGUE4ScanCount,cheapHits,verified);
+    DLOG(dbg,"END cheap=%d verified=%d\n",cheapHits,verified);
     if(dbg)fclose(dbg);
     #undef DLOG
 }
