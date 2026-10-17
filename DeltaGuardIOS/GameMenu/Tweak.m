@@ -729,7 +729,7 @@ static int DGVerifyUObjectChain(uint64_t objectsPtr, uint32_t numChunks){
         uint64_t chunk; memcpy(&chunk,table+c*8,8);
         if(!DGPtrMapped(chunk)) continue;
         for(int k=0;k<2;k++){
-            uint64_t item=chunk+(uint64_t)k*0x20;
+            uint64_t item=chunk+(uint64_t)k*0x18;
             uint64_t obj=0; if(!DGReadQ(item,&obj)) continue;
             if(obj<0x100000000||obj%8) continue;
             uint64_t vtab=0; if(!DGReadQ(obj,&vtab)) continue;
@@ -749,61 +749,52 @@ static FILE *DGOpenUE4Log(void){
 }
 
 static void DGUE4Scan(void){
-    static BOOL tried=NO; if(tried) return;
+    static BOOL tried=NO; if(tried) return; tried=YES;
     DGInitGameRanges();
-    if(!DGGameTextLo) return;
-    tried=YES;
-    vm_address_t addr=(vm_address_t)0x100000000ULL;
-    for(;;){
-        vm_size_t size=0; vm_region_basic_info_data_64_t info;
-        mach_msg_type_number_t cnt=VM_REGION_BASIC_INFO_COUNT_64; mach_port_t obj=MACH_PORT_NULL;
-        kern_return_t kr=vm_region_64(mach_task_self(),&addr,&size,VM_REGION_BASIC_INFO_64,(vm_region_info_t)&info,&cnt,&obj);
-        if(kr!=KERN_SUCCESS) break;
-        if(obj!=MACH_PORT_NULL) mach_port_deallocate(mach_task_self(),obj);
-        if((info.protection&VM_PROT_READ) && size>0x1000){
-            uint64_t off=0;
-            while(off+32<=size){
-                uint64_t want=size-off; if(want>33554432) want=33554432;
-                uint64_t got=0;
-                uint8_t *buf=DGSafeRead((uint64_t)addr+off,want,&got);
-                if(!buf) break;
-                uint64_t lim=got-32;
-                for(uint64_t q=0;q<lim;q+=8){
-                    uint64_t objects, pre; uint32_t mx,nm,mc,nc;
-                    memcpy(&objects,buf+q,8); memcpy(&pre,buf+q+8,8);
-                    memcpy(&mx,buf+q+16,4); memcpy(&nm,buf+q+20,4);
-                    memcpy(&mc,buf+q+24,4); memcpy(&nc,buf+q+28,4);
-                    if(!objects || objects%8) continue;
-                    if(mx<0x100000||mx>0x8000000) continue;
-                    if(nm<1000||nm>=mx) continue;
-                    if(mc<16||mc>65536||nc<1||nc>mc) continue;
-                    if(mx%mc) continue;
-                    uint32_t per=mx/mc; if(per<256||per>65536) continue;
-                    if(!DGPtrMapped(objects)) continue;
-                    int score=DGVerifyUObjectChain(objects,nc);
-                    if(score>=4){
-                        FILE *f=DGOpenUE4Log();
-                        if(f){
-                            fprintf(f,"GUObjectArray @ 0x%llx\n",(unsigned long long)(addr+off+q));
-                            fprintf(f,"NumElements=%u MaxElements=%u NumChunks=%u MaxChunks=%u perChunk=%u\n",nm,mx,nc,mc,per);
-                            fprintf(f,"verifyScore=%d (min 4 required)\n",score);
-                            fprintf(f,"gameText=0x%llx-0x%llx\n",(unsigned long long)DGGameTextLo,(unsigned long long)DGGameTextHi);
-                            fclose(f);
-                        }
-                        DGFreeRead(buf,got);
-                        return;
-                    }
+    NSString *outp=[NSTemporaryDirectory() stringByAppendingPathComponent:@"deltaguard_ue4.txt"];
+    FILE *dbg=fopen([outp UTF8String],"w");
+    if(dbg){ fprintf(dbg,"scan start text=0x%llx-0x%llx data=0x%llx-0x%llx\n",
+        (unsigned long long)DGGameTextLo,(unsigned long long)DGGameTextHi,
+        (unsigned long long)DGGameDataLo,(unsigned long long)DGGameDataHi); fflush(dbg); }
+    if(!DGGameTextLo||!DGGameDataLo){ if(dbg){fprintf(dbg,"FAIL: game ranges\n");fclose(dbg);} return; }
+    /* نفحص __DATA اللعبة فقط (81MB) — ثواني */
+    uint64_t cursor=DGGameDataLo;
+    while(cursor<DGGameDataHi){
+        uint64_t want=DGGameDataHi-cursor; if(want>33554432) want=33554432;
+        uint64_t got=0;
+        uint8_t *buf=DGSafeRead(cursor,want,&got);
+        if(!buf){ if(dbg){fprintf(dbg,"read fail @0x%llx\n",(unsigned long long)cursor);fflush(dbg);} cursor+=want; continue; }
+        if(dbg){ fprintf(dbg,"chunk @0x%llx (%llu MB)\n",(unsigned long long)cursor,got/1048576); fflush(dbg); }
+        uint64_t lim=got-32;
+        for(uint64_t q=0;q<lim;q+=8){
+            uint64_t objects; uint32_t mx,nm,mc,nc;
+            memcpy(&objects,buf+q,8);
+            memcpy(&mx,buf+q+16,4); memcpy(&nm,buf+q+20,4);
+            memcpy(&mc,buf+q+24,4); memcpy(&nc,buf+q+28,4);
+            if(!objects || objects%8) continue;
+            if(mx<0x40000||mx>0x10000000) continue;
+            if(nm<100||nm>=mx) continue;
+            if(mc<8||mc>65536||nc<1||nc>mc) continue;
+            if(mx%mc) continue;
+            uint32_t per=mx/mc; if(per<128||per>65536) continue;
+            if(!DGPtrMapped(objects)) continue;
+            int score=DGVerifyUObjectChain(objects,nc);
+            if(score>=3){
+                if(dbg){
+                    fprintf(dbg,"GUObjectArray @ 0x%llx\n",(unsigned long long)(cursor+q));
+                    fprintf(dbg,"NumElements=%u MaxElements=%u NumChunks=%u MaxChunks=%u perChunk=%u\n",nm,mx,nc,mc,per);
+                    fprintf(dbg,"verifyScore=%d\n",score);
+                    fclose(dbg);
                 }
                 DGFreeRead(buf,got);
-                off+=got?got:want;
-                if(!got) break;
+                return;
             }
         }
-        addr+=size;
-        if(addr<0x100000000) break;
+        DGFreeRead(buf,got);
+        cursor+=got?got:want;
+        if(!got) cursor+=want;
     }
-    FILE *f=DGOpenUE4Log();
-    if(f){ fprintf(f,"GUObjectArray NOT FOUND\n"); fclose(f); }
+    if(dbg){ fprintf(dbg,"GUObjectArray NOT FOUND in game __DATA\n"); fclose(dbg); }
 }
 
 /* بدائل يدوية إذا غابت الدوال عن التصدير */
