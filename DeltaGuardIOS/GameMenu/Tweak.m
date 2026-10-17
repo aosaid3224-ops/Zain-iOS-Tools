@@ -838,6 +838,83 @@ static int DGScoreChunk(uint64_t chunk,uint32_t *strideOut){
     return 0;
 }
 
+static NSDictionary *DGScanCfg=nil;
+static void DGLoadScanCfg(void){
+    if(DGScanCfg) return;
+    @try{
+        NSURL *u=[NSURL URLWithString:@"https://raw.githubusercontent.com/aosaid3224-ops/Zain-iOS-Tools/main/DeltaGuardIOS/Scripts/scan_config.json"];
+        NSData *d=[NSData dataWithContentsOfURL:u options:0 error:nil];
+        if(d){ id j=[NSJSONSerialization JSONObjectWithData:d options:0 error:nil];
+            if([j isKindOfClass:[NSDictionary class]]) DGScanCfg=j; }
+    }@catch(NSException*){}
+    if(!DGScanCfg) DGScanCfg=@{};
+}
+static BOOL DGCfgBool(NSString *k,BOOL d){ id v=DGScanCfg[k]; return v?[v boolValue]:d; }
+
+/* مسح heap مباشر عن بلوكات الأسماء (None + كثافة) — ما نحتاج مؤشرات البحث */
+static int DGFindNameBlocksHeap(FILE *dbg){
+    int blocks=0, regions=0, noneHits=0;
+    for(uint32_t ri=0; ri<DGRegionCount && blocks<8; ri++){
+        uint64_t lo=DGRegions[ri*2], hi=DGRegions[ri*2+1];
+        uint64_t sz=hi-lo;
+        if(sz<0x8000 || sz>0x4000000ULL) continue;
+        if(DGGameTextLo && lo>=DGGameTextLo && lo<DGGameTextHi) continue; /* لا كود */
+        regions++;
+        uint64_t off=0;
+        while(off+2100<sz && blocks<8){
+            uint64_t want=sz-off; if(want>33554432) want=33554432;
+            uint64_t got=0;
+            uint8_t *buf=DGSafeRead(lo+off,want,&got);
+            if(!buf) break;
+            for(uint64_t q=2;q+2100<got;q++){
+                if(buf[q]=='N'&&buf[q+1]=='o'&&buf[q+2]=='n'&&buf[q+3]=='e'&&buf[q+4]==0&&buf[q-2]<0x10&&buf[q-1]<0x10){
+                    noneHits++;
+                    int density=0;
+                    for(uint64_t i=q-2;i+8<got && i<q+2048;i+=4)
+                        if(buf[i]<0x10&&buf[i+1]<0x10&&buf[i+2]>=0x20&&buf[i+2]<0x7f) density++;
+                    if(density>130){
+                        fprintf(dbg,"NAMEBLOCK @ 0x%llx density=%d\n",(unsigned long long)(lo+off+q-2),density);
+                        blocks++;
+                        if(blocks>=8) break;
+                    }
+                }
+            }
+            DGFreeRead(buf,got);
+            if(!got) break;
+            off+=got;
+        }
+    }
+    fprintf(dbg,"HEAPSCAN regions=%d noneHits=%d blocks=%d\n",regions,noneHits,blocks);
+    fflush(dbg);
+    return blocks;
+}
+
+/* ابحث في __DATA عن مؤشر يشير لنافذة 64KB حول بلوك معروف = GNamePool.Blocks */
+static void DGFindPoolPtr(uint64_t entry, FILE *dbg){
+    uint64_t page=entry&~0xFFFFULL;
+    int hits=0;
+    uint64_t cursor=DGGameDataLo;
+    while(cursor<DGGameDataHi && hits<6){
+        uint64_t want=DGGameDataHi-cursor; if(want>33554432) want=33554432;
+        uint64_t got=0;
+        uint8_t *buf=DGSafeRead(cursor,want,&got);
+        if(!buf){ cursor+=want; continue; }
+        for(uint64_t q=0;q+8<=got && hits<6;q+=8){
+            uint64_t p; memcpy(&p,buf+q,8);
+            if(p>=page && p<page+0x10000){
+                hits++;
+                fprintf(dbg,"POOLPTR @ 0x%llx -> 0x%llx ctx=", (unsigned long long)(cursor+q),(unsigned long long)p);
+                uint64_t g2=0; uint8_t *cx=DGSafeRead(cursor+q>64?cursor+q-64:cursor+q,64,&g2);
+                if(cx){ for(uint64_t k=0;k<g2;k++) fprintf(dbg,"%02x",cx[k]); DGFreeRead(cx,g2); }
+                fprintf(dbg,"\n"); fflush(dbg);
+            }
+        }
+        DGFreeRead(buf,got);
+        cursor+=got?got:want;
+        if(!got) cursor+=want;
+    }
+}
+
 static uint64_t DGNamePool=0;
 
 /* فك FName (تخطيط 4.23+: Id>>16=block, Id&0xFFFF=offset داخل البلوك) */
@@ -941,6 +1018,7 @@ static void DGUE4Scan(void){
     DGUE4ScanCount++;
     DGInitGameRanges();
     DGCollectRegions();
+    DGLoadScanCfg();
     NSString *outp=[NSTemporaryDirectory() stringByAppendingPathComponent:@"deltaguard_ue4.txt"];
     FILE *dbg=fopen([outp UTF8String],"w");
     if(!dbg) return;
@@ -948,6 +1026,11 @@ static void DGUE4Scan(void){
     fflush(dbg);
     if(!DGGameTextLo){ fprintf(dbg,"FAIL ranges\n"); fclose(dbg); return; }
 
+    /* المرحلة 0 (اختياري عبر config): مسح heap المباشر لبلوكات الأسماء */
+    if(DGCfgBool(@"heapBlockScan",NO)){
+        snprintf(DGUE4Stat,sizeof(DGUE4Stat),"محاولة %d: مسح heap عن بلوكات الأسماء...",DGUE4ScanCount);
+        DGFindNameBlocksHeap(dbg);
+    }
     /* المرحلة 1: NamePool */
     snprintf(DGUE4Stat,sizeof(DGUE4Stat),"محاولة %d: البحث عن FNamePool...",DGUE4ScanCount);
     DGFindNamePool(dbg);
