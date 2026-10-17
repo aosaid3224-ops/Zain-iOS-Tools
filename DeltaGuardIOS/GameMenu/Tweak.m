@@ -4,7 +4,9 @@
 #import <objc/runtime.h>
 #include <dlfcn.h>
 #include <math.h>
+#include <string.h>
 #include <mach-o/dyld.h>
+#include <mach-o/loader.h>
 
 /* نفس تخطيط CAFrameRateRange (iOS 15+) */
 typedef struct { float minimum; float maximum; float preferred; } DGFrameRateRange;
@@ -93,46 +95,181 @@ static NSMutableArray<NSString*> *DGCandidateClasses = nil;
 static BOOL DGCandidatesScanned = NO;
 static BOOL DGClassesSeen = NO; /* هل ظهرت كلاسات IL2CPP فعلاً (Unity مهيأ) */
 
+/* ===== ماسح شجرة تصدير Mach-O — بديل مباشر عن dlopen/dlsym ===== */
+static uint64_t DGUleb128(const uint8_t **p, const uint8_t *end){
+    uint64_t r=0; unsigned s=0;
+    while(*p<end){
+        uint8_t b=**p; (*p)++;
+        r|=((uint64_t)(b&0x7f))<<s;
+        if(!(b&0x80)) break;
+        s+=7;
+        if(s>63) break;
+    }
+    return r;
+}
+
+static BOOL DGTrieNode(const uint8_t *node, const uint8_t *trieStart, const uint8_t *trieEnd, const char *want, const char *prefix, uint64_t slide, void **out){
+    if(node<trieStart || node>=trieEnd) return NO;
+    const uint8_t *p=node;
+    uint64_t termSize=DGUleb128(&p,trieEnd);
+    const uint8_t *afterTerm=p+termSize;
+    if(termSize>0){
+        (void)DGUleb128(&p,trieEnd); /* flags */
+        uint64_t addr=DGUleb128(&p,trieEnd);
+        if(strcmp(prefix,want)==0){
+            *out=(void*)(uintptr_t)(addr+slide);
+            return YES;
+        }
+    }
+    p=afterTerm;
+    if(p>=trieEnd) return NO;
+    uint64_t kids=DGUleb128(&p,trieEnd);
+    for(uint64_t i=0;i<kids && p<trieEnd;i++){
+        const char *label=(const char*)p;
+        size_t ll=0;
+        while(p+ll<trieEnd && label[ll]) ll++;
+        if(p+ll>=trieEnd) break;
+        p+=ll+1;
+        uint64_t off=DGUleb128(&p,trieEnd);
+        char buf[200];
+        size_t pl=strlen(prefix);
+        if(pl+ll>=sizeof(buf)) continue;
+        memcpy(buf,prefix,pl); memcpy(buf+pl,label,ll); buf[pl+ll]=0;
+        size_t wl=strlen(want);
+        size_t m=(pl+ll)<wl?(pl+ll):wl;
+        if(m>0 && memcmp(buf,want,m)==0){
+            if(DGTrieNode(trieStart+off,trieStart,trieEnd,want,buf,slide,out)) return YES;
+        }
+    }
+    return NO;
+}
+
+/* البحث عن رمز مصدّر داخل صورة محمّلة عبر شجرة التصدير — دون الحاجة لـ dlopen */
+static void* DGExportLookup(uint32_t idx, const char *sym){
+    const struct mach_header_64 *mh=(const struct mach_header_64 *)_dyld_get_image_header(idx);
+    if(!mh || mh->magic!=MH_MAGIC_64) return NULL;
+    uint64_t slide=_dyld_get_image_vmaddr_slide(idx);
+    const uint8_t *cs=(const uint8_t*)mh+sizeof(struct mach_header_64);
+    const uint8_t *sgBase=cs;
+    for(uint32_t i=0;i<mh->ncmds;i++){
+        const struct load_command *lc=(const struct load_command*)cs;
+        if(lc->cmd==LC_DYLD_INFO || lc->cmd==LC_DYLD_INFO_ONLY){
+            const struct dyld_info_command *di=(const struct dyld_info_command*)lc;
+            if(di->export_size==0) return NULL;
+            const uint8_t *sg=sgBase;
+            uint64_t va=0;
+            for(uint32_t j=0;j<mh->ncmds;j++){
+                const struct load_command *l2=(const struct load_command*)sg;
+                if(l2->cmd==LC_SEGMENT_64){
+                    const struct segment_command_64 *seg=(const struct segment_command_64*)sg;
+                    if(di->export_off>=seg->fileoff && di->export_off<seg->fileoff+seg->filesize){
+                        va=seg->vmaddr+(di->export_off-seg->fileoff)+slide;
+                        break;
+                    }
+                }
+                sg+=l2->cmdsize;
+            }
+            if(!va) return NULL;
+            const uint8_t *trie=(const uint8_t*)(uintptr_t)va;
+            void *out=NULL;
+            DGTrieNode(trie,trie,trie+di->export_size,sym,"",slide,&out);
+            return out;
+        }
+        cs+=lc->cmdsize;
+    }
+    return NULL;
+}
+
+/* ===== حالة التشخيص ===== */
+static unsigned DGImagesScanned=0;
+static char DGHitImage[128]="";
+static char DGDiagShort[64]="—";
+static NSString *DGLastDiag=nil;
+
+static void DGResolveOne(uint32_t idx, const char *name, void **slot){
+    void *p=DGExportLookup(idx,name);
+    if(!p){
+        const char *path=_dyld_get_image_name(idx);
+        void *h=path?dlopen(path,RTLD_NOLOAD|RTLD_LAZY):NULL;
+        if(h) p=dlsym(h,name);
+    }
+    if(p) *slot=p;
+}
+
+/* الحل الرئيسي: شجرة التصدير أولاً ثم dlsym لأي نقص — مع بدائل يدوية لاحقاً */
 static void DGResolveIL2CPP(void){
     if(DGIL2CPP.available) return;
+    memset(&DGIL2CPP,0,sizeof(DGIL2CPP));
     uint32_t count=_dyld_image_count();
+    DGImagesScanned=count;
     for(uint32_t i=0;i<count;i++){
-        const char *path=_dyld_get_image_name(i);
-        if(!path) continue;
-        /* ركّز فقط على صور Unity/il2cpp المحتملة لتسريع البحث */
-        if(!strstr(path,"Unity") && !strstr(path,"GameAssembly") && !strstr(path,"il2cpp") && !strstr(path,"elta")) continue;
-        void *h=dlopen(path, RTLD_NOLOAD|RTLD_LAZY);
-        if(!h) continue;
-        DGDomainGetFn dg=(DGDomainGetFn)dlsym(h,"il2cpp_domain_get");
-        if(!dg){ continue; }
-        DGIL2CPP.domain_get=dg;
-        DGIL2CPP.domain_get_assemblies=(DGDomainGetAssembliesFn)dlsym(h,"il2cpp_domain_get_assemblies");
-        DGIL2CPP.assembly_get_image=(DGAssemblyGetImageFn)dlsym(h,"il2cpp_assembly_get_image");
-        DGIL2CPP.class_from_name=(DGClassFromNameFn)dlsym(h,"il2cpp_class_from_name");
-        DGIL2CPP.class_get_method_from_name=(DGClassGetMethodFn)dlsym(h,"il2cpp_class_get_method_from_name");
-        DGIL2CPP.runtime_invoke=(DGRuntimeInvokeFn)dlsym(h,"il2cpp_runtime_invoke");
-        DGIL2CPP.object_unbox=(DGObjectUnboxFn)dlsym(h,"il2cpp_object_unbox");
-        DGIL2CPP.string_chars=(DGStringCharsFn)dlsym(h,"il2cpp_string_chars");
-        DGIL2CPP.string_length=(DGStringLengthFn)dlsym(h,"il2cpp_string_length");
-        DGIL2CPP.image_get_name=(DGImageGetNameFn)dlsym(h,"il2cpp_image_get_name");
-        DGIL2CPP.class_for_each=(DGClassForEachFn)dlsym(h,"il2cpp_class_for_each");
-        if(DGIL2CPP.domain_get_assemblies && DGIL2CPP.assembly_get_image &&
-           DGIL2CPP.class_from_name && DGIL2CPP.class_get_method_from_name &&
-           DGIL2CPP.runtime_invoke && DGIL2CPP.object_unbox &&
-           DGIL2CPP.string_chars && DGIL2CPP.image_get_name){
-            DGIL2CPP.available=YES;
-            const char *base=strrchr(path,'/');
-            snprintf(DGIL2CPP.imageName,sizeof(DGIL2CPP.imageName),"%s",base?base+1:path);
-            if(DGIL2CPP.domain_get){
-                size_t n=0;
-                DGIL2CPP.domain_get_assemblies(DGIL2CPP.domain_get(),&n);
-                DGIL2CPP.assemblies=n;
-            }
-            break;
-        }
-        /* لم تكتمل الدوال — صفر وواصل البحث */
-        memset(&DGIL2CPP,0,sizeof(DGIL2CPP));
+        void *probe=DGExportLookup(i,"il2cpp_domain_get");
+        if(!probe) continue;
+        DGIL2CPP.domain_get=(DGDomainGetFn)probe;
+        DGResolveOne(i,"il2cpp_domain_get_assemblies",(void**)&DGIL2CPP.domain_get_assemblies);
+        DGResolveOne(i,"il2cpp_assembly_get_image",(void**)&DGIL2CPP.assembly_get_image);
+        DGResolveOne(i,"il2cpp_class_from_name",(void**)&DGIL2CPP.class_from_name);
+        DGResolveOne(i,"il2cpp_class_get_method_from_name",(void**)&DGIL2CPP.class_get_method_from_name);
+        DGResolveOne(i,"il2cpp_runtime_invoke",(void**)&DGIL2CPP.runtime_invoke);
+        DGResolveOne(i,"il2cpp_object_unbox",(void**)&DGIL2CPP.object_unbox);
+        DGResolveOne(i,"il2cpp_string_chars",(void**)&DGIL2CPP.string_chars);
+        DGResolveOne(i,"il2cpp_string_length",(void**)&DGIL2CPP.string_length);
+        DGResolveOne(i,"il2cpp_image_get_name",(void**)&DGIL2CPP.image_get_name);
+        DGResolveOne(i,"il2cpp_class_for_each",(void**)&DGIL2CPP.class_for_each);
+        const char *nm=_dyld_get_image_name(i);
+        snprintf(DGHitImage,sizeof(DGHitImage),"%s",nm?nm:"?");
+        const char *base=strrchr(DGHitImage,'/');
+        if(base) memmove(DGHitImage,base+1,strlen(base+1)+1);
+        break;
     }
+    /* الحد الأدنى — string/unbox لها بدائل يدوية */
+    if(DGIL2CPP.domain_get && DGIL2CPP.domain_get_assemblies && DGIL2CPP.assembly_get_image &&
+       DGIL2CPP.class_from_name && DGIL2CPP.class_get_method_from_name && DGIL2CPP.runtime_invoke){
+        DGIL2CPP.available=YES;
+        size_t n=0;
+        DGIL2CPP.domain_get_assemblies(DGIL2CPP.domain_get(),&n);
+        DGIL2CPP.assemblies=n;
+        snprintf(DGIL2CPP.imageName,sizeof(DGIL2CPP.imageName),"%s",DGHitImage);
+        snprintf(DGDiagShort,sizeof(DGDiagShort),"OK:%s",DGHitImage);
+    } else {
+        snprintf(DGDiagShort,sizeof(DGDiagShort),"لا رمز | صور:%u",count);
+    }
+}
+
+/* بدائل يدوية إذا غابت الدوال عن التصدير */
+static void* DGUnbox(void *obj){
+    if(DGIL2CPP.object_unbox) return DGIL2CPP.object_unbox(obj);
+    return obj?((char*)obj+0x10):NULL; /* بيانات القيمة بعد رأس Il2CppObject */
+}
+static int32_t DGStrLen(void *s){
+    if(!s) return 0;
+    if(DGIL2CPP.string_length) return DGIL2CPP.string_length(s);
+    return *(volatile int32_t*)((char*)s+0x10);
+}
+static const uint16_t* DGStrChars(void *s){
+    if(!s) return NULL;
+    if(DGIL2CPP.string_chars) return DGIL2CPP.string_chars(s);
+    return (const uint16_t*)((char*)s+0x14);
+}
+
+/* كتابة ملف تشخيص يحدد مكان رموز IL2CPP بدقة */
+static void DGWriteDiag(void){
+    NSMutableString *m=[NSMutableString string];
+    [m appendFormat:@"DeltaGuard IL2CPP diag | %@\n",[NSDate date]];
+    [m appendFormat:@"available=%d | %s | hit=%s | images=%u\n",DGIL2CPP.available,DGDiagShort,DGHitImage,DGImagesScanned];
+    uint32_t c=_dyld_image_count();
+    for(uint32_t i=0;i<c;i++){
+        const char *p=_dyld_get_image_name(i);
+        if(!p) continue;
+        if(!strstr(p,"elta") && !strstr(p,"Unity") && !strstr(p,"il2cpp") && !strstr(p,"GameAssembly") && !strstr(p,"ramework") && !strstr(p,"rameworks")) continue;
+        void *s=DGExportLookup(i,"il2cpp_domain_get");
+        [m appendFormat:@"%s -> %s\n",p,s?"IL2CPP_EXPORT ✅":"—"];
+    }
+    NSString *state=[m copy];
+    if(DGLastDiag && [state isEqualToString:DGLastDiag]) return;
+    DGLastDiag=state;
+    NSString *path=[NSTemporaryDirectory() stringByAppendingPathComponent:@"deltaguard_il2cpp_diag.txt"];
+    [m writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:nil];
 }
 
 /* البحث عن كلاس عبر كل الصور — يعيد أول مطابقة */
@@ -243,22 +380,21 @@ static NSString* DGGetSceneName(void){
     DGResolveIL2CPP();
     if(!DGIL2CPP.available) return nil;
     static void *smClass=NULL; static void *getActive=NULL; static void *sceneClass=NULL; static void *getName=NULL;
-    if(!smClass){
-        smClass=DGFindClass("UnityEngine.SceneManagement","SceneManager");
-        if(smClass) getActive=DGIL2CPP.class_get_method_from_name(smClass,"GetActiveScene",0);
-        sceneClass=DGFindClass("UnityEngine.SceneManagement","Scene");
-        if(sceneClass) getName=DGIL2CPP.class_get_method_from_name(sceneClass,"get_name",0);
-    }
+    /* إعادة الحل في كل مرة: إذا نقص أي تابع نصفر الكل لإعادة المحاولة لاحقاً */
+    smClass=DGFindClass("UnityEngine.SceneManagement","SceneManager");
+    getActive=smClass?DGIL2CPP.class_get_method_from_name(smClass,"GetActiveScene",0):NULL;
+    sceneClass=DGFindClass("UnityEngine.SceneManagement","Scene");
+    getName=sceneClass?DGIL2CPP.class_get_method_from_name(sceneClass,"get_name",0):NULL;
     if(!smClass||!getActive||!sceneClass||!getName) return nil;
     void *exc=NULL;
     void *boxed=DGIL2CPP.runtime_invoke(getActive,NULL,NULL,&exc);
     if(!boxed||exc) return nil;
-    void *sceneData=DGIL2CPP.object_unbox(boxed);
+    void *sceneData=DGUnbox(boxed);
     if(!sceneData) return nil;
     void *nameObj=DGIL2CPP.runtime_invoke(getName,sceneData,NULL,&exc);
     if(!nameObj||exc) return nil;
-    int32_t len=DGIL2CPP.string_length(nameObj);
-    const uint16_t *chars=DGIL2CPP.string_chars(nameObj);
+    int32_t len=DGStrLen(nameObj);
+    const uint16_t *chars=DGStrChars(nameObj);
     if(!chars||len<=0) return @"";
     return [[NSString alloc] initWithCharacters:(const unichar*)chars length:len];
 }
@@ -269,21 +405,15 @@ static BOOL DGGetCameraBasis(void){
     if(!DGIL2CPP.available) return NO;
     static void *camClass=NULL,*getMain=NULL,*getTransform=NULL,*getPosition=NULL,*getForward=NULL,*getRight=NULL,*getFov=NULL;
     static void *transformClass=NULL,*getUp=NULL;
-    if(!camClass){
-        camClass=DGFindClass("UnityEngine","Camera");
-        if(camClass){
-            getMain=DGIL2CPP.class_get_method_from_name(camClass,"get_main",0);
-            getTransform=DGIL2CPP.class_get_method_from_name(camClass,"get_transform",0);
-            getForward=DGIL2CPP.class_get_method_from_name(camClass,"get_forward",0);
-            getRight=DGIL2CPP.class_get_method_from_name(camClass,"get_right",0);
-            getFov=DGIL2CPP.class_get_method_from_name(camClass,"get_fieldOfView",0);
-        }
-        transformClass=DGFindClass("UnityEngine","Transform");
-        if(transformClass){
-            getPosition=DGIL2CPP.class_get_method_from_name(transformClass,"get_position",0);
-            getUp=DGIL2CPP.class_get_method_from_name(transformClass,"get_up",0);
-        }
-    }
+    camClass=DGFindClass("UnityEngine","Camera");
+    getMain=camClass?DGIL2CPP.class_get_method_from_name(camClass,"get_main",0):NULL;
+    getTransform=camClass?DGIL2CPP.class_get_method_from_name(camClass,"get_transform",0):NULL;
+    getForward=camClass?DGIL2CPP.class_get_method_from_name(camClass,"get_forward",0):NULL;
+    getRight=camClass?DGIL2CPP.class_get_method_from_name(camClass,"get_right",0):NULL;
+    getFov=camClass?DGIL2CPP.class_get_method_from_name(camClass,"get_fieldOfView",0):NULL;
+    transformClass=DGFindClass("UnityEngine","Transform");
+    getPosition=transformClass?DGIL2CPP.class_get_method_from_name(transformClass,"get_position",0):NULL;
+    getUp=transformClass?DGIL2CPP.class_get_method_from_name(transformClass,"get_up",0):NULL;
     if(!camClass||!getMain||!getTransform||!transformClass||!getPosition||!getForward||!getRight||!getUp||!getFov){
         DGHavCamBasis=NO;
         return NO;
@@ -296,27 +426,27 @@ static BOOL DGGetCameraBasis(void){
     float *v=NULL;
     void *boxed=DGIL2CPP.runtime_invoke(getPosition,tr,NULL,&exc);
     if(!boxed||exc){ DGHavCamBasis=NO; return NO; }
-    v=(float*)DGIL2CPP.object_unbox(boxed);
+    v=(float*)DGUnbox(boxed);
     if(!v){ DGHavCamBasis=NO; return NO; }
     memcpy(DGCamPos,v,sizeof(float)*3);
     boxed=DGIL2CPP.runtime_invoke(getForward,tr,NULL,&exc);
     if(!boxed||exc){ DGHavCamBasis=NO; return NO; }
-    v=(float*)DGIL2CPP.object_unbox(boxed);
+    v=(float*)DGUnbox(boxed);
     if(!v){ DGHavCamBasis=NO; return NO; }
     memcpy(DGCamFwd,v,sizeof(float)*3);
     boxed=DGIL2CPP.runtime_invoke(getRight,tr,NULL,&exc);
     if(!boxed||exc){ DGHavCamBasis=NO; return NO; }
-    v=(float*)DGIL2CPP.object_unbox(boxed);
+    v=(float*)DGUnbox(boxed);
     if(!v){ DGHavCamBasis=NO; return NO; }
     memcpy(DGCamRight,v,sizeof(float)*3);
     boxed=DGIL2CPP.runtime_invoke(getUp,tr,NULL,&exc);
     if(!boxed||exc){ DGHavCamBasis=NO; return NO; }
-    v=(float*)DGIL2CPP.object_unbox(boxed);
+    v=(float*)DGUnbox(boxed);
     if(!v){ DGHavCamBasis=NO; return NO; }
     memcpy(DGCamUp,v,sizeof(float)*3);
     boxed=DGIL2CPP.runtime_invoke(getFov,cam,NULL,&exc);
     if(!boxed||exc){ DGHavCamBasis=NO; return NO; }
-    v=(float*)DGIL2CPP.object_unbox(boxed);
+    v=(float*)DGUnbox(boxed);
     if(!v){ DGHavCamBasis=NO; return NO; }
     DGCamFov=v[0];
     if(DGCamFov<20.0f||DGCamFov>150.0f) DGCamFov=60.0f;
@@ -746,7 +876,7 @@ static void DGHaptic(void){
     [DGPanel addSubview:hint];
 
     UILabel *ver=[[UILabel alloc] initWithFrame:CGRectMake(196,346,66,16)];
-    ver.text=@"v0.5.1-stage1";
+    ver.text=@"v0.5.2-stage1";
     ver.textColor=[UIColor lightGrayColor]; ver.textAlignment=NSTextAlignmentRight; ver.font=[UIFont systemFontOfSize:9]; ver.alpha=0.6;
     [DGPanel addSubview:ver];
 
@@ -826,8 +956,9 @@ static void DGHaptic(void){
 + (void)updateDiscovery{
     if(!DGPanel && !DGCoordPill) return;
 
-    /* (1) حالة IL2CPP */
+    /* (1) حالة IL2CPP + كتابة التشخيص عند كل تغير */
     DGResolveIL2CPP();
+    DGWriteDiag();
 
     /* (2) المشهد النشط */
     NSString *scene=DGGetSceneName();
@@ -842,7 +973,7 @@ static void DGHaptic(void){
     /* (3) تحديث واجهة اللوحة */
     if(DGSceneLabel){
         if(!DGIL2CPP.available){
-            DGSceneLabel.text=@"IL2CPP: بانتظار تحميل Unity…";
+            DGSceneLabel.text=[NSString stringWithFormat:@"IL2CPP: غير متاح | %s",DGDiagShort];
         } else if(!scene || scene.length==0){
             DGSceneLabel.text=[NSString stringWithFormat:@"IL2CPP ✅ (%zu assembly) | المشهد: …",DGIL2CPP.assemblies];
         } else {
@@ -851,7 +982,9 @@ static void DGHaptic(void){
     }
 
     if(DGCandidatesLabel){
-        if(!DGCandidatesScanned){
+        if(!DGIL2CPP.available){
+            DGCandidatesLabel.text=@"IL2CPP غير متاح — الماسك الحالي لا يرى الرموز";
+        } else if(!DGCandidatesScanned){
             DGCandidatesLabel.text=@"فحص الكلاسات المرشحة: جارٍ…";
         } else if(DGCandidateClasses.count==0){
             DGCandidatesLabel.text=@"لا كلاسات مرشحة بعد — أضف كلمات مفتاحية في DGNameMatches";
