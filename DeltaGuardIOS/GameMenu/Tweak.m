@@ -1,5 +1,6 @@
 #import <UIKit/UIKit.h>
 #import <mach/mach.h>
+#import <CommonCrypto/CommonCrypto.h>
 #include <mach/vm_map.h>
 #include <stdlib.h>
 #import <objc/runtime.h>
@@ -40,6 +41,15 @@ static UISwitch *DGTrainingSwitch;
 static UISwitch *DGDebugSwitch;
 static UILabel *DG90Note;
 static UIScrollView *DGScroll;
+static UIButton *DGDLButton;
+static UIProgressView *DGDLBar;
+static UILabel *DGDLProgressLabel;
+static UILabel *DGDLStatusLabel;
+static NSURLSession *DGDLSession;
+static NSMutableData *DGDLBuffer;
+static long DGDLPartsDone;
+static int DGDLCurrentPart;
+static BOOL DGDLBusy=NO;
 static NSDate *DGSessionStart;
 static CADisplayLink *DGLink;
 static NSUInteger DGFrameCount;
@@ -1473,7 +1483,7 @@ static UIView *DGToggleRow(CGFloat y, NSString *text, SEL action, UISwitch * __s
     DGScroll.showsVerticalScrollIndicator=NO;
     DGScroll.alwaysBounceVertical=YES;
     DGScroll.delaysContentTouches=NO;
-    UIView *content=[[UIView alloc] initWithFrame:CGRectMake(0,0,300,470)];
+    UIView *content=[[UIView alloc] initWithFrame:CGRectMake(0,0,300,592)];
     [DGScroll addSubview:content];
 
     /* — البطاقة 1: الإحصائيات — */
@@ -1513,7 +1523,31 @@ static UIView *DGToggleRow(CGFloat y, NSString *text, SEL action, UISwitch * __s
     [c3 addSubview:DGSceneLabel]; [c3 addSubview:DGCoordLabel]; [c3 addSubview:DGCandidatesLabel];
     [content addSubview:c3];
 
-    DGScroll.contentSize=CGSizeMake(300,470);
+    /* — البطاقة 4: التحميل الحي — */
+    UIView *c4=DGMakeCard(CGRectMake(12,464,276,118),@"📥 ملف التحليل — 5 أجزاء (416MB)");
+    DGDLButton=[UIButton buttonWithType:UIButtonTypeSystem];
+    DGDLButton.frame=CGRectMake(12,30,252,28);
+    [DGDLButton setTitle:@"بدء التحميل من GitHub" forState:UIControlStateNormal];
+    [DGDLButton addTarget:self action:@selector(dgStartDownload) forControlEvents:UIControlEventTouchUpInside];
+    [c4 addSubview:DGDLButton];
+    DGDLBar=[[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
+    DGDLBar.frame=CGRectMake(12,64,252,6);
+    DGDLBar.progress=0; DGDLBar.progressTintColor=DGAccentColor();
+    [c4 addSubview:DGDLBar];
+    DGDLProgressLabel=[[UILabel alloc] initWithFrame:CGRectMake(12,72,252,14)];
+    DGDLProgressLabel.text=@"0 / 416 MB (0%)";
+    DGDLProgressLabel.textColor=[UIColor colorWithWhite:1 alpha:0.55];
+    DGDLProgressLabel.font=[UIFont monospacedSystemFontOfSize:10 weight:UIFontWeightMedium];
+    [c4 addSubview:DGDLProgressLabel];
+    DGDLStatusLabel=[[UILabel alloc] initWithFrame:CGRectMake(12,86,252,28)];
+    DGDLStatusLabel.text=@"⚪ لم يبدأ";
+    DGDLStatusLabel.textColor=[UIColor whiteColor];
+    DGDLStatusLabel.font=[UIFont systemFontOfSize:10];
+    DGDLStatusLabel.numberOfLines=2;
+    [c4 addSubview:DGDLStatusLabel];
+    [content addSubview:c4];
+
+    DGScroll.contentSize=CGSizeMake(300,592);
     [DGPanel addSubview:DGScroll];
     [root addSubview:DGPanel];
 
@@ -1695,6 +1729,108 @@ static UIView *DGToggleRow(CGFloat y, NSString *text, SEL action, UISwitch * __s
     DGStatsLabel.text=@"جاري إنهاء اللعبة…";
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(0.5*NSEC_PER_SEC)),dispatch_get_main_queue(),^{ exit(0); });
 }
+@end
+
+/* ============================================================
+   v0.7.2 — مدير التحميل الحي (5 أجزاء + تجميع + تحقق SHA-256)
+   ============================================================ */
+@implementation DGMenu (DGDownload)
+
++ (void)dgStartDownload{
+    if(DGDLBusy) return;
+    DGDLBusy=YES; DGDLPartsDone=0; DGDLCurrentPart=0;
+    DGDLBar.progress=0;
+    DGDLProgressLabel.text=@"0 / 416 MB (0%)";
+    DGDLStatusLabel.text=@"⬇️ بدأ التحميل...";
+    DGDLButton.enabled=NO;
+    [DGDLButton setTitle:@"⏳ جارٍ التحميل..." forState:UIControlStateNormal];
+    DGDLBuffer=[NSMutableData data];
+    NSURLSessionConfiguration *cfg=[NSURLSessionConfiguration defaultSessionConfiguration];
+    DGDLSession=[NSURLSession sessionWithConfiguration:cfg delegate:(id)self delegateQueue:nil];
+    [DGMenu dgStartPart:0];
+}
+
++ (void)dgStartPart:(int)idx{
+    NSString *u=[NSString stringWithFormat:@"https://raw.githubusercontent.com/aosaid3224-ops/Zain-iOS-Tools/main/DeltaForceClient/DeltaForceClient.part%03d",idx+1];
+    dispatch_async(dispatch_get_main_queue(),^{
+        DGDLStatusLabel.text=[NSString stringWithFormat:@"⬇️ يحمّل الجزء %d/5 ...",idx+1];
+    });
+    NSURLSessionDataTask *t=[DGDLSession dataTaskWithURL:[NSURL URLWithString:u]];
+    [t resume];
+}
+
+- (void)URLSession:(NSURLSession *)s dataTask:(NSURLSessionDataTask *)t didReceiveResponse:(NSURLResponse *)r completionHandler:(void (^)(NSURLSessionResponseDisposition))c{
+    [DGDLBuffer setLength:0];
+    c(NSURLSessionResponseAllow);
+}
+
+- (void)URLSession:(NSURLSession *)s dataTask:(NSURLSessionDataTask *)t didReceiveData:(NSData *)d{
+    [DGDLBuffer appendData:d];
+    long cur=DGDLPartsDone+(long)DGDLBuffer.length;
+    float f=(float)cur/416167600.0f;
+    dispatch_async(dispatch_get_main_queue(),^{
+        DGDLBar.progress=f;
+        DGDLProgressLabel.text=[NSString stringWithFormat:@"%ld / 416 MB (%d%%)",cur/1048576,(int)(f*100.0f)];
+    });
+}
+
+- (void)URLSession:(NSURLSession *)s task:(NSURLSessionTask *)t didCompleteWithError:(NSError *)e{
+    if(e){
+        dispatch_async(dispatch_get_main_queue(),^{
+            DGDLStatusLabel.text=[NSString stringWithFormat:@"❌ خطأ في الجزء %d: %@",DGDLCurrentPart+1,e.localizedDescription];
+            DGDLButton.enabled=YES;
+            [DGDLButton setTitle:@"🔄 إعادة المحاولة" forState:UIControlStateNormal];
+            DGDLBusy=NO;
+        });
+        return;
+    }
+    NSString *out=[NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"dfpart%03d",DGDLCurrentPart+1]];
+    [DGDLBuffer writeToFile:out atomically:NO];
+    DGDLPartsDone+=(long)DGDLBuffer.length;
+    DGDLCurrentPart++;
+    if(DGDLCurrentPart<5){ [DGMenu dgStartPart:DGDLCurrentPart]; }
+    else { [DGMenu dgAssemble]; }
+}
+
++ (void)dgAssemble{
+    dispatch_async(dispatch_get_main_queue(),^{ DGDLStatusLabel.text=@"🔧 تجميع الأجزاء الخمسة..."; });
+    NSFileManager *fm=[NSFileManager defaultManager];
+    NSString *outp=[NSTemporaryDirectory() stringByAppendingPathComponent:@"DeltaForceClient"];
+    [fm removeItemAtPath:outp error:nil];
+    [fm createFileAtPath:outp contents:nil attributes:nil];
+    NSFileHandle *of=[NSFileHandle fileHandleForWritingAtPath:outp];
+    CC_SHA256_CTX ctx; CC_SHA256_Init(&ctx);
+    for(int i=1;i<=5;i++){
+        NSString *p=[NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"dfpart%03d",i]];
+        NSFileHandle *fh=[NSFileHandle fileHandleForReadingAtPath:p];
+        if(!fh) continue;
+        while(YES){
+            NSData *c=[fh readDataOfLength:8388608];
+            if(!c||!c.length) break;
+            CC_SHA256_Update(&ctx,c.bytes,(CC_LONG)c.length);
+            [of writeData:c];
+        }
+        [fh closeFile];
+        [fm removeItemAtPath:p error:nil];
+    }
+    [of closeFile];
+    unsigned char dig[CC_SHA256_DIGEST_LENGTH];
+    CC_SHA256_Final(dig,&ctx);
+    NSMutableString *hs=[NSMutableString string];
+    for(int i=0;i<32;i++) [hs appendFormat:@"%02x",dig[i]];
+    BOOL ok=[hs hasPrefix:@"175b75f14edcdd40"];
+    long fsz=(long)[[fm attributesOfItemAtPath:outp error:nil][NSFileSize] longLongValue];
+    dispatch_async(dispatch_get_main_queue(),^{
+        DGDLBar.progress=1.0f;
+        DGDLProgressLabel.text=@"416 / 416 MB (100%)";
+        DGDLStatusLabel.text=[NSString stringWithFormat:@"%@ | الحجم: %ld بايت | SHA256: %@...",
+            ok?@"✅ اكتمل فعليًا — بصمة مطابقة":@"❌ التجميع انتهى لكن البصمة غير مطابقة",fsz,[hs substringToIndex:16]];
+        DGDLButton.enabled=YES;
+        [DGDLButton setTitle:@"🔄 إعادة التحميل" forState:UIControlStateNormal];
+        DGDLBusy=NO;
+    });
+}
+
 @end
 
 __attribute__((constructor)) static void DGEntry(void){
