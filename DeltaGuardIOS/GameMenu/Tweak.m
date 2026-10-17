@@ -8,6 +8,7 @@
 #include <string.h>
 #include <mach-o/dyld.h>
 #include <mach-o/loader.h>
+#include <mach-o/nlist.h>
 #ifndef LC_DYLD_EXPORTS_TRIE
 #define LC_DYLD_EXPORTS_TRIE 0x80000033 /* شجرة تصدير dyld3 الحديثة — Xcode 13+ */
 #endif
