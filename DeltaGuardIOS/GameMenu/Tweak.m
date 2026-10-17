@@ -265,306 +265,85 @@ static unsigned DGImagesScanned=0;
 static char DGHitImage[128]="";
 static char DGDiagShort[64]="—";
 static char DGAnchorHost[256]="";
-static NSString *DGLastDiag=nil;
+static uint64_t DGMetaAddr=0;
+static uint64_t DGCSharpAddr=0;
+static uint64_t DGMetaSize=0;
 
-static void DGResolveOne(uint32_t idx, const char *name, void **slot){
-    void *p=DGExportLookupU(idx,name);
-    if(!p){
-        const char *path=_dyld_get_image_name(idx);
-        void *h=path?dlopen(path,RTLD_NOLOAD|RTLD_LAZY):NULL;
-        if(h) p=dlsym(h,name);
-    }
-    if(!p) p=dlsym(RTLD_DEFAULT,name); /* حل أخير: النطاق العام */
-    if(p) *slot=p;
-}
-
-/* الحل الرئيسي: شجرة التصدير أولاً ثم dlsym لأي نقص — مع بدائل يدوية لاحقاً */
-static void DGResolveIL2CPP(void){
-    if(DGIL2CPP.available) return;
-    static NSTimeInterval lastTry=0;
-    NSTimeInterval now=[[NSDate date] timeIntervalSince1970];
-    if(lastTry>0 && now-lastTry<1.5) return; /* تخفيف الحمل: محاولة كل 1.5 ثانية */
-    lastTry=now;
-    memset(&DGIL2CPP,0,sizeof(DGIL2CPP));
-    uint32_t count=_dyld_image_count();
-    DGImagesScanned=count;
-    for(uint32_t i=0;i<count;i++){
-        void *probe=DGExportLookupU(i,"il2cpp_domain_get");
-        if(!probe) continue;
-        DGIL2CPP.domain_get=(DGDomainGetFn)probe;
-        DGResolveOne(i,"il2cpp_domain_get_assemblies",(void**)&DGIL2CPP.domain_get_assemblies);
-        DGResolveOne(i,"il2cpp_assembly_get_image",(void**)&DGIL2CPP.assembly_get_image);
-        DGResolveOne(i,"il2cpp_class_from_name",(void**)&DGIL2CPP.class_from_name);
-        DGResolveOne(i,"il2cpp_class_get_method_from_name",(void**)&DGIL2CPP.class_get_method_from_name);
-        DGResolveOne(i,"il2cpp_runtime_invoke",(void**)&DGIL2CPP.runtime_invoke);
-        DGResolveOne(i,"il2cpp_object_unbox",(void**)&DGIL2CPP.object_unbox);
-        DGResolveOne(i,"il2cpp_string_chars",(void**)&DGIL2CPP.string_chars);
-        DGResolveOne(i,"il2cpp_string_length",(void**)&DGIL2CPP.string_length);
-        DGResolveOne(i,"il2cpp_image_get_name",(void**)&DGIL2CPP.image_get_name);
-        DGResolveOne(i,"il2cpp_class_for_each",(void**)&DGIL2CPP.class_for_each);
-        const char *nm=_dyld_get_image_name(i);
-        snprintf(DGHitImage,sizeof(DGHitImage),"%s",nm?nm:"?");
-        const char *base=strrchr(DGHitImage,'/');
-        if(base) memmove(DGHitImage,base+1,strlen(base+1)+1);
-        break;
-    }
-    /* الحد الأدنى — string/unbox لها بدائل يدوية */
-    if(DGIL2CPP.domain_get && DGIL2CPP.domain_get_assemblies && DGIL2CPP.assembly_get_image &&
-       DGIL2CPP.class_from_name && DGIL2CPP.class_get_method_from_name && DGIL2CPP.runtime_invoke){
-        DGIL2CPP.available=YES;
-        size_t n=0;
-        DGIL2CPP.domain_get_assemblies(DGIL2CPP.domain_get(),&n);
-        DGIL2CPP.assemblies=n;
-        snprintf(DGIL2CPP.imageName,sizeof(DGIL2CPP.imageName),"%s",DGHitImage);
-        snprintf(DGDiagShort,sizeof(DGDiagShort),"OK:%s",DGHitImage);
-    } else {
-        /* المرحلة أ: مسح المراسي المثبتة — دليل حضور زمن التشغيل */
-        static const char *anchors[]={"il2cpp_class_get_name","il2cpp_method_get_name","il2cpp_object_get_size","il2cpp_thread_walk_frame_stack",NULL};
-        static NSTimeInterval lastAnchor=0;
-        if(now-lastAnchor>10.0 || lastAnchor==0){
-            lastAnchor=now;
-            DGIL2CPP.partialAPIs=0;
-            for(int a=0;anchors[a];a++){
-                for(uint32_t i=0;i<count;i++){
-                    void *p=DGExportLookupU(i,anchors[a]);
-                    if(p){
-                        DGIL2CPP.partialAPIs++;
-                        if(a==0){
-                            DGIL2CPP.fn_class_get_name=p;
-                            const char *hp=_dyld_get_image_name(i);
-                            snprintf(DGAnchorHost,sizeof(DGAnchorHost),"%s",hp?hp:"?");
-                        }
-                        if(a==1) DGIL2CPP.fn_method_get_name=p;
-                        if(a==2) DGIL2CPP.fn_object_get_size=p;
-                        break;
-                    }
-                }
-            }
-            DGResolveProfilerFns(count);
-        }
-        /* المرحلة ب: الحل بالأوفسيتات من التحليل */
-        DGTryOffsetResolver();
-        if(!DGIL2CPP.available)
-            snprintf(DGDiagShort,sizeof(DGDiagShort),"partial:%d/4|img:%u",DGIL2CPP.partialAPIs,count);
-    }
-}
-
-/* ============================================================
-   الحل بالأوفسيتات — للمحركات التي تُخفي واجهة il2cpp الكاملة
-   (kgvmp/KiwiVM في Delta Force). القيم من IDA: File Offset
-   داخل ثنائي DeltaForceClient. 0 = المعطّل.
-   ============================================================ */
-typedef struct {
-    const char *imageName;              /* الصورة الحاملة لزمن il2cpp */
-    uint64_t fileOffDomainGet;          /* il2cpp_domain_get */
-    uint64_t fileOffRuntimeInvoke;      /* il2cpp_runtime_invoke */
-    uint64_t fileOffClassFromName;      /* il2cpp_class_from_name */
-    uint64_t fileOffClassGetMethodFromName; /* il2cpp_class_get_method_from_name */
-    uint64_t fileOffObjectUnbox;        /* il2cpp_object_unbox */
-    uint64_t fileOffStringChars;        /* il2cpp_string_chars */
-    uint64_t fileOffStringLength;       /* il2cpp_string_length */
-    uint64_t fileOffThreadAttach;       /* il2cpp_thread_attach (اختياري) */
-    uint64_t fileOffDomainGetAssemblies; /* il2cpp_domain_get_assemblies (مطلوب) */
-    uint64_t fileOffAssemblyGetImage;   /* il2cpp_assembly_get_image (مطلوب) */
-} DGEngineOffsets;
-
-/* ⚠️ املأ من تحليلك — كل قيمة 0 تعني "لا أعرف بعد" ولن تُستخدم */
-static DGEngineOffsets DGOffsets={
-    "DeltaForceClient",
-    0,0,0,0,0,0,0,0, 0,0
-};
-
-static void* DGAddrFromFileOff(uint32_t idx, uint64_t fileoff){
-    if(!fileoff) return NULL;
-    const struct mach_header_64 *mh=(const struct mach_header_64*)_dyld_get_image_header(idx);
-    if(!mh||mh->magic!=MH_MAGIC_64) return NULL;
-    uint64_t slide=_dyld_get_image_vmaddr_slide(idx);
-    const uint8_t *sg=(const uint8_t*)mh+sizeof(struct mach_header_64);
-    for(uint32_t j=0;j<mh->ncmds;j++){
-        const struct load_command *l2=(const struct load_command*)sg;
-        if(l2->cmd==LC_SEGMENT_64){
-            const struct segment_command_64 *seg=(const struct segment_command_64*)sg;
-            if(fileoff>=seg->fileoff && fileoff<seg->fileoff+seg->filesize)
-                return (void*)(uintptr_t)(seg->vmaddr+(fileoff-seg->fileoff)+slide);
-        }
-        sg+=l2->cmdsize;
-    }
-    return NULL;
-}
-
-static uint32_t DGFindImageIndex(const char *name){
-    uint32_t c=_dyld_image_count();
-    for(uint32_t i=0;i<c;i++){
-        const char *p=_dyld_get_image_name(i);
-        if(p && strstr(p,name)) return i;
-    }
-    return UINT32_MAX;
-}
-
-/* محاولة الحل بالأوفسيتات — تُعيد YES فقط إذا اجتاز التحقق الحقيقي */
-static BOOL DGTryOffsetResolver(void){
-    if(DGIL2CPP.available) return YES;
-    if(!DGOffsets.fileOffDomainGet) return NO;
-    uint32_t idx=DGFindImageIndex(DGOffsets.imageName);
-    if(idx==UINT32_MAX) return NO;
-    DGDomainGetFn dom=(DGDomainGetFn)DGAddrFromFileOff(idx,DGOffsets.fileOffDomainGet);
-    if(!dom) return NO;
-    /* تحقق حتمي: الاستدعاء يجب أن يرجع غير NULL — غير ذلك يعني أوفسيت خاطئ */
-    void *domain=dom();
-    if(!domain) return NO;
-    DGIL2CPP.domain_get=dom;
-    DGIL2CPP.runtime_invoke=(DGRuntimeInvokeFn)DGAddrFromFileOff(idx,DGOffsets.fileOffRuntimeInvoke);
-    DGIL2CPP.class_from_name=(DGClassFromNameFn)DGAddrFromFileOff(idx,DGOffsets.fileOffClassFromName);
-    DGIL2CPP.class_get_method_from_name=(DGClassGetMethodFn)DGAddrFromFileOff(idx,DGOffsets.fileOffClassGetMethodFromName);
-    DGIL2CPP.object_unbox=(DGObjectUnboxFn)DGAddrFromFileOff(idx,DGOffsets.fileOffObjectUnbox);
-    DGIL2CPP.string_chars=(DGStringCharsFn)DGAddrFromFileOff(idx,DGOffsets.fileOffStringChars);
-    DGIL2CPP.string_length=(DGStringLengthFn)DGAddrFromFileOff(idx,DGOffsets.fileOffStringLength);
-    DGIL2CPP.domain_get_assemblies=(DGDomainGetAssembliesFn)DGAddrFromFileOff(idx,DGOffsets.fileOffDomainGetAssemblies);
-    DGIL2CPP.assembly_get_image=(DGAssemblyGetImageFn)DGAddrFromFileOff(idx,DGOffsets.fileOffAssemblyGetImage);
-    /* الحد الأدنى الصارم — أي نقص يعني فشلًا صادقًا */
-    if(!DGIL2CPP.domain_get_assemblies || !DGIL2CPP.assembly_get_image ||
-       !DGIL2CPP.runtime_invoke || !DGIL2CPP.class_from_name || !DGIL2CPP.class_get_method_from_name){
-        memset(&DGIL2CPP,0,sizeof(DGIL2CPP));
-        snprintf(DGDiagShort,sizeof(DGDiagShort),"offsets-incomplete");
-        return NO;
-    }
-    DGIL2CPP.available=YES;
-    DGIL2CPP.resolvedViaOffsets=1;
-    DGIL2CPP.assemblies=0;
-    snprintf(DGIL2CPP.imageName,sizeof(DGIL2CPP.imageName),"%s+offsets",DGOffsets.imageName);
-    snprintf(DGDiagShort,sizeof(DGDiagShort),"OK:offsets");
-    return YES;
-}
-
-/* ============================================================
-   المستكشف الحي — Profiler Bridge
-   يستخدم الدوال المصدَّرة فقط (allocation profiler) لالتقاط
-   الكائنات الحية وأسماء كلاساتها أثناء اللعب — بلا أوفسيتات.
-   ============================================================ */
-static void (*DGProfAlloc)(void*,void*)=NULL;        /* il2cpp_profiler_install_allocation(cb,ud) */
-static void (*DGProfEnterLeave)(void*,void*)=NULL;   /* il2cpp_profiler_install_enter_leave(en,lv) */
-static void (*DGProfSetEvents)(uint32_t)=NULL;       /* il2cpp_profiler_set_events(mask) */
-
-#define DG_MAX_CLASSES 64
-#define DG_MAX_CNAME 48
-static struct { char name[DG_MAX_CNAME]; uint32_t allocs; void *lastObj; } DGSeen[DG_MAX_CLASSES];
-static int DGSeenCount=0;
-static char DGMatchNames[12][DG_MAX_CNAME];
-static int DGMatchCount=0;
-static volatile uint32_t DGAllocCount=0;
-static volatile uint32_t DGEnterCount=0;
-static BOOL DGProbeStarted=NO;
-static BOOL DGProbeEverFired=NO;
-
-static void DGAllocCb(void *obj, void *klass, size_t size, void *userData){
-    (void)size; (void)userData;
-    DGAllocCount++;
-    if(!klass||!obj) return;
-    DGProbeEverFired=YES;
-    const char *(*getname)(void*)=(const char*(*)(void*))DGIL2CPP.fn_class_get_name;
-    if(!getname) return;
-    const char *nm=getname(klass);
-    if(!nm) return;
-    int idx=-1;
-    for(int i=0;i<DGSeenCount;i++){ if(strncmp(DGSeen[i].name,nm,DG_MAX_CNAME-1)==0){ idx=i; break; } }
-    if(idx<0 && DGSeenCount<DG_MAX_CLASSES){
-        idx=DGSeenCount++;
-        strncpy(DGSeen[idx].name,nm,DG_MAX_CNAME-1);
-        DGSeen[idx].name[DG_MAX_CNAME-1]=0;
-    }
-    if(idx>=0){ DGSeen[idx].allocs++; DGSeen[idx].lastObj=obj; }
-    if(DGMatchCount<12){
-        char low[DG_MAX_CNAME];
-        size_t L=strlen(nm); if(L>DG_MAX_CNAME-1) L=DG_MAX_CNAME-1;
-        for(size_t i=0;i<L;i++) low[i]=(char)tolower((unsigned char)nm[i]); low[L]=0;
-        if(strstr(low,"player")||strstr(low,"character")||strstr(low,"soldier")||
-           strstr(low,"avatar")||strstr(low,"pawn")||strstr(low,"entity")||strstr(low,"hero")){
-            BOOL fnd=NO;
-            for(int i=0;i<DGMatchCount;i++) if(strncmp(DGMatchNames[i],nm,DG_MAX_CNAME-1)==0) fnd=YES;
-            if(!fnd){ strncpy(DGMatchNames[DGMatchCount],nm,DG_MAX_CNAME-1); DGMatchNames[DGMatchCount][DG_MAX_CNAME-1]=0; DGMatchCount++; }
-        }
-    }
-}
-static void DGEnterCb(void *method, void *obj, void **args, void *userData){
-    (void)method;(void)obj;(void)args;(void)userData; DGEnterCount++;
-}
-static void DGLeaveCb(void *method, void *obj, void *ret, void *userData){
-    (void)method;(void)obj;(void)ret;(void)userData;
-}
-
-static void DGResolveProfilerFns(uint32_t count){
-    if(DGProfAlloc&&DGProfEnterLeave&&DGProfSetEvents) return;
-    for(uint32_t i=0;i<count;i++){
-        if(!DGProfAlloc) DGProfAlloc=(void(*)(void*,void*))DGExportLookupU(i,"il2cpp_profiler_install_allocation");
-        if(!DGProfEnterLeave) DGProfEnterLeave=(void(*)(void*,void*))DGExportLookupU(i,"il2cpp_profiler_install_enter_leave");
-        if(!DGProfSetEvents) DGProfSetEvents=(void(*)(uint32_t))DGExportLookupU(i,"il2cpp_profiler_set_events");
-    }
-}
-
-/* تشغيل المستكشف — ALLOCATIONS أولاً (الأخف)؛ ENTER_LEAVE يُضاف يدويًا لاحقًا */
-static void DGStartProbe(void){
-    if(DGProbeStarted) return;
-    if(!DGIL2CPP.fn_class_get_name||!DGProfAlloc||!DGProfSetEvents) return;
-    DGProfAlloc((void*)DGAllocCb,NULL);
-    DGProfSetEvents(8u|128u|256u); /* CLASS | ALLOCATIONS | GC */
-    DGProbeStarted=YES;
-}
-
-/* ============================================================
-   مستخرج global-metadata.dat من الذاكرة الحية
-   التوقيع: sanity=0xFAB11BAF ثم version (24..34)
-   ============================================================ */
-static void DGExtractMetadata(void){
+/* فحص كل ذاكرة العملية (mach_vm_region) — الـ metadata قد يكون mmap خارج صور dyld */
+static void DGScanMemoryForMetadata(void){
     static BOOL tried=NO; if(tried) return; tried=YES;
-    const uint32_t sig=0xFAB11BAFu;
-    uint32_t c=_dyld_image_count();
-    for(uint32_t i=0;i<c;i++){
-        const char *ipath=_dyld_get_image_name(i);
-        if(!ipath || !strstr(ipath,".app/")) continue; /* العبة و frameworks فقط */
-        const struct mach_header_64 *mh=(const struct mach_header_64*)_dyld_get_image_header(i);
-        if(!mh||mh->magic!=MH_MAGIC_64) continue;
-        uint64_t slide=_dyld_get_image_vmaddr_slide(i);
-        const uint8_t *cs=(const uint8_t*)mh+sizeof(struct mach_header_64);
-        for(uint32_t j=0;j<mh->ncmds;j++){
-            const struct load_command *l2=(const struct load_command*)cs;
-            if(l2->cmd==LC_SEGMENT_64){
-                const struct segment_command_64 *seg=(const struct segment_command_64*)cs;
-                if((seg->initprot&1)==0 || seg->filesize<4096){ cs+=l2->cmdsize; continue; }
-                const uint8_t *base=(const uint8_t*)(uintptr_t)(seg->vmaddr+slide);
-                uint64_t limit=seg->filesize;
-                const uint8_t *p=base;
-                uint64_t rem=limit;
-                while(rem>16){
-                    p=(const uint8_t*)memchr(p,0xAF,rem-16);
-                    if(!p) break;
-                    uint32_t v,ver;
-                    memcpy(&v,p,4);
-                    if(v==sig){
-                        memcpy(&ver,p+4,4);
-                        if(ver>=24 && ver<=34){
-                            /* احفظ 96MB من الرأس — Il2CppDumper يقرأ حسب الحقول فقط */
-                            uint64_t avail=(uint64_t)(base+limit-p);
-                            uint64_t dump=avail>100663296?100663296:avail;
-                            NSString *out=[NSTemporaryDirectory() stringByAppendingPathComponent:@"global-metadata.dat"];
-                            NSFileHandle *fh=[NSFileHandle fileHandleForWritingAtPath:out];
-                            if(!fh) [[NSFileManager defaultManager] createFileAtPath:out contents:nil attributes:nil];
-                            fh=[NSFileHandle fileHandleForWritingAtPath:out];
-                            if(fh){
-                                [fh writeData:[NSData dataWithBytesNoCopy:(void*)p length:(NSUInteger)dump freeWhenDone:NO]];
-                                [fh closeFile];
-                            }
-                            NSString *doc=[@"/var/mobile/Documents/global-metadata.dat" copy];
-                            [[NSFileManager defaultManager] removeItemAtPath:doc error:nil];
-                            [[NSFileManager defaultManager] copyItemAtPath:out toPath:doc error:nil];
-                            return;
+    NSString *out=[NSTemporaryDirectory() stringByAppendingPathComponent:@"global-metadata.dat"];
+    [[NSFileManager defaultManager] removeItemAtPath:out error:nil];
+    mach_vm_address_t addr=0x100000000;
+    const char *cs="Assembly-CSharp";
+    const size_t csLen=strlen(cs);
+    for(;;){
+        mach_vm_size_t size=0;
+        vm_region_basic_info_data_64_t info;
+        mach_msg_type_number_t cnt=VM_REGION_BASIC_INFO_COUNT_64;
+        mach_port_t obj=MACH_PORT_NULL;
+        kern_return_t kr=mach_vm_region(mach_task_self(),&addr,&size,VM_REGION_BASIC_INFO_64,(vm_region_info_t)&info,&cnt,&obj);
+        if(kr!=KERN_SUCCESS) break;
+        if(obj!=MACH_PORT_NULL) mach_port_deallocate(mach_task_self(),obj);
+        if((info.protection&VM_PROT_READ) && size>4096 && size<0x40000000ULL){ /* أقل من 1GB */
+            const uint8_t *base=(const uint8_t*)(uintptr_t)addr;
+            uint64_t rem=(uint64_t)size;
+            const uint8_t *p=base;
+            while(rem>csLen+8){
+                p=(const uint8_t*)memchr(p,0xAF,rem-(csLen+8));
+                if(!p) break;
+                uint32_t v,ver;
+                memcpy(&v,p,4);
+                if(v==0xFAB11BAFu){
+                    memcpy(&ver,p+4,4);
+                    if(ver>=21 && ver<=40){
+                        uint64_t dump=rem>100663296?100663296:rem;
+                        NSFileHandle *fh=[NSFileHandle fileHandleForWritingAtPath:out];
+                        if(!fh){ [[NSFileManager defaultManager] createFileAtPath:out contents:nil attributes:nil]; fh=[NSFileHandle fileHandleForWritingAtPath:out]; }
+                        if(fh){
+                            [fh truncateFileAtOffset:0];
+                            [fh writeData:[NSData dataWithBytesNoCopy:(void*)p length:(NSUInteger)dump freeWhenDone:NO]];
+                            [fh closeFile];
+                            DGMetaAddr=(uint64_t)(uintptr_t)p;
+                            DGMetaSize=dump;
                         }
+                        return; /* اكتمل */
                     }
-                    rem=(uint64_t)(base+limit)-(uint64_t)(p+1);
-                    p=p+1;
                 }
+                rem=(uint64_t)(base+size)-(uint64_t)(p+1);
+                p=p+1;
             }
-            cs+=l2->cmdsize;
         }
+        addr+=size;
+        if(addr<0x100000000) break;
+    }
+}
+
+/* تحديد مكان سلاسل metadata كنصوص دلالية */
+static void DGFindCSharpStrings(void){
+    const char *cs="Assembly-CSharp";
+    const size_t csLen=strlen(cs);
+    mach_vm_address_t addr=0x100000000;
+    for(;;){
+        mach_vm_size_t size=0;
+        vm_region_basic_info_data_64_t info;
+        mach_msg_type_number_t cnt=VM_REGION_BASIC_INFO_COUNT_64;
+        mach_port_t obj=MACH_PORT_NULL;
+        kern_return_t kr=mach_vm_region(mach_task_self(),&addr,&size,VM_REGION_BASIC_INFO_64,(vm_region_info_t)&info,&cnt,&obj);
+        if(kr!=KERN_SUCCESS) break;
+        if(obj!=MACH_PORT_NULL) mach_port_deallocate(mach_task_self(),obj);
+        if((info.protection&VM_PROT_READ) && size>csLen+8 && size<0x40000000ULL){
+            const uint8_t *base=(const uint8_t*)(uintptr_t)addr;
+            const uint8_t *hit=(const uint8_t*)memchr(base,cs[0],size-csLen);
+            while(hit){
+                if(memcmp(hit,cs,csLen)==0){ DGCSharpAddr=(uint64_t)(uintptr_t)hit; return; }
+                uint64_t off=(uint64_t)(hit-base)+1;
+                if(off>=size-csLen) break;
+                hit=(const uint8_t*)memchr(base+off,cs[0],size-csLen-off);
+            }
+        }
+        addr+=size;
+        if(addr<0x100000000) break;
     }
 }
 
@@ -611,8 +390,7 @@ static void DGWriteDiag(void){
     [m appendFormat:@"DeltaGuard IL2CPP diag | %@\n",[NSDate date]];
     [m appendFormat:@"available=%d | %s | hit=%s | images=%u\n",DGIL2CPP.available,DGDiagShort,DGHitImage,DGImagesScanned];
     [m appendFormat:@"cryptid=%d | anchorHost=%s\n",DGMainCryptid(),DGAnchorHost];
-    BOOL meta=[[NSFileManager defaultManager] fileExistsAtPath:@"/var/mobile/Documents/global-metadata.dat"];
-    [m appendFormat:@"metadata-extracted=%d\n",meta?1:0];
+    [m appendFormat:@"metadata@0x%llx size=%llu | csharpStrings@0x%llx\n",(unsigned long long)DGMetaAddr,(unsigned long long)DGMetaSize,(unsigned long long)DGCSharpAddr];
 
     /* فحص صحة الماسك: مراسي متعددة معروفة الوجود */
     static const char *probes[]={"NSLog","malloc","objc_msgSend","il2cpp_class_get_name",NULL};
@@ -1369,7 +1147,10 @@ static UIView *DGToggleRow(CGFloat y, NSString *text, SEL action, UISwitch * __s
     DGResolveIL2CPP();
     DGWriteDiag();
     DGStartProbe(); /* يشتغل فقط عند اكتمال المراسي والدوال — وإلا يصمت */
-    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND,0),^{ DGExtractMetadata(); });
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND,0),^{
+        DGScanMemoryForMetadata();
+        DGFindCSharpStrings();
+    });
 
     /* (2) المشهد النشط */
     NSString *scene=DGGetSceneName();
