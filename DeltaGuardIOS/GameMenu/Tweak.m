@@ -1,6 +1,5 @@
 #import <UIKit/UIKit.h>
 #import <mach/mach.h>
-#import <mach/mach_vm.h>
 #import <CommonCrypto/CommonCrypto.h>
 #include <mach/vm_map.h>
 #include <stdlib.h>
@@ -780,11 +779,11 @@ static uint64_t *DGRegions=0; static uint32_t DGRegionCount=0;
 static void DGCollectRegions(void){
     if(DGRegions) return;
     DGRegions=(uint64_t*)malloc(sizeof(uint64_t)*2*8192);
-    mach_vm_address_t addr=0x100000000;
+    vm_address_t addr=(vm_address_t)0x100000000ULL;
     while(DGRegionCount<8192){
-        mach_vm_size_t size=0; vm_region_basic_info_data_64_t info;
+        vm_size_t size=0; vm_region_basic_info_data_64_t info;
         mach_msg_type_number_t cnt=VM_REGION_BASIC_INFO_COUNT_64; mach_port_t obj=MACH_PORT_NULL;
-        if(mach_vm_region(mach_task_self(),&addr,&size,VM_REGION_BASIC_INFO_64,(vm_region_info_t)&info,&cnt,&obj)!=KERN_SUCCESS) break;
+        if(vm_region_64(mach_task_self(),&addr,&size,VM_REGION_BASIC_INFO_64,(vm_region_info_t)&info,&cnt,&obj)!=KERN_SUCCESS) break;
         if(obj!=MACH_PORT_NULL) mach_port_deallocate(mach_task_self(),obj);
         if((info.protection&VM_PROT_READ)&&size>0){
             DGRegions[DGRegionCount*2]=(uint64_t)addr;
