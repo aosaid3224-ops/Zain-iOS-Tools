@@ -873,61 +873,61 @@ static BOOL DGObjName(uint64_t obj, uint32_t nameOff, char *out, int outLen){
     return DGDecodeFName(id,out,outLen);
 }
 
-/* البحث عن FNamePool الحي في __DATA اللعبة */
+/* البحث عن FNamePool: تحقق None-أول بدون افتراض ترتيب الحقول */
+static int DGBlockHasNone(uint64_t block){
+    uint64_t got=0;
+    uint8_t *e=DGSafeRead(block,160,&got);
+    if(!e) return 0;
+    int found=0;
+    for(uint64_t i=0;i+8<got;i+=2){
+        if(e[i+2]=='N'&&e[i+3]=='o'&&e[i+4]=='n'&&e[i+5]=='e'&&e[i+6]==0&&e[i]<0x10&&e[i+1]<0x10){
+            found=1; break;
+        }
+    }
+    DGFreeRead(e,got);
+    return found;
+}
 static int DGFindNamePool(FILE *dbg){
     if(DGNamePool) return 1;
-    int tested=0, hits=0;
+    int ptrCand=0, blockTested=0, hits=0;
     uint64_t cursor=DGGameDataLo;
     while(cursor<DGGameDataHi){
         uint64_t want=DGGameDataHi-cursor; if(want>33554432) want=33554432;
         uint64_t got=0;
         uint8_t *buf=DGSafeRead(cursor,want,&got);
         if(!buf){ cursor+=want; continue; }
-        uint64_t lim=got-32;
+        uint64_t lim=got-8;
         for(uint64_t q=0;q<lim;q+=8){
-            uint64_t blocks; uint32_t nb,cb,bc,pad;
-            memcpy(&blocks,buf+q,8);
-            memcpy(&nb,buf+q+8,4); memcpy(&cb,buf+q+12,4);
-            memcpy(&bc,buf+q+16,4); memcpy(&pad,buf+q+20,4);
-            if(!blocks||(blocks&7)||!DGInRegions(blocks)) continue;
-            if(blocks>=DGGameDataLo&&blocks<DGGameDataHi) continue; /* لازم يشير لHeap */
-            if(nb<1||nb>512||cb>=nb||bc>0x20000) continue;
-            tested++;
-            /* تحقق: Blocks[0] -> أول entry يجب أن يكون "None" */
-            uint64_t block0=0;
-            if(!DGReadQ(blocks,&block0)||!block0||!DGInRegions(block0)) continue;
-            BOOL noneOk=NO;
-            for(uint64_t off=0;off<=0x40;off+=0x8){
-                uint64_t g2=0; uint8_t *e=DGSafeRead(block0+off,8,&g2);
-                if(!e||g2<7){ if(e)DGFreeRead(e,g2); continue; }
-                /* FNameEntry: [uint16 hdr]["None"\0] */
-                if(memcmp((char*)e+2,"None",4)==0 && e[6]==0){ noneOk=YES; }
-                DGFreeRead(e,g2);
-                if(noneOk) break;
+            uint64_t p; memcpy(&p,buf+q,8);
+            if(!p||(p&7)||!DGInRegions(p)) continue;
+            if(p>=DGGameDataLo&&p<DGGameDataHi) continue;
+            ptrCand++;
+            /* اقرأ أول 4 مؤشرات بلوك دفعة واحدة */
+            uint64_t g2=0; uint8_t *ba=DGSafeRead(p,32,&g2);
+            if(!ba) continue;
+            int none=0;
+            int nb=(int)(g2/8); if(nb>4) nb=4;
+            for(int i=0;i<nb;i++){
+                uint64_t blk; memcpy(&blk,ba+i*8,8);
+                if(!blk||!DGInRegions(blk)) continue;
+                blockTested++;
+                if(DGBlockHasNone(blk)){ none=1; break; }
             }
-            if(!noneOk) continue;
-            /* فك 5 أسماء عشوائية للتأكيد */
-            char nm[64]; int good=0;
-            for(uint32_t id=1; id<=40 && good<5; id++){
-                if(DGDecodeFName((id<<8)|0x20,nm,sizeof nm)||DGDecodeFName(id<<16|0x10,nm,sizeof nm)||DGDecodeFName((1u<<16)|(id*0x20),nm,sizeof nm)){
-                    if(dbg) fprintf(dbg,"POOLSAMPLE %s\n",nm);
-                    good++;
-                }
-            }
-            if(good>=2){
-                DGNamePool=cursor+q;
-                hits++;
-                if(dbg) fprintf(dbg,"NAMEPOOL @ 0x%llx blocks=0x%llx NumBlocks=%u\n",
-                    (unsigned long long)(cursor+q),(unsigned long long)blocks,nb);
-                DGFreeRead(buf,got);
-                return 1;
-            }
+            DGFreeRead(ba,g2);
+            if(!none) continue;
+            hits++;
+            if(dbg) fprintf(dbg,"POOLCAND @ 0x%llx ctx64=",(unsigned long long)(cursor+q));
+            uint64_t g3=0; uint8_t *cx=DGSafeRead(cursor+q>64?cursor+q-64:cursor+q,64,&g3);
+            if(cx){ for(uint64_t k=0;k<g3;k++) fprintf(dbg,"%02x",cx[k]); DGFreeRead(cx,g3); }
+            fprintf(dbg,"\n");
+            fflush(dbg);
+            if(hits>=6){ DGFreeRead(buf,got); if(dbg)fprintf(dbg,"POOL candidates>=6 (funnel ptr=%d blocks=%d)\n",ptrCand,blockTested); return 0; }
         }
         DGFreeRead(buf,got);
         cursor+=got?got:want;
         if(!got) cursor+=want;
     }
-    if(dbg) fprintf(dbg,"NAMEPOOL not found (tested=%d)\n",tested);
+    if(dbg) fprintf(dbg,"POOL funnel: ptrCand=%d blockTested=%d hits=%d\n",ptrCand,blockTested,hits);
     return 0;
 }
 
@@ -949,10 +949,8 @@ static void DGUE4Scan(void){
     if(!DGGameTextLo){ fprintf(dbg,"FAIL ranges\n"); fclose(dbg); return; }
 
     /* المرحلة 1: NamePool */
-    if(!DGNamePool){
-        snprintf(DGUE4Stat,sizeof(DGUE4Stat),"محاولة %d: البحث عن FNamePool...",DGUE4ScanCount);
-        DGFindNamePool(dbg);
-    }
+    snprintf(DGUE4Stat,sizeof(DGUE4Stat),"محاولة %d: البحث عن FNamePool...",DGUE4ScanCount);
+    DGFindNamePool(dbg);
     if(DGNamePool) fprintf(dbg,"PHASE1 OK pool=0x%llx\n",(unsigned long long)DGNamePool);
     else fprintf(dbg,"PHASE1 pending\n");
     fflush(dbg);
