@@ -795,7 +795,7 @@ static UIView *DGMakeCard(CGRect frame, NSString *titleText){
 }
 
 /* صف تفعيل: نص واضح + مفتاح — الحالة تُقرأ من المفتاح نفسه */
-static UIView *DGToggleRow(CGFloat y, NSString *text, SEL action, UISwitch **outSwitch){
+static UIView *DGToggleRow(CGFloat y, NSString *text, SEL action, UISwitch * __strong *outSwitch){
     UIView *row=[[UIView alloc] initWithFrame:CGRectMake(0,y,276,34)];
     UILabel *l=[[UILabel alloc] initWithFrame:CGRectMake(12,0,204,34)];
     l.text=text; l.textColor=[UIColor whiteColor]; l.font=[UIFont systemFontOfSize:13];
