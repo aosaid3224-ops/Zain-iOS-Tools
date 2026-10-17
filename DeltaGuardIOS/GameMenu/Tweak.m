@@ -58,7 +58,7 @@ static long DGDLCurrentPartBytes;
 static int DGDLCurrentPart;
 static BOOL DGDLBusy=NO;
 static UILabel *DGUE4Label;
-static char DGUE4Stat[256]="ÙÙÙÙÙ Ø§ÙÙØ§Ø³Ø­ ÙÙ ÙØ¨Ø¯Ø£";
+static char DGUE4Stat[256]="لم يبدأ الماسح";
 static int DGUE4ScanCount=0;
 static BOOL DGUE4FoundFlag=NO;
 static char DGUE4FoundAddr[64]="";
@@ -83,6 +83,7 @@ static BOOL DGStarted=NO;
 static BOOL DGForceTraining=NO;
 static BOOL DGDebugLines=NO;
 static dispatch_block_t DGIdleBlock;
+static void DGHaptic(void);
 
 /* قاعدة الكاميرا الحالية — تُحدّث كل فريم عند تفعيل خطوط التجربة */
 static float DGCamPos[3]={0,0,0}, DGCamFwd[3]={0,0,1}, DGCamRight[3]={1,0,0}, DGCamUp[3]={0,1,0};
@@ -804,15 +805,20 @@ static void DGUE4Scan(void){
     if(now-lastTry<30.0) return;
     lastTry=now;
     DGUE4ScanCount++;
-    snprintf(DGUE4Stat,sizeof(DGUE4Stat),"ÙØ­Ø§ÙÙØ© %d: ÙÙØ­Øµ Ø§ÙØ¢Ù...",DGUE4ScanCount);
+    snprintf(DGUE4Stat,sizeof(DGUE4Stat),"المحاولة %d: يفحص الآن...",DGUE4ScanCount);
     DGInitGameRanges();
     NSString *outp=[NSTemporaryDirectory() stringByAppendingPathComponent:@"deltaguard_ue4.txt"];
     FILE *dbg=fopen([outp UTF8String],"w");
     #define DLOG(...) do{ if(dbg){fprintf(__VA_ARGS__);fflush(dbg);} }while(0)
-    DLOG(dbg,"scan v0.7.3 start data=0x%llx-0x%llx text=0x%llx-0x%llx\n",
+    DLOG(dbg,"scan v0.7.4 start data=0x%llx-0x%llx text=0x%llx-0x%llx\n",
         (unsigned long long)DGGameDataLo,(unsigned long long)DGGameDataHi,
         (unsigned long long)DGGameTextLo,(unsigned long long)DGGameTextHi);
-    if(!DGGameTextLo||!DGGameDataLo){ DLOG(dbg,"FAIL: game ranges\n"); if(dbg)fclose(dbg); return; }
+    if(!DGGameTextLo||!DGGameDataLo){
+        snprintf(DGUE4Stat,sizeof(DGUE4Stat),"لم تُحدّد نطاقات اللعبة (المحاولة %d)",DGUE4ScanCount);
+        DLOG(dbg,"FAIL: game ranges\n");
+        if(dbg)fclose(dbg);
+        return;
+    }
     int nearMiss=0, verified=0;
     uint64_t cursor=DGGameDataLo;
     while(cursor<DGGameDataHi){
@@ -820,7 +826,7 @@ static void DGUE4Scan(void){
         uint64_t got=0;
         uint8_t *buf=DGSafeRead(cursor,want,&got);
         if(!buf){ DLOG(dbg,"read fail @0x%llx\n",(unsigned long long)cursor); cursor+=want; continue; }
-        uint64_t lim=got-32;
+        uint64_t lim=got>=32?got-32:0;
         for(uint64_t q=0;q<lim;q+=8){
             uint64_t objects; uint32_t num,max,nc,mc;
             int lay=DGTryLayout(buf,q,&objects,&num,&max,&nc,&mc);
@@ -829,7 +835,7 @@ static void DGUE4Scan(void){
             int score=DGVerifyUObjectChain(objects,nc);
             if(score>=3){
                 found=YES; DGUE4FoundFlag=YES;
-                snprintf(DGUE4Stat,sizeof(DGUE4Stat),"â ØªÙ: GUObjectArray @ 0x%llx (layout %c) — ÙÙÙÙÙ Ø§ÙØ®Ø±ÙØ¬",
+                snprintf(DGUE4Stat,sizeof(DGUE4Stat),"✅ تم العثور على GUObjectArray @ 0x%llx (layout %c)",
                     (unsigned long long)(cursor+q),lay==1?'A':'B');
                 snprintf(DGUE4FoundAddr,sizeof(DGUE4FoundAddr),"0x%llx",(unsigned long long)(cursor+q));
                 dispatch_async(dispatch_get_main_queue(),^{ DGHaptic(); DGHaptic(); });
@@ -855,7 +861,7 @@ static void DGUE4Scan(void){
         cursor+=got?got:want;
         if(!got) cursor+=want;
     }
-    if(!DGUE4FoundFlag) snprintf(DGUE4Stat,sizeof(DGUE4Stat),"â ÙÙ ÙÙØ¬Ø¯ (ÙØ­Ø§ÙÙØ© %d) — Ø¥Ø¹Ø§Ø¯Ø© ØªÙÙØ§Ù Ø®ÙØ§Ù 30Ø« | NEAR-MISS: %d",DGUE4ScanCount,nearMiss);
+    if(!DGUE4FoundFlag) snprintf(DGUE4Stat,sizeof(DGUE4Stat),"⚠️ لم يُعثر عليها بعد (المحاولة %d) — إعادة خلال 30ث | NEAR-MISS: %d",DGUE4ScanCount,nearMiss);
     DLOG(dbg,"END: layoutMatches=%d nearMissSamples=%d\n",verified,nearMiss);
     if(dbg)fclose(dbg);
     #undef DLOG
