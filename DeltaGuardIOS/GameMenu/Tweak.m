@@ -6,9 +6,14 @@
 /* نفس تخطيط CAFrameRateRange (iOS 15+) */
 typedef struct { float minimum; float maximum; float preferred; } DGFrameRateRange;
 
-@interface DGFloatButton : UIButton @end
+@class DGMenu;
+
+@interface DGFloatButton : UIButton
+@property(nonatomic,getter=isDGMinimized) BOOL dgMinimized;
+@end
 
 static UIWindow *DGWindow;
+static DGFloatButton *DGButton;
 static UIView *DGPanel;
 static UILabel *DGStatsLabel;
 static UIButton *DG90Button;
@@ -20,7 +25,10 @@ static NSTimer *DGStatsTimer;
 static BOOL DG90Enabled=NO;
 static NSInteger DGRealMaxFPS=60; /* قدرة الشاشة الحقيقية (تُلتقط قبل السوازل) */
 static NSString *const DG90Key=@"DG90Enabled";
+static NSString *const DGFloatPosKey=@"DGFloatPos";
+static NSString *const DGPanelPosKey=@"DGPanelPos";
 static BOOL DGStarted=NO;
+static dispatch_block_t DGIdleBlock;
 
 static NSString *DGMemoryString(void){
     task_vm_info_data_t info; mach_msg_type_number_t count=TASK_VM_INFO_COUNT;
@@ -110,13 +118,88 @@ static void DGSwizzleFPS(void){
 }
 @end
 
+// ===== سلوك الزر العائم: شفافية خمول، التصاق بالحواف، حفظ الموضع =====
+
+static void DGCancelIdle(void){
+    if(DGIdleBlock){ dispatch_block_cancel(DGIdleBlock); DGIdleBlock=nil; }
+}
+
+static void DGScheduleIdle(void){
+    DGCancelIdle();
+    DGIdleBlock=dispatch_block_create(0,^{
+        DGFloatButton *b=DGButton;
+        if(b && !b.isHighlighted && !b.isDGMinimized){
+            [UIView animateWithDuration:0.4 animations:^{ b.alpha=0.55; }];
+        }
+    });
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(3.0*NSEC_PER_SEC)),dispatch_get_main_queue(),DGIdleBlock);
+}
+
+static void DGSnapButton(DGFloatButton *btn){
+    if(!btn) return;
+    CGRect sb=[UIScreen mainScreen].bounds;
+    CGFloat half=btn.bounds.size.width/2;
+    CGFloat x=(btn.center.x<sb.size.width/2)?(10+half):(sb.size.width-10-half);
+    CGFloat y=MIN(MAX(btn.center.y,70),sb.size.height-90);
+    [UIView animateWithDuration:0.35 delay:0 usingSpringWithDamping:0.75 initialSpringVelocity:0.4 options:UIViewAnimationOptionCurveEaseOut animations:^{
+        btn.center=CGPointMake(x,y);
+    } completion:nil];
+}
+
+static void DGSaveButtonPos(void){
+    if(!DGButton) return;
+    [[NSUserDefaults standardUserDefaults] setObject:NSStringFromCGPoint(DGButton.frame.origin) forKey:DGFloatPosKey];
+}
+
+static void DGRestoreButtonPos(CGRect *frame){
+    NSString *s=[[NSUserDefaults standardUserDefaults] stringForKey:DGFloatPosKey];
+    if(s){
+        CGPoint o=CGPointFromString(s);
+        if(o.x>=0 && o.y>=0) *frame=(CGRect){o,frame->size};
+    }
+}
+
 @implementation DGFloatButton
-- (void)dgPan:(UIPanGestureRecognizer *)g{
-    CGPoint t=[g translationInView:DGWindow];
-    static CGPoint start;
-    if(g.state==UIGestureRecognizerStateBegan) start=self.center;
-    self.center=CGPointMake(start.x+t.x,start.y+t.y);
-    [g setTranslation:CGPointZero inView:DGWindow];
+
+/* سحب بالضغط المطوّل: الضغط العادي يبقى للفتح، والسحب ما يتعارض مع النقرة */
+- (void)dgLongPress:(UILongPressGestureRecognizer *)g{
+    CGPoint p=[g locationInView:DGWindow];
+    if(g.state==UIGestureRecognizerStateBegan){
+        DGCancelIdle();
+        [UIView animateWithDuration:0.1 animations:^{ self.alpha=1.0; self.transform=CGAffineTransformMakeScale(1.08,1.08); }];
+    } else if(g.state==UIGestureRecognizerStateChanged){
+        self.center=CGPointMake(p.x,p.y-32); /* يطفو فوق الإصبع */
+    } else if(g.state==UIGestureRecognizerStateEnded || g.state==UIGestureRecognizerStateCancelled){
+        [UIView animateWithDuration:0.15 animations:^{ self.transform=CGAffineTransformIdentity; }];
+        DGSnapButton(self);
+        DGSaveButtonPos();
+        DGScheduleIdle();
+    }
+}
+
+/* نقرة مزدوجة: تصغير إلى نقطة صغيرة حتى لا تعيق التجارب */
+- (void)dgDoubleTap:(UITapGestureRecognizer *)g{
+    (void)g;
+    self.dgMinimized=!self.dgMinimized;
+    CGFloat size=self.dgMinimized?30:52;
+    DGCancelIdle();
+    [UIView animateWithDuration:0.22 delay:0 usingSpringWithDamping:0.8 initialSpringVelocity:0.4 options:0 animations:^{
+        self.frame=CGRectMake(self.center.x-size/2,self.center.y-size/2,size,size);
+        self.layer.cornerRadius=size/2;
+        self.titleLabel.font=[UIFont systemFontOfSize:self.dgMinimized?13:22];
+        self.alpha=1.0;
+    } completion:^(BOOL f){ (void)f; DGScheduleIdle(); }];
+    if(self.dgMinimized && DGPanel && !DGPanel.isHidden) [DGMenu hidePanel];
+}
+
+- (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event{
+    [super touchesBegan:touches withEvent:event];
+    DGCancelIdle();
+    self.alpha=1.0;
+}
+- (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event{
+    [super touchesEnded:touches withEvent:event];
+    DGScheduleIdle();
 }
 @end
 
@@ -150,30 +233,55 @@ static void DGSwizzleFPS(void){
     DGWindow.rootViewController.view.backgroundColor=[UIColor clearColor];
     DGWindow.hidden=NO;
     UIView *root=DGWindow.rootViewController.view;
-    DGFloatButton *btn=[DGFloatButton buttonWithType:UIButtonTypeCustom];
-    btn.frame=CGRectMake(20,140,52,52);
-    btn.layer.cornerRadius=26;
-    btn.backgroundColor=[UIColor colorWithWhite:0.05 alpha:0.9];
-    btn.layer.borderColor=[UIColor colorWithRed:0.2 green:0.85 blue:1 alpha:1].CGColor;
-    btn.layer.borderWidth=2;
-    [btn setTitle:@"🛡" forState:UIControlStateNormal];
-    btn.titleLabel.font=[UIFont systemFontOfSize:22];
-    [btn addTarget:self action:@selector(togglePanel) forControlEvents:UIControlEventTouchUpInside];
-    UIPanGestureRecognizer *pan=[[UIPanGestureRecognizer alloc] initWithTarget:btn action:@selector(dgPan:)];
-    [btn addGestureRecognizer:pan];
-    [root addSubview:btn];
 
-    DGPanel=[[UIView alloc] initWithFrame:CGRectMake(60,200,260,222)];
+    CGRect btnFrame=CGRectMake(20,140,52,52);
+    DGRestoreButtonPos(&btnFrame);
+    DGButton=[DGFloatButton buttonWithType:UIButtonTypeCustom];
+    DGButton.frame=btnFrame;
+    DGButton.layer.cornerRadius=26;
+    DGButton.backgroundColor=[UIColor colorWithWhite:0.05 alpha:0.9];
+    DGButton.layer.borderColor=[UIColor colorWithRed:0.2 green:0.85 blue:1 alpha:1].CGColor;
+    DGButton.layer.borderWidth=2;
+    [DGButton setTitle:@"🛡" forState:UIControlStateNormal];
+    DGButton.titleLabel.font=[UIFont systemFontOfSize:22];
+    [DGButton addTarget:self action:@selector(togglePanel) forControlEvents:UIControlEventTouchUpInside];
+    UILongPressGestureRecognizer *hold=[[UILongPressGestureRecognizer alloc] initWithTarget:DGButton action:@selector(dgLongPress:)];
+    hold.minimumPressDuration=0.3;
+    [DGButton addGestureRecognizer:hold];
+    UITapGestureRecognizer *dt=[[UITapGestureRecognizer alloc] initWithTarget:DGButton action:@selector(dgDoubleTap:)];
+    dt.numberOfTapsRequired=2;
+    [DGButton addGestureRecognizer:dt];
+    [root addSubview:DGButton];
+    DGScheduleIdle();
+
+    CGRect panelFrame=CGRectMake(60,200,260,222);
+    NSString *ps=[[NSUserDefaults standardUserDefaults] stringForKey:DGPanelPosKey];
+    if(ps){
+        CGPoint o=CGPointFromString(ps);
+        if(o.x>=0 && o.y>=0) panelFrame=(CGRect){o,panelFrame.size};
+    }
+    DGPanel=[[UIView alloc] initWithFrame:panelFrame];
     DGPanel.backgroundColor=[UIColor colorWithWhite:0.08 alpha:0.92];
     DGPanel.layer.cornerRadius=14;
     DGPanel.layer.borderColor=[UIColor colorWithRed:0.2 green:0.85 blue:1 alpha:1].CGColor;
     DGPanel.layer.borderWidth=1.5;
     DGPanel.hidden=YES;
 
-    UILabel *title=[[UILabel alloc] initWithFrame:CGRectMake(0,10,260,24)];
+    UILabel *title=[[UILabel alloc] initWithFrame:CGRectMake(30,10,200,24)];
     title.text=@"🛡 حارس دلتا — أداة العملية";
     title.textColor=[UIColor whiteColor]; title.textAlignment=NSTextAlignmentCenter; title.font=[UIFont boldSystemFontOfSize:14];
+    title.userInteractionEnabled=YES;
+    UIPanGestureRecognizer *panelPan=[[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(dgPanelPan:)];
+    [title addGestureRecognizer:panelPan];
     [DGPanel addSubview:title];
+
+    UIButton *closeB=[UIButton buttonWithType:UIButtonTypeSystem];
+    closeB.frame=CGRectMake(228,6,26,28);
+    [closeB setTitle:@"✕" forState:UIControlStateNormal];
+    closeB.titleLabel.font=[UIFont boldSystemFontOfSize:14];
+    closeB.tintColor=[UIColor lightGrayColor];
+    [closeB addTarget:self action:@selector(hidePanel) forControlEvents:UIControlEventTouchUpInside];
+    [DGPanel addSubview:closeB];
 
     DGStatsLabel=[[UILabel alloc] initWithFrame:CGRectMake(10,40,240,60)];
     DGStatsLabel.textColor=[UIColor colorWithRed:0.4 green:1 blue:0.6 alpha:1];
@@ -202,15 +310,37 @@ static void DGSwizzleFPS(void){
     [DGPanel addSubview:DG90Button];
 
     UILabel *hint=[[UILabel alloc] initWithFrame:CGRectMake(10,186,240,30)];
-    hint.text=@"اسحب الأيقونة لتحريكها — اضغط عليها للفتح";
+    hint.text=@"اضغط مطولاً للسحب • نقرة للفتح • نقرتان للتصغير";
     hint.textColor=[UIColor lightGrayColor]; hint.textAlignment=NSTextAlignmentCenter; hint.font=[UIFont systemFontOfSize:10];
     [DGPanel addSubview:hint];
+
+    UILabel *ver=[[UILabel alloc] initWithFrame:CGRectMake(196,200,54,16)];
+    ver.text=@"v0.4.0";
+    ver.textColor=[UIColor lightGrayColor]; ver.textAlignment=NSTextAlignmentRight; ver.font=[UIFont systemFontOfSize:9]; ver.alpha=0.6;
+    [DGPanel addSubview:ver];
 
     [root addSubview:DGPanel];
     DGLink=[CADisplayLink displayLinkWithTarget:self selector:@selector(frame:)];
     [DGLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSRunLoopCommonModes];
     DGStatsTimer=[NSTimer scheduledTimerWithTimeInterval:1.0 target:self selector:@selector(updateStats) userInfo:nil repeats:YES];
     [DGStatsLabel setText:[self statsText]];
+}
+
+/* سحب اللوحة من شريط العنوان مع التثبيت داخل الشاشة والحفظ */
++ (void)dgPanelPan:(UIPanGestureRecognizer *)g{
+    CGPoint t=[g translationInView:DGWindow];
+    static CGPoint start;
+    if(g.state==UIGestureRecognizerStateBegan) start=DGPanel.center;
+    DGPanel.center=CGPointMake(start.x+t.x,start.y+t.y);
+    [g setTranslation:CGPointZero inView:DGWindow];
+    if(g.state==UIGestureRecognizerStateEnded || g.state==UIGestureRecognizerStateCancelled){
+        CGRect b=[UIScreen mainScreen].bounds;
+        CGFloat pw=DGPanel.bounds.size.width, ph=DGPanel.bounds.size.height;
+        CGFloat cx=MIN(MAX(DGPanel.center.x,pw/2),b.size.width-pw/2);
+        CGFloat cy=MIN(MAX(DGPanel.center.y,ph/2+40),b.size.height-ph/2-40);
+        [UIView animateWithDuration:0.25 animations:^{ DGPanel.center=CGPointMake(cx,cy); }];
+        [[NSUserDefaults standardUserDefaults] setObject:NSStringFromCGPoint(DGPanel.frame.origin) forKey:DGPanelPosKey];
+    }
 }
 
 + (void)toggle90{
@@ -243,7 +373,17 @@ static void DGSwizzleFPS(void){
         (long)DGRealMaxFPS,DGMemoryString(),(int)(up/60),((int)up)%60,mode];
 }
 
-+ (void)togglePanel{ DGPanel.hidden=!DGPanel.isHidden; }
++ (void)togglePanel{
+    if(DGPanel.isHidden){
+        DGPanel.hidden=NO;
+        DGPanel.alpha=0;
+        DGPanel.transform=CGAffineTransformMakeScale(0.85,0.85);
+        [UIView animateWithDuration:0.2 animations:^{ DGPanel.alpha=1; DGPanel.transform=CGAffineTransformIdentity; }];
+    } else {
+        [UIView animateWithDuration:0.15 animations:^{ DGPanel.alpha=0; DGPanel.transform=CGAffineTransformMakeScale(0.9,0.9); }
+                         completion:^(BOOL f){ DGPanel.hidden=YES; DGPanel.transform=CGAffineTransformIdentity; DGPanel.alpha=1; }];
+    }
+}
 + (void)hidePanel{ DGPanel.hidden=YES; }
 + (void)quitGame{
     DGStatsLabel.text=@"جاري إنهاء اللعبة…";
