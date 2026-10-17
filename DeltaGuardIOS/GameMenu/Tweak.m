@@ -1499,28 +1499,8 @@ static UIView *DGToggleRow(CGFloat y, NSString *text, SEL action, UISwitch * __s
     [root addSubview:DGButton];
     DGScheduleIdle();
 
-    /* حبة الإحداثيات أعلى الشاشة — أثناء التدريب فقط */
-    DGCoordPill=[[UILabel alloc] initWithFrame:CGRectMake(0,54,220,26)];
-    DGCoordPill.center=CGPointMake([UIScreen mainScreen].bounds.size.width/2,DGCoordPill.center.y);
-    DGCoordPill.backgroundColor=[UIColor colorWithWhite:0 alpha:0.55];
-    DGCoordPill.textColor=[UIColor colorWithRed:0.4 green:1 blue:0.6 alpha:1];
-    DGCoordPill.font=[UIFont monospacedSystemFontOfSize:11 weight:UIFontWeightSemibold];
-    DGCoordPill.textAlignment=NSTextAlignmentCenter;
-    DGCoordPill.layer.cornerRadius=13;
-    DGCoordPill.clipsToBounds=YES;
-    DGCoordPill.hidden=YES;
-    DGCoordPill.userInteractionEnabled=NO;
-    [root addSubview:DGCoordPill];
-
-    /* طبقة خطوط الكشف — لا تلمس شيئاً */
-    DGEspView=[[DGEspDebugView alloc] initWithFrame:[UIScreen mainScreen].bounds];
-    DGEspView.backgroundColor=[UIColor clearColor];
-    DGEspView.opaque=NO;
-    DGEspView.userInteractionEnabled=NO;
-    [root addSubview:DGEspView];
-
     /* ===== اللوحة: ترويسة + تمرير + بطاقات أقسام ===== */
-    CGRect panelFrame=CGRectMake(60,110,300,460);
+    CGRect panelFrame=CGRectMake(60,110,300,400);
     NSString *ps=[[NSUserDefaults standardUserDefaults] stringForKey:DGPanelPosKey];
     if(ps){
         CGPoint o=CGPointFromString(ps);
@@ -1543,7 +1523,7 @@ static UIView *DGToggleRow(CGFloat y, NSString *text, SEL action, UISwitch * __s
     title.text=@"🛡 حارس دلتا";
     title.textColor=[UIColor whiteColor]; title.font=[UIFont boldSystemFontOfSize:15];
     UILabel *sub=[[UILabel alloc] initWithFrame:CGRectMake(14,26,230,13)];
-    sub.text=@"DeltaGuard iOS — المرحلة 1: الاستكشاف";
+    sub.text=@"DeltaGuard iOS — المرحلة 2: ماسح UE4";
     sub.textColor=[UIColor colorWithWhite:1 alpha:0.45]; sub.font=[UIFont systemFontOfSize:9];
     UIButton *closeB=[UIButton buttonWithType:UIButtonTypeSystem];
     closeB.frame=CGRectMake(258,9,32,28);
@@ -1558,57 +1538,41 @@ static UIView *DGToggleRow(CGFloat y, NSString *text, SEL action, UISwitch * __s
     [header addGestureRecognizer:panelPan];
     [DGPanel addSubview:header];
 
-    DGScroll=[[UIScrollView alloc] initWithFrame:CGRectMake(0,46,300,414)];
+    DGScroll=[[UIScrollView alloc] initWithFrame:CGRectMake(0,46,300,354)];
     DGScroll.showsVerticalScrollIndicator=NO;
     DGScroll.alwaysBounceVertical=YES;
     DGScroll.delaysContentTouches=NO;
-    UIView *content=[[UIView alloc] initWithFrame:CGRectMake(0,0,300,592)];
+    UIView *content=[[UIView alloc] initWithFrame:CGRectMake(0,0,300,360)];
     [DGScroll addSubview:content];
 
-    /* — البطاقة 1: الإحصائيات — */
-    UIView *c1=DGMakeCard(CGRectMake(12,12,276,92),@"📊 الإحصائيات");
-    DGStatsLabel=[[UILabel alloc] initWithFrame:CGRectMake(12,30,252,52)];
+    /* — البطاقة 1: الحالة — */
+    UIView *c1=DGMakeCard(CGRectMake(12,12,276,64),@"📊 الحالة");
+    DGStatsLabel=[[UILabel alloc] initWithFrame:CGRectMake(12,28,252,30)];
     DGStatsLabel.textColor=[UIColor colorWithRed:0.45 green:1 blue:0.65 alpha:1];
-    DGStatsLabel.font=[UIFont monospacedSystemFontOfSize:11 weight:UIFontWeightMedium];
-    DGStatsLabel.numberOfLines=3;
+    DGStatsLabel.font=[UIFont monospacedSystemFontOfSize:10 weight:UIFontWeightMedium];
+    DGStatsLabel.numberOfLines=2;
     [c1 addSubview:DGStatsLabel];
     [content addSubview:c1];
 
-    /* — البطاقة 2: التفعيلات — كل حالة تُقرأ من المفتاح نفسه — */
-    UIView *c2=DGMakeCard(CGRectMake(12,112,276,168),@"⚡ التفعيلات");
-    UIView *r1=DGToggleRow(30,@"فتح 90 FPS",@selector(dg90Changed:),&DG90Switch);
-    UIView *r2=DGToggleRow(66,@"وضع التدريب (قراءة الإحداثيات)",@selector(dgTrainingChanged:),&DGTrainingSwitch);
-    UIView *r3=DGToggleRow(102,@"خطوط الكشف التجريبية",@selector(dgDebugChanged:),&DGDebugSwitch);
-    DG90Note=[[UILabel alloc] initWithFrame:CGRectMake(12,136,252,28)];
-    DG90Note.text=@"⚠️ شاشتك 60Hz — التفعيل لن يغيّر معدل الإطارات فعلياً";
-    DG90Note.textColor=[UIColor systemYellowColor];
-    DG90Note.font=[UIFont systemFontOfSize:10];
-    DG90Note.numberOfLines=2;
-    [c2 addSubview:r1]; [c2 addSubview:r2]; [c2 addSubview:r3]; [c2 addSubview:DG90Note];
+    /* — البطاقة 2: ماسح UE4 — الأهم — */
+    UIView *c2=DGMakeCard(CGRectMake(12,84,276,124),@"🎯 ماسح UE4 — GUObjectArray");
+    DGUE4Label=[[UILabel alloc] initWithFrame:CGRectMake(12,28,252,44)];
+    DGUE4Label.textColor=[UIColor colorWithRed:1 green:0.85 blue:0.3 alpha:1];
+    DGUE4Label.font=[UIFont monospacedSystemFontOfSize:11 weight:UIFontWeightSemibold];
+    DGUE4Label.numberOfLines=3;
+    DGUE4Label.text=@"UE4: الماسح لم يبدأ";
+    [c2 addSubview:DGUE4Label];
+    UILabel *hint=[[UILabel alloc] initWithFrame:CGRectMake(12,76,252,40)];
+    hint.text=@"يفحص كل 30 ثانية تلقائيًا\nعند ✅: اهتزاز — اخرج وأرسل deltaguard_ue4.txt";
+    hint.textColor=[UIColor colorWithWhite:1 alpha:0.5];
+    hint.font=[UIFont systemFontOfSize:9];
+    hint.numberOfLines=2;
+    [c2 addSubview:hint];
     [content addSubview:c2];
 
-    /* — البطاقة 3: استكشاف الكائنات — */
-    UIView *c3=DGMakeCard(CGRectMake(12,288,276,168),@"🔍 استكشاف الكائنات");
-    DGSceneLabel=[[UILabel alloc] initWithFrame:CGRectMake(12,30,252,16)];
-    DGSceneLabel.textColor=[UIColor whiteColor];
-    DGSceneLabel.font=[UIFont monospacedSystemFontOfSize:10 weight:UIFontWeightMedium];
-    DGCoordLabel=[[UILabel alloc] initWithFrame:CGRectMake(12,48,252,18)];
-    DGCoordLabel.textColor=[UIColor colorWithRed:0.4 green:1 blue:0.6 alpha:1];
-    DGCoordLabel.font=[UIFont monospacedSystemFontOfSize:11 weight:UIFontWeightSemibold];
-    DGUE4Label=[[UILabel alloc] initWithFrame:CGRectMake(12,66,252,14)];
-    DGUE4Label.textColor=[UIColor colorWithRed:1 green:0.85 blue:0.3 alpha:1];
-    DGUE4Label.font=[UIFont monospacedSystemFontOfSize:9 weight:UIFontWeightSemibold];
-    DGUE4Label.text=@"UE4: ...";
-    [c3 addSubview:DGUE4Label];
-    DGCandidatesLabel=[[UILabel alloc] initWithFrame:CGRectMake(12,82,252,76)];
-    DGCandidatesLabel.textColor=[UIColor colorWithWhite:1 alpha:0.65];
-    DGCandidatesLabel.font=[UIFont monospacedSystemFontOfSize:9 weight:UIFontWeightRegular];
-    DGCandidatesLabel.numberOfLines=6;
-    [c3 addSubview:DGSceneLabel]; [c3 addSubview:DGCoordLabel]; [c3 addSubview:DGCandidatesLabel];
-    [content addSubview:c3];
-
+    /* — البطاقة 3: التحميل الموثق — */
     /* — البطاقة 4: التحميل الحي — */
-    UIView *c4=DGMakeCard(CGRectMake(12,464,276,118),@"📥 ملف التحليل — 5 أجزاء (416MB)");
+    UIView *c4=DGMakeCard(CGRectMake(12,216,276,118),@"📥 ملف التحليل — 5 أجزاء (416MB)");
     DGDLButton=[UIButton buttonWithType:UIButtonTypeSystem];
     DGDLButton.frame=CGRectMake(12,30,252,28);
     [DGDLButton setTitle:@"بدء التحميل من GitHub" forState:UIControlStateNormal];
@@ -1631,7 +1595,9 @@ static UIView *DGToggleRow(CGFloat y, NSString *text, SEL action, UISwitch * __s
     [c4 addSubview:DGDLStatusLabel];
     [content addSubview:c4];
 
-    DGScroll.contentSize=CGSizeMake(300,592);
+
+    DGScroll.contentSize=CGSizeMake(300,360);
+
     [DGPanel addSubview:DGScroll];
     [root addSubview:DGPanel];
 
@@ -1792,12 +1758,9 @@ static UIView *DGToggleRow(CGFloat y, NSString *text, SEL action, UISwitch * __s
 
 + (NSString *)statsText{
     NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
-    NSString *mode;
-    if(!DG90Enabled) mode=@"متوقف";
-    else if(DGCanUnlock()) mode=@"مفعّل ✅";
-    else mode=@"مفعّل — بلا فائدة (60Hz)";
-    return [NSString stringWithFormat:@"إطارات الشاشة: %ld Hz | الذاكرة: %@\nمدة التشغيل: %02d:%02d | 90FPS: %@",
-        (long)DGRealMaxFPS,DGMemoryString(),(int)(up/60),((int)up)%60,mode];
+    return [NSString stringWithFormat:@"الذاكرة: %@ | التشغيل: %02d:%02d
+DeltaGuard v0.7.7 — UE4",
+        DGMemoryString(),(int)(up/60),((int)up)%60];
 }
 
 + (void)togglePanel{
