@@ -57,6 +57,11 @@ static long DGDLPartsDone;
 static long DGDLCurrentPartBytes;
 static int DGDLCurrentPart;
 static BOOL DGDLBusy=NO;
+static UILabel *DGUE4Label;
+static char DGUE4Stat[256]="ÙÙÙÙÙ Ø§ÙÙØ§Ø³Ø­ ÙÙ ÙØ¨Ø¯Ø£";
+static int DGUE4ScanCount=0;
+static BOOL DGUE4FoundFlag=NO;
+static char DGUE4FoundAddr[64]="";
 static BOOL DGDLResponseValid=NO;
 static NSInteger DGDLHTTPStatusCode=0;
 static const long DGDLPartSizes[5]={90000000L,90000000L,90000000L,90000000L,56167600L};
@@ -798,6 +803,8 @@ static void DGUE4Scan(void){
     NSTimeInterval now=[[NSDate date] timeIntervalSince1970];
     if(now-lastTry<30.0) return;
     lastTry=now;
+    DGUE4ScanCount++;
+    snprintf(DGUE4Stat,sizeof(DGUE4Stat),"ÙØ­Ø§ÙÙØ© %d: ÙÙØ­Øµ Ø§ÙØ¢Ù...",DGUE4ScanCount);
     DGInitGameRanges();
     NSString *outp=[NSTemporaryDirectory() stringByAppendingPathComponent:@"deltaguard_ue4.txt"];
     FILE *dbg=fopen([outp UTF8String],"w");
@@ -821,7 +828,11 @@ static void DGUE4Scan(void){
             if(!DGPtrMapped(objects)) continue;
             int score=DGVerifyUObjectChain(objects,nc);
             if(score>=3){
-                found=YES;
+                found=YES; DGUE4FoundFlag=YES;
+                snprintf(DGUE4Stat,sizeof(DGUE4Stat),"â ØªÙ: GUObjectArray @ 0x%llx (layout %c) — ÙÙÙÙÙ Ø§ÙØ®Ø±ÙØ¬",
+                    (unsigned long long)(cursor+q),lay==1?'A':'B');
+                snprintf(DGUE4FoundAddr,sizeof(DGUE4FoundAddr),"0x%llx",(unsigned long long)(cursor+q));
+                dispatch_async(dispatch_get_main_queue(),^{ DGHaptic(); DGHaptic(); });
                 DLOG(dbg,"FOUND layout=%c\n",lay==1?'A':'B');
                 DLOG(dbg,"GUObjectArray @ 0x%llx\n",(unsigned long long)(cursor+q));
                 DLOG(dbg,"NumElements=%u MaxElements=%u NumChunks=%u MaxChunks=%u\n",num,max,nc,mc);
@@ -844,6 +855,7 @@ static void DGUE4Scan(void){
         cursor+=got?got:want;
         if(!got) cursor+=want;
     }
+    if(!DGUE4FoundFlag) snprintf(DGUE4Stat,sizeof(DGUE4Stat),"â ÙÙ ÙÙØ¬Ø¯ (ÙØ­Ø§ÙÙØ© %d) — Ø¥Ø¹Ø§Ø¯Ø© ØªÙÙØ§Ù Ø®ÙØ§Ù 30Ø« | NEAR-MISS: %d",DGUE4ScanCount,nearMiss);
     DLOG(dbg,"END: layoutMatches=%d nearMissSamples=%d\n",verified,nearMiss);
     if(dbg)fclose(dbg);
     #undef DLOG
@@ -1558,7 +1570,12 @@ static UIView *DGToggleRow(CGFloat y, NSString *text, SEL action, UISwitch * __s
     DGCoordLabel=[[UILabel alloc] initWithFrame:CGRectMake(12,48,252,18)];
     DGCoordLabel.textColor=[UIColor colorWithRed:0.4 green:1 blue:0.6 alpha:1];
     DGCoordLabel.font=[UIFont monospacedSystemFontOfSize:11 weight:UIFontWeightSemibold];
-    DGCandidatesLabel=[[UILabel alloc] initWithFrame:CGRectMake(12,68,252,90)];
+    DGUE4Label=[[UILabel alloc] initWithFrame:CGRectMake(12,66,252,14)];
+    DGUE4Label.textColor=[UIColor colorWithRed:1 green:0.85 blue:0.3 alpha:1];
+    DGUE4Label.font=[UIFont monospacedSystemFontOfSize:9 weight:UIFontWeightSemibold];
+    DGUE4Label.text=@"UE4: ...";
+    [c3 addSubview:DGUE4Label];
+    DGCandidatesLabel=[[UILabel alloc] initWithFrame:CGRectMake(12,82,252,76)];
     DGCandidatesLabel.textColor=[UIColor colorWithWhite:1 alpha:0.65];
     DGCandidatesLabel.font=[UIFont monospacedSystemFontOfSize:9 weight:UIFontWeightRegular];
     DGCandidatesLabel.numberOfLines=6;
@@ -1704,6 +1721,12 @@ static UIView *DGToggleRow(CGFloat y, NSString *text, SEL action, UISwitch * __s
             }
             DGCandidatesLabel.text=ms;
         }
+    }
+
+    /* (3.5) حالة ماسح UE4 — حي */
+    if(DGUE4Label){
+        DGUE4Label.text=[NSString stringWithFormat:@"UE4: %s",DGUE4Stat];
+        DGUE4Label.textColor=DGUE4FoundFlag?[UIColor systemGreenColor]:[UIColor colorWithRed:1 green:0.85 blue:0.3 alpha:1];
     }
 
     /* (4) قراءة الإحداثيات — تظهر فقط في وضع التدريب */
