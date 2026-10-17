@@ -668,6 +668,136 @@ static int DGMainCryptid(void){
     return -1;
 }
 
+/* ============================================================
+   v0.7.0 — UE4 Runtime Scanner
+   يمسح ذاكرة العملية الحية (mach_vm_read — آمن كليًا) عن
+   TUObjectArray متقد (NumElements>0) ويتحقق بسلسلة:
+   chunk → FUObjectItem → UObject → vtable داخل __TEXT اللعبة
+   ============================================================ */
+static uint64_t DGGameTextLo=0, DGGameTextHi=0;
+static uint64_t DGGameDataLo=0, DGGameDataHi=0;
+
+static void DGInitGameRanges(void){
+    if(DGGameTextLo) return;
+    uint32_t ic=_dyld_image_count();
+    for(uint32_t i=0;i<ic;i++){
+        const char *p=_dyld_get_image_name(i);
+        if(!p || !strstr(p,"DeltaForceClient.app/DeltaForceClient") || strstr(p,"Frameworks/")) continue;
+        const struct mach_header_64 *mh=(const struct mach_header_64*)_dyld_get_image_header(i);
+        if(!mh||mh->magic!=MH_MAGIC_64) continue;
+        uint64_t slide=_dyld_get_image_vmaddr_slide(i);
+        const uint8_t *cs=(const uint8_t*)mh+sizeof(struct mach_header_64);
+        for(uint32_t k2=0;k2<mh->ncmds;k2++){
+            const struct load_command *l2=(const struct load_command*)cs;
+            if(l2->cmd==LC_SEGMENT_64){
+                const struct segment_command_64 *seg=(const struct segment_command_64*)l2;
+                uint64_t lo=seg->vmaddr+slide, hi=lo+seg->vmsize;
+                if(strncmp(seg->segname,"__TEXT",16)==0){ DGGameTextLo=lo; DGGameTextHi=hi; }
+                if(strncmp(seg->segname,"__DATA",16)==0){ if(!DGGameDataLo||lo<DGGameDataLo)DGGameDataLo=lo; if(hi>DGGameDataHi)DGGameDataHi=hi; }
+            }
+            cs+=l2->cmdsize;
+        }
+        break;
+    }
+}
+
+static BOOL DGPtrMapped(uint64_t p){
+    if(p<0x1000) return NO;
+    mach_vm_address_t a=(mach_vm_address_t)(p&~0x3FFFULL);
+    mach_vm_size_t size=0; vm_region_basic_info_data_64_t info;
+    mach_msg_type_number_t cnt=VM_REGION_BASIC_INFO_COUNT_64; mach_port_t obj=MACH_PORT_NULL;
+    kern_return_t kr=mach_vm_region(mach_task_self(),&a,&size,VM_REGION_BASIC_INFO_64,(vm_region_info_t)&info,&cnt,&obj);
+    if(obj!=MACH_PORT_NULL) mach_port_deallocate(mach_task_self(),obj);
+    if(kr!=KERN_SUCCESS) return NO;
+    return (p>=a && p<a+size);
+}
+
+static BOOL DGReadQ(uint64_t at, uint64_t *out){
+    uint64_t got=0; uint8_t *b=DGSafeRead(at,8,&got);
+    if(!b||got<8) return NO;
+    memcpy(out,b,8); DGFreeRead(b,got);
+    return YES;
+}
+
+static int DGVerifyUObjectChain(uint64_t objectsPtr, uint32_t numChunks){
+    uint64_t got=0;
+    uint32_t want=numChunks; if(want>512) want=512;
+    uint8_t *table=DGSafeRead(objectsPtr,(uint64_t)want*8,&got);
+    if(!table) return 0;
+    int score=0; uint64_t checked=0;
+    for(uint32_t c=0;c<want && checked<24;c++){
+        uint64_t chunk; memcpy(&chunk,table+c*8,8);
+        if(!DGPtrMapped(chunk)) continue;
+        for(int k=0;k<2;k++){
+            uint64_t item=chunk+(uint64_t)k*0x20;
+            uint64_t obj=0; if(!DGReadQ(item,&obj)) continue;
+            if(obj<0x100000000||obj%8) continue;
+            uint64_t vtab=0; if(!DGReadQ(obj,&vtab)) continue;
+            if(DGGameTextLo && vtab>=DGGameTextLo && vtab<DGGameTextHi) score++;
+            checked++;
+        }
+    }
+    DGFreeRead(table,got);
+    return score;
+}
+
+static void DGUE4Scan(void){
+    static BOOL tried=NO; if(tried) return; tried=YES;
+    DGInitGameRanges();
+    if(!DGGameTextLo) return;
+    mach_vm_address_t addr=0x100000000;
+    for(;;){
+        mach_vm_size_t size=0; vm_region_basic_info_data_64_t info;
+        mach_msg_type_number_t cnt=VM_REGION_BASIC_INFO_COUNT_64; mach_port_t obj=MACH_PORT_NULL;
+        kern_return_t kr=mach_vm_region(mach_task_self(),&addr,&size,VM_REGION_BASIC_INFO_64,(vm_region_info_t)&info,&cnt,&obj);
+        if(kr!=KERN_SUCCESS) break;
+        if(obj!=MACH_PORT_NULL) mach_port_deallocate(mach_task_self(),obj);
+        if((info.protection&VM_PROT_READ) && size>0x1000 && size<=0x4000000ULL){
+            uint64_t off=0;
+            while(off+32<=size){
+                uint64_t want=size-off; if(want>33554432) want=33554432;
+                uint64_t got=0;
+                uint8_t *buf=DGSafeRead((uint64_t)addr+off,want,&got);
+                if(!buf) break;
+                uint64_t lim=got-32;
+                for(uint64_t q=0;q<lim;q+=8){
+                    uint64_t objects, pre; uint32_t mx,nm,mc,nc;
+                    memcpy(&objects,buf+q,8); memcpy(&pre,buf+q+8,8);
+                    memcpy(&mx,buf+q+16,4); memcpy(&nm,buf+q+20,4);
+                    memcpy(&mc,buf+q+24,4); memcpy(&nc,buf+q+28,4);
+                    if(!objects || objects%8) continue;
+                    if(mx<0x100000||mx>0x8000000) continue;
+                    if(nm<1000||nm>=mx) continue;
+                    if(mc<16||mc>65536||nc<1||nc>mc) continue;
+                    if(mx%mc) continue;
+                    uint32_t per=mx/mc; if(per<256||per>65536) continue;
+                    if(!DGPtrMapped(objects)) continue;
+                    int score=DGVerifyUObjectChain(objects,nc);
+                    if(score>=4){
+                        FILE *f=fopen([[NSTemporaryDirectory() stringByAppendingPathComponent:@"deltaguard_ue4.txt"] UTF8String],"w");
+                        if(f){
+                            fprintf(f,"GUObjectArray @ 0x%llx\n",(unsigned long long)(addr+off+q));
+                            fprintf(f,"NumElements=%u MaxElements=%u NumChunks=%u MaxChunks=%u perChunk=%u\n",nm,mx,nc,mc,per);
+                            fprintf(f,"verifyScore=%d (min 4 required)\n",score);
+                            fprintf(f,"gameText=0x%llx-0x%llx\n",(unsigned long long)DGGameTextLo,(unsigned long long)DGGameTextHi);
+                            fclose(f);
+                        }
+                        DGFreeRead(buf,got);
+                        return;
+                    }
+                }
+                DGFreeRead(buf,got);
+                off+=got?got:want;
+                if(!got) break;
+            }
+        }
+        addr+=size;
+        if(addr<0x100000000) break;
+    }
+    FILE *f=fopen([[NSTemporaryDirectory() stringByAppendingPathComponent:@"deltaguard_ue4.txt"] UTF8String],"w");
+    if(f){ fprintf(f,"GUObjectArray NOT FOUND\n"); fclose(f); }
+}
+
 /* بدائل يدوية إذا غابت الدوال عن التصدير */
 static void* DGUnbox(void *obj){
     if(DGIL2CPP.object_unbox) return DGIL2CPP.object_unbox(obj);
@@ -1453,7 +1583,8 @@ static UIView *DGToggleRow(CGFloat y, NSString *text, SEL action, UISwitch * __s
     DGWriteDiag();
     DGStartProbe(); /* يشتغل فقط عند اكتمال المراسي والدوال — وإلا يصمت */
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND,0),^{
-        DGDumpSymbols();          /* الأولوية: رموز UE4 */
+        DGUE4Scan();              /* الأولوية القصوى: GUObjectArray الحي */
+        DGDumpSymbols();
         DGScanMemoryForMetadata();
     });
 
