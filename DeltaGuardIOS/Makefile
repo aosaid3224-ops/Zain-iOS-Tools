@@ -34,8 +34,14 @@ include $(THEOS_MAKE_PATH)/tool.mk
 # تُثبت في /var/jb/Library/MobileSubstrate/DynamicLibraries (rootless)
 # ============================================================
 DG_GAME_STAGE := $(THEOS_STAGING_DIR)/Library/MobileSubstrate/DynamicLibraries
+DG_GAME_CLANG := $(shell xcrun --sdk iphoneos --find clang 2>/dev/null)
+ifeq ($(strip $(DG_GAME_CLANG)),)
 DG_GAME_CLANG := $(THEOS)/toolchain/linux/iphone/bin/clang
+endif
+DG_GAME_LDID := $(shell command -v ldid 2>/dev/null)
+ifeq ($(strip $(DG_GAME_LDID)),)
 DG_GAME_LDID := $(THEOS)/toolchain/linux/iphone/bin/ldid
+endif
 DG_GAME_SDK := $(SYSROOT)
 
 internal-stage:: dg-game-overlay

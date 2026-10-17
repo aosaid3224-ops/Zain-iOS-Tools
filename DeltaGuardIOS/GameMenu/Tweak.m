@@ -7,17 +7,21 @@
 typedef struct { float minimum; float maximum; float preferred; } DGFrameRateRange;
 
 @interface DGFloatButton : UIButton @end
+@interface DGMockESPView : UIView @end
 
 static UIWindow *DGWindow;
 static UIView *DGPanel;
 static UILabel *DGStatsLabel;
 static UIButton *DG90Button;
+static UIButton *DGMockButton;
+static DGMockESPView *DGMockOverlay;
 static NSDate *DGSessionStart;
 static CADisplayLink *DGLink;
 static NSUInteger DGFrameCount;
 static NSUInteger DGFPS;
 static NSTimer *DGStatsTimer;
 static BOOL DG90Enabled=NO;
+static BOOL DGMockEnabled=NO; /* معاينة تخطيط اصطناعية فقط، لا تتصل ببيانات اللعبة */
 static NSInteger DGRealMaxFPS=60; /* قدرة الشاشة الحقيقية (تُلتقط قبل السوازل) */
 static NSString *const DG90Key=@"DG90Enabled";
 static BOOL DGStarted=NO;
@@ -120,9 +124,108 @@ static void DGSwizzleFPS(void){
 }
 @end
 
+/* طبقة اختبار مستقلة: كل المواقع والأسماء والمسافات أدناه بيانات ثابتة اصطناعية. */
+@implementation DGMockESPView
+- (instancetype)initWithFrame:(CGRect)frame{
+    self=[super initWithFrame:frame];
+    if(self){
+        self.backgroundColor=[UIColor clearColor];
+        self.opaque=NO;
+        self.userInteractionEnabled=NO;
+        self.autoresizingMask=UIViewAutoresizingFlexibleWidth|UIViewAutoresizingFlexibleHeight;
+        self.contentMode=UIViewContentModeRedraw;
+    }
+    return self;
+}
+- (void)drawRect:(CGRect)rect{
+    CGFloat w=CGRectGetWidth(self.bounds), h=CGRectGetHeight(self.bounds);
+    if(w<100 || h<100) return;
+
+    NSDictionary *watermark=@{NSFontAttributeName:[UIFont monospacedSystemFontOfSize:10 weight:UIFontWeightBold],
+                              NSForegroundColorAttributeName:[UIColor colorWithWhite:1 alpha:.92]};
+    [@"معاينة اصطناعية — لا تقرأ بيانات اللعبة" drawInRect:CGRectMake(8,34,MAX(80,w-16),18) withAttributes:watermark];
+
+    NSArray *samples=@[
+        @{ @"name":@"SIM-01", @"meters":@"18", @"x":@0.29, @"y":@0.36, @"hp":@0.86 },
+        @{ @"name":@"SIM-02", @"meters":@"37", @"x":@0.50, @"y":@0.43, @"hp":@0.54 },
+        @{ @"name":@"SIM-03", @"meters":@"52", @"x":@0.70, @"y":@0.34, @"hp":@0.28 }
+    ];
+    NSArray *colors=@[[UIColor colorWithRed:.15 green:.92 blue:1 alpha:.96],
+                      [UIColor colorWithRed:.45 green:1 blue:.52 alpha:.96],
+                      [UIColor colorWithRed:1 green:.76 blue:.22 alpha:.96]];
+    CGFloat boxW=MIN(w*.18,MAX(46.0,h*.12));
+    CGFloat boxH=MIN(h*.30,MAX(90.0,h*.18));
+    for(NSUInteger i=0;i<samples.count;i++){
+        NSDictionary *sample=samples[i];
+        CGFloat cx=[sample[@"x"] floatValue]*w, cy=[sample[@"y"] floatValue]*h;
+        CGRect box=CGRectMake(cx-boxW*.5,cy-boxH*.5,boxW,boxH);
+        box.origin.x=MIN(MAX(8.0,box.origin.x),MAX(8.0,w-boxW-8.0));
+        box.origin.y=MIN(MAX(32.0,box.origin.y),MAX(32.0,h-boxH-8.0));
+        UIColor *color=colors[i];
+        UIBezierPath *outline=[UIBezierPath bezierPathWithRect:box];
+        outline.lineWidth=2.0;
+        [color setStroke];
+        [outline stroke];
+
+        NSString *caption=[NSString stringWithFormat:@"%@ · %@ m",sample[@"name"],sample[@"meters"]];
+        NSDictionary *captionStyle=@{NSFontAttributeName:[UIFont monospacedSystemFontOfSize:10 weight:UIFontWeightBold],
+                                     NSForegroundColorAttributeName:[UIColor whiteColor]};
+        CGRect captionRect=CGRectMake(MAX(4.0,CGRectGetMinX(box)-15.0),CGRectGetMinY(box)-20.0,boxW+30.0,17.0);
+        UIBezierPath *captionBG=[UIBezierPath bezierPathWithRoundedRect:captionRect cornerRadius:4.0];
+        [[UIColor colorWithWhite:0 alpha:.78] setFill];
+        [captionBG fill];
+        [caption drawInRect:CGRectInset(captionRect,3,1) withAttributes:captionStyle];
+
+        CGFloat health=[sample[@"hp"] floatValue];
+        CGRect healthBG=CGRectMake(CGRectGetMaxX(box)+4.0,CGRectGetMinY(box),4.0,CGRectGetHeight(box));
+        [[UIColor colorWithWhite:1 alpha:.30] setFill];
+        [[UIBezierPath bezierPathWithRect:healthBG] fill];
+        CGRect healthFG=CGRectMake(healthBG.origin.x,CGRectGetMaxY(healthBG)-healthBG.size.height*health,
+                                   healthBG.size.width,healthBG.size.height*health);
+        UIColor *healthColor=health>.5?[UIColor colorWithRed:.25 green:1 blue:.48 alpha:.96]:[UIColor colorWithRed:1 green:.36 blue:.24 alpha:.96];
+        [healthColor setFill];
+        [[UIBezierPath bezierPathWithRect:healthFG] fill];
+    }
+
+    CGFloat radarSize=MIN(112.0,MIN(w,h)*.30);
+    CGRect radar=CGRectMake(MAX(8.0,w-radarSize-14.0),MAX(8.0,h-radarSize-14.0),radarSize,radarSize);
+    UIBezierPath *radarBG=[UIBezierPath bezierPathWithRoundedRect:radar cornerRadius:9.0];
+    [[UIColor colorWithWhite:0 alpha:.68] setFill];
+    [radarBG fill];
+    [[UIColor colorWithRed:.20 green:.88 blue:1 alpha:.90] setStroke];
+    radarBG.lineWidth=1.3;
+    [radarBG stroke];
+    CGFloat cx=CGRectGetMidX(radar), cy=CGRectGetMidY(radar);
+    UIBezierPath *axes=[UIBezierPath bezierPath];
+    [axes moveToPoint:CGPointMake(cx,CGRectGetMinY(radar)+17)];
+    [axes addLineToPoint:CGPointMake(cx,CGRectGetMaxY(radar)-7)];
+    [axes moveToPoint:CGPointMake(CGRectGetMinX(radar)+7,cy+5)];
+    [axes addLineToPoint:CGPointMake(CGRectGetMaxX(radar)-7,cy+5)];
+    axes.lineWidth=.7;
+    [[UIColor colorWithWhite:1 alpha:.42] setStroke];
+    [axes stroke];
+    NSDictionary *radarTitle=@{NSFontAttributeName:[UIFont monospacedSystemFontOfSize:8 weight:UIFontWeightBold],
+                               NSForegroundColorAttributeName:[UIColor whiteColor]};
+    [@"RADAR · SIM" drawInRect:CGRectMake(CGRectGetMinX(radar)+5,CGRectGetMinY(radar)+4,radarSize-10,12) withAttributes:radarTitle];
+    NSArray *dots=@[@[@.34,@.38],@[@.68,@.47],@[@.58,@.72]];
+    for(NSUInteger i=0;i<dots.count;i++){
+        CGFloat dx=[dots[i][0] floatValue], dy=[dots[i][1] floatValue];
+        CGPoint point=CGPointMake(CGRectGetMinX(radar)+dx*radarSize,CGRectGetMinY(radar)+dy*radarSize);
+        UIBezierPath *dot=[UIBezierPath bezierPathWithOvalInRect:CGRectMake(point.x-3.0,point.y-3.0,6.0,6.0)];
+        [colors[i] setFill];
+        [dot fill];
+    }
+    UIBezierPath *selfDot=[UIBezierPath bezierPathWithOvalInRect:CGRectMake(cx-4.0,cy+1.0,8.0,8.0)];
+    [[UIColor whiteColor] setFill];
+    [selfDot fill];
+}
+@end
+
 @interface DGMenu : NSObject
 + (void)install;
 + (void)start;
++ (void)toggleMock;
++ (void)updateMockButton;
 @end
 
 @implementation DGMenu
@@ -150,6 +253,9 @@ static void DGSwizzleFPS(void){
     DGWindow.rootViewController.view.backgroundColor=[UIColor clearColor];
     DGWindow.hidden=NO;
     UIView *root=DGWindow.rootViewController.view;
+    DGMockOverlay=[[DGMockESPView alloc] initWithFrame:root.bounds];
+    DGMockOverlay.hidden=YES;
+    [root addSubview:DGMockOverlay];
     DGFloatButton *btn=[DGFloatButton buttonWithType:UIButtonTypeCustom];
     btn.frame=CGRectMake(20,140,52,52);
     btn.layer.cornerRadius=26;
@@ -163,11 +269,14 @@ static void DGSwizzleFPS(void){
     [btn addGestureRecognizer:pan];
     [root addSubview:btn];
 
-    DGPanel=[[UIView alloc] initWithFrame:CGRectMake(60,200,260,222)];
+    CGFloat panelX=MIN(60.0,MAX(12.0,root.bounds.size.width-272.0));
+    CGFloat panelY=MIN(200.0,MAX(12.0,root.bounds.size.height-282.0));
+    DGPanel=[[UIView alloc] initWithFrame:CGRectMake(panelX,panelY,260,270)];
     DGPanel.backgroundColor=[UIColor colorWithWhite:0.08 alpha:0.92];
     DGPanel.layer.cornerRadius=14;
     DGPanel.layer.borderColor=[UIColor colorWithRed:0.2 green:0.85 blue:1 alpha:1].CGColor;
     DGPanel.layer.borderWidth=1.5;
+    DGPanel.autoresizingMask=UIViewAutoresizingFlexibleLeftMargin|UIViewAutoresizingFlexibleTopMargin;
     DGPanel.hidden=YES;
 
     UILabel *title=[[UILabel alloc] initWithFrame:CGRectMake(0,10,260,24)];
@@ -201,8 +310,14 @@ static void DGSwizzleFPS(void){
     [self update90Button];
     [DGPanel addSubview:DG90Button];
 
-    UILabel *hint=[[UILabel alloc] initWithFrame:CGRectMake(10,186,240,30)];
-    hint.text=@"اسحب الأيقونة لتحريكها — اضغط عليها للفتح";
+    DGMockButton=[UIButton buttonWithType:UIButtonTypeSystem];
+    DGMockButton.frame=CGRectMake(20,184,220,34);
+    [DGMockButton addTarget:self action:@selector(toggleMock) forControlEvents:UIControlEventTouchUpInside];
+    [self updateMockButton];
+    [DGPanel addSubview:DGMockButton];
+
+    UILabel *hint=[[UILabel alloc] initWithFrame:CGRectMake(10,224,240,30)];
+    hint.text=@"المعاينة اصطناعية فقط — لا تقرأ بيانات اللعبة";
     hint.textColor=[UIColor lightGrayColor]; hint.textAlignment=NSTextAlignmentCenter; hint.font=[UIFont systemFontOfSize:10];
     [DGPanel addSubview:hint];
 
@@ -228,6 +343,20 @@ static void DGSwizzleFPS(void){
     else { title=@"⚡ 90 FPS: غير متاح — شاشتك 60Hz"; color=[UIColor systemYellowColor]; }
     [DG90Button setTitle:title forState:UIControlStateNormal];
     DG90Button.tintColor=color;
+}
+
++ (void)toggleMock{
+    DGMockEnabled=!DGMockEnabled;
+    DGMockOverlay.hidden=!DGMockEnabled;
+    [DGMockOverlay setNeedsDisplay];
+    [self updateMockButton];
+}
+
++ (void)updateMockButton{
+    if(!DGMockButton) return;
+    NSString *title=DGMockEnabled?@"معاينة اصطناعية: تشغيل":@"معاينة اصطناعية: إيقاف";
+    [DGMockButton setTitle:title forState:UIControlStateNormal];
+    DGMockButton.tintColor=DGMockEnabled?[UIColor systemGreenColor]:[UIColor systemCyanColor];
 }
 
 + (void)frame:(CADisplayLink *)l{ DGFrameCount++; }
