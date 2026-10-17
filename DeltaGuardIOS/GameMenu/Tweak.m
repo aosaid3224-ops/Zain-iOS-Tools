@@ -897,14 +897,13 @@ static int DGFindNamePool(FILE *dbg){
             uint64_t block0=0;
             if(!DGReadQ(blocks,&block0)||!block0||!DGInRegions(block0)) continue;
             BOOL noneOk=NO;
-            for(uint64_t off=0;off<=0x40;off+=0x10){
+            for(uint64_t off=0;off<=0x40;off+=0x8){
                 uint64_t g2=0; uint8_t *e=DGSafeRead(block0+off,8,&g2);
-                if(!e) continue;
-                char chk[8]={0}; memcpy(chk,e,g2<7?g2:7); DGFreeRead(e,g2);
-                if(chk[0]!=0 && memcmp(chk+1,"None",4)==0 && chk[5]==0){ noneOk=YES; break; }
-                /* header ثم None: hdr uint16 في e[0..1] */
-                if(g2>=8 && e[0]==0 && memcmp((char*)e+2,"None",4)==0){ noneOk=YES; DGFreeRead(e,g2); break; }
-                /* أعد القراءة إذا حررنا مبكرًا */
+                if(!e||g2<7){ if(e)DGFreeRead(e,g2); continue; }
+                /* FNameEntry: [uint16 hdr]["None"\0] */
+                if(memcmp((char*)e+2,"None",4)==0 && e[6]==0){ noneOk=YES; }
+                DGFreeRead(e,g2);
+                if(noneOk) break;
             }
             if(!noneOk) continue;
             /* فك 5 أسماء عشوائية للتأكيد */
