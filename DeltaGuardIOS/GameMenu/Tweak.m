@@ -33,9 +33,11 @@ static UILabel *DGSceneLabel;
 static UILabel *DGCoordLabel;
 static UILabel *DGCandidatesLabel;
 static UILabel *DGCoordPill;
-static UIButton *DG90Button;
-static UIButton *DGTrainingButton;
-static UIButton *DGDebugButton;
+static UISwitch *DG90Switch;
+static UISwitch *DGTrainingSwitch;
+static UISwitch *DGDebugSwitch;
+static UILabel *DG90Note;
+static UIScrollView *DGScroll;
 static NSDate *DGSessionStart;
 static CADisplayLink *DGLink;
 static NSUInteger DGFrameCount;
@@ -767,6 +769,45 @@ static void DGHaptic(void){
     }
 }
 
+/* ===== نظام واجهة موحّد — لون وهوية واحدة لكل العناصر ===== */
+static UIColor *DGAccentColor(void){ return [UIColor colorWithRed:0.2 green:0.85 blue:1 alpha:1]; }
+
+static void DGStyleButton(DGFloatButton *btn, CGFloat size){
+    btn.bounds=CGRectMake(0,0,size,size);
+    btn.layer.cornerRadius=size/2;
+    btn.backgroundColor=[UIColor colorWithWhite:0.04 alpha:0.9];
+    btn.layer.borderColor=DGAccentColor().CGColor;
+    btn.layer.borderWidth=1.5;
+    btn.clipsToBounds=YES;
+}
+
+/* بطاقة قسم: عنوان ملوّن في الأعلى + خلفية موحّدة */
+static UIView *DGMakeCard(CGRect frame, NSString *titleText){
+    UIView *card=[[UIView alloc] initWithFrame:frame];
+    card.backgroundColor=[UIColor colorWithWhite:1 alpha:0.055];
+    card.layer.cornerRadius=12;
+    UILabel *t=[[UILabel alloc] initWithFrame:CGRectMake(12,9,frame.size.width-24,16)];
+    t.text=titleText;
+    t.textColor=DGAccentColor();
+    t.font=[UIFont boldSystemFontOfSize:12];
+    [card addSubview:t];
+    return card;
+}
+
+/* صف تفعيل: نص واضح + مفتاح — الحالة تُقرأ من المفتاح نفسه */
+static UIView *DGToggleRow(CGFloat y, NSString *text, SEL action, UISwitch **outSwitch){
+    UIView *row=[[UIView alloc] initWithFrame:CGRectMake(0,y,276,34)];
+    UILabel *l=[[UILabel alloc] initWithFrame:CGRectMake(12,0,204,34)];
+    l.text=text; l.textColor=[UIColor whiteColor]; l.font=[UIFont systemFontOfSize:13];
+    UISwitch *sw=[[UISwitch alloc] initWithFrame:CGRectMake(215,1,51,32)];
+    sw.transform=CGAffineTransformMakeScale(0.8,0.8);
+    sw.onTintColor=DGAccentColor();
+    [sw addTarget:[DGMenu class] action:action forControlEvents:UIControlEventValueChanged];
+    [row addSubview:l]; [row addSubview:sw];
+    if(outSwitch) *outSwitch=sw;
+    return row;
+}
+
 @implementation DGFloatButton
 
 /* سحب بالضغط المطوّل: الضغط العادي يبقى للفتح، والسحب ما يتعارض مع النقرة */
@@ -790,13 +831,13 @@ static void DGHaptic(void){
 - (void)dgDoubleTap:(UITapGestureRecognizer *)g{
     (void)g;
     self.dgMinimized=!self.dgMinimized;
-    CGFloat size=self.dgMinimized?30:52;
+    CGFloat size=self.dgMinimized?26:50;
     DGCancelIdle();
     DGHaptic();
     [UIView animateWithDuration:0.22 delay:0 usingSpringWithDamping:0.8 initialSpringVelocity:0.4 options:0 animations:^{
         self.frame=CGRectMake(self.center.x-size/2,self.center.y-size/2,size,size);
         self.layer.cornerRadius=size/2;
-        self.titleLabel.font=[UIFont systemFontOfSize:self.dgMinimized?13:22];
+        self.titleLabel.font=[UIFont systemFontOfSize:self.dgMinimized?11:20];
         self.alpha=1.0;
     } completion:^(BOOL f){ (void)f; DGScheduleIdle(); }];
     if(self.dgMinimized && DGPanel && !DGPanel.isHidden) [DGMenu hidePanel];
@@ -841,20 +882,17 @@ static void DGHaptic(void){
     DGWindow.hidden=NO;
     UIView *root=DGWindow.rootViewController.view;
 
-    CGRect btnFrame=CGRectMake(20,140,52,52);
+    /* ===== الزر العائم — نظيف، سلس، لا يعيق ===== */
+    CGRect btnFrame=CGRectMake(20,140,50,50);
     DGRestoreButtonPos(&btnFrame);
     DGButton=[DGFloatButton buttonWithType:UIButtonTypeCustom];
     DGButton.frame=btnFrame;
-    DGButton.layer.cornerRadius=26;
-    DGButton.backgroundColor=[UIColor colorWithWhite:0.05 alpha:0.9];
-    DGButton.layer.borderColor=[UIColor colorWithRed:0.2 green:0.85 blue:1 alpha:1].CGColor;
-    DGButton.layer.borderWidth=2;
-    DGButton.clipsToBounds=YES;
+    DGStyleButton(DGButton,50);
     [DGButton setTitle:@"🛡" forState:UIControlStateNormal];
-    DGButton.titleLabel.font=[UIFont systemFontOfSize:22];
+    DGButton.titleLabel.font=[UIFont systemFontOfSize:20];
     [DGButton addTarget:self action:@selector(togglePanel) forControlEvents:UIControlEventTouchUpInside];
     UILongPressGestureRecognizer *hold=[[UILongPressGestureRecognizer alloc] initWithTarget:DGButton action:@selector(dgLongPress:)];
-    hold.minimumPressDuration=0.3;
+    hold.minimumPressDuration=0.25;
     [DGButton addGestureRecognizer:hold];
     UITapGestureRecognizer *dt=[[UITapGestureRecognizer alloc] initWithTarget:DGButton action:@selector(dgDoubleTap:)];
     dt.numberOfTapsRequired=2;
@@ -862,10 +900,10 @@ static void DGHaptic(void){
     [root addSubview:DGButton];
     DGScheduleIdle();
 
-    /* حبة إحداثيات مصغّرة تظهر أعلى الشاشة أثناء التدريب فقط — لا تعيق اللعب */
+    /* حبة الإحداثيات أعلى الشاشة — أثناء التدريب فقط */
     DGCoordPill=[[UILabel alloc] initWithFrame:CGRectMake(0,54,220,26)];
     DGCoordPill.center=CGPointMake([UIScreen mainScreen].bounds.size.width/2,DGCoordPill.center.y);
-    DGCoordPill.backgroundColor=[UIColor colorWithWhite:0.0 alpha:0.55];
+    DGCoordPill.backgroundColor=[UIColor colorWithWhite:0 alpha:0.55];
     DGCoordPill.textColor=[UIColor colorWithRed:0.4 green:1 blue:0.6 alpha:1];
     DGCoordPill.font=[UIFont monospacedSystemFontOfSize:11 weight:UIFontWeightSemibold];
     DGCoordPill.textAlignment=NSTextAlignmentCenter;
@@ -875,113 +913,107 @@ static void DGHaptic(void){
     DGCoordPill.userInteractionEnabled=NO;
     [root addSubview:DGCoordPill];
 
-    /* طبقة خطوط الكشف التجريبية — شفافة تماماً ولا تستقبل أي لمس */
+    /* طبقة خطوط الكشف — لا تلمس شيئاً */
     DGEspView=[[DGEspDebugView alloc] initWithFrame:[UIScreen mainScreen].bounds];
     DGEspView.backgroundColor=[UIColor clearColor];
     DGEspView.opaque=NO;
     DGEspView.userInteractionEnabled=NO;
     [root addSubview:DGEspView];
 
-    CGRect panelFrame=CGRectMake(50,180,280,372);
+    /* ===== اللوحة: ترويسة + تمرير + بطاقات أقسام ===== */
+    CGRect panelFrame=CGRectMake(60,110,300,460);
     NSString *ps=[[NSUserDefaults standardUserDefaults] stringForKey:DGPanelPosKey];
     if(ps){
         CGPoint o=CGPointFromString(ps);
         if(o.x>=0 && o.y>=0) panelFrame=(CGRect){o,panelFrame.size};
     }
     DGPanel=[[UIView alloc] initWithFrame:panelFrame];
-    DGPanel.backgroundColor=[UIColor colorWithWhite:0.08 alpha:0.92];
-    DGPanel.layer.cornerRadius=14;
-    DGPanel.layer.borderColor=[UIColor colorWithRed:0.2 green:0.85 blue:1 alpha:1].CGColor;
-    DGPanel.layer.borderWidth=1.5;
+    DGPanel.backgroundColor=[UIColor colorWithWhite:0.05 alpha:0.97];
+    DGPanel.layer.cornerRadius=16;
+    DGPanel.layer.borderColor=[DGAccentColor() colorWithAlphaComponent:0.55].CGColor;
+    DGPanel.layer.borderWidth=1;
+    DGPanel.layer.shadowColor=[UIColor blackColor].CGColor;
+    DGPanel.layer.shadowOpacity=0.45;
+    DGPanel.layer.shadowRadius=14;
+    DGPanel.layer.shadowOffset=CGSizeMake(0,8);
     DGPanel.hidden=YES;
 
-    UILabel *title=[[UILabel alloc] initWithFrame:CGRectMake(30,10,220,24)];
-    title.text=@"🛡 حارس دلتا — أداة العملية";
-    title.textColor=[UIColor whiteColor]; title.textAlignment=NSTextAlignmentCenter; title.font=[UIFont boldSystemFontOfSize:14];
-    title.userInteractionEnabled=YES;
-    UIPanGestureRecognizer *panelPan=[[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(dgPanelPan:)];
-    [title addGestureRecognizer:panelPan];
-    [DGPanel addSubview:title];
-
+    /* الترويسة — منطقة السحب الوحيدة، واضحة وثابتة */
+    UIView *header=[[UIView alloc] initWithFrame:CGRectMake(0,0,300,46)];
+    UILabel *title=[[UILabel alloc] initWithFrame:CGRectMake(14,6,230,20)];
+    title.text=@"🛡 حارس دلتا";
+    title.textColor=[UIColor whiteColor]; title.font=[UIFont boldSystemFontOfSize:15];
+    UILabel *sub=[[UILabel alloc] initWithFrame:CGRectMake(14,26,230,13)];
+    sub.text=@"DeltaGuard iOS — المرحلة 1: الاستكشاف";
+    sub.textColor=[UIColor colorWithWhite:1 alpha:0.45]; sub.font=[UIFont systemFontOfSize:9];
     UIButton *closeB=[UIButton buttonWithType:UIButtonTypeSystem];
-    closeB.frame=CGRectMake(246,6,26,28);
+    closeB.frame=CGRectMake(258,9,32,28);
     [closeB setTitle:@"✕" forState:UIControlStateNormal];
-    closeB.titleLabel.font=[UIFont boldSystemFontOfSize:14];
-    closeB.tintColor=[UIColor lightGrayColor];
+    closeB.titleLabel.font=[UIFont boldSystemFontOfSize:15];
+    closeB.tintColor=[UIColor colorWithWhite:1 alpha:0.6];
     [closeB addTarget:self action:@selector(hidePanel) forControlEvents:UIControlEventTouchUpInside];
-    [DGPanel addSubview:closeB];
+    UIView *sep=[[UIView alloc] initWithFrame:CGRectMake(14,45.5,272,0.5)];
+    sep.backgroundColor=[UIColor colorWithWhite:1 alpha:0.1];
+    [header addSubview:title]; [header addSubview:sub]; [header addSubview:closeB]; [header addSubview:sep];
+    UIPanGestureRecognizer *panelPan=[[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(dgPanelPan:)];
+    [header addGestureRecognizer:panelPan];
+    [DGPanel addSubview:header];
 
-    DGStatsLabel=[[UILabel alloc] initWithFrame:CGRectMake(10,38,260,44)];
-    DGStatsLabel.textColor=[UIColor colorWithRed:0.4 green:1 blue:0.6 alpha:1];
-    DGStatsLabel.font=[UIFont monospacedSystemFontOfSize:11 weight:UIFontWeightRegular];
-    DGStatsLabel.numberOfLines=2;
-    DGStatsLabel.textAlignment=NSTextAlignmentCenter;
-    [DGPanel addSubview:DGStatsLabel];
+    DGScroll=[[UIScrollView alloc] initWithFrame:CGRectMake(0,46,300,414)];
+    DGScroll.showsVerticalScrollIndicator=NO;
+    DGScroll.alwaysBounceVertical=YES;
+    DGScroll.delaysContentTouches=NO;
+    UIView *content=[[UIView alloc] initWithFrame:CGRectMake(0,0,300,470)];
+    [DGScroll addSubview:content];
 
-    DG90Button=[UIButton buttonWithType:UIButtonTypeSystem];
-    DG90Button.frame=CGRectMake(20,86,240,30);
-    [DG90Button addTarget:self action:@selector(toggle90) forControlEvents:UIControlEventTouchUpInside];
-    [self update90Button];
-    [DGPanel addSubview:DG90Button];
+    /* — البطاقة 1: الإحصائيات — */
+    UIView *c1=DGMakeCard(CGRectMake(12,12,276,92),@"📊 الإحصائيات");
+    DGStatsLabel=[[UILabel alloc] initWithFrame:CGRectMake(12,30,252,52)];
+    DGStatsLabel.textColor=[UIColor colorWithRed:0.45 green:1 blue:0.65 alpha:1];
+    DGStatsLabel.font=[UIFont monospacedSystemFontOfSize:11 weight:UIFontWeightMedium];
+    DGStatsLabel.numberOfLines=3;
+    [c1 addSubview:DGStatsLabel];
+    [content addSubview:c1];
 
-    /* ===== قسم استكشاف الكائنات — المرحلة 1 ===== */
-    UILabel *discTitle=[[UILabel alloc] initWithFrame:CGRectMake(10,120,260,16)];
-    discTitle.text=@"🔍 استكشاف الكائنات — المرحلة 1";
-    discTitle.textColor=[UIColor colorWithRed:0.2 green:0.85 blue:1 alpha:1];
-    discTitle.font=[UIFont boldSystemFontOfSize:11];
-    discTitle.textAlignment=NSTextAlignmentCenter;
-    [DGPanel addSubview:discTitle];
+    /* — البطاقة 2: التفعيلات — كل حالة تُقرأ من المفتاح نفسه — */
+    UIView *c2=DGMakeCard(CGRectMake(12,112,276,168),@"⚡ التفعيلات");
+    UIView *r1=DGToggleRow(30,@"فتح 90 FPS",@selector(dg90Changed:),&DG90Switch);
+    UIView *r2=DGToggleRow(66,@"وضع التدريب (قراءة الإحداثيات)",@selector(dgTrainingChanged:),&DGTrainingSwitch);
+    UIView *r3=DGToggleRow(102,@"خطوط الكشف التجريبية",@selector(dgDebugChanged:),&DGDebugSwitch);
+    DG90Note=[[UILabel alloc] initWithFrame:CGRectMake(12,136,252,28)];
+    DG90Note.text=@"⚠️ شاشتك 60Hz — التفعيل لن يغيّر معدل الإطارات فعلياً";
+    DG90Note.textColor=[UIColor systemYellowColor];
+    DG90Note.font=[UIFont systemFontOfSize:10];
+    DG90Note.numberOfLines=2;
+    [c2 addSubview:r1]; [c2 addSubview:r2]; [c2 addSubview:r3]; [c2 addSubview:DG90Note];
+    [content addSubview:c2];
 
-    DGSceneLabel=[[UILabel alloc] initWithFrame:CGRectMake(10,138,260,16)];
+    /* — البطاقة 3: استكشاف الكائنات — */
+    UIView *c3=DGMakeCard(CGRectMake(12,288,276,168),@"🔍 استكشاف الكائنات");
+    DGSceneLabel=[[UILabel alloc] initWithFrame:CGRectMake(12,30,252,16)];
     DGSceneLabel.textColor=[UIColor whiteColor];
     DGSceneLabel.font=[UIFont monospacedSystemFontOfSize:10 weight:UIFontWeightMedium];
-    DGSceneLabel.textAlignment=NSTextAlignmentCenter;
-    [DGPanel addSubview:DGSceneLabel];
-
-    DGCoordLabel=[[UILabel alloc] initWithFrame:CGRectMake(10,154,260,18)];
+    DGCoordLabel=[[UILabel alloc] initWithFrame:CGRectMake(12,48,252,18)];
     DGCoordLabel.textColor=[UIColor colorWithRed:0.4 green:1 blue:0.6 alpha:1];
     DGCoordLabel.font=[UIFont monospacedSystemFontOfSize:11 weight:UIFontWeightSemibold];
-    DGCoordLabel.textAlignment=NSTextAlignmentCenter;
-    [DGPanel addSubview:DGCoordLabel];
-
-    DGCandidatesLabel=[[UILabel alloc] initWithFrame:CGRectMake(10,174,260,72)];
-    DGCandidatesLabel.textColor=[UIColor lightGrayColor];
+    DGCandidatesLabel=[[UILabel alloc] initWithFrame:CGRectMake(12,68,252,90)];
+    DGCandidatesLabel.textColor=[UIColor colorWithWhite:1 alpha:0.65];
     DGCandidatesLabel.font=[UIFont monospacedSystemFontOfSize:9 weight:UIFontWeightRegular];
-    DGCandidatesLabel.numberOfLines=5;
-    DGCandidatesLabel.textAlignment=NSTextAlignmentLeft;
-    DGCandidatesLabel.adjustsFontSizeToFitWidth=NO;
-    [DGPanel addSubview:DGCandidatesLabel];
+    DGCandidatesLabel.numberOfLines=6;
+    [c3 addSubview:DGSceneLabel]; [c3 addSubview:DGCoordLabel]; [c3 addSubview:DGCandidatesLabel];
+    [content addSubview:c3];
 
-    DGTrainingButton=[UIButton buttonWithType:UIButtonTypeSystem];
-    DGTrainingButton.frame=CGRectMake(20,250,240,28);
-    [DGTrainingButton addTarget:self action:@selector(toggleTraining) forControlEvents:UIControlEventTouchUpInside];
-    [self updateTrainingButton];
-    [DGPanel addSubview:DGTrainingButton];
-
-    DGDebugButton=[UIButton buttonWithType:UIButtonTypeSystem];
-    DGDebugButton.frame=CGRectMake(20,282,240,28);
-    [DGDebugButton addTarget:self action:@selector(toggleDebug) forControlEvents:UIControlEventTouchUpInside];
-    [self updateDebugButton];
-    [DGPanel addSubview:DGDebugButton];
-    /* ===== نهاية قسم الاستكشاف ===== */
-
-    UILabel *hint=[[UILabel alloc] initWithFrame:CGRectMake(10,314,260,26)];
-    hint.text=@"اضغط مطولاً للسحب • نقرة للفتح • نقرتان للتصغير";
-    hint.textColor=[UIColor lightGrayColor]; hint.textAlignment=NSTextAlignmentCenter; hint.font=[UIFont systemFontOfSize:10];
-    hint.numberOfLines=1;
-    [DGPanel addSubview:hint];
-
-    UILabel *ver=[[UILabel alloc] initWithFrame:CGRectMake(196,346,66,16)];
-    ver.text=@"v0.5.3-stage1";
-    ver.textColor=[UIColor lightGrayColor]; ver.textAlignment=NSTextAlignmentRight; ver.font=[UIFont systemFontOfSize:9]; ver.alpha=0.6;
-    [DGPanel addSubview:ver];
-
+    DGScroll.contentSize=CGSizeMake(300,470);
+    [DGPanel addSubview:DGScroll];
     [root addSubview:DGPanel];
+
+    [self syncUI];
+    [DGStatsLabel setText:[self statsText]];
+
     DGLink=[CADisplayLink displayLinkWithTarget:self selector:@selector(frame:)];
     [DGLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSRunLoopCommonModes];
     DGStatsTimer=[NSTimer scheduledTimerWithTimeInterval:1.0 target:self selector:@selector(updateStats) userInfo:nil repeats:YES];
     DGDiscoveryTimer=[NSTimer scheduledTimerWithTimeInterval:0.5 target:self selector:@selector(updateDiscovery) userInfo:nil repeats:YES];
-    [DGStatsLabel setText:[self statsText]];
     [self updateDiscovery];
 }
 
@@ -1002,51 +1034,34 @@ static void DGHaptic(void){
     }
 }
 
-+ (void)toggle90{
-    DG90Enabled=!DG90Enabled;
++ (void)dg90Changed:(UISwitch *)sw{
+    DG90Enabled=sw.isOn;
     [[NSUserDefaults standardUserDefaults] setBool:DG90Enabled forKey:DG90Key];
-    [self update90Button];
     [DGStatsLabel setText:[self statsText]];
 }
 
-+ (void)update90Button{
-    NSString *title;
-    UIColor *color=[UIColor labelColor];
-    if(!DG90Enabled) title=@"⚡ تفعيل 90 FPS";
-    else if(DGCanUnlock()){ title=@"⚡ 90 FPS: مفعّل ✅"; color=[UIColor systemGreenColor]; }
-    else { title=@"⚡ 90 FPS: غير متاح — شاشتك 60Hz"; color=[UIColor systemYellowColor]; }
-    [DG90Button setTitle:title forState:UIControlStateNormal];
-    DG90Button.tintColor=color;
-}
-
-/* ===== المرحلة 1: منطق الاستكشاف ===== */
-
-+ (void)toggleTraining{
-    DGForceTraining=!DGForceTraining;
++ (void)dgTrainingChanged:(UISwitch *)sw{
+    DGForceTraining=sw.isOn;
     [[NSUserDefaults standardUserDefaults] setBool:DGForceTraining forKey:DGForceTrainingKey];
-    [self updateTrainingButton];
     [self updateDiscovery];
 }
 
-+ (void)updateTrainingButton{
-    NSString *title=DGForceTraining?@"🎯 وضع التدريب: مفعّل يدوياً":@"🎯 وضع التدريب: تلقائي (حسب المشهد)";
-    UIColor *color=DGForceTraining?[UIColor systemGreenColor]:[UIColor labelColor];
-    [DGTrainingButton setTitle:title forState:UIControlStateNormal];
-    DGTrainingButton.tintColor=color;
-}
-
-+ (void)toggleDebug{
-    DGDebugLines=!DGDebugLines;
++ (void)dgDebugChanged:(UISwitch *)sw{
+    DGDebugLines=sw.isOn;
     [[NSUserDefaults standardUserDefaults] setBool:DGDebugLines forKey:DGDebugLinesKey];
-    [self updateDebugButton];
     if(!DGDebugLines && DGEspView) [DGEspView setNeedsDisplay];
 }
 
-+ (void)updateDebugButton{
-    NSString *title=DGDebugLines?@"📐 خطوط الكشف: مفعّلة ✅":@"📐 خطوط الكشف (تجربة): معطّلة";
-    UIColor *color=DGDebugLines?[UIColor systemGreenColor]:[UIColor labelColor];
-    [DGDebugButton setTitle:title forState:UIControlStateNormal];
-    DGDebugButton.tintColor=color;
+/* مزامنة كل الواجهة مع الحالة الفعلية — تُستدعى عند فتح اللوحة */
++ (void)syncUI{
+    if(DG90Switch){
+        BOOL can=DGCanUnlock();
+        DG90Switch.enabled=can;
+        DG90Switch.on=can && DG90Enabled;
+        DG90Note.hidden=can;
+    }
+    if(DGTrainingSwitch) DGTrainingSwitch.on=DGForceTraining;
+    if(DGDebugSwitch) DGDebugSwitch.on=DGDebugLines;
 }
 
 + (void)updateDiscovery{
@@ -1141,6 +1156,7 @@ static void DGHaptic(void){
 
 + (void)togglePanel{
     DGHaptic();
+    [self syncUI];
     if(DGPanel.isHidden){
         DGPanel.hidden=NO;
         DGPanel.alpha=0;
