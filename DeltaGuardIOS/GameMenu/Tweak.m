@@ -79,6 +79,9 @@ typedef const char* (*DGImageGetNameFn)(const void*);
 typedef void (*DGClassVisitorFn)(void*, void*);
 typedef void (*DGClassForEachFn)(DGClassVisitorFn, void*);
 
+static BOOL DGTryOffsetResolver(void);
+static void DGResolveProfilerFns(uint32_t count);
+
 static struct {
     BOOL available;
     DGDomainGetFn domain_get;
@@ -1308,9 +1311,7 @@ static UIView *DGToggleRow(CGFloat y, NSString *text, SEL action, UISwitch * __s
 
     if(DGCandidatesLabel){
         if(!DGIL2CPP.available){
-            DGCandidatesLabel.text=@"واجهة il2cpp الكاملة غير مصدَّرة (KiwiVM)
-الحل: أوفسيتات من التحليل ← DGOffsets في Tweak.m
-أو ابحث في deltaguard_exports.txt عن domain/invoke";
+            DGCandidatesLabel.text=@"واجهة il2cpp الكاملة غير مصدَّرة (KiwiVM)\nالحل: أوفسيتات من التحليل ← DGOffsets في Tweak.m\nأو ابحث في deltaguard_exports.txt عن domain/invoke";
         } else if(!DGCandidatesScanned){
             DGCandidatesLabel.text=@"فحص الكلاسات المرشحة: جارٍ…";
         } else if(DGCandidateClasses.count==0){
