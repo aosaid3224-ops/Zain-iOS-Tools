@@ -13,8 +13,8 @@
     </array>
     <key>CFBundleName</key><string>DeltaGuard</string>
     <key>CFBundlePackageType</key><string>APPL</string>
-    <key>CFBundleShortVersionString</key><string>0.5.4</string>
-    <key>CFBundleVersion</key><string>54</string>
+    <key>CFBundleShortVersionString</key><string>0.6.1</string>
+    <key>CFBundleVersion</key><string>61</string>
     <key>LSRequiresIPhoneOS</key><true/>
     <key>UIApplicationSupportsIndirectInputEvents</key><true/>
     <key>UIRequiredDeviceCapabilities</key><array><string>arm64</string></array>
