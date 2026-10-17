@@ -769,53 +769,84 @@ static FILE *DGOpenUE4Log(void){
     return fopen([path UTF8String],"w");
 }
 
+static int DGTryLayout(const uint8_t *buf, uint64_t q, uint64_t *objectsOut,
+                       uint32_t *numOut, uint32_t *maxOut, uint32_t *ncOut, uint32_t *mcOut){
+    uint64_t objects; uint32_t v10,v14,v18,v1c;
+    memcpy(&objects,buf+q,8);
+    memcpy(&v10,buf+q+16,4); memcpy(&v14,buf+q+20,4);
+    memcpy(&v18,buf+q+24,4); memcpy(&v1c,buf+q+28,4);
+    if(!objects||objects%8) return 0;
+    /* تخطيط A (4.26): +0x10=Max +0x14=Num +0x18=MaxChunks +0x1C=NumChunks */
+    if(v10>=0x40000&&v10<=0x10000000&&v14>=100&&v14<v10&&v18>=8&&v18<=65536&&v1c>=1&&v1c<=v18&&(v10%v18)==0){
+        uint32_t per=v10/v18; if(per>=128&&per<=65536){
+            *objectsOut=objects;*numOut=v14;*maxOut=v10;*mcOut=v18;*ncOut=v1c; return 1;
+        }
+    }
+    /* تخطيط B (UE5-style): +0x10=Num +0x14=Max +0x18=MaxChunks +0x1C=NumChunks */
+    if(v14>=0x40000&&v14<=0x10000000&&v10>=100&&v10<v14&&v18>=8&&v18<=65536&&v1c>=1&&v1c<=v18&&(v14%v18)==0){
+        uint32_t per=v14/v18; if(per>=128&&per<=65536){
+            *objectsOut=objects;*numOut=v10;*maxOut=v14;*mcOut=v18;*ncOut=v1c; return 2;
+        }
+    }
+    return 0;
+}
+
 static void DGUE4Scan(void){
-    static BOOL tried=NO; if(tried) return; tried=YES;
+    static NSTimeInterval lastTry=0;
+    static BOOL found=NO;
+    if(found) return;
+    NSTimeInterval now=[[NSDate date] timeIntervalSince1970];
+    if(now-lastTry<30.0) return;
+    lastTry=now;
     DGInitGameRanges();
     NSString *outp=[NSTemporaryDirectory() stringByAppendingPathComponent:@"deltaguard_ue4.txt"];
     FILE *dbg=fopen([outp UTF8String],"w");
-    if(dbg){ fprintf(dbg,"scan start text=0x%llx-0x%llx data=0x%llx-0x%llx\n",
-        (unsigned long long)DGGameTextLo,(unsigned long long)DGGameTextHi,
-        (unsigned long long)DGGameDataLo,(unsigned long long)DGGameDataHi); fflush(dbg); }
-    if(!DGGameTextLo||!DGGameDataLo){ if(dbg){fprintf(dbg,"FAIL: game ranges\n");fclose(dbg);} return; }
-    /* نفحص __DATA اللعبة فقط (81MB) — ثواني */
+    #define DLOG(...) do{ if(dbg){fprintf(__VA_ARGS__);fflush(dbg);} }while(0)
+    DLOG(dbg,"scan v0.7.3 start data=0x%llx-0x%llx text=0x%llx-0x%llx\n",
+        (unsigned long long)DGGameDataLo,(unsigned long long)DGGameDataHi,
+        (unsigned long long)DGGameTextLo,(unsigned long long)DGGameTextHi);
+    if(!DGGameTextLo||!DGGameDataLo){ DLOG(dbg,"FAIL: game ranges\n"); if(dbg)fclose(dbg); return; }
+    int nearMiss=0, verified=0;
     uint64_t cursor=DGGameDataLo;
     while(cursor<DGGameDataHi){
         uint64_t want=DGGameDataHi-cursor; if(want>33554432) want=33554432;
         uint64_t got=0;
         uint8_t *buf=DGSafeRead(cursor,want,&got);
-        if(!buf){ if(dbg){fprintf(dbg,"read fail @0x%llx\n",(unsigned long long)cursor);fflush(dbg);} cursor+=want; continue; }
-        if(dbg){ fprintf(dbg,"chunk @0x%llx (%llu MB)\n",(unsigned long long)cursor,got/1048576); fflush(dbg); }
+        if(!buf){ DLOG(dbg,"read fail @0x%llx\n",(unsigned long long)cursor); cursor+=want; continue; }
         uint64_t lim=got-32;
         for(uint64_t q=0;q<lim;q+=8){
-            uint64_t objects; uint32_t mx,nm,mc,nc;
-            memcpy(&objects,buf+q,8);
-            memcpy(&mx,buf+q+16,4); memcpy(&nm,buf+q+20,4);
-            memcpy(&mc,buf+q+24,4); memcpy(&nc,buf+q+28,4);
-            if(!objects || objects%8) continue;
-            if(mx<0x40000||mx>0x10000000) continue;
-            if(nm<100||nm>=mx) continue;
-            if(mc<8||mc>65536||nc<1||nc>mc) continue;
-            if(mx%mc) continue;
-            uint32_t per=mx/mc; if(per<128||per>65536) continue;
+            uint64_t objects; uint32_t num,max,nc,mc;
+            int lay=DGTryLayout(buf,q,&objects,&num,&max,&nc,&mc);
+            if(!lay) continue;
             if(!DGPtrMapped(objects)) continue;
             int score=DGVerifyUObjectChain(objects,nc);
             if(score>=3){
-                if(dbg){
-                    fprintf(dbg,"GUObjectArray @ 0x%llx\n",(unsigned long long)(cursor+q));
-                    fprintf(dbg,"NumElements=%u MaxElements=%u NumChunks=%u MaxChunks=%u perChunk=%u\n",nm,mx,nc,mc,per);
-                    fprintf(dbg,"verifyScore=%d\n",score);
-                    fclose(dbg);
-                }
+                found=YES;
+                DLOG(dbg,"FOUND layout=%c\n",lay==1?'A':'B');
+                DLOG(dbg,"GUObjectArray @ 0x%llx\n",(unsigned long long)(cursor+q));
+                DLOG(dbg,"NumElements=%u MaxElements=%u NumChunks=%u MaxChunks=%u\n",num,max,nc,mc);
+                DLOG(dbg,"verifyScore=%d\n",score);
+                if(dbg)fclose(dbg);
                 DGFreeRead(buf,got);
                 return;
+            }
+            verified++;
+            /* عينة Near-Miss: تخطيط يطابق لكن السلسلة فشلت */
+            if(nearMiss<10){
+                DLOG(dbg,"NEAR-MISS @ 0x%llx layout=%c num=%u max=%u score=%d raw=",
+                    (unsigned long long)(cursor+q),lay==1?'A':'B',num,max,score);
+                for(int k=0;k<32;k++) DLOG(dbg,"%02x",buf[q+k]);
+                DLOG(dbg,"\n");
+                nearMiss++;
             }
         }
         DGFreeRead(buf,got);
         cursor+=got?got:want;
         if(!got) cursor+=want;
     }
-    if(dbg){ fprintf(dbg,"GUObjectArray NOT FOUND in game __DATA\n"); fclose(dbg); }
+    DLOG(dbg,"END: layoutMatches=%d nearMissSamples=%d\n",verified,nearMiss);
+    if(dbg)fclose(dbg);
+    #undef DLOG
 }
 
 /* بدائل يدوية إذا غابت الدوال عن التصدير */
