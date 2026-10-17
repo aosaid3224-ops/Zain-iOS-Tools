@@ -264,6 +264,7 @@ static void DGDumpImageExports(uint32_t idx, NSMutableString *out, NSUInteger *t
 static unsigned DGImagesScanned=0;
 static char DGHitImage[128]="";
 static char DGDiagShort[64]="—";
+static char DGAnchorHost[256]="";
 static NSString *DGLastDiag=nil;
 
 static void DGResolveOne(uint32_t idx, const char *name, void **slot){
@@ -513,8 +514,6 @@ static void DGStartProbe(void){
    مستخرج global-metadata.dat من الذاكرة الحية
    التوقيع: sanity=0xFAB11BAF ثم version (24..34)
    ============================================================ */
-static char DGAnchorHost[256]="";
-
 static void DGExtractMetadata(void){
     static BOOL tried=NO; if(tried) return; tried=YES;
     const uint32_t sig=0xFAB11BAFu;
