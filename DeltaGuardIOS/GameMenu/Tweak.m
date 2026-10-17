@@ -1,6 +1,6 @@
 #import <UIKit/UIKit.h>
 #import <mach/mach.h>
-#include <mach/mach_vm.h>
+#include <mach/vm_map.h>
 #include <stdlib.h>
 #import <objc/runtime.h>
 #include <dlfcn.h>
@@ -265,25 +265,26 @@ static void DGDumpImageExports(uint32_t idx, NSMutableString *out, NSUInteger *t
 static unsigned DGImagesScanned=0;
 static char DGHitImage[128]="";
 static char DGDiagShort[64]="—";
+static NSString *DGLastDiag=nil;
 static char DGAnchorHost[256]="";
 static uint64_t DGMetaAddr=0;
 static uint64_t DGCSharpAddr=0;
 static uint64_t DGMetaSize=0;
 
-/* فحص كل ذاكرة العملية (mach_vm_region) — الـ metadata قد يكون mmap خارج صور dyld */
+/* فحص كل ذاكرة العملية (vm_region_64) — الـ metadata قد يكون mmap خارج صور dyld */
 static void DGScanMemoryForMetadata(void){
     static BOOL tried=NO; if(tried) return; tried=YES;
     NSString *out=[NSTemporaryDirectory() stringByAppendingPathComponent:@"global-metadata.dat"];
     [[NSFileManager defaultManager] removeItemAtPath:out error:nil];
-    mach_vm_address_t addr=0x100000000;
+    vm_address_t addr=(vm_address_t)0x100000000ULL;
     const char *cs="Assembly-CSharp";
     const size_t csLen=strlen(cs);
     for(;;){
-        mach_vm_size_t size=0;
+        vm_size_t size=0;
         vm_region_basic_info_data_64_t info;
         mach_msg_type_number_t cnt=VM_REGION_BASIC_INFO_COUNT_64;
         mach_port_t obj=MACH_PORT_NULL;
-        kern_return_t kr=mach_vm_region(mach_task_self(),&addr,&size,VM_REGION_BASIC_INFO_64,(vm_region_info_t)&info,&cnt,&obj);
+        kern_return_t kr=vm_region_64(mach_task_self(),&addr,&size,VM_REGION_BASIC_INFO_64,(vm_region_info_t)&info,&cnt,&obj);
         if(kr!=KERN_SUCCESS) break;
         if(obj!=MACH_PORT_NULL) mach_port_deallocate(mach_task_self(),obj);
         if((info.protection&VM_PROT_READ) && size>4096 && size<0x40000000ULL){ /* أقل من 1GB */
@@ -329,13 +330,13 @@ static void DGScanMemoryForMetadata(void){
 static void DGFindCSharpStrings(void){
     const char *cs="Assembly-CSharp";
     const size_t csLen=strlen(cs);
-    mach_vm_address_t addr=0x100000000;
+    vm_address_t addr=(vm_address_t)0x100000000ULL;
     for(;;){
-        mach_vm_size_t size=0;
+        vm_size_t size=0;
         vm_region_basic_info_data_64_t info;
         mach_msg_type_number_t cnt=VM_REGION_BASIC_INFO_COUNT_64;
         mach_port_t obj=MACH_PORT_NULL;
-        kern_return_t kr=mach_vm_region(mach_task_self(),&addr,&size,VM_REGION_BASIC_INFO_64,(vm_region_info_t)&info,&cnt,&obj);
+        kern_return_t kr=vm_region_64(mach_task_self(),&addr,&size,VM_REGION_BASIC_INFO_64,(vm_region_info_t)&info,&cnt,&obj);
         if(kr!=KERN_SUCCESS) break;
         if(obj!=MACH_PORT_NULL) mach_port_deallocate(mach_task_self(),obj);
         if((info.protection&VM_PROT_READ) && size>csLen+8 && size<0x40000000ULL){
