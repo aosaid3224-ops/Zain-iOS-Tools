@@ -810,6 +810,26 @@ static BOOL DGObjOk(uint64_t item,uint64_t *objOut){
     return YES;
 }
 
+static int DGScoreChunk(uint64_t chunk){
+    uint64_t got=0;
+    uint8_t *b=DGSafeRead(chunk,0x180,&got); /* 16 عنصر × 0x18 */
+    if(!b||got<0x18){ if(b)DGFreeRead(b,got); return 0; }
+    int n=(int)(got/0x18); if(n>16) n=16;
+    int score=0,ptrs=0;
+    for(int i=0;i<n;i++){
+        uint64_t o; memcpy(&o,b+i*0x18,8);
+        if(!o) continue;
+        if((o&7)||!DGInRegions(o)) continue;
+        ptrs++;
+        uint64_t v=0;
+        if(DGReadQ(o,&v)&&DGGameTextLo<=v&&v<DGGameTextHi) score++;
+    }
+    DGFreeRead(b,got);
+    if(score>=3) return score;
+    if(ptrs>=6) return -ptrs; /* اشتباه ضعيف */
+    return 0;
+}
+
 static void DGUE4Scan(void){
     static NSTimeInterval lastTry=0;
     static BOOL found=NO;
@@ -849,21 +869,19 @@ static void DGUE4Scan(void){
                 if(s2<0x8000||s2>0x800000||s2<stride-0x4000||s2>stride+0x4000) continue;
             }
             cheapHits++;
-            int score=0; uint64_t sample=0;
-            if(DGObjOk(c0,&sample)) score++;
-            if(DGObjOk(c0+0x18,0)) score++;
-            if(DGObjOk(c1,&sample)) score++;
-            if(score>=2){
+            int score=DGScoreChunk(c0);
+            if(score!=0){
                 verified++;
-                /* اقرأ ترويسة البنية قبل الجدول */
                 uint8_t hdr[96]; uint64_t hg=0;
-                uint8_t *hb=DGSafeRead(table-96>0x1000?table-96:0x1000,96,&hg);
+                uint8_t *hb=DGSafeRead(table>96?table-96:0x1000,96,&hg);
                 if(hb){ memcpy(hdr,hb,96); DGFreeRead(hb,hg); } else memset(hdr,0,96);
-                DLOG(dbg,"TABLE @ 0x%llx stride=0x%llx score=%d header96=",
-                    (unsigned long long)table,(unsigned long long)stride,score);
-                for(int k=0;k<96;k++) DLOG(dbg,"%02x",hdr[k]);
-                DLOG(dbg,"\n");
-                if(verified>=3||score>=3){
+                if(verified<=300){
+                    DLOG(dbg,"TABLE @ 0x%llx stride=0x%llx score=%d header96=",
+                        (unsigned long long)table,(unsigned long long)stride,score);
+                    for(int k=0;k<96;k++) DLOG(dbg,"%02x",hdr[k]);
+                    DLOG(dbg,"\n");
+                }
+                if(score>=3){
                     found=YES; DGUE4FoundFlag=YES;
                     snprintf(DGUE4Stat,sizeof(DGUE4Stat),"تم: جدول الشانكات @ 0x%llx — يمكنك الخروج",(unsigned long long)table);
                     snprintf(DGUE4FoundAddr,sizeof(DGUE4FoundAddr),"0x%llx",(unsigned long long)table);
