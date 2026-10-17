@@ -2,6 +2,9 @@
 #import <mach/mach.h>
 #include <stdlib.h>
 #import <objc/runtime.h>
+#include <dlfcn.h>
+#include <math.h>
+#include <mach-o/dyld.h>
 
 /* نفس تخطيط CAFrameRateRange (iOS 15+) */
 typedef struct { float minimum; float maximum; float preferred; } DGFrameRateRange;
@@ -15,21 +18,388 @@ typedef struct { float minimum; float maximum; float preferred; } DGFrameRateRan
 static UIWindow *DGWindow;
 static DGFloatButton *DGButton;
 static UIView *DGPanel;
+static UIView *DGEspView;
 static UILabel *DGStatsLabel;
+static UILabel *DGSceneLabel;
+static UILabel *DGCoordLabel;
+static UILabel *DGCandidatesLabel;
+static UILabel *DGCoordPill;
 static UIButton *DG90Button;
+static UIButton *DGTrainingButton;
+static UIButton *DGDebugButton;
 static NSDate *DGSessionStart;
 static CADisplayLink *DGLink;
 static NSUInteger DGFrameCount;
 static NSUInteger DGFPS;
 static NSTimer *DGStatsTimer;
+static NSTimer *DGDiscoveryTimer;
 static BOOL DG90Enabled=NO;
 static NSInteger DGRealMaxFPS=60; /* قدرة الشاشة الحقيقية (تُلتقط قبل السوازل) */
 static NSString *const DG90Key=@"DG90Enabled";
 static NSString *const DGFloatPosKey=@"DGFloatPos";
 static NSString *const DGPanelPosKey=@"DGPanelPos";
+static NSString *const DGForceTrainingKey=@"DGForceTraining";
+static NSString *const DGDebugLinesKey=@"DGDebugLines";
 static BOOL DGStarted=NO;
+static BOOL DGForceTraining=NO;
+static BOOL DGDebugLines=NO;
 static dispatch_block_t DGIdleBlock;
 
+/* قاعدة الكاميرا الحالية — تُحدّث كل فريم عند تفعيل خطوط التجربة */
+static float DGCamPos[3]={0,0,0}, DGCamFwd[3]={0,0,1}, DGCamRight[3]={1,0,0}, DGCamUp[3]={0,1,0};
+static float DGCamFov=60.0f;
+static BOOL DGHavCamBasis=NO;
+
+/* ============================================================
+   المرحلة 1 — Entity Discovery
+   اكتشاف بيئة IL2CPP داخل العملية وقراءة الإحداثيات للتشخيص
+   ============================================================ */
+
+typedef void* (*DGDomainGetFn)(void);
+typedef void** (*DGDomainGetAssembliesFn)(void*, size_t*);
+typedef void* (*DGAssemblyGetImageFn)(void*);
+typedef void* (*DGClassFromNameFn)(void*, const char*, const char*);
+typedef void* (*DGClassGetMethodFn)(void*, const char*, int);
+typedef void* (*DGRuntimeInvokeFn)(void*, void*, void**, void**);
+typedef void* (*DGObjectUnboxFn)(void*);
+typedef const uint16_t* (*DGStringCharsFn)(void*);
+typedef int32_t (*DGStringLengthFn)(void*);
+typedef const char* (*DGImageGetNameFn)(const void*);
+typedef void (*DGClassVisitorFn)(void*, void*);
+typedef void (*DGClassForEachFn)(DGClassVisitorFn, void*);
+
+static struct {
+    BOOL available;
+    DGDomainGetFn domain_get;
+    DGDomainGetAssembliesFn domain_get_assemblies;
+    DGAssemblyGetImageFn assembly_get_image;
+    DGClassFromNameFn class_from_name;
+    DGClassGetMethodFn class_get_method_from_name;
+    DGRuntimeInvokeFn runtime_invoke;
+    DGObjectUnboxFn object_unbox;
+    DGStringCharsFn string_chars;
+    DGStringLengthFn string_length;
+    DGImageGetNameFn image_get_name;
+    DGClassForEachFn class_for_each; /* اختياري */
+    size_t assemblies;
+    char imageName[96];
+} DGIL2CPP;
+
+static NSMutableArray<NSString*> *DGCandidateClasses = nil;
+static BOOL DGCandidatesScanned = NO;
+static BOOL DGClassesSeen = NO; /* هل ظهرت كلاسات IL2CPP فعلاً (Unity مهيأ) */
+
+static void DGResolveIL2CPP(void){
+    if(DGIL2CPP.available) return;
+    uint32_t count=_dyld_image_count();
+    for(uint32_t i=0;i<count;i++){
+        const char *path=_dyld_get_image_name(i);
+        if(!path) continue;
+        /* ركّز فقط على صور Unity/il2cpp المحتملة لتسريع البحث */
+        if(!strstr(path,"Unity") && !strstr(path,"GameAssembly") && !strstr(path,"il2cpp") && !strstr(path,"elta")) continue;
+        void *h=dlopen(path, RTLD_NOLOAD|RTLD_LAZY);
+        if(!h) continue;
+        DGDomainGetFn dg=(DGDomainGetFn)dlsym(h,"il2cpp_domain_get");
+        if(!dg){ continue; }
+        DGIL2CPP.domain_get=dg;
+        DGIL2CPP.domain_get_assemblies=(DGDomainGetAssembliesFn)dlsym(h,"il2cpp_domain_get_assemblies");
+        DGIL2CPP.assembly_get_image=(DGAssemblyGetImageFn)dlsym(h,"il2cpp_assembly_get_image");
+        DGIL2CPP.class_from_name=(DGClassFromNameFn)dlsym(h,"il2cpp_class_from_name");
+        DGIL2CPP.class_get_method_from_name=(DGClassGetMethodFn)dlsym(h,"il2cpp_class_get_method_from_name");
+        DGIL2CPP.runtime_invoke=(DGRuntimeInvokeFn)dlsym(h,"il2cpp_runtime_invoke");
+        DGIL2CPP.object_unbox=(DGObjectUnboxFn)dlsym(h,"il2cpp_object_unbox");
+        DGIL2CPP.string_chars=(DGStringCharsFn)dlsym(h,"il2cpp_string_chars");
+        DGIL2CPP.string_length=(DGStringLengthFn)dlsym(h,"il2cpp_string_length");
+        DGIL2CPP.image_get_name=(DGImageGetNameFn)dlsym(h,"il2cpp_image_get_name");
+        DGIL2CPP.class_for_each=(DGClassForEachFn)dlsym(h,"il2cpp_class_for_each");
+        if(DGIL2CPP.domain_get_assemblies && DGIL2CPP.assembly_get_image &&
+           DGIL2CPP.class_from_name && DGIL2CPP.class_get_method_from_name &&
+           DGIL2CPP.runtime_invoke && DGIL2CPP.object_unbox &&
+           DGIL2CPP.string_chars && DGIL2CPP.image_get_name){
+            DGIL2CPP.available=YES;
+            const char *base=strrchr(path,'/');
+            snprintf(DGIL2CPP.imageName,sizeof(DGIL2CPP.imageName),"%s",base?base+1:path);
+            if(DGIL2CPP.domain_get){
+                size_t n=0;
+                DGIL2CPP.domain_get_assemblies(DGIL2CPP.domain_get(),&n);
+                DGIL2CPP.assemblies=n;
+            }
+            break;
+        }
+        /* لم تكتمل الدوال — صفر وواصل البحث */
+        memset(&DGIL2CPP,0,sizeof(DGIL2CPP));
+    }
+}
+
+/* البحث عن كلاس عبر كل الصور — يعيد أول مطابقة */
+static void* DGFindClass(const char *nameSpace, const char *name){
+    if(!DGIL2CPP.available || !DGIL2CPP.domain_get || !DGIL2CPP.domain_get_assemblies) return NULL;
+    size_t n=0;
+    void **assemblies=DGIL2CPP.domain_get_assemblies(DGIL2CPP.domain_get(),&n);
+    if(!assemblies) return NULL;
+    for(size_t i=0;i<n;i++){
+        if(!assemblies[i]) continue;
+        void *img=DGIL2CPP.assembly_get_image(assemblies[i]);
+        if(!img) continue;
+        void *klass=DGIL2CPP.class_from_name(img,nameSpace,name);
+        if(klass) return klass;
+    }
+    return NULL;
+}
+
+static BOOL DGNameMatches(const char *name){
+    if(!name) return NO;
+    static const char *kw[]={"player","character","entity","soldier","pawn","actor","avatar","humanoid",NULL};
+    char lower[128];
+    size_t len=strlen(name);
+    if(len>=sizeof(lower)) return NO;
+    for(size_t i=0;i<=len;i++) lower[i]=(char)tolower((unsigned char)name[i]);
+    for(int k=0;kw[k];k++){ if(strstr(lower,kw[k])) return YES; }
+    return NO;
+}
+
+/* حالة مشتركة لرابط الزيارة — function pointer يتطلب دالة C حقيقية بدون التقاط متغيرات */
+static const char *(*DGClassNameFn)(void*)=NULL;
+static const char *(*DGClassNsFn)(void*)=NULL;
+static int DGFoundCount=0;
+
+static void DGClassVisitCB(void *klass, void *userData){
+    (void)userData;
+    if(!klass || DGFoundCount>=24 || !DGClassNameFn || !DGClassNsFn) return;
+    const char *nm=DGClassNameFn(klass);
+    if(nm && DGNameMatches(nm)){
+        const char *ns=DGClassNsFn(klass);
+        NSString *s=[NSString stringWithFormat:@"%s%s%s",ns&&strlen(ns)?ns:"",ns&&strlen(ns)?".":"",nm];
+        [DGCandidateClasses addObject:s];
+        DGFoundCount++;
+    }
+}
+
+/* فلترة الكلاسات المرشحة — تُستدعى مرة واحدة فقط */
+static void DGScanCandidateClasses(void){
+    if(DGCandidatesScanned) return;
+    DGResolveIL2CPP();
+    if(!DGIL2CPP.available) return;
+    if(!DGCandidateClasses) DGCandidateClasses=[NSMutableArray array];
+    [DGCandidateClasses removeAllObjects];
+
+    /* نحتاج il2cpp_class_get_name و il2cpp_class_get_namespace: نجلبهما عبر dlopen على نفس المكتبة */
+    uint32_t count=_dyld_image_count();
+    for(uint32_t i=0;i<count;i++){
+        const char *path=_dyld_get_image_name(i);
+        if(!path) continue;
+        void *h=dlopen(path,RTLD_NOLOAD|RTLD_LAZY);
+        if(!h) continue;
+        if(dlsym(h,"il2cpp_domain_get")){
+            DGClassNameFn=(const char*(*)(void*))dlsym(h,"il2cpp_class_get_name");
+            DGClassNsFn=(const char*(*)(void*))dlsym(h,"il2cpp_class_get_namespace");
+            break;
+        }
+    }
+    if(!DGClassNameFn || !DGClassNsFn) return;
+
+    if(DGIL2CPP.class_for_each){
+        /* مسار سريع: زيارة كل الكلاسات عبر callback من نوع C */
+        DGFoundCount=0;
+        DGIL2CPP.class_for_each(DGClassVisitCB,NULL);
+        DGClassesSeen=YES;
+    } else {
+        /* مسار بديل: بحث مباشر عن أسماء شائعة */
+        static const struct { const char *ns; const char *name; } guesses[]={
+            {"UnityEngine","Transform"},
+            {"UnityEngine","Camera"},
+            {"", "Player"},
+            {"", "PlayerController"},
+            {"", "LocalPlayer"},
+            {"", "Character"},
+            {"", "GamePlayer"},
+            {"", "BasePlayer"},
+            {"", "Soldier"},
+            {"", "Avatar"},
+            {NULL,NULL}
+        };
+        int found=0;
+        for(int i=0;guesses[i].name && found<24;i++){
+            void *k=DGFindClass(guesses[i].ns,guesses[i].name);
+            if(k){
+                const char *nm=DGClassNameFn(k);
+                const char *ns=DGClassNsFn(k);
+                NSString *s=[NSString stringWithFormat:@"%s%s%s",ns&&strlen(ns)?ns:"",ns&&strlen(ns)?".":"",nm?nm:guesses[i].name];
+                [DGCandidateClasses addObject:s];
+                found++;
+            }
+        }
+        DGClassesSeen=YES;
+    }
+    DGCandidatesScanned=YES;
+}
+
+/* قراءة اسم المشهد النشط — يعمل بعد تحميل Unity بالكامل */
+static NSString* DGGetSceneName(void){
+    DGResolveIL2CPP();
+    if(!DGIL2CPP.available) return nil;
+    static void *smClass=NULL; static void *getActive=NULL; static void *sceneClass=NULL; static void *getName=NULL;
+    if(!smClass){
+        smClass=DGFindClass("UnityEngine.SceneManagement","SceneManager");
+        if(smClass) getActive=DGIL2CPP.class_get_method_from_name(smClass,"GetActiveScene",0);
+        sceneClass=DGFindClass("UnityEngine.SceneManagement","Scene");
+        if(sceneClass) getName=DGIL2CPP.class_get_method_from_name(sceneClass,"get_name",0);
+    }
+    if(!smClass||!getActive||!sceneClass||!getName) return nil;
+    void *exc=NULL;
+    void *boxed=DGIL2CPP.runtime_invoke(getActive,NULL,NULL,&exc);
+    if(!boxed||exc) return nil;
+    void *sceneData=DGIL2CPP.object_unbox(boxed);
+    if(!sceneData) return nil;
+    void *nameObj=DGIL2CPP.runtime_invoke(getName,sceneData,NULL,&exc);
+    if(!nameObj||exc) return nil;
+    int32_t len=DGIL2CPP.string_length(nameObj);
+    const uint16_t *chars=DGIL2CPP.string_chars(nameObj);
+    if(!chars||len<=0) return @"";
+    return [[NSString alloc] initWithCharacters:(const unichar*)chars length:len];
+}
+
+/* قراءة قاعدة الكاميرا الكاملة: الموضع + الاتجاهات + زاوية الرؤية */
+static BOOL DGGetCameraBasis(void){
+    DGResolveIL2CPP();
+    if(!DGIL2CPP.available) return NO;
+    static void *camClass=NULL,*getMain=NULL,*getTransform=NULL,*getPosition=NULL,*getForward=NULL,*getRight=NULL,*getFov=NULL;
+    static void *transformClass=NULL,*getUp=NULL;
+    if(!camClass){
+        camClass=DGFindClass("UnityEngine","Camera");
+        if(camClass){
+            getMain=DGIL2CPP.class_get_method_from_name(camClass,"get_main",0);
+            getTransform=DGIL2CPP.class_get_method_from_name(camClass,"get_transform",0);
+            getForward=DGIL2CPP.class_get_method_from_name(camClass,"get_forward",0);
+            getRight=DGIL2CPP.class_get_method_from_name(camClass,"get_right",0);
+            getFov=DGIL2CPP.class_get_method_from_name(camClass,"get_fieldOfView",0);
+        }
+        transformClass=DGFindClass("UnityEngine","Transform");
+        if(transformClass){
+            getPosition=DGIL2CPP.class_get_method_from_name(transformClass,"get_position",0);
+            getUp=DGIL2CPP.class_get_method_from_name(transformClass,"get_up",0);
+        }
+    }
+    if(!camClass||!getMain||!getTransform||!transformClass||!getPosition||!getForward||!getRight||!getUp||!getFov){
+        DGHavCamBasis=NO;
+        return NO;
+    }
+    void *exc=NULL;
+    void *cam=DGIL2CPP.runtime_invoke(getMain,NULL,NULL,&exc);
+    if(!cam||exc){ DGHavCamBasis=NO; return NO; }
+    void *tr=DGIL2CPP.runtime_invoke(getTransform,cam,NULL,&exc);
+    if(!tr||exc){ DGHavCamBasis=NO; return NO; }
+    float *v=NULL;
+    void *boxed=DGIL2CPP.runtime_invoke(getPosition,tr,NULL,&exc);
+    if(!boxed||exc){ DGHavCamBasis=NO; return NO; }
+    v=(float*)DGIL2CPP.object_unbox(boxed);
+    if(!v){ DGHavCamBasis=NO; return NO; }
+    memcpy(DGCamPos,v,sizeof(float)*3);
+    boxed=DGIL2CPP.runtime_invoke(getForward,tr,NULL,&exc);
+    if(!boxed||exc){ DGHavCamBasis=NO; return NO; }
+    v=(float*)DGIL2CPP.object_unbox(boxed);
+    if(!v){ DGHavCamBasis=NO; return NO; }
+    memcpy(DGCamFwd,v,sizeof(float)*3);
+    boxed=DGIL2CPP.runtime_invoke(getRight,tr,NULL,&exc);
+    if(!boxed||exc){ DGHavCamBasis=NO; return NO; }
+    v=(float*)DGIL2CPP.object_unbox(boxed);
+    if(!v){ DGHavCamBasis=NO; return NO; }
+    memcpy(DGCamRight,v,sizeof(float)*3);
+    boxed=DGIL2CPP.runtime_invoke(getUp,tr,NULL,&exc);
+    if(!boxed||exc){ DGHavCamBasis=NO; return NO; }
+    v=(float*)DGIL2CPP.object_unbox(boxed);
+    if(!v){ DGHavCamBasis=NO; return NO; }
+    memcpy(DGCamUp,v,sizeof(float)*3);
+    boxed=DGIL2CPP.runtime_invoke(getFov,cam,NULL,&exc);
+    if(!boxed||exc){ DGHavCamBasis=NO; return NO; }
+    v=(float*)DGIL2CPP.object_unbox(boxed);
+    if(!v){ DGHavCamBasis=NO; return NO; }
+    DGCamFov=v[0];
+    if(DGCamFov<20.0f||DGCamFov>150.0f) DGCamFov=60.0f;
+    DGHavCamBasis=YES;
+    return YES;
+}
+
+/* قراءة موضع الكاميرا — للحبة واللوحة */
+static BOOL DGGetCameraPosition(float *x,float *y,float *z){
+    if(!DGGetCameraBasis()) return NO;
+    *x=DGCamPos[0]; *y=DGCamPos[1]; *z=DGCamPos[2];
+    return YES;
+}
+
+/* إسقاط نقطة عالمية على شاشة الجهاز — يُستخدم للخطوط الآن ولـ ESP لاحقاً */
+static BOOL DGProjectToScreen(const float *world, CGFloat *sx, CGFloat *sy){
+    if(!DGHavCamBasis) return NO;
+    float rx=world[0]-DGCamPos[0], ry=world[1]-DGCamPos[1], rz=world[2]-DGCamPos[2];
+    float depth=rx*DGCamFwd[0]+ry*DGCamFwd[1]+rz*DGCamFwd[2];
+    if(depth<0.5f) return NO;
+    float lx=rx*DGCamRight[0]+ry*DGCamRight[1]+rz*DGCamRight[2];
+    float ly=rx*DGCamUp[0]+ry*DGCamUp[1]+rz*DGCamUp[2];
+    CGRect b=[UIScreen mainScreen].bounds;
+    CGFloat focal=(b.size.height*0.5f)/tanf((DGCamFov*0.5f)*(float)M_PI/180.0f);
+    *sx=b.size.width*0.5f + focal*(lx/depth);
+    *sy=b.size.height*0.5f - focal*(ly/depth);
+    return YES;
+}
+
+/* طبقة خطوط الكشف التجريبية — لا تستقبل اللمس إطلاقاً */
+@interface DGEspDebugView : UIView @end
+@implementation DGEspDebugView
+- (void)drawRect:(CGRect)rect{
+    (void)rect;
+    if(!DGDebugLines || !DGHavCamBasis) return;
+    CGContextRef c=UIGraphicsGetCurrentContext();
+    CGRect b=self.bounds;
+    CGFloat cx=b.size.width*0.5f, cy=b.size.height*0.5f;
+
+    /* مربع تصويب صغير في المنتصف */
+    CGContextSetStrokeColorWithColor(c,[UIColor colorWithWhite:1 alpha:0.30].CGColor);
+    CGContextSetLineWidth(c,1.0f);
+    CGContextStrokeRect(c,CGRectMake(cx-5,cy-5,10,10));
+
+    /* خط أمامي: المركز → نقطة على بعد 8m أمام الكاميرا */
+    float pf[3]={DGCamPos[0]+DGCamFwd[0]*8.0f, DGCamPos[1]+DGCamFwd[1]*8.0f, DGCamPos[2]+DGCamFwd[2]*8.0f};
+    CGFloat sx,sy;
+    if(DGProjectToScreen(pf,&sx,&sy)){
+        CGContextSetStrokeColorWithColor(c,[UIColor colorWithRed:0.3 green:1 blue:0.4 alpha:0.9].CGColor);
+        CGContextSetLineWidth(c,2.0f);
+        CGContextMoveToPoint(c,cx,cy);
+        CGContextAddLineToPoint(c,sx,sy);
+        CGContextStrokePath(c);
+        CGContextSetFillColorWithColor(c,[UIColor colorWithRed:0.3 green:1 blue:0.4 alpha:1].CGColor);
+        CGContextFillEllipseInRect(c,CGRectMake(sx-3,sy-3,6,6));
+    }
+
+    /* محور اليمين: أحمر قصير */
+    float pr[3]={DGCamPos[0]+DGCamRight[0]*4.0f, DGCamPos[1]+DGCamRight[1]*4.0f, DGCamPos[2]+DGCamRight[2]*4.0f};
+    if(DGProjectToScreen(pr,&sx,&sy)){
+        CGContextSetStrokeColorWithColor(c,[UIColor colorWithRed:1 green:0.35 blue:0.35 alpha:0.9].CGColor);
+        CGContextSetLineWidth(c,1.5f);
+        CGContextMoveToPoint(c,cx,cy);
+        CGContextAddLineToPoint(c,sx,sy);
+        CGContextStrokePath(c);
+    }
+
+    /* محور الأعلى: أزرق قصير */
+    float pu[3]={DGCamPos[0]+DGCamUp[0]*4.0f, DGCamPos[1]+DGCamUp[1]*4.0f, DGCamPos[2]+DGCamUp[2]*4.0f};
+    if(DGProjectToScreen(pu,&sx,&sy)){
+        CGContextSetStrokeColorWithColor(c,[UIColor colorWithRed:0.4 green:0.6 blue:1 alpha:0.9].CGColor);
+        CGContextSetLineWidth(c,1.5f);
+        CGContextMoveToPoint(c,cx,cy);
+        CGContextAddLineToPoint(c,sx,sy);
+        CGContextStrokePath(c);
+    }
+}
+@end
+
+static BOOL DGIsTrainingMode(NSString *scene){
+    if(DGForceTraining) return YES;
+    if(!scene) return NO;
+    NSString *low=[scene lowercaseString];
+    return [low containsString:@"train"] || [low containsString:@"practice"] || [low containsString:@"range"];
+}
+
+// ===== نهاية المرحلة 1 =====
 static NSString *DGMemoryString(void){
     task_vm_info_data_t info; mach_msg_type_number_t count=TASK_VM_INFO_COUNT;
     if(task_info(mach_task_self(),TASK_VM_INFO,(task_info_t)&info,&count)==KERN_SUCCESS){
@@ -129,7 +499,7 @@ static void DGScheduleIdle(void){
     DGIdleBlock=dispatch_block_create(0,^{
         DGFloatButton *b=DGButton;
         if(b && !b.isHighlighted && !b.isDGMinimized){
-            [UIView animateWithDuration:0.4 animations:^{ b.alpha=0.55; }];
+            [UIView animateWithDuration:0.4 animations:^{ b.alpha=0.45; }];
         }
     });
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(3.0*NSEC_PER_SEC)),dispatch_get_main_queue(),DGIdleBlock);
@@ -159,6 +529,14 @@ static void DGRestoreButtonPos(CGRect *frame){
     }
 }
 
+static void DGHaptic(void){
+    if(@available(iOS 10.0,*)){
+        UIImpactFeedbackGenerator *g=[[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleMedium];
+        [g prepare];
+        [g impactOccurred];
+    }
+}
+
 @implementation DGFloatButton
 
 /* سحب بالضغط المطوّل: الضغط العادي يبقى للفتح، والسحب ما يتعارض مع النقرة */
@@ -166,7 +544,8 @@ static void DGRestoreButtonPos(CGRect *frame){
     CGPoint p=[g locationInView:DGWindow];
     if(g.state==UIGestureRecognizerStateBegan){
         DGCancelIdle();
-        [UIView animateWithDuration:0.1 animations:^{ self.alpha=1.0; self.transform=CGAffineTransformMakeScale(1.08,1.08); }];
+        DGHaptic();
+        [UIView animateWithDuration:0.1 animations:^{ self.alpha=1.0; self.transform=CGAffineTransformMakeScale(1.12,1.12); }];
     } else if(g.state==UIGestureRecognizerStateChanged){
         self.center=CGPointMake(p.x,p.y-32); /* يطفو فوق الإصبع */
     } else if(g.state==UIGestureRecognizerStateEnded || g.state==UIGestureRecognizerStateCancelled){
@@ -183,6 +562,7 @@ static void DGRestoreButtonPos(CGRect *frame){
     self.dgMinimized=!self.dgMinimized;
     CGFloat size=self.dgMinimized?30:52;
     DGCancelIdle();
+    DGHaptic();
     [UIView animateWithDuration:0.22 delay:0 usingSpringWithDamping:0.8 initialSpringVelocity:0.4 options:0 animations:^{
         self.frame=CGRectMake(self.center.x-size/2,self.center.y-size/2,size,size);
         self.layer.cornerRadius=size/2;
@@ -207,7 +587,6 @@ static void DGRestoreButtonPos(CGRect *frame){
 + (void)install;
 + (void)start;
 @end
-
 @implementation DGMenu
 
 + (void)start{
@@ -215,6 +594,8 @@ static void DGRestoreButtonPos(CGRect *frame){
     DGStarted=YES;
     DGRealMaxFPS=[UIScreen mainScreen].maximumFramesPerSecond;
     DG90Enabled=[[NSUserDefaults standardUserDefaults] boolForKey:DG90Key];
+    DGForceTraining=[[NSUserDefaults standardUserDefaults] boolForKey:DGForceTrainingKey];
+    DGDebugLines=[[NSUserDefaults standardUserDefaults] boolForKey:DGDebugLinesKey];
     DGSwizzleFPS();
     [self install];
 }
@@ -242,6 +623,7 @@ static void DGRestoreButtonPos(CGRect *frame){
     DGButton.backgroundColor=[UIColor colorWithWhite:0.05 alpha:0.9];
     DGButton.layer.borderColor=[UIColor colorWithRed:0.2 green:0.85 blue:1 alpha:1].CGColor;
     DGButton.layer.borderWidth=2;
+    DGButton.clipsToBounds=YES;
     [DGButton setTitle:@"🛡" forState:UIControlStateNormal];
     DGButton.titleLabel.font=[UIFont systemFontOfSize:22];
     [DGButton addTarget:self action:@selector(togglePanel) forControlEvents:UIControlEventTouchUpInside];
@@ -254,7 +636,27 @@ static void DGRestoreButtonPos(CGRect *frame){
     [root addSubview:DGButton];
     DGScheduleIdle();
 
-    CGRect panelFrame=CGRectMake(60,200,260,222);
+    /* حبة إحداثيات مصغّرة تظهر أعلى الشاشة أثناء التدريب فقط — لا تعيق اللعب */
+    DGCoordPill=[[UILabel alloc] initWithFrame:CGRectMake(0,54,220,26)];
+    DGCoordPill.center=CGPointMake([UIScreen mainScreen].bounds.size.width/2,DGCoordPill.center.y);
+    DGCoordPill.backgroundColor=[UIColor colorWithWhite:0.0 alpha:0.55];
+    DGCoordPill.textColor=[UIColor colorWithRed:0.4 green:1 blue:0.6 alpha:1];
+    DGCoordPill.font=[UIFont monospacedSystemFontOfSize:11 weight:UIFontWeightSemibold];
+    DGCoordPill.textAlignment=NSTextAlignmentCenter;
+    DGCoordPill.layer.cornerRadius=13;
+    DGCoordPill.clipsToBounds=YES;
+    DGCoordPill.hidden=YES;
+    DGCoordPill.userInteractionEnabled=NO;
+    [root addSubview:DGCoordPill];
+
+    /* طبقة خطوط الكشف التجريبية — شفافة تماماً ولا تستقبل أي لمس */
+    DGEspView=[[DGEspDebugView alloc] initWithFrame:[UIScreen mainScreen].bounds];
+    DGEspView.backgroundColor=[UIColor clearColor];
+    DGEspView.opaque=NO;
+    DGEspView.userInteractionEnabled=NO;
+    [root addSubview:DGEspView];
+
+    CGRect panelFrame=CGRectMake(50,180,280,372);
     NSString *ps=[[NSUserDefaults standardUserDefaults] stringForKey:DGPanelPosKey];
     if(ps){
         CGPoint o=CGPointFromString(ps);
@@ -267,7 +669,7 @@ static void DGRestoreButtonPos(CGRect *frame){
     DGPanel.layer.borderWidth=1.5;
     DGPanel.hidden=YES;
 
-    UILabel *title=[[UILabel alloc] initWithFrame:CGRectMake(30,10,200,24)];
+    UILabel *title=[[UILabel alloc] initWithFrame:CGRectMake(30,10,220,24)];
     title.text=@"🛡 حارس دلتا — أداة العملية";
     title.textColor=[UIColor whiteColor]; title.textAlignment=NSTextAlignmentCenter; title.font=[UIFont boldSystemFontOfSize:14];
     title.userInteractionEnabled=YES;
@@ -276,46 +678,75 @@ static void DGRestoreButtonPos(CGRect *frame){
     [DGPanel addSubview:title];
 
     UIButton *closeB=[UIButton buttonWithType:UIButtonTypeSystem];
-    closeB.frame=CGRectMake(228,6,26,28);
+    closeB.frame=CGRectMake(246,6,26,28);
     [closeB setTitle:@"✕" forState:UIControlStateNormal];
     closeB.titleLabel.font=[UIFont boldSystemFontOfSize:14];
     closeB.tintColor=[UIColor lightGrayColor];
     [closeB addTarget:self action:@selector(hidePanel) forControlEvents:UIControlEventTouchUpInside];
     [DGPanel addSubview:closeB];
 
-    DGStatsLabel=[[UILabel alloc] initWithFrame:CGRectMake(10,40,240,60)];
+    DGStatsLabel=[[UILabel alloc] initWithFrame:CGRectMake(10,38,260,44)];
     DGStatsLabel.textColor=[UIColor colorWithRed:0.4 green:1 blue:0.6 alpha:1];
     DGStatsLabel.font=[UIFont monospacedSystemFontOfSize:11 weight:UIFontWeightRegular];
-    DGStatsLabel.numberOfLines=3;
+    DGStatsLabel.numberOfLines=2;
     DGStatsLabel.textAlignment=NSTextAlignmentCenter;
     [DGPanel addSubview:DGStatsLabel];
 
-    UIButton *hide=[UIButton buttonWithType:UIButtonTypeSystem];
-    hide.frame=CGRectMake(20,104,100,34);
-    [hide setTitle:@"إخفاء اللوحة" forState:UIControlStateNormal];
-    [hide addTarget:self action:@selector(hidePanel) forControlEvents:UIControlEventTouchUpInside];
-    [DGPanel addSubview:hide];
-
-    UIButton *quit=[UIButton buttonWithType:UIButtonTypeSystem];
-    quit.frame=CGRectMake(140,104,100,34);
-    [quit setTitle:@"إنهاء اللعبة" forState:UIControlStateNormal];
-    quit.tintColor=[UIColor systemRedColor];
-    [quit addTarget:self action:@selector(quitGame) forControlEvents:UIControlEventTouchUpInside];
-    [DGPanel addSubview:quit];
-
     DG90Button=[UIButton buttonWithType:UIButtonTypeSystem];
-    DG90Button.frame=CGRectMake(20,144,220,34);
+    DG90Button.frame=CGRectMake(20,86,240,30);
     [DG90Button addTarget:self action:@selector(toggle90) forControlEvents:UIControlEventTouchUpInside];
     [self update90Button];
     [DGPanel addSubview:DG90Button];
 
-    UILabel *hint=[[UILabel alloc] initWithFrame:CGRectMake(10,186,240,30)];
+    /* ===== قسم استكشاف الكائنات — المرحلة 1 ===== */
+    UILabel *discTitle=[[UILabel alloc] initWithFrame:CGRectMake(10,120,260,16)];
+    discTitle.text=@"🔍 استكشاف الكائنات — المرحلة 1";
+    discTitle.textColor=[UIColor colorWithRed:0.2 green:0.85 blue:1 alpha:1];
+    discTitle.font=[UIFont boldSystemFontOfSize:11];
+    discTitle.textAlignment=NSTextAlignmentCenter;
+    [DGPanel addSubview:discTitle];
+
+    DGSceneLabel=[[UILabel alloc] initWithFrame:CGRectMake(10,138,260,16)];
+    DGSceneLabel.textColor=[UIColor whiteColor];
+    DGSceneLabel.font=[UIFont monospacedSystemFontOfSize:10 weight:UIFontWeightMedium];
+    DGSceneLabel.textAlignment=NSTextAlignmentCenter;
+    [DGPanel addSubview:DGSceneLabel];
+
+    DGCoordLabel=[[UILabel alloc] initWithFrame:CGRectMake(10,154,260,18)];
+    DGCoordLabel.textColor=[UIColor colorWithRed:0.4 green:1 blue:0.6 alpha:1];
+    DGCoordLabel.font=[UIFont monospacedSystemFontOfSize:11 weight:UIFontWeightSemibold];
+    DGCoordLabel.textAlignment=NSTextAlignmentCenter;
+    [DGPanel addSubview:DGCoordLabel];
+
+    DGCandidatesLabel=[[UILabel alloc] initWithFrame:CGRectMake(10,174,260,72)];
+    DGCandidatesLabel.textColor=[UIColor lightGrayColor];
+    DGCandidatesLabel.font=[UIFont monospacedSystemFontOfSize:9 weight:UIFontWeightRegular];
+    DGCandidatesLabel.numberOfLines=5;
+    DGCandidatesLabel.textAlignment=NSTextAlignmentLeft;
+    DGCandidatesLabel.adjustsFontSizeToFitWidth=NO;
+    [DGPanel addSubview:DGCandidatesLabel];
+
+    DGTrainingButton=[UIButton buttonWithType:UIButtonTypeSystem];
+    DGTrainingButton.frame=CGRectMake(20,250,240,28);
+    [DGTrainingButton addTarget:self action:@selector(toggleTraining) forControlEvents:UIControlEventTouchUpInside];
+    [self updateTrainingButton];
+    [DGPanel addSubview:DGTrainingButton];
+
+    DGDebugButton=[UIButton buttonWithType:UIButtonTypeSystem];
+    DGDebugButton.frame=CGRectMake(20,282,240,28);
+    [DGDebugButton addTarget:self action:@selector(toggleDebug) forControlEvents:UIControlEventTouchUpInside];
+    [self updateDebugButton];
+    [DGPanel addSubview:DGDebugButton];
+    /* ===== نهاية قسم الاستكشاف ===== */
+
+    UILabel *hint=[[UILabel alloc] initWithFrame:CGRectMake(10,314,260,26)];
     hint.text=@"اضغط مطولاً للسحب • نقرة للفتح • نقرتان للتصغير";
     hint.textColor=[UIColor lightGrayColor]; hint.textAlignment=NSTextAlignmentCenter; hint.font=[UIFont systemFontOfSize:10];
+    hint.numberOfLines=1;
     [DGPanel addSubview:hint];
 
-    UILabel *ver=[[UILabel alloc] initWithFrame:CGRectMake(196,200,54,16)];
-    ver.text=@"v0.4.0";
+    UILabel *ver=[[UILabel alloc] initWithFrame:CGRectMake(196,346,66,16)];
+    ver.text=@"v0.5.1-stage1";
     ver.textColor=[UIColor lightGrayColor]; ver.textAlignment=NSTextAlignmentRight; ver.font=[UIFont systemFontOfSize:9]; ver.alpha=0.6;
     [DGPanel addSubview:ver];
 
@@ -323,7 +754,9 @@ static void DGRestoreButtonPos(CGRect *frame){
     DGLink=[CADisplayLink displayLinkWithTarget:self selector:@selector(frame:)];
     [DGLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSRunLoopCommonModes];
     DGStatsTimer=[NSTimer scheduledTimerWithTimeInterval:1.0 target:self selector:@selector(updateStats) userInfo:nil repeats:YES];
+    DGDiscoveryTimer=[NSTimer scheduledTimerWithTimeInterval:0.5 target:self selector:@selector(updateDiscovery) userInfo:nil repeats:YES];
     [DGStatsLabel setText:[self statsText]];
+    [self updateDiscovery];
 }
 
 /* سحب اللوحة من شريط العنوان مع التثبيت داخل الشاشة والحفظ */
@@ -360,7 +793,111 @@ static void DGRestoreButtonPos(CGRect *frame){
     DG90Button.tintColor=color;
 }
 
-+ (void)frame:(CADisplayLink *)l{ DGFrameCount++; }
+/* ===== المرحلة 1: منطق الاستكشاف ===== */
+
++ (void)toggleTraining{
+    DGForceTraining=!DGForceTraining;
+    [[NSUserDefaults standardUserDefaults] setBool:DGForceTraining forKey:DGForceTrainingKey];
+    [self updateTrainingButton];
+    [self updateDiscovery];
+}
+
++ (void)updateTrainingButton{
+    NSString *title=DGForceTraining?@"🎯 وضع التدريب: مفعّل يدوياً":@"🎯 وضع التدريب: تلقائي (حسب المشهد)";
+    UIColor *color=DGForceTraining?[UIColor systemGreenColor]:[UIColor labelColor];
+    [DGTrainingButton setTitle:title forState:UIControlStateNormal];
+    DGTrainingButton.tintColor=color;
+}
+
++ (void)toggleDebug{
+    DGDebugLines=!DGDebugLines;
+    [[NSUserDefaults standardUserDefaults] setBool:DGDebugLines forKey:DGDebugLinesKey];
+    [self updateDebugButton];
+    if(!DGDebugLines && DGEspView) [DGEspView setNeedsDisplay];
+}
+
++ (void)updateDebugButton{
+    NSString *title=DGDebugLines?@"📐 خطوط الكشف: مفعّلة ✅":@"📐 خطوط الكشف (تجربة): معطّلة";
+    UIColor *color=DGDebugLines?[UIColor systemGreenColor]:[UIColor labelColor];
+    [DGDebugButton setTitle:title forState:UIControlStateNormal];
+    DGDebugButton.tintColor=color;
+}
+
++ (void)updateDiscovery{
+    if(!DGPanel && !DGCoordPill) return;
+
+    /* (1) حالة IL2CPP */
+    DGResolveIL2CPP();
+
+    /* (2) المشهد النشط */
+    NSString *scene=DGGetSceneName();
+
+    /* عند اكتشاف أول مشهد فعلي: نفّذ فحص الكلاسات مرة واحدة */
+    if(scene && scene.length>0 && !DGCandidatesScanned){
+        DGScanCandidateClasses();
+    }
+
+    BOOL training=DGIsTrainingMode(scene);
+
+    /* (3) تحديث واجهة اللوحة */
+    if(DGSceneLabel){
+        if(!DGIL2CPP.available){
+            DGSceneLabel.text=@"IL2CPP: بانتظار تحميل Unity…";
+        } else if(!scene || scene.length==0){
+            DGSceneLabel.text=[NSString stringWithFormat:@"IL2CPP ✅ (%zu assembly) | المشهد: …",DGIL2CPP.assemblies];
+        } else {
+            DGSceneLabel.text=[NSString stringWithFormat:@"IL2CPP ✅ (%zu assembly) | المشهد: %@%@",DGIL2CPP.assemblies,scene,training?@" 🎯":@""];
+        }
+    }
+
+    if(DGCandidatesLabel){
+        if(!DGCandidatesScanned){
+            DGCandidatesLabel.text=@"فحص الكلاسات المرشحة: جارٍ…";
+        } else if(DGCandidateClasses.count==0){
+            DGCandidatesLabel.text=@"لا كلاسات مرشحة بعد — أضف كلمات مفتاحية في DGNameMatches";
+        } else {
+            NSMutableString *ms=[NSMutableString stringWithFormat:@"كلاسات مرشحة (%lu):\n",(unsigned long)DGCandidateClasses.count];
+            NSUInteger max=MIN(DGCandidateClasses.count,4);
+            for(NSUInteger i=0;i<max;i++) [ms appendFormat:@"• %@\n",DGCandidateClasses[i]];
+            if(DGCandidateClasses.count>4) [ms appendFormat:@"… +%lu أخرى",(unsigned long)(DGCandidateClasses.count-4)];
+            DGCandidatesLabel.text=ms;
+        }
+    }
+
+    /* (4) قراءة الإحداثيات — تظهر فقط في وضع التدريب */
+    float px=0,py=0,pz=0;
+    BOOL havePos=(training && DGGetCameraPosition(&px,&py,&pz));
+    if(DGCoordLabel){
+        if(training){
+            DGCoordLabel.text=havePos?
+                [NSString stringWithFormat:@"📍 %.2f  %.2f  %.2f",px,py,pz]:
+                @"📍 الإحداثيات: بانتظار تهيئة الكاميرا…";
+        } else {
+            DGCoordLabel.text=@"📍 الإحداثيات: دخّل وضع التدريب للقراءة";
+        }
+    }
+
+    /* (5) الحبة المصغرة أعلى الشاشة */
+    if(DGCoordPill){
+        DGCoordPill.hidden=!training;
+        if(training){
+            DGCoordPill.text=havePos?
+                [NSString stringWithFormat:@"📍 %.1f / %.1f / %.1f",px,py,pz]:
+                @"📍 بانتظار الكاميرا…";
+        }
+    }
+}
+
+/* ===== نهاية منطق المرحلة 1 ===== */
+
++ (void)frame:(CADisplayLink *)l{
+    (void)l;
+    DGFrameCount++;
+    /* تحديث قاعدة الكاميرا وإعادة رسم خطوط التجربة — فقط عند تفعيلها */
+    if(DGDebugLines && DGEspView){
+        if(DGGetCameraBasis()) [DGEspView setNeedsDisplay];
+    }
+}
 + (void)updateStats{ DGFPS=DGFrameCount; DGFrameCount=0; [DGStatsLabel setText:[self statsText]]; }
 
 + (NSString *)statsText{
@@ -374,11 +911,13 @@ static void DGRestoreButtonPos(CGRect *frame){
 }
 
 + (void)togglePanel{
+    DGHaptic();
     if(DGPanel.isHidden){
         DGPanel.hidden=NO;
         DGPanel.alpha=0;
         DGPanel.transform=CGAffineTransformMakeScale(0.85,0.85);
         [UIView animateWithDuration:0.2 animations:^{ DGPanel.alpha=1; DGPanel.transform=CGAffineTransformIdentity; }];
+        [self updateDiscovery];
     } else {
         [UIView animateWithDuration:0.15 animations:^{ DGPanel.alpha=0; DGPanel.transform=CGAffineTransformMakeScale(0.9,0.9); }
                          completion:^(BOOL f){ DGPanel.hidden=YES; DGPanel.transform=CGAffineTransformIdentity; DGPanel.alpha=1; }];
