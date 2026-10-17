@@ -21,6 +21,11 @@ typedef struct { float minimum; float maximum; float preferred; } DGFrameRateRan
 + (void)hidePanel;
 + (void)install;
 + (void)start;
++ (void)dgStartPart:(int)idx;
++ (void)dgAssemble;
+@end
+
+@interface DGDownloadDelegate : NSObject <NSURLSessionDataDelegate, NSURLSessionTaskDelegate>
 @end
 
 @interface DGFloatButton : UIButton
@@ -46,10 +51,16 @@ static UIProgressView *DGDLBar;
 static UILabel *DGDLProgressLabel;
 static UILabel *DGDLStatusLabel;
 static NSURLSession *DGDLSession;
+static DGDownloadDelegate *DGDLDelegate;
 static NSMutableData *DGDLBuffer;
 static long DGDLPartsDone;
+static long DGDLCurrentPartBytes;
 static int DGDLCurrentPart;
 static BOOL DGDLBusy=NO;
+static BOOL DGDLResponseValid=NO;
+static NSInteger DGDLHTTPStatusCode=0;
+static const long DGDLPartSizes[5]={90000000L,90000000L,90000000L,90000000L,56167600L};
+static NSString *const DGDLExpectedSHA256=@"175b75f14edcdd409d3267f19ec3997b6fda415d71a0b3c7650d66b040bdc599";
 static NSDate *DGSessionStart;
 static CADisplayLink *DGLink;
 static NSUInteger DGFrameCount;
@@ -1745,51 +1756,22 @@ static UIView *DGToggleRow(CGFloat y, NSString *text, SEL action, UISwitch * __s
     DGDLButton.enabled=NO;
     [DGDLButton setTitle:@"⏳ جارٍ التحميل..." forState:UIControlStateNormal];
     DGDLBuffer=[NSMutableData data];
+    DGDLDelegate=[DGDownloadDelegate new];
     NSURLSessionConfiguration *cfg=[NSURLSessionConfiguration defaultSessionConfiguration];
-    DGDLSession=[NSURLSession sessionWithConfiguration:cfg delegate:(id)self delegateQueue:nil];
+    DGDLSession=[NSURLSession sessionWithConfiguration:cfg delegate:DGDLDelegate delegateQueue:nil];
     [DGMenu dgStartPart:0];
 }
 
 + (void)dgStartPart:(int)idx{
+    DGDLCurrentPartBytes=0;
+    DGDLResponseValid=NO;
+    DGDLHTTPStatusCode=0;
     NSString *u=[NSString stringWithFormat:@"https://raw.githubusercontent.com/aosaid3224-ops/Zain-iOS-Tools/main/DeltaForceClient/DeltaForceClient.part%03d",idx+1];
     dispatch_async(dispatch_get_main_queue(),^{
         DGDLStatusLabel.text=[NSString stringWithFormat:@"⬇️ يحمّل الجزء %d/5 ...",idx+1];
     });
     NSURLSessionDataTask *t=[DGDLSession dataTaskWithURL:[NSURL URLWithString:u]];
     [t resume];
-}
-
-- (void)URLSession:(NSURLSession *)s dataTask:(NSURLSessionDataTask *)t didReceiveResponse:(NSURLResponse *)r completionHandler:(void (^)(NSURLSessionResponseDisposition))c{
-    [DGDLBuffer setLength:0];
-    c(NSURLSessionResponseAllow);
-}
-
-- (void)URLSession:(NSURLSession *)s dataTask:(NSURLSessionDataTask *)t didReceiveData:(NSData *)d{
-    [DGDLBuffer appendData:d];
-    long cur=DGDLPartsDone+(long)DGDLBuffer.length;
-    float f=(float)cur/416167600.0f;
-    dispatch_async(dispatch_get_main_queue(),^{
-        DGDLBar.progress=f;
-        DGDLProgressLabel.text=[NSString stringWithFormat:@"%ld / 416 MB (%d%%)",cur/1048576,(int)(f*100.0f)];
-    });
-}
-
-- (void)URLSession:(NSURLSession *)s task:(NSURLSessionTask *)t didCompleteWithError:(NSError *)e{
-    if(e){
-        dispatch_async(dispatch_get_main_queue(),^{
-            DGDLStatusLabel.text=[NSString stringWithFormat:@"❌ خطأ في الجزء %d: %@",DGDLCurrentPart+1,e.localizedDescription];
-            DGDLButton.enabled=YES;
-            [DGDLButton setTitle:@"🔄 إعادة المحاولة" forState:UIControlStateNormal];
-            DGDLBusy=NO;
-        });
-        return;
-    }
-    NSString *out=[NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"dfpart%03d",DGDLCurrentPart+1]];
-    [DGDLBuffer writeToFile:out atomically:NO];
-    DGDLPartsDone+=(long)DGDLBuffer.length;
-    DGDLCurrentPart++;
-    if(DGDLCurrentPart<5){ [DGMenu dgStartPart:DGDLCurrentPart]; }
-    else { [DGMenu dgAssemble]; }
 }
 
 + (void)dgAssemble{
@@ -1799,11 +1781,19 @@ static UIView *DGToggleRow(CGFloat y, NSString *text, SEL action, UISwitch * __s
     [fm removeItemAtPath:outp error:nil];
     [fm createFileAtPath:outp contents:nil attributes:nil];
     NSFileHandle *of=[NSFileHandle fileHandleForWritingAtPath:outp];
+    if(!of){
+        dispatch_async(dispatch_get_main_queue(),^{ DGDLStatusLabel.text=@"❌ تعذر إنشاء الملف المجمع"; DGDLButton.enabled=YES; DGDLBusy=NO; });
+        return;
+    }
     CC_SHA256_CTX ctx; CC_SHA256_Init(&ctx);
     for(int i=1;i<=5;i++){
         NSString *p=[NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"dfpart%03d",i]];
         NSFileHandle *fh=[NSFileHandle fileHandleForReadingAtPath:p];
-        if(!fh) continue;
+        if(!fh){
+            [of closeFile]; [fm removeItemAtPath:outp error:nil];
+            dispatch_async(dispatch_get_main_queue(),^{ DGDLStatusLabel.text=[NSString stringWithFormat:@"❌ الجزء %d مفقود؛ أعد التحميل",i]; DGDLButton.enabled=YES; DGDLBusy=NO; });
+            return;
+        }
         while(YES){
             NSData *c=[fh readDataOfLength:8388608];
             if(!c||!c.length) break;
@@ -1818,8 +1808,8 @@ static UIView *DGToggleRow(CGFloat y, NSString *text, SEL action, UISwitch * __s
     CC_SHA256_Final(dig,&ctx);
     NSMutableString *hs=[NSMutableString string];
     for(int i=0;i<32;i++) [hs appendFormat:@"%02x",dig[i]];
-    BOOL ok=[hs hasPrefix:@"175b75f14edcdd40"];
     long fsz=(long)[[fm attributesOfItemAtPath:outp error:nil][NSFileSize] longLongValue];
+    BOOL ok=(fsz==416167600L && [hs isEqualToString:DGDLExpectedSHA256]);
     dispatch_async(dispatch_get_main_queue(),^{
         DGDLBar.progress=1.0f;
         DGDLProgressLabel.text=@"416 / 416 MB (100%)";
@@ -1829,6 +1819,59 @@ static UIView *DGToggleRow(CGFloat y, NSString *text, SEL action, UISwitch * __s
         [DGDLButton setTitle:@"🔄 إعادة التحميل" forState:UIControlStateNormal];
         DGDLBusy=NO;
     });
+}
+
+@end
+
+@implementation DGDownloadDelegate
+
+- (void)URLSession:(NSURLSession *)s dataTask:(NSURLSessionDataTask *)t didReceiveResponse:(NSURLResponse *)r completionHandler:(void (^)(NSURLSessionResponseDisposition))c{
+    [DGDLBuffer setLength:0];
+    DGDLCurrentPartBytes=0;
+    DGDLHTTPStatusCode=[r isKindOfClass:[NSHTTPURLResponse class]]?[(NSHTTPURLResponse *)r statusCode]:0;
+    DGDLResponseValid=([r isKindOfClass:[NSHTTPURLResponse class]] && DGDLHTTPStatusCode==200);
+    c(DGDLResponseValid?NSURLSessionResponseAllow:NSURLSessionResponseCancel);
+}
+
+- (void)URLSession:(NSURLSession *)s dataTask:(NSURLSessionDataTask *)t didReceiveData:(NSData *)d{
+    if(!DGDLResponseValid) return;
+    [DGDLBuffer appendData:d];
+    DGDLCurrentPartBytes+=(long)d.length;
+    long cur=DGDLPartsDone+DGDLCurrentPartBytes;
+    float f=(float)cur/416167600.0f;
+    dispatch_async(dispatch_get_main_queue(),^{
+        DGDLBar.progress=f;
+        DGDLProgressLabel.text=[NSString stringWithFormat:@"%ld / 416 MB (%d%%)",cur/1000000,(int)(f*100.0f)];
+    });
+}
+
+- (void)URLSession:(NSURLSession *)s task:(NSURLSessionTask *)t didCompleteWithError:(NSError *)e{
+    long bytes=DGDLCurrentPartBytes;
+    NSInteger status=DGDLHTTPStatusCode;
+    BOOL valid=DGDLResponseValid && DGDLCurrentPart>=0 && DGDLCurrentPart<5 && bytes==DGDLPartSizes[DGDLCurrentPart];
+    if(e || !valid){
+        NSString *reason=e.localizedDescription;
+        if(!DGDLResponseValid) reason=[NSString stringWithFormat:@"استجابة HTTP غير صالحة (%ld)",(long)status];
+        else if(!valid) reason=[NSString stringWithFormat:@"حجم الجزء غير صحيح (%ld بايت)",bytes];
+        dispatch_async(dispatch_get_main_queue(),^{
+            DGDLStatusLabel.text=[NSString stringWithFormat:@"❌ خطأ في الجزء %d: %@",DGDLCurrentPart+1,reason?:@"فشل غير معروف"];
+            DGDLButton.enabled=YES;
+            [DGDLButton setTitle:@"🔄 إعادة المحاولة" forState:UIControlStateNormal];
+            DGDLBusy=NO;
+        });
+        [s invalidateAndCancel];
+        return;
+    }
+    NSString *out=[NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"dfpart%03d",DGDLCurrentPart+1]];
+    if(![DGDLBuffer writeToFile:out atomically:YES]){
+        dispatch_async(dispatch_get_main_queue(),^{ DGDLStatusLabel.text=@"❌ تعذّر حفظ الجزء؛ أعد المحاولة"; DGDLButton.enabled=YES; [DGDLButton setTitle:@"🔄 إعادة المحاولة" forState:UIControlStateNormal]; DGDLBusy=NO; });
+        [s invalidateAndCancel];
+        return;
+    }
+    DGDLPartsDone+=bytes;
+    DGDLCurrentPart++;
+    if(DGDLCurrentPart<5){ [DGMenu dgStartPart:DGDLCurrentPart]; }
+    else { [DGMenu dgAssemble]; [s finishTasksAndInvalidate]; }
 }
 
 @end
