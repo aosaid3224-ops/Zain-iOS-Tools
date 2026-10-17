@@ -838,78 +838,179 @@ static int DGScoreChunk(uint64_t chunk,uint32_t *strideOut){
     return 0;
 }
 
-static void DGUE4Scan(void){
-    static NSTimeInterval lastTry=0;
-    static BOOL found=NO;
-    if(found) return;
-    NSTimeInterval now=[[NSDate date] timeIntervalSince1970];
-    if(now-lastTry<30.0) return;
-    lastTry=now;
-    DGUE4ScanCount++;
-    snprintf(DGUE4Stat,sizeof(DGUE4Stat),"محاولة %d: فحص جدول الشانكات...",DGUE4ScanCount);
-    DGInitGameRanges();
-    DGCollectRegions();
-    NSString *outp=[NSTemporaryDirectory() stringByAppendingPathComponent:@"deltaguard_ue4.txt"];
-    FILE *dbg=fopen([outp UTF8String],"w");
-    #define DLOG(...) do{ if(dbg){fprintf(__VA_ARGS__);fflush(dbg);} }while(0)
-    DLOG(dbg,"scan v0.7.8 chunk-table regions=%u data=0x%llx-0x%llx text=0x%llx-0x%llx\n",
-        DGRegionCount,(unsigned long long)DGGameDataLo,(unsigned long long)DGGameDataHi,
-        (unsigned long long)DGGameTextLo,(unsigned long long)DGGameTextHi);
-    if(!DGGameTextLo){ DLOG(dbg,"FAIL ranges\n"); if(dbg)fclose(dbg); return; }
-    int cheapHits=0, verified=0;
+static uint64_t DGNamePool=0;
+
+/* فك FName (تخطيط 4.23+: Id>>16=block, Id&0xFFFF=offset داخل البلوك) */
+static BOOL DGDecodeFName(uint32_t nameId, char *out, int outLen){
+    out[0]=0;
+    if(!DGNamePool||!nameId) return NO;
+    uint64_t blocksPtr=0;
+    if(!DGReadQ(DGNamePool,&blocksPtr)||!blocksPtr) return NO;
+    uint32_t blockIdx=nameId>>16, off=nameId&0xFFFF;
+    if(blockIdx>512||off>0xFF00) return NO;
+    uint64_t block=0;
+    if(!DGReadQ(blocksPtr+(uint64_t)blockIdx*8,&block)||!block) return NO;
+    uint64_t got=0;
+    uint8_t *h=DGSafeRead(block+off,2,&got);
+    if(!h||got<2){ if(h)DGFreeRead(h,got); return NO; }
+    uint16_t hdr; memcpy(&hdr,h,2); DGFreeRead(h,got);
+    if(hdr&1) return NO; /* wide name */
+    uint8_t *s=DGSafeRead(block+off+2,(uint64_t)outLen,&got);
+    if(!s) return NO;
+    int n=(int)(got<(uint64_t)outLen?got:(uint64_t)outLen);
+    memcpy(out,s,n); out[n-1]=0;
+    DGFreeRead(s,got);
+    for(int i=0;out[i];i++){ if(out[i]<32||out[i]>126){out[0]=0;return NO;} }
+    return out[0]!=0;
+}
+static BOOL DGObjName(uint64_t obj, uint32_t nameOff, char *out, int outLen){
+    out[0]=0;
+    uint64_t got=0;
+    uint8_t *b=DGSafeRead(obj+nameOff,4,&got);
+    if(!b||got<4){ if(b)DGFreeRead(b,got); return NO; }
+    uint32_t id; memcpy(&id,b,4); DGFreeRead(b,got);
+    if(!id) return NO;
+    return DGDecodeFName(id,out,outLen);
+}
+
+/* البحث عن FNamePool الحي في __DATA اللعبة */
+static int DGFindNamePool(FILE *dbg){
+    if(DGNamePool) return 1;
+    int tested=0, hits=0;
     uint64_t cursor=DGGameDataLo;
     while(cursor<DGGameDataHi){
         uint64_t want=DGGameDataHi-cursor; if(want>33554432) want=33554432;
         uint64_t got=0;
         uint8_t *buf=DGSafeRead(cursor,want,&got);
         if(!buf){ cursor+=want; continue; }
-        uint64_t lim=got-24;
+        uint64_t lim=got-32;
         for(uint64_t q=0;q<lim;q+=8){
-            uint64_t table; memcpy(&table,buf+q,8);
-            if(!table||(table&7)||!DGInRegions(table)) continue;
-            uint64_t c0=0,c1=0,c2=0;
-            if(!DGReadQ(table,&c0)||!DGInRegions(c0)) continue;
-            if(!DGReadQ(table+8,&c1)||!DGInRegions(c1)) continue;
-            long long stride=(long long)(c1-c0);
-            if(stride<0x8000||stride>0x800000) continue;
-            if(DGReadQ(table+16,&c2)&&DGInRegions(c2)){
-                long long s2=(long long)(c2-c1);
-                if(s2<0x8000||s2>0x800000||s2<stride-0x4000||s2>stride+0x4000) continue;
+            uint64_t blocks; uint32_t nb,cb,bc,pad;
+            memcpy(&blocks,buf+q,8);
+            memcpy(&nb,buf+q+8,4); memcpy(&cb,buf+q+12,4);
+            memcpy(&bc,buf+q+16,4); memcpy(&pad,buf+q+20,4);
+            if(!blocks||(blocks&7)||!DGInRegions(blocks)) continue;
+            if(blocks>=DGGameDataLo&&blocks<DGGameDataHi) continue; /* لازم يشير لHeap */
+            if(nb<1||nb>512||cb>=nb||bc>0x20000) continue;
+            tested++;
+            /* تحقق: Blocks[0] -> أول entry يجب أن يكون "None" */
+            uint64_t block0=0;
+            if(!DGReadQ(blocks,&block0)||!block0||!DGInRegions(block0)) continue;
+            BOOL noneOk=NO;
+            for(uint64_t off=0;off<=0x40;off+=0x10){
+                uint64_t g2=0; uint8_t *e=DGSafeRead(block0+off,8,&g2);
+                if(!e) continue;
+                char chk[8]={0}; memcpy(chk,e,g2<7?g2:7); DGFreeRead(e,g2);
+                if(chk[0]!=0 && memcmp(chk+1,"None",4)==0 && chk[5]==0){ noneOk=YES; break; }
+                /* header ثم None: hdr uint16 في e[0..1] */
+                if(g2>=8 && e[0]==0 && memcmp((char*)e+2,"None",4)==0){ noneOk=YES; DGFreeRead(e,g2); break; }
+                /* أعد القراءة إذا حررنا مبكرًا */
             }
-            cheapHits++;
-            uint32_t usedStride=0;
-            int score=DGScoreChunk(c0,&usedStride);
-            if(score!=0){
-                verified++;
-                uint8_t hdr[96]; uint64_t hg=0;
-                uint8_t *hb=DGSafeRead(table>96?table-96:0x1000,96,&hg);
-                if(hb){ memcpy(hdr,hb,96); DGFreeRead(hb,hg); } else memset(hdr,0,96);
-                if(verified<=300){
-                    DLOG(dbg,"TABLE @ 0x%llx stride=0x%llx itemStride=0x%x score=%d header96=",
-                        (unsigned long long)table,(unsigned long long)stride,usedStride,score);
-                    for(int k=0;k<96;k++) DLOG(dbg,"%02x",hdr[k]);
-                    DLOG(dbg,"\n");
+            if(!noneOk) continue;
+            /* فك 5 أسماء عشوائية للتأكيد */
+            char nm[64]; int good=0;
+            for(uint32_t id=1; id<=40 && good<5; id++){
+                if(DGDecodeFName((id<<8)|0x20,nm,sizeof nm)||DGDecodeFName(id<<16|0x10,nm,sizeof nm)||DGDecodeFName((1u<<16)|(id*0x20),nm,sizeof nm)){
+                    if(dbg) fprintf(dbg,"POOLSAMPLE %s\n",nm);
+                    good++;
                 }
-                if(score>=3){
-                    found=YES; DGUE4FoundFlag=YES;
-                    snprintf(DGUE4Stat,sizeof(DGUE4Stat),"تم: جدول الشانكات @ 0x%llx — يمكنك الخروج",(unsigned long long)table);
-                    snprintf(DGUE4FoundAddr,sizeof(DGUE4FoundAddr),"0x%llx",(unsigned long long)table);
-                    dispatch_async(dispatch_get_main_queue(),^{ DGHaptic(); DGHaptic(); });
-                    DLOG(dbg,"VERIFIED TABLE @ 0x%llx\n",(unsigned long long)table);
-                    DGFreeRead(buf,got);
-                    if(dbg)fclose(dbg);
-                    return;
-                }
+            }
+            if(good>=2){
+                DGNamePool=cursor+q;
+                hits++;
+                if(dbg) fprintf(dbg,"NAMEPOOL @ 0x%llx blocks=0x%llx NumBlocks=%u\n",
+                    (unsigned long long)(cursor+q),(unsigned long long)blocks,nb);
+                DGFreeRead(buf,got);
+                return 1;
             }
         }
         DGFreeRead(buf,got);
         cursor+=got?got:want;
         if(!got) cursor+=want;
     }
-    if(!DGUE4FoundFlag) snprintf(DGUE4Stat,sizeof(DGUE4Stat),"لم يجد (محاولة %d) — cheap=%d verified=%d | يعيد خلال 30ث",DGUE4ScanCount,cheapHits,verified);
-    DLOG(dbg,"END cheap=%d verified=%d\n",cheapHits,verified);
-    if(dbg)fclose(dbg);
-    #undef DLOG
+    if(dbg) fprintf(dbg,"NAMEPOOL not found (tested=%d)\n",tested);
+    return 0;
+}
+
+static void DGUE4Scan(void){
+    static NSTimeInterval lastTry=0;
+    static BOOL found=NO;
+    if(found) return;
+    NSTimeInterval now=[[NSDate date] timeIntervalSince1970];
+    if(now-lastTry<45.0) return;
+    lastTry=now;
+    DGUE4ScanCount++;
+    DGInitGameRanges();
+    DGCollectRegions();
+    NSString *outp=[NSTemporaryDirectory() stringByAppendingPathComponent:@"deltaguard_ue4.txt"];
+    FILE *dbg=fopen([outp UTF8String],"w");
+    if(!dbg) return;
+    fprintf(dbg,"=== OBSERVATORY v0.8.0 attempt %d regions=%u ===\n",DGUE4ScanCount,DGRegionCount);
+    fflush(dbg);
+    if(!DGGameTextLo){ fprintf(dbg,"FAIL ranges\n"); fclose(dbg); return; }
+
+    /* المرحلة 1: NamePool */
+    if(!DGNamePool){
+        snprintf(DGUE4Stat,sizeof(DGUE4Stat),"محاولة %d: البحث عن FNamePool...",DGUE4ScanCount);
+        DGFindNamePool(dbg);
+    }
+    if(DGNamePool) fprintf(dbg,"PHASE1 OK pool=0x%llx\n",(unsigned long long)DGNamePool);
+    else fprintf(dbg,"PHASE1 pending\n");
+    fflush(dbg);
+
+    /* المرحلة 2: جدول الكائنات مع تحقق بالأسماء */
+    int cheap=0, withNames=0, verified=0;
+    if(DGNamePool){
+        snprintf(DGUE4Stat,sizeof(DGUE4Stat),"محاولة %d: البحث عن جدول الكائنات (تحقق بالأسماء)...",DGUE4ScanCount);
+        uint64_t cursor=DGGameDataLo;
+        while(cursor<DGGameDataHi && !found){
+            uint64_t want=DGGameDataHi-cursor; if(want>33554432) want=33554432;
+            uint64_t got=0;
+            uint8_t *buf=DGSafeRead(cursor,want,&got);
+            if(!buf){ cursor+=want; continue; }
+            uint64_t lim=got-24;
+            for(uint64_t q=0;q<lim && !found;q+=8){
+                uint64_t table; memcpy(&table,buf+q,8);
+                if(!table||(table&7)||!DGInRegions(table)) continue;
+                uint64_t c0=0,c1=0;
+                if(!DGReadQ(table,&c0)||!DGInRegions(c0)) continue;
+                if(!DGReadQ(table+8,&c1)||!DGInRegions(c1)) continue;
+                long long stride=(long long)(c1-c0);
+                if(stride<0x8000||stride>0x800000) continue;
+                cheap++;
+                /* تحقق بالأسماء على خطوتي عنصر */
+                int nameScore18=0,nameScore20=0; char sample[64]="";
+                for(int i=0;i<12;i++){
+                    uint64_t item=c0+(uint64_t)i*0x18;
+                    uint64_t obj=0;
+                    if(!DGReadQ(item,&obj)||!obj||!DGInRegions(obj)) continue;
+                    char nm[64];
+                    if(DGObjName(obj,0x18,nm,sizeof nm)){ nameScore18++; if(!sample[0]) strncpy(sample,nm,63); }
+                    if(DGObjName(obj,0x20,nm,sizeof nm)){ nameScore20++; if(!sample[0]) strncpy(sample,nm,63); }
+                }
+                int bestN=MAX(nameScore18,nameScore20);
+                if(bestN>=1&&withNames<40){
+                    withNames++;
+                    fprintf(dbg,"OBJTABLE? @ 0x%llx stride=0x%llx names18=%d names20=%d sample=%s\n",
+                        (unsigned long long)table,(unsigned long long)stride,nameScore18,nameScore20,sample);
+                    fflush(dbg);
+                }
+                if(bestN>=3){
+                    found=YES; DGUE4FoundFlag=YES;
+                    snprintf(DGUE4Stat,sizeof(DGUE4Stat),"تم: GUObjectArray @ 0x%llx — يمكنك الخروج",(unsigned long long)table);
+                    snprintf(DGUE4FoundAddr,sizeof(DGUE4FoundAddr),"0x%llx",(unsigned long long)table);
+                    dispatch_async(dispatch_get_main_queue(),^{ DGHaptic(); DGHaptic(); });
+                    fprintf(dbg,"VERIFIED GObjects @ 0x%llx (name-verified, itemStride=%s, sample=%s)\n",
+                        (unsigned long long)table,nameScore20>nameScore18?"0x20":"0x18",sample);
+                }
+            }
+            DGFreeRead(buf,got);
+            cursor+=got?got:want;
+            if(!got) cursor+=want;
+        }
+    }
+    fprintf(dbg,"END pool=%s cheap=%d nameHits=%d\n",DGNamePool?"YES":"NO",cheap,withNames);
+    fclose(dbg);
 }
 
 /* بدائل يدوية إذا غابت الدوال عن التصدير */
