@@ -810,14 +810,14 @@ static BOOL DGObjOk(uint64_t item,uint64_t *objOut){
     return YES;
 }
 
-static int DGScoreChunk(uint64_t chunk){
+static int DGScoreChunkStride(uint64_t chunk,uint32_t stride){
     uint64_t got=0;
-    uint8_t *b=DGSafeRead(chunk,0x180,&got); /* 16 عنصر × 0x18 */
-    if(!b||got<0x18){ if(b)DGFreeRead(b,got); return 0; }
-    int n=(int)(got/0x18); if(n>16) n=16;
+    uint8_t *b=DGSafeRead(chunk,stride*16,&got);
+    if(!b||got<stride){ if(b)DGFreeRead(b,got); return 0; }
+    int n=(int)(got/stride); if(n>16) n=16;
     int score=0,ptrs=0;
     for(int i=0;i<n;i++){
-        uint64_t o; memcpy(&o,b+i*0x18,8);
+        uint64_t o; memcpy(&o,b+i*stride,8);
         if(!o) continue;
         if((o&7)||!DGInRegions(o)) continue;
         ptrs++;
@@ -826,7 +826,15 @@ static int DGScoreChunk(uint64_t chunk){
     }
     DGFreeRead(b,got);
     if(score>=3) return score;
-    if(ptrs>=6) return -ptrs; /* اشتباه ضعيف */
+    if(ptrs>=6) return -ptrs;
+    return 0;
+}
+static int DGScoreChunk(uint64_t chunk,uint32_t *strideOut){
+    int s18=DGScoreChunkStride(chunk,0x18);
+    int s20=DGScoreChunkStride(chunk,0x20);
+    if(s20>s18){ if(strideOut)*strideOut=0x20; return s20; }
+    if(s18!=0){ if(strideOut)*strideOut=0x18; return s18; }
+    if(s20!=0){ if(strideOut)*strideOut=0x20; return s20; }
     return 0;
 }
 
@@ -869,15 +877,16 @@ static void DGUE4Scan(void){
                 if(s2<0x8000||s2>0x800000||s2<stride-0x4000||s2>stride+0x4000) continue;
             }
             cheapHits++;
-            int score=DGScoreChunk(c0);
+            uint32_t usedStride=0;
+            int score=DGScoreChunk(c0,&usedStride);
             if(score!=0){
                 verified++;
                 uint8_t hdr[96]; uint64_t hg=0;
                 uint8_t *hb=DGSafeRead(table>96?table-96:0x1000,96,&hg);
                 if(hb){ memcpy(hdr,hb,96); DGFreeRead(hb,hg); } else memset(hdr,0,96);
                 if(verified<=300){
-                    DLOG(dbg,"TABLE @ 0x%llx stride=0x%llx score=%d header96=",
-                        (unsigned long long)table,(unsigned long long)stride,score);
+                    DLOG(dbg,"TABLE @ 0x%llx stride=0x%llx itemStride=0x%x score=%d header96=",
+                        (unsigned long long)table,(unsigned long long)stride,usedStride,score);
                     for(int k=0;k<96;k++) DLOG(dbg,"%02x",hdr[k]);
                     DLOG(dbg,"\n");
                 }
