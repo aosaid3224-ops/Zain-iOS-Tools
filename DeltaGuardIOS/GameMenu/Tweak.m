@@ -354,7 +354,7 @@ static void DGSwizzleFPS(void){
 
 + (void)updateMockButton{
     if(!DGMockButton) return;
-    NSString *title=DGMockEnabled?@"معاينة اصطناعية: تشغيل":"معاينة اصطناعية: إيقاف";
+    NSString *title=DGMockEnabled?@"معاينة اصطناعية: تشغيل":@"معاينة اصطناعية: إيقاف";
     [DGMockButton setTitle:title forState:UIControlStateNormal];
     DGMockButton.tintColor=DGMockEnabled?[UIColor systemGreenColor]:[UIColor systemCyanColor];
 }
