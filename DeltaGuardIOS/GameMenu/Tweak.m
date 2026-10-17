@@ -322,9 +322,17 @@ static void DGResolveIL2CPP(void){
             DGIL2CPP.partialAPIs=0;
             for(int a=0;anchors[a];a++){
                 for(uint32_t i=0;i<count;i++){
-                    if(DGExportLookupU(i,anchors[a])){ DGIL2CPP.partialAPIs++; break; }
+                    void *p=DGExportLookupU(i,anchors[a]);
+                    if(p){
+                        DGIL2CPP.partialAPIs++;
+                        if(a==0) DGIL2CPP.fn_class_get_name=p;
+                        if(a==1) DGIL2CPP.fn_method_get_name=p;
+                        if(a==2) DGIL2CPP.fn_object_get_size=p;
+                        break;
+                    }
                 }
             }
+            DGResolveProfilerFns(count);
         }
         /* المرحلة ب: الحل بالأوفسيتات من التحليل */
         DGTryOffsetResolver();
@@ -420,6 +428,80 @@ static BOOL DGTryOffsetResolver(void){
     return YES;
 }
 
+/* ============================================================
+   المستكشف الحي — Profiler Bridge
+   يستخدم الدوال المصدَّرة فقط (allocation profiler) لالتقاط
+   الكائنات الحية وأسماء كلاساتها أثناء اللعب — بلا أوفسيتات.
+   ============================================================ */
+static void (*DGProfAlloc)(void*,void*)=NULL;        /* il2cpp_profiler_install_allocation(cb,ud) */
+static void (*DGProfEnterLeave)(void*,void*)=NULL;   /* il2cpp_profiler_install_enter_leave(en,lv) */
+static void (*DGProfSetEvents)(uint32_t)=NULL;       /* il2cpp_profiler_set_events(mask) */
+
+#define DG_MAX_CLASSES 64
+#define DG_MAX_CNAME 48
+static struct { char name[DG_MAX_CNAME]; uint32_t allocs; void *lastObj; } DGSeen[DG_MAX_CLASSES];
+static int DGSeenCount=0;
+static char DGMatchNames[12][DG_MAX_CNAME];
+static int DGMatchCount=0;
+static volatile uint32_t DGAllocCount=0;
+static volatile uint32_t DGEnterCount=0;
+static BOOL DGProbeStarted=NO;
+static BOOL DGProbeEverFired=NO;
+
+static void DGAllocCb(void *obj, void *klass, size_t size, void *userData){
+    (void)size; (void)userData;
+    DGAllocCount++;
+    if(!klass||!obj) return;
+    DGProbeEverFired=YES;
+    const char *(*getname)(void*)=(const char*(*)(void*))DGIL2CPP.fn_class_get_name;
+    if(!getname) return;
+    const char *nm=getname(klass);
+    if(!nm) return;
+    int idx=-1;
+    for(int i=0;i<DGSeenCount;i++){ if(strncmp(DGSeen[i].name,nm,DG_MAX_CNAME-1)==0){ idx=i; break; } }
+    if(idx<0 && DGSeenCount<DG_MAX_CLASSES){
+        idx=DGSeenCount++;
+        strncpy(DGSeen[idx].name,nm,DG_MAX_CNAME-1);
+        DGSeen[idx].name[DG_MAX_CNAME-1]=0;
+    }
+    if(idx>=0){ DGSeen[idx].allocs++; DGSeen[idx].lastObj=obj; }
+    if(DGMatchCount<12){
+        char low[DG_MAX_CNAME];
+        size_t L=strlen(nm); if(L>DG_MAX_CNAME-1) L=DG_MAX_CNAME-1;
+        for(size_t i=0;i<L;i++) low[i]=(char)tolower((unsigned char)nm[i]); low[L]=0;
+        if(strstr(low,"player")||strstr(low,"character")||strstr(low,"soldier")||
+           strstr(low,"avatar")||strstr(low,"pawn")||strstr(low,"entity")||strstr(low,"hero")){
+            BOOL fnd=NO;
+            for(int i=0;i<DGMatchCount;i++) if(strncmp(DGMatchNames[i],nm,DG_MAX_CNAME-1)==0) fnd=YES;
+            if(!fnd){ strncpy(DGMatchNames[DGMatchCount],nm,DG_MAX_CNAME-1); DGMatchNames[DGMatchCount][DG_MAX_CNAME-1]=0; DGMatchCount++; }
+        }
+    }
+}
+static void DGEnterCb(void *method, void *obj, void **args, void *userData){
+    (void)method;(void)obj;(void)args;(void)userData; DGEnterCount++;
+}
+static void DGLeaveCb(void *method, void *obj, void *ret, void *userData){
+    (void)method;(void)obj;(void)ret;(void)userData;
+}
+
+static void DGResolveProfilerFns(uint32_t count){
+    if(DGProfAlloc&&DGProfEnterLeave&&DGProfSetEvents) return;
+    for(uint32_t i=0;i<count;i++){
+        if(!DGProfAlloc) DGProfAlloc=(void(*)(void*,void*))DGExportLookupU(i,"il2cpp_profiler_install_allocation");
+        if(!DGProfEnterLeave) DGProfEnterLeave=(void(*)(void*,void*))DGExportLookupU(i,"il2cpp_profiler_install_enter_leave");
+        if(!DGProfSetEvents) DGProfSetEvents=(void(*)(uint32_t))DGExportLookupU(i,"il2cpp_profiler_set_events");
+    }
+}
+
+/* تشغيل المستكشف — ALLOCATIONS أولاً (الأخف)؛ ENTER_LEAVE يُضاف يدويًا لاحقًا */
+static void DGStartProbe(void){
+    if(DGProbeStarted) return;
+    if(!DGIL2CPP.fn_class_get_name||!DGProfAlloc||!DGProfSetEvents) return;
+    DGProfAlloc((void*)DGAllocCb,NULL);
+    DGProfSetEvents(8u|128u|256u); /* CLASS | ALLOCATIONS | GC */
+    DGProbeStarted=YES;
+}
+
 /* بدائل يدوية إذا غابت الدوال عن التصدير */
 static void* DGUnbox(void *obj){
     if(DGIL2CPP.object_unbox) return DGIL2CPP.object_unbox(obj);
@@ -488,6 +570,17 @@ static void DGWriteDiag(void){
         NSString *epath=[NSTemporaryDirectory() stringByAppendingPathComponent:@"deltaguard_exports.txt"];
         [out writeToFile:epath atomically:YES encoding:NSUTF8StringEncoding error:nil];
     }
+
+    /* نتائج المستكشف الحي */
+    [m appendFormat:@"PROBE: started=%d fired=%d alloc=%u enter=%u classes=%d matches=%d\n",
+        DGProbeStarted,DGProbeEverFired,(unsigned)DGAllocCount,(unsigned)DGEnterCount,DGSeenCount,DGMatchCount];
+    if(DGMatchCount>0){
+        [m appendString:@"MATCHES: "];
+        for(int i=0;i<DGMatchCount;i++) [m appendFormat:@"%s ",DGMatchNames[i]];
+        [m appendString:@"\n"];
+    }
+    [m appendString:@"SEEN(first 40):\n"];
+    for(int i=0;i<DGSeenCount && i<40;i++) [m appendFormat:@"  %s x%u\n",DGSeen[i].name,DGSeen[i].allocs];
 }
 
 /* البحث عن كلاس عبر كل الصور — يعيد أول مطابقة */
@@ -1190,6 +1283,7 @@ static UIView *DGToggleRow(CGFloat y, NSString *text, SEL action, UISwitch * __s
     /* (1) حالة IL2CPP + كتابة التشخيص عند كل تغير */
     DGResolveIL2CPP();
     DGWriteDiag();
+    DGStartProbe(); /* يشتغل فقط عند اكتمال المراسي والدوال — وإلا يصمت */
 
     /* (2) المشهد النشط */
     NSString *scene=DGGetSceneName();
@@ -1222,10 +1316,16 @@ static UIView *DGToggleRow(CGFloat y, NSString *text, SEL action, UISwitch * __s
         } else if(DGCandidateClasses.count==0){
             DGCandidatesLabel.text=@"لا كلاسات مرشحة بعد — أضف كلمات مفتاحية في DGNameMatches";
         } else {
-            NSMutableString *ms=[NSMutableString stringWithFormat:@"كلاسات مرشحة (%lu):\n",(unsigned long)DGCandidateClasses.count];
-            NSUInteger max=MIN(DGCandidateClasses.count,4);
-            for(NSUInteger i=0;i<max;i++) [ms appendFormat:@"• %@\n",DGCandidateClasses[i]];
-            if(DGCandidateClasses.count>4) [ms appendFormat:@"… +%lu أخرى",(unsigned long)(DGCandidateClasses.count-4)];
+            NSMutableString *ms=[NSMutableString stringWithFormat:@"🧪 alloc:%u enter:%u | كلاسات:%d | مطابق:%d\n",(unsigned)DGAllocCount,(unsigned)DGEnterCount,DGSeenCount,DGMatchCount];
+            if(DGMatchCount>0){
+                [ms appendString:@"مطابقات: "];
+                for(int i=0;i<DGMatchCount && i<3;i++) [ms appendFormat:@"%s ",DGMatchNames[i]];
+                [ms appendString:@"\n"];
+            }
+            NSUInteger shown=0;
+            for(int i=0;i<DGSeenCount && shown<3;i++){
+                if(DGSeen[i].allocs>1){ [ms appendFormat:@"• %s ×%u\n",DGSeen[i].name,DGSeen[i].allocs]; shown++; }
+            }
             DGCandidatesLabel.text=ms;
         }
     }
