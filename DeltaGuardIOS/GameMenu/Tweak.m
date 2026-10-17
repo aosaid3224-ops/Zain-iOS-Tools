@@ -58,7 +58,7 @@ static long DGDLCurrentPartBytes;
 static int DGDLCurrentPart;
 static BOOL DGDLBusy=NO;
 static UILabel *DGUE4Label;
-static char DGUE4Stat[256]="لم يبدأ الماسح";
+static char DGUE4Stat[256]="الماسح لم يبدأ بعد";
 static int DGUE4ScanCount=0;
 static BOOL DGUE4FoundFlag=NO;
 static char DGUE4FoundAddr[64]="";
@@ -805,7 +805,7 @@ static void DGUE4Scan(void){
     if(now-lastTry<30.0) return;
     lastTry=now;
     DGUE4ScanCount++;
-    snprintf(DGUE4Stat,sizeof(DGUE4Stat),"المحاولة %d: يفحص الآن...",DGUE4ScanCount);
+    snprintf(DGUE4Stat,sizeof(DGUE4Stat),"محاولة %d: يفحص الآن...",DGUE4ScanCount);
     DGInitGameRanges();
     NSString *outp=[NSTemporaryDirectory() stringByAppendingPathComponent:@"deltaguard_ue4.txt"];
     FILE *dbg=fopen([outp UTF8String],"w");
@@ -814,7 +814,7 @@ static void DGUE4Scan(void){
         (unsigned long long)DGGameDataLo,(unsigned long long)DGGameDataHi,
         (unsigned long long)DGGameTextLo,(unsigned long long)DGGameTextHi);
     if(!DGGameTextLo||!DGGameDataLo){
-        snprintf(DGUE4Stat,sizeof(DGUE4Stat),"لم تُحدّد نطاقات اللعبة (المحاولة %d)",DGUE4ScanCount);
+        snprintf(DGUE4Stat,sizeof(DGUE4Stat),"محاولة %d: يفحص الآن...",DGUE4ScanCount);
         DLOG(dbg,"FAIL: game ranges\n");
         if(dbg)fclose(dbg);
         return;
@@ -835,8 +835,7 @@ static void DGUE4Scan(void){
             int score=DGVerifyUObjectChain(objects,nc);
             if(score>=3){
                 found=YES; DGUE4FoundFlag=YES;
-                snprintf(DGUE4Stat,sizeof(DGUE4Stat),"✅ تم العثور على GUObjectArray @ 0x%llx (layout %c)",
-                    (unsigned long long)(cursor+q),lay==1?'A':'B');
+                snprintf(DGUE4Stat,sizeof(DGUE4Stat),"تم العثور: GUObjectArray @ 0x%llx (layout %c) - يمكنك الخروج",(unsigned long long)(cursor+q),lay==1?'A':'B');
                 snprintf(DGUE4FoundAddr,sizeof(DGUE4FoundAddr),"0x%llx",(unsigned long long)(cursor+q));
                 dispatch_async(dispatch_get_main_queue(),^{ DGHaptic(); DGHaptic(); });
                 DLOG(dbg,"FOUND layout=%c\n",lay==1?'A':'B');
@@ -861,7 +860,7 @@ static void DGUE4Scan(void){
         cursor+=got?got:want;
         if(!got) cursor+=want;
     }
-    if(!DGUE4FoundFlag) snprintf(DGUE4Stat,sizeof(DGUE4Stat),"⚠️ لم يُعثر عليها بعد (المحاولة %d) — إعادة خلال 30ث | NEAR-MISS: %d",DGUE4ScanCount,nearMiss);
+    if(!DGUE4FoundFlag) snprintf(DGUE4Stat,sizeof(DGUE4Stat),"لم يجد بعد (محاولة %d) - يعيد خلال 30 ثانية | NEAR-MISS: %d",DGUE4ScanCount,nearMiss);
     DLOG(dbg,"END: layoutMatches=%d nearMissSamples=%d\n",verified,nearMiss);
     if(dbg)fclose(dbg);
     #undef DLOG
