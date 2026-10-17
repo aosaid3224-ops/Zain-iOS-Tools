@@ -94,6 +94,12 @@ static struct {
     DGClassForEachFn class_for_each; /* اختياري */
     size_t assemblies;
     char imageName[96];
+    /* مراسي il2cpp المثبتة التصدير — دليل حضور وقت التشغيل */
+    void *fn_class_get_name;
+    void *fn_method_get_name;
+    void *fn_object_get_size;
+    int partialAPIs;        /* عدد المراسي المحلولة */
+    int resolvedViaOffsets; /* 1 = الحل تم عبر أوفسيتات التحليل */
 } DGIL2CPP;
 
 static NSMutableArray<NSString*> *DGCandidateClasses = nil;
@@ -198,6 +204,17 @@ static void* DGExportLookup(uint32_t idx, const char *sym){
     return out;
 }
 
+/* البحث بالصيغتين: مع شرطة سفلية وبدون — شجرة التصدير تخزن _name للدوال C */
+static void* DGExportLookupU(uint32_t idx, const char *sym){
+    void *p=DGExportLookup(idx,sym);
+    if(!p && sym[0]!='_'){
+        char buf[160];
+        snprintf(buf,sizeof(buf),"_%s",sym);
+        p=DGExportLookup(idx,buf);
+    }
+    return p;
+}
+
 /* تفريغ كل أسماء رموز شجرة التصدير — لكشف الأسماء المعاد تسميتها */
 static void DGTrieDump(const uint8_t *node, const uint8_t *start, const uint8_t *end, char *prefix, size_t prefixCap, NSMutableString *out, NSUInteger *count){
     if(*count>=30000) return;
@@ -247,7 +264,7 @@ static char DGDiagShort[64]="—";
 static NSString *DGLastDiag=nil;
 
 static void DGResolveOne(uint32_t idx, const char *name, void **slot){
-    void *p=DGExportLookup(idx,name);
+    void *p=DGExportLookupU(idx,name);
     if(!p){
         const char *path=_dyld_get_image_name(idx);
         void *h=path?dlopen(path,RTLD_NOLOAD|RTLD_LAZY):NULL;
@@ -268,7 +285,7 @@ static void DGResolveIL2CPP(void){
     uint32_t count=_dyld_image_count();
     DGImagesScanned=count;
     for(uint32_t i=0;i<count;i++){
-        void *probe=DGExportLookup(i,"il2cpp_domain_get");
+        void *probe=DGExportLookupU(i,"il2cpp_domain_get");
         if(!probe) continue;
         DGIL2CPP.domain_get=(DGDomainGetFn)probe;
         DGResolveOne(i,"il2cpp_domain_get_assemblies",(void**)&DGIL2CPP.domain_get_assemblies);
@@ -297,8 +314,110 @@ static void DGResolveIL2CPP(void){
         snprintf(DGIL2CPP.imageName,sizeof(DGIL2CPP.imageName),"%s",DGHitImage);
         snprintf(DGDiagShort,sizeof(DGDiagShort),"OK:%s",DGHitImage);
     } else {
-        snprintf(DGDiagShort,sizeof(DGDiagShort),"no-sym|img:%u",count);
+        /* المرحلة أ: مسح المراسي المثبتة — دليل حضور زمن التشغيل */
+        static const char *anchors[]={"il2cpp_class_get_name","il2cpp_method_get_name","il2cpp_object_get_size","il2cpp_thread_walk_frame_stack",NULL};
+        static NSTimeInterval lastAnchor=0;
+        if(now-lastAnchor>10.0 || lastAnchor==0){
+            lastAnchor=now;
+            DGIL2CPP.partialAPIs=0;
+            for(int a=0;anchors[a];a++){
+                for(uint32_t i=0;i<count;i++){
+                    if(DGExportLookupU(i,anchors[a])){ DGIL2CPP.partialAPIs++; break; }
+                }
+            }
+        }
+        /* المرحلة ب: الحل بالأوفسيتات من التحليل */
+        DGTryOffsetResolver();
+        if(!DGIL2CPP.available)
+            snprintf(DGDiagShort,sizeof(DGDiagShort),"partial:%d/4|img:%u",DGIL2CPP.partialAPIs,count);
     }
+}
+
+/* ============================================================
+   الحل بالأوفسيتات — للمحركات التي تُخفي واجهة il2cpp الكاملة
+   (kgvmp/KiwiVM في Delta Force). القيم من IDA: File Offset
+   داخل ثنائي DeltaForceClient. 0 = المعطّل.
+   ============================================================ */
+typedef struct {
+    const char *imageName;              /* الصورة الحاملة لزمن il2cpp */
+    uint64_t fileOffDomainGet;          /* il2cpp_domain_get */
+    uint64_t fileOffRuntimeInvoke;      /* il2cpp_runtime_invoke */
+    uint64_t fileOffClassFromName;      /* il2cpp_class_from_name */
+    uint64_t fileOffClassGetMethodFromName; /* il2cpp_class_get_method_from_name */
+    uint64_t fileOffObjectUnbox;        /* il2cpp_object_unbox */
+    uint64_t fileOffStringChars;        /* il2cpp_string_chars */
+    uint64_t fileOffStringLength;       /* il2cpp_string_length */
+    uint64_t fileOffThreadAttach;       /* il2cpp_thread_attach (اختياري) */
+    uint64_t fileOffDomainGetAssemblies; /* il2cpp_domain_get_assemblies (مطلوب) */
+    uint64_t fileOffAssemblyGetImage;   /* il2cpp_assembly_get_image (مطلوب) */
+} DGEngineOffsets;
+
+/* ⚠️ املأ من تحليلك — كل قيمة 0 تعني "لا أعرف بعد" ولن تُستخدم */
+static DGEngineOffsets DGOffsets={
+    "DeltaForceClient",
+    0,0,0,0,0,0,0,0, 0,0
+};
+
+static void* DGAddrFromFileOff(uint32_t idx, uint64_t fileoff){
+    if(!fileoff) return NULL;
+    const struct mach_header_64 *mh=(const struct mach_header_64*)_dyld_get_image_header(idx);
+    if(!mh||mh->magic!=MH_MAGIC_64) return NULL;
+    uint64_t slide=_dyld_get_image_vmaddr_slide(idx);
+    const uint8_t *sg=(const uint8_t*)mh+sizeof(struct mach_header_64);
+    for(uint32_t j=0;j<mh->ncmds;j++){
+        const struct load_command *l2=(const struct load_command*)sg;
+        if(l2->cmd==LC_SEGMENT_64){
+            const struct segment_command_64 *seg=(const struct segment_command_64*)sg;
+            if(fileoff>=seg->fileoff && fileoff<seg->fileoff+seg->filesize)
+                return (void*)(uintptr_t)(seg->vmaddr+(fileoff-seg->fileoff)+slide);
+        }
+        sg+=l2->cmdsize;
+    }
+    return NULL;
+}
+
+static uint32_t DGFindImageIndex(const char *name){
+    uint32_t c=_dyld_image_count();
+    for(uint32_t i=0;i<c;i++){
+        const char *p=_dyld_get_image_name(i);
+        if(p && strstr(p,name)) return i;
+    }
+    return UINT32_MAX;
+}
+
+/* محاولة الحل بالأوفسيتات — تُعيد YES فقط إذا اجتاز التحقق الحقيقي */
+static BOOL DGTryOffsetResolver(void){
+    if(DGIL2CPP.available) return YES;
+    if(!DGOffsets.fileOffDomainGet) return NO;
+    uint32_t idx=DGFindImageIndex(DGOffsets.imageName);
+    if(idx==UINT32_MAX) return NO;
+    DGDomainGetFn dom=(DGDomainGetFn)DGAddrFromFileOff(idx,DGOffsets.fileOffDomainGet);
+    if(!dom) return NO;
+    /* تحقق حتمي: الاستدعاء يجب أن يرجع غير NULL — غير ذلك يعني أوفسيت خاطئ */
+    void *domain=dom();
+    if(!domain) return NO;
+    DGIL2CPP.domain_get=dom;
+    DGIL2CPP.runtime_invoke=(DGRuntimeInvokeFn)DGAddrFromFileOff(idx,DGOffsets.fileOffRuntimeInvoke);
+    DGIL2CPP.class_from_name=(DGClassFromNameFn)DGAddrFromFileOff(idx,DGOffsets.fileOffClassFromName);
+    DGIL2CPP.class_get_method_from_name=(DGClassGetMethodFn)DGAddrFromFileOff(idx,DGOffsets.fileOffClassGetMethodFromName);
+    DGIL2CPP.object_unbox=(DGObjectUnboxFn)DGAddrFromFileOff(idx,DGOffsets.fileOffObjectUnbox);
+    DGIL2CPP.string_chars=(DGStringCharsFn)DGAddrFromFileOff(idx,DGOffsets.fileOffStringChars);
+    DGIL2CPP.string_length=(DGStringLengthFn)DGAddrFromFileOff(idx,DGOffsets.fileOffStringLength);
+    DGIL2CPP.domain_get_assemblies=(DGDomainGetAssembliesFn)DGAddrFromFileOff(idx,DGOffsets.fileOffDomainGetAssemblies);
+    DGIL2CPP.assembly_get_image=(DGAssemblyGetImageFn)DGAddrFromFileOff(idx,DGOffsets.fileOffAssemblyGetImage);
+    /* الحد الأدنى الصارم — أي نقص يعني فشلًا صادقًا */
+    if(!DGIL2CPP.domain_get_assemblies || !DGIL2CPP.assembly_get_image ||
+       !DGIL2CPP.runtime_invoke || !DGIL2CPP.class_from_name || !DGIL2CPP.class_get_method_from_name){
+        memset(&DGIL2CPP,0,sizeof(DGIL2CPP));
+        snprintf(DGDiagShort,sizeof(DGDiagShort),"offsets-incomplete");
+        return NO;
+    }
+    DGIL2CPP.available=YES;
+    DGIL2CPP.resolvedViaOffsets=1;
+    DGIL2CPP.assemblies=0;
+    snprintf(DGIL2CPP.imageName,sizeof(DGIL2CPP.imageName),"%s+offsets",DGOffsets.imageName);
+    snprintf(DGDiagShort,sizeof(DGDiagShort),"OK:offsets");
+    return YES;
 }
 
 /* بدائل يدوية إذا غابت الدوال عن التصدير */
@@ -328,13 +447,14 @@ static void DGWriteDiag(void){
     [m appendFormat:@"DeltaGuard IL2CPP diag | %@\n",[NSDate date]];
     [m appendFormat:@"available=%d | %s | hit=%s | images=%u\n",DGIL2CPP.available,DGDiagShort,DGHitImage,DGImagesScanned];
 
-    /* فحص صحة الماسك: NSLog موجود في كل عملية — يجب أن يُوجد */
-    void *probe=NULL; uint32_t probeIdx=0;
+    /* فحص صحة الماسك: مراسي متعددة معروفة الوجود */
+    static const char *probes[]={"NSLog","malloc","objc_msgSend","il2cpp_class_get_name",NULL};
     uint32_t c0=_dyld_image_count();
-    for(uint32_t i=0;i<c0;i++){
-        if(DGExportLookup(i,"NSLog")){ probe=DGExportLookup(i,"NSLog"); probeIdx=i; break; }
+    for(int q=0;probes[q];q++){
+        uint32_t hitIdx=UINT32_MAX;
+        for(uint32_t i=0;i<c0;i++){ if(DGExportLookupU(i,probes[q])){ hitIdx=i; break; } }
+        [m appendFormat:@"probe %s -> %s\n",probes[q],hitIdx!=UINT32_MAX?"FOUND":"—"];
     }
-    [m appendFormat:@"walker-check: NSLog %s (img#%u)\n",probe?"FOUND ✅":"NOT-FOUND ❌",probeIdx];
 
     /* صور اللعبة/Unity وحالة il2cpp_domain_get في كل منها */
     uint32_t c=_dyld_image_count();
@@ -1084,17 +1204,19 @@ static UIView *DGToggleRow(CGFloat y, NSString *text, SEL action, UISwitch * __s
     /* (3) تحديث واجهة اللوحة */
     if(DGSceneLabel){
         if(!DGIL2CPP.available){
-            DGSceneLabel.text=[NSString stringWithFormat:@"IL2CPP: غير متاح | %@",[[NSString alloc] initWithUTF8String:DGDiagShort]];
+            DGSceneLabel.text=[NSString stringWithFormat:@"⚠️ %@ | جزئي:%d/4",[[NSString alloc] initWithUTF8String:DGDiagShort],DGIL2CPP.partialAPIs];
         } else if(!scene || scene.length==0){
             DGSceneLabel.text=[NSString stringWithFormat:@"IL2CPP ✅ (%zu assembly) | المشهد: …",DGIL2CPP.assemblies];
         } else {
-            DGSceneLabel.text=[NSString stringWithFormat:@"IL2CPP ✅ (%zu assembly) | المشهد: %@%@",DGIL2CPP.assemblies,scene,training?@" 🎯":@""];
+            DGSceneLabel.text=[NSString stringWithFormat:@"IL2CPP ✅ (%zu assembly)%@ | المشهد: %@%@",DGIL2CPP.assemblies,DGIL2CPP.resolvedViaOffsets?@" 📐offsets":@"",scene,training?@" 🎯":@""];
         }
     }
 
     if(DGCandidatesLabel){
         if(!DGIL2CPP.available){
-            DGCandidatesLabel.text=@"IL2CPP غير متاح — الماسك الحالي لا يرى الرموز";
+            DGCandidatesLabel.text=@"واجهة il2cpp الكاملة غير مصدَّرة (KiwiVM)
+الحل: أوفسيتات من التحليل ← DGOffsets في Tweak.m
+أو ابحث في deltaguard_exports.txt عن domain/invoke";
         } else if(!DGCandidatesScanned){
             DGCandidatesLabel.text=@"فحص الكلاسات المرشحة: جارٍ…";
         } else if(DGCandidateClasses.count==0){
