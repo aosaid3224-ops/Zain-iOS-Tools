@@ -670,7 +670,7 @@ static int DGMainCryptid(void){
 
 /* ============================================================
    v0.7.0 — UE4 Runtime Scanner
-   يمسح ذاكرة العملية الحية (mach_vm_read — آمن كليًا) عن
+   يمسح ذاكرة العملية الحية عبر vm_read (نسخ kernel) عن
    TUObjectArray متقد (NumElements>0) ويتحقق بسلسلة:
    chunk → FUObjectItem → UObject → vtable داخل __TEXT اللعبة
    ============================================================ */
@@ -703,10 +703,10 @@ static void DGInitGameRanges(void){
 
 static BOOL DGPtrMapped(uint64_t p){
     if(p<0x1000) return NO;
-    mach_vm_address_t a=(mach_vm_address_t)(p&~0x3FFFULL);
-    mach_vm_size_t size=0; vm_region_basic_info_data_64_t info;
+    vm_address_t a=(vm_address_t)(p&~0x3FFFULL);
+    vm_size_t size=0; vm_region_basic_info_data_64_t info;
     mach_msg_type_number_t cnt=VM_REGION_BASIC_INFO_COUNT_64; mach_port_t obj=MACH_PORT_NULL;
-    kern_return_t kr=mach_vm_region(mach_task_self(),&a,&size,VM_REGION_BASIC_INFO_64,(vm_region_info_t)&info,&cnt,&obj);
+    kern_return_t kr=vm_region_64(mach_task_self(),&a,&size,VM_REGION_BASIC_INFO_64,(vm_region_info_t)&info,&cnt,&obj);
     if(obj!=MACH_PORT_NULL) mach_port_deallocate(mach_task_self(),obj);
     if(kr!=KERN_SUCCESS) return NO;
     return (p>=a && p<a+size);
@@ -741,18 +741,26 @@ static int DGVerifyUObjectChain(uint64_t objectsPtr, uint32_t numChunks){
     return score;
 }
 
+static FILE *DGOpenUE4Log(void){
+    NSString *docs=@"/var/mobile/Documents";
+    [[NSFileManager defaultManager] createDirectoryAtPath:docs withIntermediateDirectories:YES attributes:nil error:nil];
+    NSString *path=[docs stringByAppendingPathComponent:@"deltaguard_ue4.txt"];
+    return fopen([path UTF8String],"w");
+}
+
 static void DGUE4Scan(void){
-    static BOOL tried=NO; if(tried) return; tried=YES;
+    static BOOL tried=NO; if(tried) return;
     DGInitGameRanges();
     if(!DGGameTextLo) return;
-    mach_vm_address_t addr=0x100000000;
+    tried=YES;
+    vm_address_t addr=(vm_address_t)0x100000000ULL;
     for(;;){
-        mach_vm_size_t size=0; vm_region_basic_info_data_64_t info;
+        vm_size_t size=0; vm_region_basic_info_data_64_t info;
         mach_msg_type_number_t cnt=VM_REGION_BASIC_INFO_COUNT_64; mach_port_t obj=MACH_PORT_NULL;
-        kern_return_t kr=mach_vm_region(mach_task_self(),&addr,&size,VM_REGION_BASIC_INFO_64,(vm_region_info_t)&info,&cnt,&obj);
+        kern_return_t kr=vm_region_64(mach_task_self(),&addr,&size,VM_REGION_BASIC_INFO_64,(vm_region_info_t)&info,&cnt,&obj);
         if(kr!=KERN_SUCCESS) break;
         if(obj!=MACH_PORT_NULL) mach_port_deallocate(mach_task_self(),obj);
-        if((info.protection&VM_PROT_READ) && size>0x1000 && size<=0x4000000ULL){
+        if((info.protection&VM_PROT_READ) && size>0x1000){
             uint64_t off=0;
             while(off+32<=size){
                 uint64_t want=size-off; if(want>33554432) want=33554432;
@@ -774,7 +782,7 @@ static void DGUE4Scan(void){
                     if(!DGPtrMapped(objects)) continue;
                     int score=DGVerifyUObjectChain(objects,nc);
                     if(score>=4){
-                        FILE *f=fopen([[NSTemporaryDirectory() stringByAppendingPathComponent:@"deltaguard_ue4.txt"] UTF8String],"w");
+                        FILE *f=DGOpenUE4Log();
                         if(f){
                             fprintf(f,"GUObjectArray @ 0x%llx\n",(unsigned long long)(addr+off+q));
                             fprintf(f,"NumElements=%u MaxElements=%u NumChunks=%u MaxChunks=%u perChunk=%u\n",nm,mx,nc,mc,per);
@@ -794,7 +802,7 @@ static void DGUE4Scan(void){
         addr+=size;
         if(addr<0x100000000) break;
     }
-    FILE *f=fopen([[NSTemporaryDirectory() stringByAppendingPathComponent:@"deltaguard_ue4.txt"] UTF8String],"w");
+    FILE *f=DGOpenUE4Log();
     if(f){ fprintf(f,"GUObjectArray NOT FOUND\n"); fclose(f); }
 }
 
