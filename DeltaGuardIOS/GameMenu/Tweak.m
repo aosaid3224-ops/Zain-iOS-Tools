@@ -7,6 +7,9 @@
 #include <string.h>
 #include <mach-o/dyld.h>
 #include <mach-o/loader.h>
+#ifndef LC_DYLD_EXPORTS_TRIE
+#define LC_DYLD_EXPORTS_TRIE 0x80000033 /* شجرة تصدير dyld3 الحديثة — Xcode 13+ */
+#endif
 
 /* نفس تخطيط CAFrameRateRange (iOS 15+) */
 typedef struct { float minimum; float maximum; float preferred; } DGFrameRateRange;
@@ -144,40 +147,95 @@ static BOOL DGTrieNode(const uint8_t *node, const uint8_t *trieStart, const uint
     return NO;
 }
 
+/* استخراج (offset,size) لشجرة التصدير من أي من الأمرين القديم والحديث */
+static BOOL DGGetTrieInfo(const struct mach_header_64 *mh, uint64_t *outOff, uint64_t *outSize){
+    const uint8_t *cs=(const uint8_t*)mh+sizeof(struct mach_header_64);
+    for(uint32_t i=0;i<mh->ncmds;i++){
+        const struct load_command *lc=(const struct load_command*)cs;
+        if(lc->cmd==LC_DYLD_INFO || lc->cmd==LC_DYLD_INFO_ONLY){
+            const struct dyld_info_command *di=(const struct dyld_info_command*)lc;
+            *outOff=di->export_off; *outSize=di->export_size;
+            return di->export_size>0;
+        }
+        if(lc->cmd==LC_DYLD_EXPORTS_TRIE){
+            const uint32_t *f=(const uint32_t*)lc; /* cmd,cmdsize,dataoff,datasize */
+            *outOff=f[2]; *outSize=f[3];
+            return f[3]>0;
+        }
+        cs+=lc->cmdsize;
+    }
+    return NO;
+}
+
+static uint64_t DGFileOffToVMAddr(const struct mach_header_64 *mh, uint64_t fileoff, uint64_t slide){
+    const uint8_t *sg=(const uint8_t*)mh+sizeof(struct mach_header_64);
+    for(uint32_t j=0;j<mh->ncmds;j++){
+        const struct load_command *l2=(const struct load_command*)sg;
+        if(l2->cmd==LC_SEGMENT_64){
+            const struct segment_command_64 *seg=(const struct segment_command_64*)sg;
+            if(fileoff>=seg->fileoff && fileoff<seg->fileoff+seg->filesize)
+                return seg->vmaddr+(fileoff-seg->fileoff)+slide;
+        }
+        sg+=l2->cmdsize;
+    }
+    return 0;
+}
+
 /* البحث عن رمز مصدّر داخل صورة محمّلة عبر شجرة التصدير — دون الحاجة لـ dlopen */
 static void* DGExportLookup(uint32_t idx, const char *sym){
     const struct mach_header_64 *mh=(const struct mach_header_64 *)_dyld_get_image_header(idx);
     if(!mh || mh->magic!=MH_MAGIC_64) return NULL;
     uint64_t slide=_dyld_get_image_vmaddr_slide(idx);
-    const uint8_t *cs=(const uint8_t*)mh+sizeof(struct mach_header_64);
-    const uint8_t *sgBase=cs;
-    for(uint32_t i=0;i<mh->ncmds;i++){
-        const struct load_command *lc=(const struct load_command*)cs;
-        if(lc->cmd==LC_DYLD_INFO || lc->cmd==LC_DYLD_INFO_ONLY){
-            const struct dyld_info_command *di=(const struct dyld_info_command*)lc;
-            if(di->export_size==0) return NULL;
-            const uint8_t *sg=sgBase;
-            uint64_t va=0;
-            for(uint32_t j=0;j<mh->ncmds;j++){
-                const struct load_command *l2=(const struct load_command*)sg;
-                if(l2->cmd==LC_SEGMENT_64){
-                    const struct segment_command_64 *seg=(const struct segment_command_64*)sg;
-                    if(di->export_off>=seg->fileoff && di->export_off<seg->fileoff+seg->filesize){
-                        va=seg->vmaddr+(di->export_off-seg->fileoff)+slide;
-                        break;
-                    }
-                }
-                sg+=l2->cmdsize;
-            }
-            if(!va) return NULL;
-            const uint8_t *trie=(const uint8_t*)(uintptr_t)va;
-            void *out=NULL;
-            DGTrieNode(trie,trie,trie+di->export_size,sym,"",slide,&out);
-            return out;
-        }
-        cs+=lc->cmdsize;
+    uint64_t off=0,sz=0;
+    if(!DGGetTrieInfo(mh,&off,&sz)) return NULL;
+    uint64_t va=DGFileOffToVMAddr(mh,off,slide);
+    if(!va) return NULL;
+    const uint8_t *trie=(const uint8_t*)(uintptr_t)va;
+    void *out=NULL;
+    DGTrieNode(trie,trie,trie+sz,sym,"",slide,&out);
+    return out;
+}
+
+/* تفريغ كل أسماء رموز شجرة التصدير — لكشف الأسماء المعاد تسميتها */
+static void DGTrieDump(const uint8_t *node, const uint8_t *start, const uint8_t *end, char *prefix, size_t prefixCap, NSMutableString *out, NSUInteger *count){
+    if(*count>=30000) return;
+    if(node<start||node>=end) return;
+    const uint8_t *p=node;
+    uint64_t termSize=DGUleb128(&p,end);
+    const uint8_t *afterTerm=p+termSize;
+    if(termSize>0 && prefix[0]){
+        [out appendFormat:@"%s\n",prefix];
+        (*count)++;
     }
-    return NULL;
+    p=afterTerm;
+    if(p>=end) return;
+    uint64_t kids=DGUleb128(&p,end);
+    for(uint64_t i=0;i<kids && p<end;i++){
+        const char *label=(const char*)p;
+        size_t ll=0;
+        while(p+ll<end && label[ll]) ll++;
+        if(p+ll>=end) break;
+        p+=ll+1;
+        uint64_t off=DGUleb128(&p,end);
+        size_t pl=strlen(prefix);
+        if(pl+ll+1<prefixCap){
+            memcpy(prefix+pl,label,ll); prefix[pl+ll]=0;
+            DGTrieDump(start+off,start,end,prefix,prefixCap,out,count);
+            prefix[pl]=0;
+        }
+    }
+}
+
+static void DGDumpImageExports(uint32_t idx, NSMutableString *out, NSUInteger *total){
+    const struct mach_header_64 *mh=(const struct mach_header_64 *)_dyld_get_image_header(idx);
+    if(!mh || mh->magic!=MH_MAGIC_64) return;
+    uint64_t slide=_dyld_get_image_vmaddr_slide(idx);
+    uint64_t off=0,sz=0;
+    if(!DGGetTrieInfo(mh,&off,&sz)) return;
+    uint64_t va=DGFileOffToVMAddr(mh,off,slide);
+    if(!va) return;
+    char prefix[600]={0};
+    DGTrieDump((const uint8_t*)(uintptr_t)va,(const uint8_t*)(uintptr_t)va,(const uint8_t*)(uintptr_t)(va+sz),prefix,sizeof(prefix),out,total);
 }
 
 /* ===== حالة التشخيص ===== */
@@ -193,12 +251,17 @@ static void DGResolveOne(uint32_t idx, const char *name, void **slot){
         void *h=path?dlopen(path,RTLD_NOLOAD|RTLD_LAZY):NULL;
         if(h) p=dlsym(h,name);
     }
+    if(!p) p=dlsym(RTLD_DEFAULT,name); /* حل أخير: النطاق العام */
     if(p) *slot=p;
 }
 
 /* الحل الرئيسي: شجرة التصدير أولاً ثم dlsym لأي نقص — مع بدائل يدوية لاحقاً */
 static void DGResolveIL2CPP(void){
     if(DGIL2CPP.available) return;
+    static NSTimeInterval lastTry=0;
+    NSTimeInterval now=[[NSDate date] timeIntervalSince1970];
+    if(lastTry>0 && now-lastTry<1.5) return; /* تخفيف الحمل: محاولة كل 1.5 ثانية */
+    lastTry=now;
     memset(&DGIL2CPP,0,sizeof(DGIL2CPP));
     uint32_t count=_dyld_image_count();
     DGImagesScanned=count;
@@ -232,7 +295,7 @@ static void DGResolveIL2CPP(void){
         snprintf(DGIL2CPP.imageName,sizeof(DGIL2CPP.imageName),"%s",DGHitImage);
         snprintf(DGDiagShort,sizeof(DGDiagShort),"OK:%s",DGHitImage);
     } else {
-        snprintf(DGDiagShort,sizeof(DGDiagShort),"لا رمز | صور:%u",count);
+        snprintf(DGDiagShort,sizeof(DGDiagShort),"no-sym|img:%u",count);
     }
 }
 
@@ -252,16 +315,31 @@ static const uint16_t* DGStrChars(void *s){
     return (const uint16_t*)((char*)s+0x14);
 }
 
-/* كتابة ملف تشخيص يحدد مكان رموز IL2CPP بدقة */
+/* كتابة ملف تشخيص يحدد مكان رموز IL2CPP بدقة + تفريغ أسماء الرموز */
 static void DGWriteDiag(void){
+    static NSTimeInterval lastWrite=0;
+    NSTimeInterval now=[[NSDate date] timeIntervalSince1970];
+    if(lastWrite>0 && now-lastWrite<2.0) return; /* كل ثانيتين كحد أقصى */
+    lastWrite=now;
+
     NSMutableString *m=[NSMutableString string];
     [m appendFormat:@"DeltaGuard IL2CPP diag | %@\n",[NSDate date]];
     [m appendFormat:@"available=%d | %s | hit=%s | images=%u\n",DGIL2CPP.available,DGDiagShort,DGHitImage,DGImagesScanned];
+
+    /* فحص صحة الماسك: NSLog موجود في كل عملية — يجب أن يُوجد */
+    void *probe=NULL; uint32_t probeIdx=0;
+    uint32_t c0=_dyld_image_count();
+    for(uint32_t i=0;i<c0;i++){
+        if(DGExportLookup(i,"NSLog")){ probe=DGExportLookup(i,"NSLog"); probeIdx=i; break; }
+    }
+    [m appendFormat:@"walker-check: NSLog %s (img#%u)\n",probe?"FOUND ✅":"NOT-FOUND ❌",probeIdx];
+
+    /* صور اللعبة/Unity وحالة il2cpp_domain_get في كل منها */
     uint32_t c=_dyld_image_count();
     for(uint32_t i=0;i<c;i++){
         const char *p=_dyld_get_image_name(i);
         if(!p) continue;
-        if(!strstr(p,"elta") && !strstr(p,"Unity") && !strstr(p,"il2cpp") && !strstr(p,"GameAssembly") && !strstr(p,"ramework") && !strstr(p,"rameworks")) continue;
+        if(!strstr(p,"elta") && !strstr(p,"Unity") && !strstr(p,"il2cpp") && !strstr(p,"GameAssembly") && !strstr(p,"ramework")) continue;
         void *s=DGExportLookup(i,"il2cpp_domain_get");
         [m appendFormat:@"%s -> %s\n",p,s?"IL2CPP_EXPORT ✅":"—"];
     }
@@ -270,6 +348,24 @@ static void DGWriteDiag(void){
     DGLastDiag=state;
     NSString *path=[NSTemporaryDirectory() stringByAppendingPathComponent:@"deltaguard_il2cpp_diag.txt"];
     [m writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:nil];
+
+    /* تفريغ أسماء كل الرموز المصدّرة لصور اللعبة/Unity — مرة واحدة لكل عملية */
+    static BOOL dumped=NO;
+    if(!dumped){
+        dumped=YES;
+        NSMutableString *out=[NSMutableString string];
+        NSUInteger total=0;
+        for(uint32_t i=0;i<c;i++){
+            const char *p=_dyld_get_image_name(i);
+            if(!p) continue;
+            if(!strstr(p,"elta") && !strstr(p,"Unity") && !strstr(p,"GameAssembly") && !strstr(p,"il2cpp")) continue;
+            [out appendFormat:@"=== %s ===\n",p];
+            DGDumpImageExports(i,out,&total);
+        }
+        [out appendFormat:@"\nTOTAL: %lu\n",(unsigned long)total];
+        NSString *epath=[NSTemporaryDirectory() stringByAppendingPathComponent:@"deltaguard_exports.txt"];
+        [out writeToFile:epath atomically:YES encoding:NSUTF8StringEncoding error:nil];
+    }
 }
 
 /* البحث عن كلاس عبر كل الصور — يعيد أول مطابقة */
@@ -876,7 +972,7 @@ static void DGHaptic(void){
     [DGPanel addSubview:hint];
 
     UILabel *ver=[[UILabel alloc] initWithFrame:CGRectMake(196,346,66,16)];
-    ver.text=@"v0.5.2-stage1";
+    ver.text=@"v0.5.3-stage1";
     ver.textColor=[UIColor lightGrayColor]; ver.textAlignment=NSTextAlignmentRight; ver.font=[UIFont systemFontOfSize:9]; ver.alpha=0.6;
     [DGPanel addSubview:ver];
 
@@ -973,7 +1069,7 @@ static void DGHaptic(void){
     /* (3) تحديث واجهة اللوحة */
     if(DGSceneLabel){
         if(!DGIL2CPP.available){
-            DGSceneLabel.text=[NSString stringWithFormat:@"IL2CPP: غير متاح | %s",DGDiagShort];
+            DGSceneLabel.text=[NSString stringWithFormat:@"IL2CPP: غير متاح | %@",[[NSString alloc] initWithUTF8String:DGDiagShort]];
         } else if(!scene || scene.length==0){
             DGSceneLabel.text=[NSString stringWithFormat:@"IL2CPP ✅ (%zu assembly) | المشهد: …",DGIL2CPP.assemblies];
         } else {
