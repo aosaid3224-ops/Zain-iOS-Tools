@@ -9,7 +9,11 @@
 /* نفس تخطيط CAFrameRateRange (iOS 15+) */
 typedef struct { float minimum; float maximum; float preferred; } DGFrameRateRange;
 
-@class DGMenu;
+@interface DGMenu : NSObject
++ (void)hidePanel;
++ (void)install;
++ (void)start;
+@end
 
 @interface DGFloatButton : UIButton
 @property(nonatomic,getter=isDGMinimized) BOOL dgMinimized;
@@ -583,10 +587,6 @@ static void DGHaptic(void){
 }
 @end
 
-@interface DGMenu : NSObject
-+ (void)install;
-+ (void)start;
-@end
 @implementation DGMenu
 
 + (void)start{
