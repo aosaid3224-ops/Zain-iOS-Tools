@@ -1,19 +1,27 @@
 مهمه تحقيق انجاز بناء esp 🎉🎉🎉
 
+## ⚠️ الحقيقة الكبرى (من سجل كراش رسمي)
+**Delta Force mobile = Unreal Engine 4** — TaskGraphThreadNP / FAsyncLoadingThread / RenderThread / GameThread / physx / `ue4::imp_cache` / ue4commandline.txt
+كل مسارات il2cpp السابقة كانت خاطئة المسار — رموز il2cpp الـ13 مجرد بقايا GPM SDK.
+
 ## سجل التطوير
 
-### v0.6.2 — تجهيز مسار Il2CppDumper (بواسطة كمبيوتر)
-- **مستخرج metadata مدمج**: يبحث في ذاكرة اللعبة عن توقيع `global-metadata.dat` (0xFAB11BAF) ويستخرجه إلى `/var/mobile/Documents/global-metadata.dat`
-- **فحص cryptid**: يكشف إذا كان الثنائي مشفرًا FairPlay قبل نقله للكمبيوتر
-- **مضيف المراسي**: يحدد أي صورة (DeltaForceClient أو GPM…) تصدر رموز il2cpp الـ13
+### v0.6.4 — التحول لـ UE4
+- إصلاح كراش الماسح: القراءة المباشرة للذاكرة استبدلت بنسخ آمن عبر kernel `mach_vm_read` (مستحيل يكراش)
+- **محلل جدول الرموز nlist**: الثنائي يحتفظ برموز محلية كاملة (الدليل: سجل الكراش يعرض `GCloud::CFile::Exist` و`physx::…`)
+- يستخرج كل رمز يحوي: GEngine/GWorld/UObjectArray/GNames/Player/Character/Pawn/Camera/Transform… → `deltaguard_symbols.txt`
 
-### v0.6.1 — المستكشف الحي (Profiler Bridge)
+### v0.6.3 — فحص ذاكرة كامل
+### v0.6.1 — المستكشف الحي (Profiler Bridge — كان يستهدف il2cpp، الآن عُطّل ضمنيًا)
+### v0.6.0 — إصلاح _underscore + DGOffsets
 
-### v0.6.0 — إصلاح _underscore + مراسي + DGOffsets
+## خطة ESP على UE4 (الجديدة)
+1. `deltaguard_symbols.txt` ← يعطينا عناوين GEngine / GUObjectArray / GNames بالاسم
+2. نمشي على UObjectArray → كل Actors → نفلتر PlayerController/Pawn
+3. RootComponent → RelativeLocation/Transform → إحداثيات كل لاعب
+4. الإسقاط على الشاشة عبر الكاميرا (من PlayerCameraManager)
 
-## سير العمل الكامل (كمبيوتر + جهاز)
-1. ابنِ وثبّت التويك، افتح اللعبة دقيقة → يستخرج global-metadata.dat تلقائيًا
-2. تأكد من `metadata-extracted=1` و `cryptid=` في ملف التشخيص
-3. انقل الملفين للكمبيوتر (خادم HTTP في NewTerm — انظر التعليمات في المحادثة)
-4. شغّل Il2CppDumper على الكمبيوتر → dump.cs + script.json
-5. dump.cs = كل الكلاسات والأوفسيتات | script.json = عناوين Il2CppCodeRegistration/MetadataRegistration = مفتاح بناء runtime كامل داخل التويك
+## الاختبار الآن
+1. ابنِ وثبّت v0.6.4 → افتح اللعبة دقيقة (بدون كراش هذه المرة)
+2. `cat /var/mobile/Containers/Data/Application/*/tmp/deltaguard_symbols.txt | head -60`
+3. وابعث لي المخرجات + سطر `syms=` من التشخيص
