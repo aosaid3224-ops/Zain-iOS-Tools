@@ -328,7 +328,11 @@ static void DGResolveIL2CPP(void){
                     void *p=DGExportLookupU(i,anchors[a]);
                     if(p){
                         DGIL2CPP.partialAPIs++;
-                        if(a==0) DGIL2CPP.fn_class_get_name=p;
+                        if(a==0){
+                            DGIL2CPP.fn_class_get_name=p;
+                            const char *hp=_dyld_get_image_name(i);
+                            snprintf(DGAnchorHost,sizeof(DGAnchorHost),"%s",hp?hp:"?");
+                        }
                         if(a==1) DGIL2CPP.fn_method_get_name=p;
                         if(a==2) DGIL2CPP.fn_object_get_size=p;
                         break;
@@ -505,6 +509,82 @@ static void DGStartProbe(void){
     DGProbeStarted=YES;
 }
 
+/* ============================================================
+   مستخرج global-metadata.dat من الذاكرة الحية
+   التوقيع: sanity=0xFAB11BAF ثم version (24..34)
+   ============================================================ */
+static char DGAnchorHost[256]="";
+
+static void DGExtractMetadata(void){
+    static BOOL tried=NO; if(tried) return; tried=YES;
+    const uint32_t sig=0xFAB11BAFu;
+    uint32_t c=_dyld_image_count();
+    for(uint32_t i=0;i<c;i++){
+        const char *ipath=_dyld_get_image_name(i);
+        if(!ipath || !strstr(ipath,".app/")) continue; /* العبة و frameworks فقط */
+        const struct mach_header_64 *mh=(const struct mach_header_64*)_dyld_get_image_header(i);
+        if(!mh||mh->magic!=MH_MAGIC_64) continue;
+        uint64_t slide=_dyld_get_image_vmaddr_slide(i);
+        const uint8_t *cs=(const uint8_t*)mh+sizeof(struct mach_header_64);
+        for(uint32_t j=0;j<mh->ncmds;j++){
+            const struct load_command *l2=(const struct load_command*)cs;
+            if(l2->cmd==LC_SEGMENT_64){
+                const struct segment_command_64 *seg=(const struct segment_command_64*)cs;
+                if((seg->initprot&1)==0 || seg->filesize<4096){ cs+=l2->cmdsize; continue; }
+                const uint8_t *base=(const uint8_t*)(uintptr_t)(seg->vmaddr+slide);
+                uint64_t limit=seg->filesize;
+                const uint8_t *p=base;
+                uint64_t rem=limit;
+                while(rem>16){
+                    p=(const uint8_t*)memchr(p,0xAF,rem-16);
+                    if(!p) break;
+                    uint32_t v,ver;
+                    memcpy(&v,p,4);
+                    if(v==sig){
+                        memcpy(&ver,p+4,4);
+                        if(ver>=24 && ver<=34){
+                            /* احفظ 96MB من الرأس — Il2CppDumper يقرأ حسب الحقول فقط */
+                            uint64_t avail=(uint64_t)(base+limit-p);
+                            uint64_t dump=avail>100663296?100663296:avail;
+                            NSString *out=[NSTemporaryDirectory() stringByAppendingPathComponent:@"global-metadata.dat"];
+                            NSFileHandle *fh=[NSFileHandle fileHandleForWritingAtPath:out];
+                            if(!fh) [[NSFileManager defaultManager] createFileAtPath:out contents:nil attributes:nil];
+                            fh=[NSFileHandle fileHandleForWritingAtPath:out];
+                            if(fh){
+                                [fh writeData:[NSData dataWithBytesNoCopy:(void*)p length:(NSUInteger)dump freeWhenDone:NO]];
+                                [fh closeFile];
+                            }
+                            NSString *doc=[@"/var/mobile/Documents/global-metadata.dat" copy];
+                            [[NSFileManager defaultManager] removeItemAtPath:doc error:nil];
+                            [[NSFileManager defaultManager] copyItemAtPath:out toPath:doc error:nil];
+                            return;
+                        }
+                    }
+                    rem=(uint64_t)(base+limit)-(uint64_t)(p+1);
+                    p=p+1;
+                }
+            }
+            cs+=l2->cmdsize;
+        }
+    }
+}
+
+/* فحص FairPlay cryptid للصورة الرئيسية */
+static int DGMainCryptid(void){
+    const struct mach_header_64 *mh=(const struct mach_header_64*)_dyld_get_image_header(0);
+    if(!mh||mh->magic!=MH_MAGIC_64) return -1;
+    const uint8_t *cs=(const uint8_t*)mh+sizeof(struct mach_header_64);
+    for(uint32_t j=0;j<mh->ncmds;j++){
+        const struct load_command *l2=(const struct load_command*)cs;
+        if(l2->cmd==LC_ENCRYPTION_INFO_64){
+            const struct encryption_info_command_64 *e=(const struct encryption_info_command_64*)cs;
+            return e->cryptid;
+        }
+        cs+=l2->cmdsize;
+    }
+    return -1;
+}
+
 /* بدائل يدوية إذا غابت الدوال عن التصدير */
 static void* DGUnbox(void *obj){
     if(DGIL2CPP.object_unbox) return DGIL2CPP.object_unbox(obj);
@@ -531,6 +611,9 @@ static void DGWriteDiag(void){
     NSMutableString *m=[NSMutableString string];
     [m appendFormat:@"DeltaGuard IL2CPP diag | %@\n",[NSDate date]];
     [m appendFormat:@"available=%d | %s | hit=%s | images=%u\n",DGIL2CPP.available,DGDiagShort,DGHitImage,DGImagesScanned];
+    [m appendFormat:@"cryptid=%d | anchorHost=%s\n",DGMainCryptid(),DGAnchorHost];
+    BOOL meta=[[NSFileManager defaultManager] fileExistsAtPath:@"/var/mobile/Documents/global-metadata.dat"];
+    [m appendFormat:@"metadata-extracted=%d\n",meta?1:0];
 
     /* فحص صحة الماسك: مراسي متعددة معروفة الوجود */
     static const char *probes[]={"NSLog","malloc","objc_msgSend","il2cpp_class_get_name",NULL};
@@ -1287,6 +1370,7 @@ static UIView *DGToggleRow(CGFloat y, NSString *text, SEL action, UISwitch * __s
     DGResolveIL2CPP();
     DGWriteDiag();
     DGStartProbe(); /* يشتغل فقط عند اكتمال المراسي والدوال — وإلا يصمت */
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND,0),^{ DGExtractMetadata(); });
 
     /* (2) المشهد النشط */
     NSString *scene=DGGetSceneName();
