@@ -884,7 +884,7 @@ static int DGFindNameBlocksHeap(FILE *dbg){
     for(uint32_t ri=0; ri<DGRegionCount && blocks<8; ri++){
         uint64_t lo=DGRegions[ri*2], hi=DGRegions[ri*2+1];
         uint64_t sz=hi-lo;
-        if(sz<0x8000 || sz>0x4000000ULL) continue;
+        if(sz<0x8000 || sz>0x40000000ULL) continue;
         if(DGGameTextLo && lo>=DGGameTextLo && lo<DGGameTextHi) continue; /* لا كود */
         regions++;
         uint64_t off=0;
@@ -894,7 +894,7 @@ static int DGFindNameBlocksHeap(FILE *dbg){
             uint8_t *buf=DGSafeRead(lo+off,want,&got);
             if(!buf) break;
             for(uint64_t q=2;q+2100<got;q++){
-                if(buf[q]=='N'&&buf[q+1]=='o'&&buf[q+2]=='n'&&buf[q+3]=='e'&&buf[q+4]==0&&buf[q-2]<0x10&&buf[q-1]<0x10){
+                if(buf[q]=='N'&&buf[q+1]=='o'&&buf[q+2]=='n'&&buf[q+3]=='e'&&buf[q+4]==0&&buf[q-1]==0&&buf[q-2]<0x40){
                     noneHits++;
                     int density=0;
                     for(uint64_t i=q-2;i+8<got && i<q+2048;i+=4)
@@ -960,7 +960,7 @@ static int DGBlockHasNone(uint64_t block){
     if(!e) return 0;
     int found=0;
     for(uint64_t i=0;i+8<got;i+=2){
-        if(e[i+2]=='N'&&e[i+3]=='o'&&e[i+4]=='n'&&e[i+5]=='e'&&e[i+6]==0&&e[i]<0x10&&e[i+1]<0x10){
+        if(e[i+2]=='N'&&e[i+3]=='o'&&e[i+4]=='n'&&e[i+5]=='e'&&e[i+6]==0&&e[i+1]==0&&e[i]<0x40){
             found=1; break;
         }
     }
