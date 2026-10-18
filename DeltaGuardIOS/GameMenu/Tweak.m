@@ -870,66 +870,40 @@ static BOOL DGMatchNone(const uint8_t *p, uint8_t k){
     return (p[0]==('N'^k)&&p[1]==('o'^k)&&p[2]==('n'^k)&&p[3]==('e'^k)&&p[4]==(0^k));
 }
 
-/* ابحث في __DATA عن مؤشر يشير لنافذة 64KB حول بلوك معروف = GNamePool.Blocks */
+/* ابحث في كل الذاكرة عن مؤشر لبلوك معروف — مع تحقق XOR أن Blocks[0] هو بداية بول حقيقية */
 static void DGFindPoolPtr(uint64_t entry, FILE *dbg){
     uint64_t page=entry&~0xFFFFULL;
     int hits=0;
-    uint64_t cursor=DGGameDataLo;
-    while(cursor<DGGameDataHi && hits<6){
-        uint64_t want=DGGameDataHi-cursor; if(want>33554432) want=33554432;
-        uint64_t got=0;
-        uint8_t *buf=DGSafeRead(cursor,want,&got);
-        if(!buf){ cursor+=want; continue; }
-        for(uint64_t q=0;q+8<=got && hits<6;q+=8){
-            uint64_t p; memcpy(&p,buf+q,8);
-            if(p>=page && p<page+0x10000){
-                hits++;
-                fprintf(dbg,"POOLPTR @ 0x%llx -> 0x%llx ctx=", (unsigned long long)(cursor+q),(unsigned long long)p);
-                uint64_t g2=0; uint8_t *cx=DGSafeRead(cursor+q>64?cursor+q-64:cursor+q,64,&g2);
-                if(cx){ for(uint64_t k=0;k<g2;k++) fprintf(dbg,"%02x",cx[k]); DGFreeRead(cx,g2); }
-                fprintf(dbg,"\n"); fflush(dbg);
-            }
-        }
-        DGFreeRead(buf,got);
-        cursor+=got?got:want;
-        if(!got) cursor+=want;
-    }
-}
-
-
-static void DGDumpRegion2(uint64_t at, uint64_t bytes, const char *name, FILE *dbg);
-
-/* مسح heap مباشر عن بلوكات الأسماء (None + كثافة) — ما نحتاج مؤشرات البحث */
-static int DGFindNameBlocksHeap(FILE *dbg){
-    int blocks=0, regions=0, noneHits=0;
-    for(uint32_t ri=0; ri<DGRegionCount && blocks<8; ri++){
+    for(uint32_t ri=0; ri<DGRegionCount && hits<8; ri++){
         uint64_t lo=DGRegions[ri*2], hi=DGRegions[ri*2+1];
         uint64_t sz=hi-lo;
-        if(sz<0x8000 || sz>0x40000000ULL) continue;
-        if(DGGameTextLo && lo>=DGGameTextLo && lo<DGGameTextHi) continue; /* لا كود */
-        regions++;
+        if(sz<0x1000||sz>0x40000000ULL) continue;
+        if(DGGameTextLo && lo>=DGGameTextLo && lo<DGGameTextHi) continue;
         uint64_t off=0;
-        while(off+2100<sz && blocks<8){
+        while(off+8<sz && hits<8){
             uint64_t want=sz-off; if(want>33554432) want=33554432;
             uint64_t got=0;
             uint8_t *buf=DGSafeRead(lo+off,want,&got);
             if(!buf) break;
-            for(uint64_t q=2;q+2100<got;q++){
-                if(buf[q-1]==0&&buf[q-2]<0x40&&(buf[q]==0x4E||buf[q]==0x40)&&((buf[q]=='N'&&buf[q+1]=='o'&&buf[q+2]=='n'&&buf[q+3]=='e'&&buf[q+4]==0)||(buf[q]==0x40&&buf[q+1]==0x61&&buf[q+2]==0x62&&buf[q+3]==0x65&&buf[q+4]==0x0E))){
-                    noneHits++;
-                    int density=0;
-                    for(uint64_t i=q-2;i+8<got && i<q+2048;i+=2)
-                        if(buf[i]<0x40&&buf[i+1]==0&&buf[i+2]>=0x20&&buf[i+2]<0x7f) density++;
-                    uint64_t entry=lo+off+q-2;
-                    if(density>100){
-                        fprintf(dbg,"NAMEBLOCK @ 0x%llx density=%d\n",(unsigned long long)entry,density);
-                        blocks++;
-                        char dumpName[64]; snprintf(dumpName,sizeof(dumpName),"nameblock_%d_%llx.bin",DGUE4ScanCount,(unsigned long long)entry); DGDumpRegion2(entry,262144,dumpName,dbg);
-                        DGFindPoolPtr(entry,dbg);
-                        if(blocks>=8) break;
-                    } else if(density>=50 && noneHits<=400){
-                        fprintf(dbg,"WEAKBLOCK @ 0x%llx density=%d\n",(unsigned long long)entry,density);
+            for(uint64_t q=0;q+8<=got && hits<8;q+=8){
+                uint64_t p; memcpy(&p,buf+q,8);
+                if(p>=page && p<page+0x10000){
+                    /* تحقق: p يجب أن يشير لبداية بلوك يحوي None بأي مفتاح */
+                    uint64_t g2=0; uint8_t *blk=DGSafeRead(p,64,&g2);
+                    int ok=0;
+                    if(blk){
+                        for(int k=0;k<DGXorKeyCount;k++)
+                            if(g2>=8 && DGMatchNone(blk+2,DGXorKeys[k])) ok=DGXorKeys[k]+1;
+                        DGFreeRead(blk,g2);
                     }
+                    if(!ok) continue;
+                    hits++;
+                    fprintf(dbg,"POOLPTR @ 0x%llx -> 0x%llx xorKey=0x%x ctx=", (unsigned long long)(lo+off+q),(unsigned long long)p,ok-1);
+                    uint64_t gc=0; uint8_t *cx=DGSafeRead(lo+off+q>64?lo+off+q-64:lo+off+q,64,&gc);
+                    if(cx){ for(uint64_t kk=0;kk<gc;kk++) fprintf(dbg,"%02x",cx[kk]); DGFreeRead(cx,gc); }
+                    fprintf(dbg,"\n");
+                    if(hits==1){ DGNamePool=lo+off+q; fprintf(dbg,"NAMEPOOL STRUCT @ 0x%llx CONFIRMED\n",(unsigned long long)DGNamePool); }
+                    fflush(dbg);
                 }
             }
             DGFreeRead(buf,got);
@@ -937,9 +911,6 @@ static int DGFindNameBlocksHeap(FILE *dbg){
             off+=got;
         }
     }
-    fprintf(dbg,"HEAPSCAN regions=%d noneHits=%d blocks=%d\n",regions,noneHits,blocks);
-    fflush(dbg);
-    return blocks;
 }
 
 static uint64_t DGNamePool=0;
