@@ -1242,7 +1242,7 @@ static int DGFindGObjects(FILE *dbg){
     if(!DGNamePool) return 0;
     int cheap=0, nameHits=0;
     uint64_t cursor=DGGameDataLo;
-    while(cursor<DGGameDataHi){
+    while(cursor<DGGameDataHi && cheap<2000){
         uint64_t want=DGGameDataHi-cursor; if(want>33554432) want=33554432;
         uint64_t got=0;
         uint8_t *buf=DGSafeRead(cursor,want,&got);
@@ -1258,8 +1258,9 @@ static int DGFindGObjects(FILE *dbg){
             long long stride=(long long)(c1-c0);
             if(stride<0x8000||stride>0x800000) continue;
             cheap++;
+            if(cheap%500==0){ fprintf(dbg,"PHASE2 progress: %d candidates\n",cheap); fflush(dbg); }
             int n18=0,n20=0; char sample[64]=""; char sample2[64]="";
-            for(int i=0;i<12;i++){
+            for(int i=0;i<6;i++){
                 uint64_t item=c0+(uint64_t)i*0x18;
                 uint64_t obj=0;
                 if(!DGReadQ(item,&obj)||!obj||!DGInRegions(obj)) continue;
@@ -1305,6 +1306,8 @@ static void DGUE4Scan(void){
     DGCollectRegions();
     DGLoadScanCfg();
     DGLoadXorKeys();
+    /* حالة الجلسة: هل البول محلول فعلًا؟ */
+    if(DGNamePool){ fprintf(dbg,"POOL already solved @ 0x%llx — skip to PHASE2\n",(unsigned long long)DGNamePool); fflush(dbg); }
     NSString *outp=[NSTemporaryDirectory() stringByAppendingPathComponent:@"deltaguard_ue4.txt"];
     FILE *dbg=fopen([outp UTF8String],"w");
     if(!dbg) return;
