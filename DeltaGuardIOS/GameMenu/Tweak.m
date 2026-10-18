@@ -1249,7 +1249,7 @@ static int DGFindGObjects(FILE *dbg){
         if(!buf){ cursor+=want; continue; }
         if(got<24){ DGFreeRead(buf,got); cursor+=got?got:want; continue; }
         uint64_t lim=got-24;
-        for(uint64_t q=0;q<lim;q+=8){
+        for(uint64_t q=0;q<lim && cheap<2000;q+=8){
             uint64_t table; memcpy(&table,buf+q,8);
             if(!table||(table&7)||!DGInRegions(table)) continue;
             uint64_t c0=0,c1=0;
@@ -1306,12 +1306,12 @@ static void DGUE4Scan(void){
     DGCollectRegions();
     DGLoadScanCfg();
     DGLoadXorKeys();
-    /* حالة الجلسة: هل البول محلول فعلًا؟ */
-    if(DGNamePool){ fprintf(dbg,"POOL already solved @ 0x%llx — skip to PHASE2\n",(unsigned long long)DGNamePool); fflush(dbg); }
     NSString *outp=[NSTemporaryDirectory() stringByAppendingPathComponent:@"deltaguard_ue4.txt"];
     FILE *dbg=fopen([outp UTF8String],"w");
     if(!dbg) return;
-    fprintf(dbg,"=== OBSERVATORY v0.9.9 attempt %d regions=%u ===\n",DGUE4ScanCount,DGRegionCount);
+    /* حالة الجلسة: هل البول محلول فعلًا؟ */
+    if(DGNamePool){ fprintf(dbg,"POOL already solved @ 0x%llx — skip to PHASE2\n",(unsigned long long)DGNamePool); fflush(dbg); }
+    fprintf(dbg,"=== OBSERVATORY v0.10.0 attempt %d regions=%u ===\n",DGUE4ScanCount,DGRegionCount);
     fflush(dbg);
     if(!DGGameTextLo){ fprintf(dbg,"FAIL ranges\n"); fclose(dbg); return; }
 
@@ -2217,7 +2217,7 @@ static UIView *DGToggleRow(CGFloat y, NSString *text, SEL action, UISwitch * __s
 
 + (NSString *)statsText{
     NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
-    return [NSString stringWithFormat:@"الذاكرة: %@ | التشغيل: %02d:%02d\nDeltaGuard v0.9.9 — UE4",
+    return [NSString stringWithFormat:@"الذاكرة: %@ | التشغيل: %02d:%02d\nDeltaGuard v0.10.0 — UE4",
         DGMemoryString(),(int)(up/60),((int)up)%60];
 }
 
