@@ -874,6 +874,23 @@ static BOOL DGMatchNone(const uint8_t *p, uint8_t k){
 }
 
 static uint64_t DGNamePool=0;
+static uint64_t DGBlocks[16];
+static int DGBlockCount=0;
+static void DGRegisterBlock(uint64_t entry, FILE *dbg){
+    uint64_t page=entry&~0xFFFFULL;
+    /* تحقق أن الصفحة تحوي None (XOR-aware) قبل التسجيل */
+    uint64_t g=0; uint8_t *b=DGSafeRead(page,0x10000>0x8000?0x8000:0x8000,&g);
+    if(!b) return;
+    int ok=0;
+    for(uint64_t i=0;i+8<g&&!ok;i+=2)
+        for(int k=0;k<DGXorKeyCount;k++)
+            if(DGMatchNone(b+i+2,DGXorKeys[k])) ok=1;
+    DGFreeRead(b,g);
+    if(!ok) return;
+    for(int i=0;i<DGBlockCount;i++) if((DGBlocks[i]&~0xFFFFULL)==page) return;
+    if(DGBlockCount<16){ DGBlocks[DGBlockCount++]=page;
+        if(dbg){ fprintf(dbg,"BLOCKREG %d @ 0x%llx\n",DGBlockCount-1,(unsigned long long)page); fflush(dbg); } }
+}
 static void DGDumpRegion2(uint64_t at, uint64_t bytes, const char *name, FILE *dbg);
 /* ابحث في كل الذاكرة عن مؤشر لبلوك معروف — مع تحقق XOR أن Blocks[0] هو بداية بول حقيقية */
 static void DGFindPoolPtr(uint64_t entry, FILE *dbg){
@@ -1367,6 +1384,76 @@ static BOOL DGVerifyPoolStruct(uint64_t A){
     if(blocks2!=blocks) return NO;
     if(!DGBlockHasNoneP(blocks2)) return NO;
     return YES;
+}
+
+/* مُصطاد Blocks[]: مصفوفة مؤشرات تشير لبلوكات موثقة متعددة = GNamePool.Blocks */
+static int DGFindBlocksArray(FILE *dbg){
+    if(DGNamePool||DGBlockCount<2) return 0;
+    int found=0;
+    for(uint32_t ri=0; ri<DGRegionCount && !found; ri++){
+        uint64_t lo=DGRegions[ri*2], hi=DGRegions[ri*2+1];
+        uint64_t sz=hi-lo;
+        if(sz<0x1000||sz>0x8000000ULL) continue;
+        if(DGGameTextLo && lo>=DGGameTextLo && lo<DGGameTextHi) continue;
+        uint64_t off=0;
+        while(off+8<sz && !found){
+            uint64_t want=sz-off; if(want>33554432) want=33554432;
+            uint64_t got=0;
+            uint8_t *buf=DGSafeRead(lo+off,want,&got);
+            if(!buf) break;
+            for(uint64_t q=0;q+16<=got && !found;q+=8){
+                uint64_t p0,p1; memcpy(&p0,buf+q,8); memcpy(&p1,buf+q+8,8);
+                if(!p0||!p1) continue;
+                /* الاثنان يشيران لبلوكات مسجلة مختلفة؟ */
+                int i0=-1,i1=-1;
+                for(int k=0;k<DGBlockCount;k++){
+                    uint64_t pg=DGBlocks[k]&~0xFFFFULL;
+                    if(p0>=pg&&p0<pg+0x10000) i0=k;
+                    if(p1>=pg&&p1<pg+0x10000) i1=k;
+                }
+                if(i0<0||i1<0||i0==i1) continue;
+                /* استقرار */
+                uint64_t g2=0; uint8_t *chk=DGSafeRead(lo+off+q,16,&g2);
+                if(!chk) continue;
+                uint8_t s[16]; memcpy(s,chk,g2<16?g2:16); DGFreeRead(chk,g2);
+                usleep(150000);
+                uint8_t *chk2=DGSafeRead(lo+off+q,16,&g2);
+                BOOL stb=chk2&&(memcmp(s,chk2,g2<16?g2:16)==0);
+                if(chk2) DGFreeRead(chk2,g2);
+                if(!stb) continue;
+                fprintf(dbg,"BLOCKSARRAY @ 0x%llx -> [%d]=0x%llx [%d]=0x%llx CONFIRMED\\n",
+                    (unsigned long long)(lo+off+q),i0,(unsigned long long)p0,i1,(unsigned long long)p1);
+                DGNamePool=lo+off+q;
+                found=1;
+            }
+            DGFreeRead(buf,got);
+            if(!got) break;
+            off+=got;
+        }
+    }
+    if(found) fprintf(dbg,"GNamePool = BlocksArray @ 0x%llx (طريقة المصفوفة)\\n",(unsigned long long)DGNamePool);
+    fflush(dbg);
+    return found;
+}
+
+/* منفذ probes من الإعدادات: قراءات خام فورية بدون بناء */
+static void DGRunProbes(FILE *dbg){
+    id arr=DGScanCfg[@"probes"];
+    if(![arr isKindOfClass:[NSArray class]]) return;
+    for(id p in arr){
+        if(![p isKindOfClass:[NSDictionary class]]) continue;
+        NSString *as=p[@"addr"];
+        if(!as) continue;
+        uint64_t a=strtoull([as UTF8String],0,16);
+        int n=[[p objectForKey:@"n"] intValue]; if(n<=0||n>4096) n=128;
+        if(a<0x1000) continue;
+        uint64_t got=0; uint8_t *b=DGSafeRead(a,(uint64_t)n,&got);
+        fprintf(dbg,"PROBE 0x%llx n=%d : ",(unsigned long long)a,n);
+        if(b){ for(uint64_t k=0;k<got;k++) fprintf(dbg,"%02x",b[k]); DGFreeRead(b,got); }
+        else fprintf(dbg,"UNREADABLE");
+        fprintf(dbg,"\\n");
+    }
+    fflush(dbg);
 }
 
 static void DGUE4Scan(void){
