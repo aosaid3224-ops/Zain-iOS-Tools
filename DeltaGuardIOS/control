@@ -1,6 +1,6 @@
 Package: com.aosaid.deltaguard
 Name: DeltaGuard iOS
-Version: 0.10.0
+Version: 0.10.1
 Architecture: iphoneos-arm64
 Description: Native iOS DeltaGuard environment, server launcher, process monitor, persistent log, and functional Rootless diagnostics.
 Maintainer: aosaid
