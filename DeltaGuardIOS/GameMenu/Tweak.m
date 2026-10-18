@@ -875,16 +875,17 @@ static uint64_t DGNamePool=0;
 static void DGDumpRegion2(uint64_t at, uint64_t bytes, const char *name, FILE *dbg);
 /* ابحث في كل الذاكرة عن مؤشر لبلوك معروف — مع تحقق XOR أن Blocks[0] هو بداية بول حقيقية */
 static void DGFindPoolPtr(uint64_t entry, FILE *dbg){
+    if(DGNamePool) return; /* انحل — توقف */
     uint64_t loW=(entry>0x50000?entry-0x40000:0x1000)&~0xFFFULL;
     uint64_t hiW=entry+0x20000;
     int hits=0;
-    for(uint32_t ri=0; ri<DGRegionCount && hits<8; ri++){
+    for(uint32_t ri=0; ri<DGRegionCount && hits<8 && !DGNamePool; ri++){
         uint64_t lo=DGRegions[ri*2], hi=DGRegions[ri*2+1];
         uint64_t sz=hi-lo;
-        if(sz<0x1000||sz>0x40000000ULL) continue;
+        if(sz<0x1000||sz>0x8000000ULL) continue; /* تخطَّ العملاقة — البول ليس فيها */
         if(DGGameTextLo && lo>=DGGameTextLo && lo<DGGameTextHi) continue;
         uint64_t off=0;
-        while(off+8<sz && hits<8){
+        while(off+8<sz && hits<8 && !DGNamePool){
             uint64_t want=sz-off; if(want>33554432) want=33554432;
             uint64_t got=0;
             uint8_t *buf=DGSafeRead(lo+off,want,&got);
@@ -1323,10 +1324,14 @@ static void DGUE4Scan(void){
         snprintf(DGUE4Stat,sizeof(DGUE4Stat),"محاولة %d: مسبار كثافة البول...",DGUE4ScanCount);
         DGFindPoolByDensity(dbg);
     }
-    /* المرحلة 1ب: NamePool بالمنهج القديم */
+    /* المرحلة 1ب: فunnel فقط إذا لم يُحل بعد */
     if(!DGNamePool){
         snprintf(DGUE4Stat,sizeof(DGUE4Stat),"محاولة %d: البحث عن FNamePool...",DGUE4ScanCount);
         DGFindNamePool(dbg);
+    }
+    if(DGNamePool && !DGUE4FoundFlag){
+        fprintf(dbg,"PHASE2: البحث عن GObjects بالتحقق من الأسماء...\n");
+        DGFindGObjects(dbg);
     }
     if(DGNamePool){ fprintf(dbg,"PHASE1 OK pool=0x%llx\n",(unsigned long long)DGNamePool);
         fprintf(dbg,"PHASE2: البحث عن GObjects بالتحقق من الأسماء...\n");
