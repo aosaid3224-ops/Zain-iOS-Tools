@@ -939,13 +939,18 @@ static int DGFindNameBlocksHeap(FILE *dbg){
                     for(uint64_t i=q-2;i+8<got && i<q+2048;i+=2)
                         if(buf[i]<0x40&&buf[i+1]==0&&buf[i+2]>=0x20&&buf[i+2]<0x7f) density++;
                     uint64_t entry=lo+off+q-2;
-                    if(density>100){
+                    int minD=DGCfgBool(@"densityFromConfig",YES)?[[DGScanCfg objectForKey:@"minDensity"] intValue]:45;
+                    int weakD=[[DGScanCfg objectForKey:@"weakMin"] intValue];
+                    if(weakD<=0) weakD=25;
+                    if(minD<=0) minD=45;
+                    if(density>minD && blocks<8){
                         fprintf(dbg,"NAMEBLOCK @ 0x%llx density=%d\n",(unsigned long long)entry,density);
                         blocks++;
                         DGFindPoolPtr(entry,dbg);
-                        if(blocks>=8) break;
-                    } else if(density>=50 && noneHits<=400){
+                    } else if(density>=weakD && noneHits<=600){
                         fprintf(dbg,"WEAKBLOCK @ 0x%llx density=%d\n",(unsigned long long)entry,density);
+                        static int weakPtr=0;
+                        if(weakPtr<6){ DGFindPoolPtr(entry,dbg); weakPtr++; }
                     }
                 }
             }
