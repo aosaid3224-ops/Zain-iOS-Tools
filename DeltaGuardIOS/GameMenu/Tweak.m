@@ -870,6 +870,7 @@ static BOOL DGMatchNone(const uint8_t *p, uint8_t k){
     return (p[0]==('N'^k)&&p[1]==('o'^k)&&p[2]==('n'^k)&&p[3]==('e'^k)&&p[4]==(0^k));
 }
 
+static uint64_t DGNamePool=0;
 /* ابحث في كل الذاكرة عن مؤشر لبلوك معروف — مع تحقق XOR أن Blocks[0] هو بداية بول حقيقية */
 static void DGFindPoolPtr(uint64_t entry, FILE *dbg){
     uint64_t page=entry&~0xFFFFULL;
@@ -913,7 +914,48 @@ static void DGFindPoolPtr(uint64_t entry, FILE *dbg){
     }
 }
 
-static uint64_t DGNamePool=0;
+
+static int DGFindNameBlocksHeap(FILE *dbg){
+    int blocks=0, regions=0, noneHits=0;
+    for(uint32_t ri=0; ri<DGRegionCount && blocks<8; ri++){
+        uint64_t lo=DGRegions[ri*2], hi=DGRegions[ri*2+1];
+        uint64_t sz=hi-lo;
+        if(sz<0x8000 || sz>0x40000000ULL) continue;
+        if(DGGameTextLo && lo>=DGGameTextLo && lo<DGGameTextHi) continue; /* لا كود */
+        regions++;
+        uint64_t off=0;
+        while(off+2100<sz && blocks<8){
+            uint64_t want=sz-off; if(want>33554432) want=33554432;
+            uint64_t got=0;
+            uint8_t *buf=DGSafeRead(lo+off,want,&got);
+            if(!buf) break;
+            for(uint64_t q=2;q+2100<got;q++){
+                if(buf[q-1]==0&&buf[q-2]<0x40&&(buf[q]==0x4E||buf[q]==0x40)&&((buf[q]=='N'&&buf[q+1]=='o'&&buf[q+2]=='n'&&buf[q+3]=='e'&&buf[q+4]==0)||(buf[q]==0x40&&buf[q+1]==0x61&&buf[q+2]==0x62&&buf[q+3]==0x65&&buf[q+4]==0x0E))){
+                    noneHits++;
+                    int density=0;
+                    for(uint64_t i=q-2;i+8<got && i<q+2048;i+=2)
+                        if(buf[i]<0x40&&buf[i+1]==0&&buf[i+2]>=0x20&&buf[i+2]<0x7f) density++;
+                    uint64_t entry=lo+off+q-2;
+                    if(density>100){
+                        fprintf(dbg,"NAMEBLOCK @ 0x%llx density=%d\n",(unsigned long long)entry,density);
+                        blocks++;
+                        DGFindPoolPtr(entry,dbg);
+                        if(blocks>=8) break;
+                    } else if(density>=50 && noneHits<=400){
+                        fprintf(dbg,"WEAKBLOCK @ 0x%llx density=%d\n",(unsigned long long)entry,density);
+                    }
+                }
+            }
+            DGFreeRead(buf,got);
+            if(!got) break;
+            off+=got;
+        }
+    }
+    fprintf(dbg,"HEAPSCAN regions=%d noneHits=%d blocks=%d\n",regions,noneHits,blocks);
+    fflush(dbg);
+    return blocks;
+}
+
 
 /* فك FName (تخطيط 4.23+: Id>>16=block, Id&0xFFFF=offset داخل البلوك) */
 static BOOL DGDecodeFName(uint32_t nameId, char *out, int outLen){
@@ -1201,7 +1243,7 @@ static void DGUE4Scan(void){
     NSString *outp=[NSTemporaryDirectory() stringByAppendingPathComponent:@"deltaguard_ue4.txt"];
     FILE *dbg=fopen([outp UTF8String],"w");
     if(!dbg) return;
-    fprintf(dbg,"=== OBSERVATORY v0.9.2 attempt %d regions=%u ===\n",DGUE4ScanCount,DGRegionCount);
+    fprintf(dbg,"=== OBSERVATORY v0.9.3 attempt %d regions=%u ===\n",DGUE4ScanCount,DGRegionCount);
     fflush(dbg);
     if(!DGGameTextLo){ fprintf(dbg,"FAIL ranges\n"); fclose(dbg); return; }
 
@@ -2151,7 +2193,7 @@ static UIView *DGToggleRow(CGFloat y, NSString *text, SEL action, UISwitch * __s
 
 + (NSString *)statsText{
     NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
-    return [NSString stringWithFormat:@"الذاكرة: %@ | التشغيل: %02d:%02d\nDeltaGuard v0.9.2 — UE4",
+    return [NSString stringWithFormat:@"الذاكرة: %@ | التشغيل: %02d:%02d\nDeltaGuard v0.9.3 — UE4",
         DGMemoryString(),(int)(up/60),((int)up)%60];
 }
 
