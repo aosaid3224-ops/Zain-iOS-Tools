@@ -1084,6 +1084,60 @@ static void DGProbeBss(FILE *dbg){
     }
 }
 
+/* مسبار الكثافة: كل مؤشر heap في __DATA ← تحقق كثافة 4KB (الحقيقي >250 إدخال) */
+static int DGBlockDensity256(const uint8_t *b, uint64_t n){
+    int d=0;
+    for(uint64_t i=0;i+8<n;i+=2)
+        if(b[i]<0x40&&b[i+1]==0&&((b[i+2]>=0x20&&b[i+2]<0x7f)||b[i+2]==0)) d++;
+    return d;
+}
+static int DGFindPoolByDensity(FILE *dbg){
+    int ptrCand=0, preHits=0, dense=0, confirmed=0;
+    uint64_t cursor=DGGameDataLo;
+    while(cursor<DGGameDataHi){
+        uint64_t want=DGGameDataHi-cursor; if(want>33554432) want=33554432;
+        uint64_t got=0;
+        uint8_t *buf=DGSafeRead(cursor,want,&got);
+        if(!buf){ cursor+=want; continue; }
+        for(uint64_t q=0;q+8<=got;q+=8){
+            uint64_t p; memcpy(&p,buf+q,8);
+            if(!p||(p&7)||!DGInRegions(p)) continue;
+            if(p>=DGGameDataLo&&p<DGGameDataHi) continue;
+            ptrCand++;
+            uint64_t g2=0; uint8_t *b256=DGSafeRead(p,256,&g2);
+            if(!b256) continue;
+            int d256=(g2>=64)?DGBlockDensity256(b256,g2):0;
+            DGFreeRead(b256,g2);
+            if(d256<18) continue;
+            preHits++;
+            uint64_t g4=0; uint8_t *b4k=DGSafeRead(p,4096,&g4);
+            if(!b4k) continue;
+            int d4k=DGBlockDensity256(b4k,g4);
+            /* تحقق نهائي: entry 0 عند البداية يجب أن يفك إلى None */
+            int none=0;
+            for(int k=0;k<DGXorKeyCount;k++)
+                if(g4>=8 && DGMatchNone(b4k+2,DGXorKeys[k])) none=DGXorKeys[k]+1;
+            DGFreeRead(b4k,g4);
+            if(d4k>250||none){
+                dense++;
+                fprintf(dbg,"DENSEBLOCK ptr=0x%llx block=0x%llx d256=%d d4k=%d noneKey=%d ctx=",
+                    (unsigned long long)(cursor+q),(unsigned long long)p,d256,d4k,none?none-1:-1);
+                uint64_t gc=0; uint8_t *cx=DGSafeRead(cursor+q>64?cursor+q-64:cursor+q,64,&gc);
+                if(cx){ for(uint64_t kk=0;kk<gc;kk++) fprintf(dbg,"%02x",cx[kk]); DGFreeRead(cx,gc); }
+                fprintf(dbg,"\n");
+                fflush(dbg);
+                if(none){ confirmed++; DGFreeRead(buf,got); return 1; }
+            }
+        }
+        DGFreeRead(buf,got);
+        cursor+=got?got:want;
+        if(!got) cursor+=want;
+    }
+    fprintf(dbg,"DENSITY funnel: ptr=%d pre=%d dense=%d confirmed=%d\n",ptrCand,preHits,dense,confirmed);
+    fflush(dbg);
+    return confirmed>0;
+}
+
 static void DGUE4Scan(void){
     static NSTimeInterval lastTry=0;
     static BOOL found=NO;
@@ -1109,9 +1163,14 @@ static void DGUE4Scan(void){
         snprintf(DGUE4Stat,sizeof(DGUE4Stat),"محاولة %d: مسح heap عن بلوكات الأسماء...",DGUE4ScanCount);
         DGFindNameBlocksHeap(dbg);
     }
-    /* المرحلة 1: NamePool */
-    snprintf(DGUE4Stat,sizeof(DGUE4Stat),"محاولة %d: البحث عن FNamePool...",DGUE4ScanCount);
-    DGFindNamePool(dbg);
+    /* المرحلة 1أ: NamePool بالكثافة (القوي) */
+    snprintf(DGUE4Stat,sizeof(DGUE4Stat),"محاولة %d: مسبار كثافة البول...",DGUE4ScanCount);
+    if(DGFindPoolByDensity(dbg)){ DGFreeRead(NULL,0); }
+    /* المرحلة 1ب: NamePool بالمنهج القديم */
+    if(!DGNamePool){
+        snprintf(DGUE4Stat,sizeof(DGUE4Stat),"محاولة %d: البحث عن FNamePool...",DGUE4ScanCount);
+        DGFindNamePool(dbg);
+    }
     if(DGNamePool) fprintf(dbg,"PHASE1 OK pool=0x%llx\n",(unsigned long long)DGNamePool);
     else fprintf(dbg,"PHASE1 pending\n");
     fflush(dbg);
