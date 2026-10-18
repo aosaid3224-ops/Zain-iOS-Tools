@@ -1277,7 +1277,7 @@ static int DGFindGObjects(FILE *dbg){
                 long long stride=(long long)(c1-c0);
                 if(stride<0x8000||stride>0x800000) continue;
                 cheap++;
-                if(cheap%1000==0){ fprintf(dbg,"PHASE2 progress: %d/%d (region %u)\\n",cheap,cap,ri); fflush(dbg); }
+                if(cheap%1000==0){ fprintf(dbg,"PHASE2 progress: %d/%d (region %u)\n",cheap,cap,ri); fflush(dbg); }
                 int n18=0,n20=0; char sample[64]=""; char sample2[64]="";
                 for(int i=0;i<6;i++){
                     uint64_t item=c0+(uint64_t)i*0x18;
@@ -1349,6 +1349,18 @@ static void DGUE4Scan(void){
     DGFindPakIndex(dbg);
     if(DGCfgBool(@"densityScan",NO)) DGFindPoolByDensity(dbg);
     if(!DGNamePool) DGFindNamePool(dbg);
+    if(DGNamePool){
+        /* فحص ذاتي: فك أسماء معروفة من البول المؤكد */
+        char sn[64]; int good=0;
+        for(uint32_t sid=0; sid<64 && good<12; sid++){
+            if(DGDecodeFName(sid,sn,sizeof sn)&&sn[0]){
+                fprintf(dbg,"POOLSAMPLE id=%u name=%s\n",sid,sn);
+                good++;
+            }
+        }
+        fprintf(dbg,"POOLSAMPLE total=%d\n",good);
+        fflush(dbg);
+    }
     if(DGNamePool && !DGUE4FoundFlag){
         fprintf(dbg,"PHASE2: البحث عن GObjects بالتحقق من الأسماء...\n");
         fflush(dbg);
