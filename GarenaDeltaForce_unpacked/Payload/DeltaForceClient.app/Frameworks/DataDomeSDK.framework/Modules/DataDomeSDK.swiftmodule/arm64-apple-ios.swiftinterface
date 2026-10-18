@@ -1,0 +1,211 @@
+// swift-interface-format-version: 1.0
+// swift-compiler-version: Apple Swift version 5.7.1 (swiftlang-5.7.1.135.3 clang-1400.0.29.51)
+// swift-module-flags: -target arm64-apple-ios11.0 -enable-objc-interop -enable-library-evolution -swift-version 5 -enforce-exclusivity=checked -O -module-name DataDomeSDK
+// swift-module-flags-ignorable: -enable-bare-slash-regex
+import AVFoundation
+import Combine
+@_exported import DataDomeSDK
+import Dispatch
+import Foundation
+import OSLog
+import Swift
+import UIKit
+import WebKit
+import _Concurrency
+import _StringProcessing
+public enum CaptchaError : Swift.Error {
+  case invalidCaptchaURL
+  public static func == (a: CaptchaError, b: CaptchaError) -> Swift.Bool
+  public func hash(into hasher: inout Swift.Hasher)
+  public var hashValue: Swift.Int {
+    get
+  }
+}
+extension CaptchaError : Foundation.LocalizedError {
+  public var errorDescription: Swift.String? {
+    get
+  }
+}
+@objc public enum LogLevel : Swift.Int, Swift.Comparable {
+  public static func < (lhs: LogLevel, rhs: LogLevel) -> Swift.Bool
+  case verbose = 0
+  case debug = 1
+  case info = 2
+  case warning = 3
+  case error = 4
+  case none = 5
+  public init?(rawValue: Swift.Int)
+  public typealias RawValue = Swift.Int
+  public var rawValue: Swift.Int {
+    get
+  }
+}
+public enum IntegrationMode : Swift.String {
+  case urlSession
+  case alamofire
+  case apollo
+  public init?(rawValue: Swift.String)
+  public typealias RawValue = Swift.String
+  public var rawValue: Swift.String {
+    get
+  }
+}
+@_hasMissingDesignatedInitializers public class Session {
+  @objc deinit
+}
+public protocol ResponseValidatorDelegate : AnyObject {
+  func shouldIgnore(request: Requestable)
+  func didFailWith(error: Swift.Error)
+  func shouldRetry(request: Requestable)
+}
+public class Callback {
+  public init(request: URLRequestable, session: Foundation.URLSession, completion: @escaping (Foundation.Data?, Foundation.URLResponse?, Swift.Error?) -> Swift.Void)
+  convenience public init(request: URLRequestable, session: Foundation.URLSession)
+  @objc deinit
+}
+@available(iOS 13, *)
+extension Foundation.URLSession {
+  public func protectedDataTaskPublisher(forURL url: Foundation.URL, captchaDelegate: CaptchaDelegate?) -> Combine.AnyPublisher<Foundation.URLSession.DataTaskPublisher.Output, Foundation.URLSession.DataTaskPublisher.Failure>
+  public func protectedDataTaskPublisher(forRequest request: Foundation.URLRequest, captchaDelegate: CaptchaDelegate?) -> Combine.AnyPublisher<Foundation.URLSession.DataTaskPublisher.Output, Foundation.URLSession.DataTaskPublisher.Failure>
+}
+@objc public protocol CaptchaDelegate {
+  @objc func present(captchaController controller: UIKit.UIViewController)
+  @objc func dismiss(captchaController controller: UIKit.UIViewController)
+}
+public class CompletionPrototype {
+  public init(data: Foundation.Data?, response: Foundation.URLResponse?, error: Swift.Error?)
+  @objc deinit
+}
+public protocol FilterDelegate : AnyObject {
+  func shouldIgnore(request: Requestable)
+  func filter(request: Requestable, didFailWith error: Swift.Error)
+  func filter(request: Requestable, didResolveCaptcha cookie: Swift.String)
+  func shouldRetry(request: Requestable)
+}
+public protocol Requestable : AnyObject {
+  var url: Foundation.URL? { get }
+  func header(forField field: Swift.String) -> Swift.String?
+  func uniqueIdentifier() -> Swift.String
+}
+extension Requestable {
+  public func uniqueIdentifier() -> Swift.String
+}
+@_hasMissingDesignatedInitializers public class CacheManager {
+  public static let shared: CacheManager
+  public var cookie: Foundation.HTTPCookie?
+  public func store(_ cookie: Foundation.HTTPCookie)
+  public func cookie(from string: Swift.String, for url: Swift.String) -> Foundation.HTTPCookie?
+  public func cache(callback: Callback)
+  @objc deinit
+}
+@objc extension Foundation.URLSession {
+  @objc(protectedDataTaskWithURL:captchaDelegate:andCompletionHandler:) dynamic public func protectedDataTask(withURL url: Foundation.URL, captchaDelegate: CaptchaDelegate?, completionHandler: @escaping (Foundation.Data?, Foundation.URLResponse?, Swift.Error?) -> Swift.Void) -> Foundation.URLSessionDataTask
+  #if compiler(>=5.3) && $AsyncAwait
+  @objc @available(iOS 13.0, *)
+  dynamic public func protectedDataTask(withURL url: Foundation.URL, captchaDelegate: CaptchaDelegate?) async throws -> (Foundation.Data, Foundation.URLResponse)
+  #endif
+  @objc(protectedDataTaskWithRequest:captchaDelegate:andCompletionHandler:) dynamic public func protectedDataTask(withRequest request: Foundation.URLRequest, captchaDelegate: CaptchaDelegate?, completionHandler: @escaping (Foundation.Data?, Foundation.URLResponse?, Swift.Error?) -> Swift.Void) -> Foundation.URLSessionDataTask
+  #if compiler(>=5.3) && $AsyncAwait
+  @objc @available(iOS 13.0, *)
+  dynamic public func protectedDataTask(withRequest request: Foundation.URLRequest, captchaDelegate: CaptchaDelegate?) async throws -> (Foundation.Data, Foundation.URLResponse)
+  #endif
+}
+open class ResponseFilter {
+  required public init(request: Requestable, session: Foundation.URLSession, prototype: CompletionPrototype, filterDelegate: FilterDelegate? = nil, captchaDelegate: CaptchaDelegate? = nil)
+  public func validate(mode: IntegrationMode)
+  @objc deinit
+}
+extension ResponseFilter : FilterDelegate {
+  public func shouldIgnore(request: Requestable)
+  public func filter(request: Requestable, didFailWith error: Swift.Error)
+  public func filter(request: Requestable, didResolveCaptcha cookie: Swift.String)
+  public func shouldRetry(request: Requestable)
+}
+public struct DataDomeResponse : Swift.Codable {
+  public func encode(to encoder: Swift.Encoder) throws
+  public init(from decoder: Swift.Decoder) throws
+}
+@_hasMissingDesignatedInitializers final public class EventTracker {
+  public static let shared: EventTracker
+  final public func log(request: Requestable?, integrationMode: IntegrationMode)
+  final public func log(_ eventType: EventType)
+  @objc deinit
+}
+@_hasMissingDesignatedInitializers public class URLRequestable {
+  @objc deinit
+}
+extension URLRequestable : Requestable {
+  public var url: Foundation.URL? {
+    get
+  }
+  public func header(forField field: Swift.String) -> Swift.String?
+}
+public class SynchronizedDictionary<T, Element> where T : Swift.Hashable {
+  public init()
+  convenience public init(_ dic: [T : Element])
+  public var dictionary: [T : Element] {
+    get
+  }
+  @objc deinit
+}
+extension SynchronizedDictionary {
+  public subscript(key: T) -> Element? {
+    get
+    set
+  }
+}
+extension SynchronizedDictionary {
+  public func removeValue(forKey key: T)
+  public func removeAll()
+}
+extension SynchronizedDictionary {
+  public var keys: [T] {
+    get
+  }
+}
+public enum EventType {
+  case responseValidation
+  case captchaSuccess
+  case touchDown(Swift.Int, Swift.Int)
+  case touchUp(Swift.Int, Swift.Int)
+  case touchMove(Swift.Int, Swift.Int)
+}
+extension Foundation.URLRequest {
+  public func requestable() -> URLRequestable
+}
+public class ResponseValidator {
+  public var delegate: ResponseValidatorDelegate?
+  public init(request: Requestable, response: Foundation.HTTPURLResponse?, data: Foundation.Data?, integrationMode: IntegrationMode = .apollo)
+  public func validate()
+  @objc deinit
+}
+extension ResponseValidator : FilterDelegate {
+  public func shouldIgnore(request: Requestable)
+  public func filter(request: Requestable, didFailWith error: Swift.Error)
+  public func filter(request: Requestable, didResolveCaptcha cookie: Swift.String)
+  public func shouldRetry(request: Requestable)
+}
+@_inheritsConvenienceInitializers @objc public class DataDomeSDK : ObjectiveC.NSObject {
+  @objc public static var bypassHTTPAccept: Swift.Bool
+  @available(iOS, deprecated: 14.0, message: "Starting with iOS 14, our logs are generated through OSLog and this method has no effect")
+  @objc public static func setLogLevel(level: LogLevel)
+  @objc public static func setResponsePageLanguage(_ language: Swift.String)
+  @objc public static func setKey(_ key: Swift.String)
+  @objc public static func getCookie() -> Foundation.HTTPCookie?
+  @objc public static func setCookie(_ cookie: Foundation.HTTPCookie)
+  @available(*, deprecated, message: "Use the static setCookie(_:) method instead")
+  @objc public func setCookie(cookie: Foundation.HTTPCookie?)
+  @objc public static func cancelCaptcha()
+  @objc override dynamic public init()
+  @objc deinit
+}
+extension DataDomeSDK {
+  @objc public static func isProxyEnabled() -> Swift.Bool
+}
+extension CaptchaError : Swift.Equatable {}
+extension CaptchaError : Swift.Hashable {}
+extension LogLevel : Swift.Hashable {}
+extension LogLevel : Swift.RawRepresentable {}
+extension IntegrationMode : Swift.Equatable {}
+extension IntegrationMode : Swift.Hashable {}
+extension IntegrationMode : Swift.RawRepresentable {}

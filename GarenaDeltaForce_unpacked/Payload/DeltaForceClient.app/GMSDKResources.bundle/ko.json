@@ -1,0 +1,14 @@
+{
+	"last_updated": 1748406560752,
+	"translation": {
+		"aggregated_login_dialog_subtitle": "다음 계정으로 로그인",
+		"aggregated_login_dialog_title": "로그인",
+		"shareTwitter_share_btn_txt": "트윗",
+		"shareVK_share_btn_txt": "만들기",
+		"unknown_error_description": "알 수 없는 오류가 발생했습니다.",
+		"unknown_error_title": "알 수 없는 오류",
+		"utilities_back_btn": "뒤로가기",
+		"utilities_close_btn": "닫기",
+		"webview_retry_btn": "재시도"
+	}
+}

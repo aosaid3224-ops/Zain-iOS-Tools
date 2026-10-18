@@ -1,0 +1,14 @@
+{
+	"last_updated": 1748406560885,
+	"translation": {
+		"aggregated_login_dialog_subtitle": "เข้าสู่ระบบด้วยบัญชีต่อไปนี้",
+		"aggregated_login_dialog_title": "เข้าสู่ระบบ",
+		"shareTwitter_share_btn_txt": "ทวีต",
+		"shareVK_share_btn_txt": "สร้าง",
+		"unknown_error_description": "เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ",
+		"unknown_error_title": "ข้อผิดพลาดที่ไม่ทราบสาเหตุ",
+		"utilities_back_btn": "ย้อนกลับ",
+		"utilities_close_btn": "ปิด",
+		"webview_retry_btn": "ลองใหม่"
+	}
+}

@@ -1,0 +1,14 @@
+{
+	"last_updated": 1748406560947,
+	"translation": {
+		"aggregated_login_dialog_subtitle": "使用以下账号登录",
+		"aggregated_login_dialog_title": "登录",
+		"shareTwitter_share_btn_txt": "推文",
+		"shareVK_share_btn_txt": "创建",
+		"unknown_error_description": "发生未知错误。",
+		"unknown_error_title": "未知错误",
+		"utilities_back_btn": "返回",
+		"utilities_close_btn": "关闭",
+		"webview_retry_btn": "重试"
+	}
+}

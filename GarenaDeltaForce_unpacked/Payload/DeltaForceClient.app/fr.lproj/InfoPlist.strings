@@ -1,0 +1,10 @@
+NSPhotoLibraryUsageDescription = "Permet de sauvegarder des images pour partager des photos de jeu et d'autres fonctionnalités relatives.";
+NSPhotoLibraryAddUsageDescription = "Permet de sauvegarder des images pour partager des photos de jeu et d'autres fonctionnalités relatives.";
+NSCameraUsageDescription = "Permet de prendre des photos.";
+NSMicrophoneUsageDescription = "Permet d'envoyer des messages vocaux en jeu et d'effectuer des communications vocales en temps réel.";
+NSUserTrackingUsageDescription = "Surveille l'efficacité du placement des publicités afin d'analyser les données et optimiser la performance des publicités.";
+NSCalendarsUsageDescription = "Propose des notifications pour la planification d'événements en jeu, la gestion des abonnements et d'autres rappels de calendrier.";
+NSLocationAlwaysUsageDescription = "Fournit une fonctionnalité de localisation pour ajouter des amis à proximité dans le jeu.";
+NSLocationWhenInUseUsageDescription = "Fournit une fonctionnalité de localisation pour ajouter des amis à proximité dans le jeu.";
+NSBluetoothPeripheralUsageDescription = "Permet la connexion à des appareils Bluetooth pour le chat vocal en jeu via des écouteurs Bluetooth.";
+NSBluetoothAlwaysUsageDescription = "Permet la connexion à des appareils Bluetooth pour le chat vocal en jeu via des écouteurs Bluetooth.";

@@ -1,0 +1,21 @@
+{
+    "version": 20240712,
+    "regex":1,
+	"configureList": [
+        "level6"
+    ],
+    
+    "level6": {
+        "classLevelNum": 6,
+        "classLevelValues": [0, 1, 2, 3, 4, 5],
+        "defLevel": 5,
+        "filter-model": {
+			"0": [],
+			"1": ["iPhone9,*", "iPad7,*", "iPhone8,*", "iPad6,*"],
+			"2": ["iPhone10,*"],
+			"3": ["iPhone11,*", "iPad8,*"],
+			"4": ["iPhone12,*", "iPhone13,*", "iPhone14,*", "iPhone15,*", "iPad11,*", "iPad12,*", "iPad13,*"],
+            "5": ["iPhone16,*", "iPhone17,*", "iPad14,*", "ipad16,*"]
+        }
+    }
+}

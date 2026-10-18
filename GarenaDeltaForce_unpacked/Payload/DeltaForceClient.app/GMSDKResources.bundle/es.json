@@ -1,0 +1,14 @@
+{
+	"last_updated": 1748406560615,
+	"translation": {
+		"aggregated_login_dialog_subtitle": "Inicia sesión con las siguientes cuentas",
+		"aggregated_login_dialog_title": "Iniciar sesión",
+		"shareTwitter_share_btn_txt": "Tuitear",
+		"shareVK_share_btn_txt": "Crear",
+		"unknown_error_description": "Se ha producido un error desconocido.",
+		"unknown_error_title": "Error desconocido",
+		"utilities_back_btn": "Volver",
+		"utilities_close_btn": "Cerrar",
+		"webview_retry_btn": "Reintentar"
+	}
+}

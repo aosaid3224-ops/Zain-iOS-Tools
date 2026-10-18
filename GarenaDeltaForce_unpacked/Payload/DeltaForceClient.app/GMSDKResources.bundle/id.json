@@ -1,0 +1,14 @@
+{
+	"last_updated": 1748406560681,
+	"translation": {
+		"aggregated_login_dialog_subtitle": "Masuk dengan akun berikut",
+		"aggregated_login_dialog_title": "Masuk",
+		"shareTwitter_share_btn_txt": "Tweet",
+		"shareVK_share_btn_txt": "Buat",
+		"unknown_error_description": "Terjadi kesalahan yang tidak diketahui.",
+		"unknown_error_title": "Kesalahan yang tidak diketahui",
+		"utilities_back_btn": "Kembali",
+		"utilities_close_btn": "Tutup",
+		"webview_retry_btn": "Coba lagi"
+	}
+}

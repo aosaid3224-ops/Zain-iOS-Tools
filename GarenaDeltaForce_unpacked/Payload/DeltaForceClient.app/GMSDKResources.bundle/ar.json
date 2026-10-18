@@ -1,0 +1,14 @@
+{
+	"last_updated": 1748406560551,
+	"translation": {
+		"aggregated_login_dialog_subtitle": "سجّل الدخول عبر الحسابات التالية",
+		"aggregated_login_dialog_title": "تسجيل الدخول",
+		"shareTwitter_share_btn_txt": "تغريدة",
+		"shareVK_share_btn_txt": "إنشاء",
+		"unknown_error_description": "حدث خطأ غير معروف.",
+		"unknown_error_title": "خطأ غير معروف",
+		"utilities_back_btn": "العودة",
+		"utilities_close_btn": "إغلاق",
+		"webview_retry_btn": "إعادة المحاولة"
+	}
+}

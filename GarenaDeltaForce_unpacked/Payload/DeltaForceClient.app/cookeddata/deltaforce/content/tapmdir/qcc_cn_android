@@ -1,0 +1,209 @@
+{
+    "version": 202607291,
+    "configureList": [
+        "level6",
+        "level6_regex"
+    ],
+
+    "level6": {
+        "classLevelNum": 6,
+        "classLevelValues": [0, 1, 2, 3, 4, 5],
+        "defLevel": 4,
+        "switchops": 526,
+        "andopts": 526,
+        "filter-model": {
+            "0": [],
+            "1": 
+            [
+
+            ],
+            "2": 
+            [   
+
+            ],
+            "3": 
+            [
+                "2201123C","2201122C","21121210C","LGE-AN00","MGI-AN00","NE2210","LGE-AN00","MGI-AN00","NE2210"
+            ],
+            "4": 
+            [
+                
+            ],
+            "5": 
+            [
+                "gamematrix*"
+            ]
+        },
+
+        "emulator": 2,
+        
+        "filter-gpu": {
+            "0": ["Mali-G71"],
+            "1": ["Adreno (TM) 512*", "Adreno (TM) 612*", "Adreno (TM) 615*", "Adreno (TM) 610*", "Mali-G52*", "Mali-G57*", "Mali-G72", "PowerVR Rogue GM9446", "PowerVR B-Series BXM-8-256"],
+            "2": ["Adreno (TM) 540*", "Adreno (TM) 618*", "Adreno (TM) 616*", "Adreno (TM) 620*", "Mali-G76*", "Mali-G68*", "Mali-G610", "Mali-G610 MC3", "Mali-G615 MC2"],
+            "3": ["Adreno (TM) 630*", "Adreno (TM) 640*", "Mali-G77*", "Adreno (TM) 642L", "Adreno (TM) 644*", "Mali-G610 MC4", "Mali-G615 MC5", "Adreno (TM) 710*", "ANGLE (Samsung Xclipse 530)*", "ANGLE (Samsung Xclipse 540)*", "ANGLE (Samsung Xclipse 550)*", "Adreno (TM) A32", "Maleoon 920C"],
+            "4": ["Adreno (TM) 650*", "Adreno (TM) 660*", "Adreno (TM) 730*", "Adreno (TM) 732*", "Adreno (TM) 810*", "Adreno (TM) 720*", "Mali-G78*", "Mali-G710*", "Mali-G610*", "Mali-G615*", "Mali-G715", "Mali-G720-Immortalis MC7", "ANGLE (Samsung Xclipse 920)*", "ANGLE (Samsung Xclipse 931)*", "ANGLE (Samsung Xclipse 940)*", "ANGLE (Samsung Xclipse 950)*", "ANGLE (Samsung Xclipse 960)*", "Maleoon 910", "Maleoon 916", "Maleoon 916B", "Maleoon 920", "Maleoon 935", "Maleoon 935F", "Maleoon 935A", "PowerVR D-Series DXT-48-1536", "Maleoon 935B", "Maleoon 916A", "Maleoon 955A", "Maleoon 955"],
+            "5": ["Adreno (TM) 740*", "Adreno (TM) 750*", "Adreno (TM) 830*", "Adreno (TM) 840*", "Adreno (TM) 735*", "Mali-G715-Immortalis MC11", "Mali-G720-Immortalis MC12", "Mali-G1-Ultra MC11", "Mali-G1-Ultra MC12", "Mali-G2-Ultra-NX MC12", "Mali-G2-Ultra-NX MC16"]
+        },
+
+        "filter-soc": {
+            "0": [],
+            "1": [],
+            "2": [],
+            "3": [],
+            "4": ["Kirin9000*", "Kirin9000S", "Kirin9010*"],
+            "5": ["Dimensity9200*", "Dimensity9300*"]
+        },
+
+        "filter-manu": {
+            "0": [],
+            "1": [],
+            "2": [],
+            "3": [],
+            "4": [],
+            "5": []
+        },
+
+        "resolution": [],
+        "ram": [],
+        "cpufreq": [],
+        "cpucores": [],
+        "gpu_vendor": {
+            "adreno": {
+                "series": ["100", "200", "300", "400", "500", "600", "700", "800"],
+                "100": [199, 199, 199, 199, 199],
+                "200": [299, 299, 299, 299, 299],
+                "300": [399, 399, 399, 399, 399],
+                "400": [499, 499, 499, 499, 499],
+                "500": [512, 540, 599, 599, 599],
+                "600": [610, 616, 630, 650, 699],
+                "700": [710, 710, 710, 720, 735],
+                "800": [800, 800, 800, 810, 825]
+            },
+            "mali": {
+                "series": ["g", "t"],
+                "g": [72, 76, 77, 78, 715],
+                "t": [999, 999, 999, 999, 999]
+            },
+            "powervr": {
+                "series": ["sgx", "gt", "ge", "gx", "g" , "gm"],
+                "sgx": [99999, 99999, 99999, 99999, 99999],
+                "gt": [7600, 9999, 9999, 7800, 9999],
+                "ge": [8323, 9999, 9999, 9999, 9999],
+                "gm": [9446, 9999, 9999, 9999, 9999],
+                "gx": [6450, 9999, 9999, 9999, 9999],
+                "g": [6431, 9999, 9999, 9999, 9999]
+            },
+            "tegra": {
+                "series": ["k1", "x1", "2", "3", "4"],
+                "k1": [0, 9, 9, 9, 9, 9],
+                "x1": [0, 9, 9, 9, 9, 9],
+                "2": [9999, 9999, 9999, 9999, 9999, 9999],
+                "3": [9999, 9999, 9999, 9999, 9999, 9999],
+                "4": [9999, 9999, 9999, 9999, 9999, 9999]
+            }
+        }
+    },
+
+
+     "level6_regex": {
+        "classLevelNum": 6,
+        "classLevelValues": [0, 1, 2, 3, 4, 5],
+        "defLevel": 4,
+        "switchops": 526,
+        "andopts": 526,
+        "regex" : 1,
+        "filter-model": {
+            "0": [],
+            "1": 
+            [
+
+            ],
+            "2": 
+            [   
+
+            ],
+            "3": 
+            [
+                "2201123C","2201122C","21121210C","LGE-AN00","MGI-AN00","NE2210","LGE-AN00","MGI-AN00","NE2210"
+            ],
+            "4": 
+            [
+                
+            ],
+            "5": 
+            [
+                "gamematrix.*"
+            ]
+        },
+
+        "emulator": 2,
+        
+        "filter-gpu": {
+            "0": ["(.*Mali-G71\\D.*)|(.*Mali-G71)"],
+            "1": ["(.*Adreno \\(TM\\) 512\\D.*)|(Adreno \\(TM\\) 512)", "(.*Adreno \\(TM\\) 612\\D.*)|(Adreno \\(TM\\) 612)", "(.*Adreno \\(TM\\) 615\\D.*)|(Adreno \\(TM\\) 615)", "(.*Adreno \\(TM\\) 610\\D.*)|(Adreno \\(TM\\) 610)", ".*Mali-G52.*", ".*Mali-G57.*", "(.*Mali-G72\\D.*)|(.*Mali-G72)", "(.*PowerVR Rogue GM9446\\D.*)|(PowerVR Rogue GM9446)", "(.*PowerVR B-Series BXM-8-256\\D.*)|(PowerVR B-Series BXM-8-256)"],
+            "2": ["(.*Adreno \\(TM\\) 540\\D.*)|(Adreno \\(TM\\) 540)", "(.*Adreno \\(TM\\) 618\\D.*)|(Adreno \\(TM\\) 618)", "(.*Adreno \\(TM\\) 616\\D.*)|(Adreno \\(TM\\) 616)", "(.*Adreno \\(TM\\) 620\\D.*)|(Adreno \\(TM\\) 620)", ".*Mali-G76.*", ".*Mali-G68.*", "(.*Mali-G610 [^M].*)|(Mali-G610)", "(.*Mali-G610 MC3\\D.*)|(Mali-G610 MC3)", "(.*Mali-G615 MC2\\D.*)|(Mali-G615 MC2)"],
+            "3": ["(.*Adreno \\(TM\\) 630\\D.*)|(Adreno \\(TM\\) 630)", "(.*Adreno \\(TM\\) 640\\D.*)|(Adreno \\(TM\\) 640)", ".*Mali-G77.*", "(.*Adreno \\(TM\\) 642L\\D.*)|(Adreno \\(TM\\) 642L)", "(.*Adreno \\(TM\\) 644\\D.*)|(Adreno \\(TM\\) 644)", "(.*Mali-G610 MC4\\D.*)|(Mali-G610 MC4)", "(.*Mali-G615 MC5\\D.*)|(Mali-G615 MC5)", "(.*Adreno \\(TM\\) 710\\D.*)|(Adreno \\(TM\\) 710)", ".*Xclipse 530.*", ".*Xclipse 540.*", ".*Xclipse 550.*", "(.*Adreno \\(TM\\) A32\\D.*)|(Adreno \\(TM\\) A32)", "(.*Maleoon 920C\\s.*)|(Maleoon 920C)"],
+            "4": ["(.*Adreno \\(TM\\) 650\\D.*)|(Adreno \\(TM\\) 650)", "(.*Adreno \\(TM\\) 660\\D.*)|(Adreno \\(TM\\) 660)", "(.*Adreno \\(TM\\) 730\\D.*)|(Adreno \\(TM\\) 730)", "(.*Adreno \\(TM\\) 732\\D.*)|(Adreno \\(TM\\) 732)", "(.*Adreno \\(TM\\) 810\\D.*)|(Adreno \\(TM\\) 810)", "(.*Adreno \\(TM\\) 720\\D.*)|(Adreno \\(TM\\) 720)", ".*Mali-G78.*", ".*Mali-G710.*", ".*Mali-G610 MC[1256789].*", "(.*Mali-G615\\D.*)|(Mali-G615)", "(.*Mali-G715\\D.*)|(Mali-G715)", "(.*Mali-G720-Immortalis MC7\\D.*)|(Mali-G720-Immortalis MC7)", ".*Xclipse 920\\D.*", ".*Xclipse 931\\D.*", ".*Xclipse 940\\D.*", ".*Xclipse 950\\D.*", ".*Xclipse 960\\D.*", "(.*PowerVR D-Series DXT-48-1536\\D.*)|(PowerVR D-Series DXT-48-1536)", "(.*Maleoon 910\\s.*)|(Maleoon 910)", "(.*Maleoon 916\\s.*)|(Maleoon 916)", "(.*Maleoon 916B\\s.*)|(Maleoon 916B)", "(.*Maleoon 920\\s.*)|(Maleoon 920)", "(.*Maleoon 935\\s.*)|(Maleoon 935)", "(.*Maleoon 935A\\s.*)|(Maleoon 935A)", "(.*Maleoon 935B\\D.*)|(Maleoon 935B)", "(.*Maleoon 916A\\D.*)|(Maleoon 916A)", "(.*Maleoon 955A\\D.*)|(Maleoon 955A)", "(.*Maleoon 955\\D.*)|(Maleoon 955)"],
+            "5": ["(.*Adreno \\(TM\\) 740\\D.*)|(Adreno \\(TM\\) 740)", "(.*Adreno \\(TM\\) 750\\D.*)|(Adreno \\(TM\\) 750)", "(.*Adreno \\(TM\\) 830\\D.*)|(Adreno \\(TM\\) 830)", "(.*Adreno \\(TM\\) 840\\D.*)|(Adreno \\(TM\\) 840)", "(.*Adreno \\(TM\\) 735\\D.*)|(Adreno \\(TM\\) 735)", "(.*Mali-G715-Immortalis MC11\\D.*)|(Mali-G715-Immortalis MC11)", "(.*Mali-G720-Immortalis MC12\\D.*)|(Mali-G720-Immortalis MC12)", "(.*Mali-G1-Ultra MC11\\D.*)|(Mali-G1-Ultra MC11)", "(.*Mali-G1-Ultra MC12\\D.*)|(Mali-G1-Ultra MC12)", "(.*Mali-G2-Ultra-NX MC12\\D.*)|(Mali-G2-Ultra-NX MC12)", "(.*Mali-G2-Ultra-NX MC16\\D.*)|(Mali-G2-Ultra-NX MC16)"]
+        },
+
+        "filter-soc": {
+            "0": [],
+            "1": [],
+            "2": [],
+            "3": [],
+            "4": ["Kirin9000.*", "Kirin9000S", "Kirin9010.*"],
+            "5": ["Dimensity9200.*", "Dimensity9300.*"]
+        },
+
+        "filter-manu": {
+            "0": [],
+            "1": [],
+            "2": [],
+            "3": [],
+            "4": [],
+            "5": []
+        },
+
+        "resolution": [],
+        "ram": [],
+        "cpufreq": [],
+        "cpucores": [],
+        "gpu_vendor": {
+            "adreno": {
+                "series": ["100", "200", "300", "400", "500", "600", "700", "800"],
+                "100": [199, 199, 199, 199, 199],
+                "200": [299, 299, 299, 299, 299],
+                "300": [399, 399, 399, 399, 399],
+                "400": [499, 499, 499, 499, 499],
+                "500": [512, 540, 599, 599, 599],
+                "600": [610, 616, 630, 650, 699],
+                "700": [710, 710, 710, 720, 735],
+                "800": [800, 800, 800, 810, 825]
+            },
+            "mali": {
+                "series": ["g", "t"],
+                "g": [72, 76, 77, 78, 715],
+                "t": [999, 999, 999, 999, 999]
+            },
+            "powervr": {
+                "series": ["sgx", "gt", "ge", "gx", "g" , "gm"],
+                "sgx": [99999, 99999, 99999, 99999, 99999],
+                "gt": [7600, 9999, 9999, 7800, 9999],
+                "ge": [8323, 9999, 9999, 9999, 9999],
+                "gm": [9446, 9999, 9999, 9999, 9999],
+                "gx": [6450, 9999, 9999, 9999, 9999],
+                "g": [6431, 9999, 9999, 9999, 9999]
+            },
+            "tegra": {
+                "series": ["k1", "x1", "2", "3", "4"],
+                "k1": [0, 9, 9, 9, 9, 9],
+                "x1": [0, 9, 9, 9, 9, 9],
+                "2": [9999, 9999, 9999, 9999, 9999, 9999],
+                "3": [9999, 9999, 9999, 9999, 9999, 9999],
+                "4": [9999, 9999, 9999, 9999, 9999, 9999]
+            }
+        }
+    }
+}

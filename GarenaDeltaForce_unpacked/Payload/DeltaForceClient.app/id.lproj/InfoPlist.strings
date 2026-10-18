@@ -1,0 +1,9 @@
+NSPhotoLibraryAddUsageDescription = "Mengizinkan anda untuk menyimpan gambar agar dapat membagikan gambar in-game dan fungsi terkait lainnya.";
+NSCameraUsageDescription = "Mengizinkan anda untuk mengambil foto.";
+NSMicrophoneUsageDescription = "Memberikan akses untuk mengirim pesan suara dalam game dan melakukan komunikasi suara real-time.";
+NSUserTrackingUsageDescription = "Digunakan untuk memantau, menganalisis, dan mengoptimalkan efek pengiriman iklan.";
+NSCalendarsUsageDescription = "Menawarkan notifikasi untuk jadwalkan event dalam game, mengelola langganan, dan pengingat kalender lainnya.";
+NSLocationAlwaysUsageDescription = "Mengaktifkan fitur lokasi untuk menambahkan teman di area terdekat dalam game";
+NSLocationWhenInUseUsageDescription = "Mengaktifkan fitur lokasi untuk menambahkan teman di area terdekat dalam game";
+NSBluetoothPeripheralUsageDescription = "Mengizinkan koneksi ke perangkat Bluetooth untuk chat suara dalam game melalui earphone Bluetooth.";
+NSBluetoothAlwaysUsageDescription = "Mengizinkan koneksi ke perangkat Bluetooth untuk chat suara dalam game melalui earphone Bluetooth.";

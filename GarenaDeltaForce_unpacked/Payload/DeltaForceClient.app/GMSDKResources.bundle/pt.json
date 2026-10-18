@@ -1,0 +1,14 @@
+{
+	"last_updated": 1748406560804,
+	"translation": {
+		"aggregated_login_dialog_subtitle": "Faça login com as seguintes contas",
+		"aggregated_login_dialog_title": "Entrar",
+		"shareTwitter_share_btn_txt": "Tuitar",
+		"shareVK_share_btn_txt": "Criar",
+		"unknown_error_description": "Ocorreu um erro desconhecido.",
+		"unknown_error_title": "Erro desconhecido",
+		"utilities_back_btn": "Voltar",
+		"utilities_close_btn": "Fechar",
+		"webview_retry_btn": "Tentar novamente"
+	}
+}

@@ -1,0 +1,5371 @@
+{
+  "ABIRoot": {
+    "kind": "Root",
+    "name": "TopLevel",
+    "printedName": "TopLevel",
+    "children": [
+      {
+        "kind": "Import",
+        "name": "Foundation",
+        "printedName": "Foundation",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "TypeDecl",
+        "name": "CaptchaError",
+        "printedName": "CaptchaError",
+        "children": [
+          {
+            "kind": "Var",
+            "name": "invalidCaptchaURL",
+            "printedName": "invalidCaptchaURL",
+            "children": [
+              {
+                "kind": "TypeFunc",
+                "name": "Function",
+                "printedName": "(DataDomeSDK.CaptchaError.Type) -> DataDomeSDK.CaptchaError",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "CaptchaError",
+                    "printedName": "DataDomeSDK.CaptchaError",
+                    "usr": "s:11DataDomeSDK12CaptchaErrorO"
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Metatype",
+                    "printedName": "DataDomeSDK.CaptchaError.Type",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "CaptchaError",
+                        "printedName": "DataDomeSDK.CaptchaError",
+                        "usr": "s:11DataDomeSDK12CaptchaErrorO"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "declKind": "EnumElement",
+            "usr": "s:11DataDomeSDK12CaptchaErrorO07invalidD3URLyA2CmF",
+            "mangledName": "$s11DataDomeSDK12CaptchaErrorO07invalidD3URLyA2CmF",
+            "moduleName": "DataDomeSDK",
+            "declAttributes": [
+              "RawDocComment"
+            ]
+          },
+          {
+            "kind": "Function",
+            "name": "==",
+            "printedName": "==(_:_:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Bool",
+                "printedName": "Swift.Bool",
+                "usr": "s:Sb"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "CaptchaError",
+                "printedName": "DataDomeSDK.CaptchaError",
+                "usr": "s:11DataDomeSDK12CaptchaErrorO"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "CaptchaError",
+                "printedName": "DataDomeSDK.CaptchaError",
+                "usr": "s:11DataDomeSDK12CaptchaErrorO"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "s:11DataDomeSDK12CaptchaErrorO2eeoiySbAC_ACtFZ",
+            "mangledName": "$s11DataDomeSDK12CaptchaErrorO2eeoiySbAC_ACtFZ",
+            "moduleName": "DataDomeSDK",
+            "static": true,
+            "implicit": true,
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Var",
+            "name": "hashValue",
+            "printedName": "hashValue",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Int",
+                "printedName": "Swift.Int",
+                "usr": "s:Si"
+              }
+            ],
+            "declKind": "Var",
+            "usr": "s:11DataDomeSDK12CaptchaErrorO9hashValueSivp",
+            "mangledName": "$s11DataDomeSDK12CaptchaErrorO9hashValueSivp",
+            "moduleName": "DataDomeSDK",
+            "implicit": true,
+            "accessors": [
+              {
+                "kind": "Accessor",
+                "name": "Get",
+                "printedName": "Get()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Int",
+                    "printedName": "Swift.Int",
+                    "usr": "s:Si"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:11DataDomeSDK12CaptchaErrorO9hashValueSivg",
+                "mangledName": "$s11DataDomeSDK12CaptchaErrorO9hashValueSivg",
+                "moduleName": "DataDomeSDK",
+                "implicit": true,
+                "accessorKind": "get"
+              }
+            ]
+          },
+          {
+            "kind": "Function",
+            "name": "hash",
+            "printedName": "hash(into:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Hasher",
+                "printedName": "Swift.Hasher",
+                "paramValueOwnership": "InOut",
+                "usr": "s:s6HasherV"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "s:11DataDomeSDK12CaptchaErrorO4hash4intoys6HasherVz_tF",
+            "mangledName": "$s11DataDomeSDK12CaptchaErrorO4hash4intoys6HasherVz_tF",
+            "moduleName": "DataDomeSDK",
+            "implicit": true,
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Var",
+            "name": "errorDescription",
+            "printedName": "errorDescription",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Optional",
+                "printedName": "Swift.String?",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "String",
+                    "printedName": "Swift.String",
+                    "usr": "s:SS"
+                  }
+                ],
+                "usr": "s:Sq"
+              }
+            ],
+            "declKind": "Var",
+            "usr": "s:11DataDomeSDK12CaptchaErrorO16errorDescriptionSSSgvp",
+            "mangledName": "$s11DataDomeSDK12CaptchaErrorO16errorDescriptionSSSgvp",
+            "moduleName": "DataDomeSDK",
+            "declAttributes": [
+              "AccessControl",
+              "RawDocComment"
+            ],
+            "isFromExtension": true,
+            "accessors": [
+              {
+                "kind": "Accessor",
+                "name": "Get",
+                "printedName": "Get()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Optional",
+                    "printedName": "Swift.String?",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "String",
+                        "printedName": "Swift.String",
+                        "usr": "s:SS"
+                      }
+                    ],
+                    "usr": "s:Sq"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:11DataDomeSDK12CaptchaErrorO16errorDescriptionSSSgvg",
+                "mangledName": "$s11DataDomeSDK12CaptchaErrorO16errorDescriptionSSSgvg",
+                "moduleName": "DataDomeSDK",
+                "isFromExtension": true,
+                "accessorKind": "get"
+              }
+            ]
+          }
+        ],
+        "declKind": "Enum",
+        "usr": "s:11DataDomeSDK12CaptchaErrorO",
+        "mangledName": "$s11DataDomeSDK12CaptchaErrorO",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "AccessControl",
+          "RawDocComment"
+        ],
+        "conformances": [
+          {
+            "kind": "Conformance",
+            "name": "Equatable",
+            "printedName": "Equatable",
+            "usr": "s:SQ",
+            "mangledName": "$sSQ"
+          },
+          {
+            "kind": "Conformance",
+            "name": "Hashable",
+            "printedName": "Hashable",
+            "usr": "s:SH",
+            "mangledName": "$sSH"
+          },
+          {
+            "kind": "Conformance",
+            "name": "Error",
+            "printedName": "Error",
+            "usr": "s:s5ErrorP",
+            "mangledName": "$ss5ErrorP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "Sendable",
+            "printedName": "Sendable",
+            "usr": "s:s8SendableP",
+            "mangledName": "$ss8SendableP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "LocalizedError",
+            "printedName": "LocalizedError",
+            "usr": "s:10Foundation14LocalizedErrorP",
+            "mangledName": "$s10Foundation14LocalizedErrorP"
+          }
+        ]
+      },
+      {
+        "kind": "Import",
+        "name": "Foundation",
+        "printedName": "Foundation",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "TypeDecl",
+        "name": "LogLevel",
+        "printedName": "LogLevel",
+        "children": [
+          {
+            "kind": "Function",
+            "name": "<",
+            "printedName": "<(_:_:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Bool",
+                "printedName": "Swift.Bool",
+                "usr": "s:Sb"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "LogLevel",
+                "printedName": "DataDomeSDK.LogLevel",
+                "usr": "c:@M@DataDomeSDK@E@LogLevel"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "LogLevel",
+                "printedName": "DataDomeSDK.LogLevel",
+                "usr": "c:@M@DataDomeSDK@E@LogLevel"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "s:11DataDomeSDK8LogLevelO1loiySbAC_ACtFZ",
+            "mangledName": "$s11DataDomeSDK8LogLevelO1loiySbAC_ACtFZ",
+            "moduleName": "DataDomeSDK",
+            "static": true,
+            "declAttributes": [
+              "AccessControl"
+            ],
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Var",
+            "name": "verbose",
+            "printedName": "verbose",
+            "children": [
+              {
+                "kind": "TypeFunc",
+                "name": "Function",
+                "printedName": "(DataDomeSDK.LogLevel.Type) -> DataDomeSDK.LogLevel",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "LogLevel",
+                    "printedName": "DataDomeSDK.LogLevel",
+                    "usr": "c:@M@DataDomeSDK@E@LogLevel"
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Metatype",
+                    "printedName": "DataDomeSDK.LogLevel.Type",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "LogLevel",
+                        "printedName": "DataDomeSDK.LogLevel",
+                        "usr": "c:@M@DataDomeSDK@E@LogLevel"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "declKind": "EnumElement",
+            "usr": "c:@M@DataDomeSDK@E@LogLevel@LogLevelVerbose",
+            "mangledName": "$s11DataDomeSDK8LogLevelO7verboseyA2CmF",
+            "moduleName": "DataDomeSDK",
+            "declAttributes": [
+              "RawDocComment",
+              "ObjC"
+            ],
+            "fixedbinaryorder": 0
+          },
+          {
+            "kind": "Var",
+            "name": "debug",
+            "printedName": "debug",
+            "children": [
+              {
+                "kind": "TypeFunc",
+                "name": "Function",
+                "printedName": "(DataDomeSDK.LogLevel.Type) -> DataDomeSDK.LogLevel",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "LogLevel",
+                    "printedName": "DataDomeSDK.LogLevel",
+                    "usr": "c:@M@DataDomeSDK@E@LogLevel"
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Metatype",
+                    "printedName": "DataDomeSDK.LogLevel.Type",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "LogLevel",
+                        "printedName": "DataDomeSDK.LogLevel",
+                        "usr": "c:@M@DataDomeSDK@E@LogLevel"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "declKind": "EnumElement",
+            "usr": "c:@M@DataDomeSDK@E@LogLevel@LogLevelDebug",
+            "mangledName": "$s11DataDomeSDK8LogLevelO5debugyA2CmF",
+            "moduleName": "DataDomeSDK",
+            "declAttributes": [
+              "RawDocComment",
+              "ObjC"
+            ],
+            "fixedbinaryorder": 1
+          },
+          {
+            "kind": "Var",
+            "name": "info",
+            "printedName": "info",
+            "children": [
+              {
+                "kind": "TypeFunc",
+                "name": "Function",
+                "printedName": "(DataDomeSDK.LogLevel.Type) -> DataDomeSDK.LogLevel",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "LogLevel",
+                    "printedName": "DataDomeSDK.LogLevel",
+                    "usr": "c:@M@DataDomeSDK@E@LogLevel"
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Metatype",
+                    "printedName": "DataDomeSDK.LogLevel.Type",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "LogLevel",
+                        "printedName": "DataDomeSDK.LogLevel",
+                        "usr": "c:@M@DataDomeSDK@E@LogLevel"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "declKind": "EnumElement",
+            "usr": "c:@M@DataDomeSDK@E@LogLevel@LogLevelInfo",
+            "mangledName": "$s11DataDomeSDK8LogLevelO4infoyA2CmF",
+            "moduleName": "DataDomeSDK",
+            "declAttributes": [
+              "RawDocComment",
+              "ObjC"
+            ],
+            "fixedbinaryorder": 2
+          },
+          {
+            "kind": "Var",
+            "name": "warning",
+            "printedName": "warning",
+            "children": [
+              {
+                "kind": "TypeFunc",
+                "name": "Function",
+                "printedName": "(DataDomeSDK.LogLevel.Type) -> DataDomeSDK.LogLevel",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "LogLevel",
+                    "printedName": "DataDomeSDK.LogLevel",
+                    "usr": "c:@M@DataDomeSDK@E@LogLevel"
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Metatype",
+                    "printedName": "DataDomeSDK.LogLevel.Type",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "LogLevel",
+                        "printedName": "DataDomeSDK.LogLevel",
+                        "usr": "c:@M@DataDomeSDK@E@LogLevel"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "declKind": "EnumElement",
+            "usr": "c:@M@DataDomeSDK@E@LogLevel@LogLevelWarning",
+            "mangledName": "$s11DataDomeSDK8LogLevelO7warningyA2CmF",
+            "moduleName": "DataDomeSDK",
+            "declAttributes": [
+              "RawDocComment",
+              "ObjC"
+            ],
+            "fixedbinaryorder": 3
+          },
+          {
+            "kind": "Var",
+            "name": "error",
+            "printedName": "error",
+            "children": [
+              {
+                "kind": "TypeFunc",
+                "name": "Function",
+                "printedName": "(DataDomeSDK.LogLevel.Type) -> DataDomeSDK.LogLevel",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "LogLevel",
+                    "printedName": "DataDomeSDK.LogLevel",
+                    "usr": "c:@M@DataDomeSDK@E@LogLevel"
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Metatype",
+                    "printedName": "DataDomeSDK.LogLevel.Type",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "LogLevel",
+                        "printedName": "DataDomeSDK.LogLevel",
+                        "usr": "c:@M@DataDomeSDK@E@LogLevel"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "declKind": "EnumElement",
+            "usr": "c:@M@DataDomeSDK@E@LogLevel@LogLevelError",
+            "mangledName": "$s11DataDomeSDK8LogLevelO5erroryA2CmF",
+            "moduleName": "DataDomeSDK",
+            "declAttributes": [
+              "RawDocComment",
+              "ObjC"
+            ],
+            "fixedbinaryorder": 4
+          },
+          {
+            "kind": "Var",
+            "name": "none",
+            "printedName": "none",
+            "children": [
+              {
+                "kind": "TypeFunc",
+                "name": "Function",
+                "printedName": "(DataDomeSDK.LogLevel.Type) -> DataDomeSDK.LogLevel",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "LogLevel",
+                    "printedName": "DataDomeSDK.LogLevel",
+                    "usr": "c:@M@DataDomeSDK@E@LogLevel"
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Metatype",
+                    "printedName": "DataDomeSDK.LogLevel.Type",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "LogLevel",
+                        "printedName": "DataDomeSDK.LogLevel",
+                        "usr": "c:@M@DataDomeSDK@E@LogLevel"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "declKind": "EnumElement",
+            "usr": "c:@M@DataDomeSDK@E@LogLevel@LogLevelNone",
+            "mangledName": "$s11DataDomeSDK8LogLevelO4noneyA2CmF",
+            "moduleName": "DataDomeSDK",
+            "declAttributes": [
+              "RawDocComment",
+              "ObjC"
+            ],
+            "fixedbinaryorder": 5
+          },
+          {
+            "kind": "Constructor",
+            "name": "init",
+            "printedName": "init(rawValue:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Optional",
+                "printedName": "DataDomeSDK.LogLevel?",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "LogLevel",
+                    "printedName": "DataDomeSDK.LogLevel",
+                    "usr": "c:@M@DataDomeSDK@E@LogLevel"
+                  }
+                ],
+                "usr": "s:Sq"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Int",
+                "printedName": "Swift.Int",
+                "usr": "s:Si"
+              }
+            ],
+            "declKind": "Constructor",
+            "usr": "s:11DataDomeSDK8LogLevelO8rawValueACSgSi_tcfc",
+            "mangledName": "$s11DataDomeSDK8LogLevelO8rawValueACSgSi_tcfc",
+            "moduleName": "DataDomeSDK",
+            "implicit": true,
+            "init_kind": "Designated"
+          },
+          {
+            "kind": "Var",
+            "name": "rawValue",
+            "printedName": "rawValue",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Int",
+                "printedName": "Swift.Int",
+                "usr": "s:Si"
+              }
+            ],
+            "declKind": "Var",
+            "usr": "s:11DataDomeSDK8LogLevelO8rawValueSivp",
+            "mangledName": "$s11DataDomeSDK8LogLevelO8rawValueSivp",
+            "moduleName": "DataDomeSDK",
+            "implicit": true,
+            "accessors": [
+              {
+                "kind": "Accessor",
+                "name": "Get",
+                "printedName": "Get()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Int",
+                    "printedName": "Swift.Int",
+                    "usr": "s:Si"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:11DataDomeSDK8LogLevelO8rawValueSivg",
+                "mangledName": "$s11DataDomeSDK8LogLevelO8rawValueSivg",
+                "moduleName": "DataDomeSDK",
+                "implicit": true,
+                "accessorKind": "get"
+              }
+            ]
+          }
+        ],
+        "declKind": "Enum",
+        "usr": "c:@M@DataDomeSDK@E@LogLevel",
+        "mangledName": "$s11DataDomeSDK8LogLevelO",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "AccessControl",
+          "ObjC",
+          "RawDocComment"
+        ],
+        "enumRawTypeName": "Int",
+        "conformances": [
+          {
+            "kind": "Conformance",
+            "name": "Equatable",
+            "printedName": "Equatable",
+            "usr": "s:SQ",
+            "mangledName": "$sSQ"
+          },
+          {
+            "kind": "Conformance",
+            "name": "Hashable",
+            "printedName": "Hashable",
+            "usr": "s:SH",
+            "mangledName": "$sSH"
+          },
+          {
+            "kind": "Conformance",
+            "name": "RawRepresentable",
+            "printedName": "RawRepresentable",
+            "children": [
+              {
+                "kind": "TypeWitness",
+                "name": "RawValue",
+                "printedName": "RawValue",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Int",
+                    "printedName": "Swift.Int",
+                    "usr": "s:Si"
+                  }
+                ]
+              }
+            ],
+            "usr": "s:SY",
+            "mangledName": "$sSY"
+          },
+          {
+            "kind": "Conformance",
+            "name": "Comparable",
+            "printedName": "Comparable",
+            "usr": "s:SL",
+            "mangledName": "$sSL"
+          }
+        ]
+      },
+      {
+        "kind": "Import",
+        "name": "Foundation",
+        "printedName": "Foundation",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "TypeDecl",
+        "name": "IntegrationMode",
+        "printedName": "IntegrationMode",
+        "children": [
+          {
+            "kind": "Var",
+            "name": "urlSession",
+            "printedName": "urlSession",
+            "children": [
+              {
+                "kind": "TypeFunc",
+                "name": "Function",
+                "printedName": "(DataDomeSDK.IntegrationMode.Type) -> DataDomeSDK.IntegrationMode",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "IntegrationMode",
+                    "printedName": "DataDomeSDK.IntegrationMode",
+                    "usr": "s:11DataDomeSDK15IntegrationModeO"
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Metatype",
+                    "printedName": "DataDomeSDK.IntegrationMode.Type",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "IntegrationMode",
+                        "printedName": "DataDomeSDK.IntegrationMode",
+                        "usr": "s:11DataDomeSDK15IntegrationModeO"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "declKind": "EnumElement",
+            "usr": "s:11DataDomeSDK15IntegrationModeO10urlSessionyA2CmF",
+            "mangledName": "$s11DataDomeSDK15IntegrationModeO10urlSessionyA2CmF",
+            "moduleName": "DataDomeSDK"
+          },
+          {
+            "kind": "Var",
+            "name": "alamofire",
+            "printedName": "alamofire",
+            "children": [
+              {
+                "kind": "TypeFunc",
+                "name": "Function",
+                "printedName": "(DataDomeSDK.IntegrationMode.Type) -> DataDomeSDK.IntegrationMode",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "IntegrationMode",
+                    "printedName": "DataDomeSDK.IntegrationMode",
+                    "usr": "s:11DataDomeSDK15IntegrationModeO"
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Metatype",
+                    "printedName": "DataDomeSDK.IntegrationMode.Type",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "IntegrationMode",
+                        "printedName": "DataDomeSDK.IntegrationMode",
+                        "usr": "s:11DataDomeSDK15IntegrationModeO"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "declKind": "EnumElement",
+            "usr": "s:11DataDomeSDK15IntegrationModeO9alamofireyA2CmF",
+            "mangledName": "$s11DataDomeSDK15IntegrationModeO9alamofireyA2CmF",
+            "moduleName": "DataDomeSDK"
+          },
+          {
+            "kind": "Var",
+            "name": "apollo",
+            "printedName": "apollo",
+            "children": [
+              {
+                "kind": "TypeFunc",
+                "name": "Function",
+                "printedName": "(DataDomeSDK.IntegrationMode.Type) -> DataDomeSDK.IntegrationMode",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "IntegrationMode",
+                    "printedName": "DataDomeSDK.IntegrationMode",
+                    "usr": "s:11DataDomeSDK15IntegrationModeO"
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Metatype",
+                    "printedName": "DataDomeSDK.IntegrationMode.Type",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "IntegrationMode",
+                        "printedName": "DataDomeSDK.IntegrationMode",
+                        "usr": "s:11DataDomeSDK15IntegrationModeO"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "declKind": "EnumElement",
+            "usr": "s:11DataDomeSDK15IntegrationModeO6apolloyA2CmF",
+            "mangledName": "$s11DataDomeSDK15IntegrationModeO6apolloyA2CmF",
+            "moduleName": "DataDomeSDK"
+          },
+          {
+            "kind": "Constructor",
+            "name": "init",
+            "printedName": "init(rawValue:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Optional",
+                "printedName": "DataDomeSDK.IntegrationMode?",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "IntegrationMode",
+                    "printedName": "DataDomeSDK.IntegrationMode",
+                    "usr": "s:11DataDomeSDK15IntegrationModeO"
+                  }
+                ],
+                "usr": "s:Sq"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              }
+            ],
+            "declKind": "Constructor",
+            "usr": "s:11DataDomeSDK15IntegrationModeO8rawValueACSgSS_tcfc",
+            "mangledName": "$s11DataDomeSDK15IntegrationModeO8rawValueACSgSS_tcfc",
+            "moduleName": "DataDomeSDK",
+            "implicit": true,
+            "init_kind": "Designated"
+          },
+          {
+            "kind": "Var",
+            "name": "rawValue",
+            "printedName": "rawValue",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              }
+            ],
+            "declKind": "Var",
+            "usr": "s:11DataDomeSDK15IntegrationModeO8rawValueSSvp",
+            "mangledName": "$s11DataDomeSDK15IntegrationModeO8rawValueSSvp",
+            "moduleName": "DataDomeSDK",
+            "implicit": true,
+            "accessors": [
+              {
+                "kind": "Accessor",
+                "name": "Get",
+                "printedName": "Get()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "String",
+                    "printedName": "Swift.String",
+                    "usr": "s:SS"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:11DataDomeSDK15IntegrationModeO8rawValueSSvg",
+                "mangledName": "$s11DataDomeSDK15IntegrationModeO8rawValueSSvg",
+                "moduleName": "DataDomeSDK",
+                "implicit": true,
+                "accessorKind": "get"
+              }
+            ]
+          }
+        ],
+        "declKind": "Enum",
+        "usr": "s:11DataDomeSDK15IntegrationModeO",
+        "mangledName": "$s11DataDomeSDK15IntegrationModeO",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "AccessControl"
+        ],
+        "enumRawTypeName": "String",
+        "conformances": [
+          {
+            "kind": "Conformance",
+            "name": "Equatable",
+            "printedName": "Equatable",
+            "usr": "s:SQ",
+            "mangledName": "$sSQ"
+          },
+          {
+            "kind": "Conformance",
+            "name": "Hashable",
+            "printedName": "Hashable",
+            "usr": "s:SH",
+            "mangledName": "$sSH"
+          },
+          {
+            "kind": "Conformance",
+            "name": "RawRepresentable",
+            "printedName": "RawRepresentable",
+            "children": [
+              {
+                "kind": "TypeWitness",
+                "name": "RawValue",
+                "printedName": "RawValue",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "String",
+                    "printedName": "Swift.String",
+                    "usr": "s:SS"
+                  }
+                ]
+              }
+            ],
+            "usr": "s:SY",
+            "mangledName": "$sSY"
+          }
+        ]
+      },
+      {
+        "kind": "Import",
+        "name": "Foundation",
+        "printedName": "Foundation",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "Import",
+        "name": "UIKit",
+        "printedName": "UIKit",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK"
+      },
+      {
+        "kind": "Import",
+        "name": "AVFoundation",
+        "printedName": "AVFoundation",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK"
+      },
+      {
+        "kind": "TypeDecl",
+        "name": "Session",
+        "printedName": "Session",
+        "declKind": "Class",
+        "usr": "s:11DataDomeSDK7SessionC",
+        "mangledName": "$s11DataDomeSDK7SessionC",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "AccessControl",
+          "RawDocComment"
+        ],
+        "hasMissingDesignatedInitializers": true
+      },
+      {
+        "kind": "Import",
+        "name": "Foundation",
+        "printedName": "Foundation",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "Import",
+        "name": "Foundation",
+        "printedName": "Foundation",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "TypeDecl",
+        "name": "ResponseValidatorDelegate",
+        "printedName": "ResponseValidatorDelegate",
+        "children": [
+          {
+            "kind": "Function",
+            "name": "shouldIgnore",
+            "printedName": "shouldIgnore(request:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Requestable",
+                "printedName": "DataDomeSDK.Requestable",
+                "usr": "s:11DataDomeSDK11RequestableP"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "s:11DataDomeSDK25ResponseValidatorDelegateP12shouldIgnore7requestyAA11Requestable_p_tF",
+            "mangledName": "$s11DataDomeSDK25ResponseValidatorDelegateP12shouldIgnore7requestyAA11Requestable_p_tF",
+            "moduleName": "DataDomeSDK",
+            "genericSig": "<τ_0_0 where τ_0_0 : DataDomeSDK.ResponseValidatorDelegate>",
+            "sugared_genericSig": "<Self where Self : DataDomeSDK.ResponseValidatorDelegate>",
+            "protocolReq": true,
+            "declAttributes": [
+              "RawDocComment"
+            ],
+            "reqNewWitnessTableEntry": true,
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "didFailWith",
+            "printedName": "didFailWith(error:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Error",
+                "printedName": "Swift.Error",
+                "usr": "s:s5ErrorP"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "s:11DataDomeSDK25ResponseValidatorDelegateP11didFailWith5errorys5Error_p_tF",
+            "mangledName": "$s11DataDomeSDK25ResponseValidatorDelegateP11didFailWith5errorys5Error_p_tF",
+            "moduleName": "DataDomeSDK",
+            "genericSig": "<τ_0_0 where τ_0_0 : DataDomeSDK.ResponseValidatorDelegate>",
+            "sugared_genericSig": "<Self where Self : DataDomeSDK.ResponseValidatorDelegate>",
+            "protocolReq": true,
+            "declAttributes": [
+              "RawDocComment"
+            ],
+            "reqNewWitnessTableEntry": true,
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "shouldRetry",
+            "printedName": "shouldRetry(request:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Requestable",
+                "printedName": "DataDomeSDK.Requestable",
+                "usr": "s:11DataDomeSDK11RequestableP"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "s:11DataDomeSDK25ResponseValidatorDelegateP11shouldRetry7requestyAA11Requestable_p_tF",
+            "mangledName": "$s11DataDomeSDK25ResponseValidatorDelegateP11shouldRetry7requestyAA11Requestable_p_tF",
+            "moduleName": "DataDomeSDK",
+            "genericSig": "<τ_0_0 where τ_0_0 : DataDomeSDK.ResponseValidatorDelegate>",
+            "sugared_genericSig": "<Self where Self : DataDomeSDK.ResponseValidatorDelegate>",
+            "protocolReq": true,
+            "declAttributes": [
+              "RawDocComment"
+            ],
+            "reqNewWitnessTableEntry": true,
+            "funcSelfKind": "NonMutating"
+          }
+        ],
+        "declKind": "Protocol",
+        "usr": "s:11DataDomeSDK25ResponseValidatorDelegateP",
+        "mangledName": "$s11DataDomeSDK25ResponseValidatorDelegateP",
+        "moduleName": "DataDomeSDK",
+        "genericSig": "<τ_0_0 : AnyObject>",
+        "sugared_genericSig": "<Self : AnyObject>",
+        "declAttributes": [
+          "AccessControl"
+        ]
+      },
+      {
+        "kind": "Import",
+        "name": "Foundation",
+        "printedName": "Foundation",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "TypeDecl",
+        "name": "Callback",
+        "printedName": "Callback",
+        "children": [
+          {
+            "kind": "Constructor",
+            "name": "init",
+            "printedName": "init(request:session:completion:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Callback",
+                "printedName": "DataDomeSDK.Callback",
+                "usr": "s:11DataDomeSDK8CallbackC"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "URLRequestable",
+                "printedName": "DataDomeSDK.URLRequestable",
+                "usr": "s:11DataDomeSDK14URLRequestableC"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "URLSession",
+                "printedName": "Foundation.URLSession",
+                "usr": "c:objc(cs)NSURLSession"
+              },
+              {
+                "kind": "TypeFunc",
+                "name": "Function",
+                "printedName": "(Foundation.Data?, Foundation.URLResponse?, Swift.Error?) -> ()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Void",
+                    "printedName": "()"
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Tuple",
+                    "printedName": "(Foundation.Data?, Foundation.URLResponse?, Swift.Error?)",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "Optional",
+                        "printedName": "Foundation.Data?",
+                        "children": [
+                          {
+                            "kind": "TypeNominal",
+                            "name": "Data",
+                            "printedName": "Foundation.Data",
+                            "usr": "s:10Foundation4DataV"
+                          }
+                        ],
+                        "usr": "s:Sq"
+                      },
+                      {
+                        "kind": "TypeNominal",
+                        "name": "Optional",
+                        "printedName": "Foundation.URLResponse?",
+                        "children": [
+                          {
+                            "kind": "TypeNominal",
+                            "name": "URLResponse",
+                            "printedName": "Foundation.URLResponse",
+                            "usr": "c:objc(cs)NSURLResponse"
+                          }
+                        ],
+                        "usr": "s:Sq"
+                      },
+                      {
+                        "kind": "TypeNominal",
+                        "name": "Optional",
+                        "printedName": "Swift.Error?",
+                        "children": [
+                          {
+                            "kind": "TypeNominal",
+                            "name": "Error",
+                            "printedName": "Swift.Error",
+                            "usr": "s:s5ErrorP"
+                          }
+                        ],
+                        "usr": "s:Sq"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "declKind": "Constructor",
+            "usr": "s:11DataDomeSDK8CallbackC7request7session10completionAcA14URLRequestableC_So12NSURLSessionCy10Foundation0A0VSg_So13NSURLResponseCSgs5Error_pSgtctcfc",
+            "mangledName": "$s11DataDomeSDK8CallbackC7request7session10completionAcA14URLRequestableC_So12NSURLSessionCy10Foundation0A0VSg_So13NSURLResponseCSgs5Error_pSgtctcfc",
+            "moduleName": "DataDomeSDK",
+            "declAttributes": [
+              "AccessControl",
+              "RawDocComment"
+            ],
+            "init_kind": "Designated"
+          },
+          {
+            "kind": "Constructor",
+            "name": "init",
+            "printedName": "init(request:session:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Callback",
+                "printedName": "DataDomeSDK.Callback",
+                "usr": "s:11DataDomeSDK8CallbackC"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "URLRequestable",
+                "printedName": "DataDomeSDK.URLRequestable",
+                "usr": "s:11DataDomeSDK14URLRequestableC"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "URLSession",
+                "printedName": "Foundation.URLSession",
+                "usr": "c:objc(cs)NSURLSession"
+              }
+            ],
+            "declKind": "Constructor",
+            "usr": "s:11DataDomeSDK8CallbackC7request7sessionAcA14URLRequestableC_So12NSURLSessionCtcfc",
+            "mangledName": "$s11DataDomeSDK8CallbackC7request7sessionAcA14URLRequestableC_So12NSURLSessionCtcfc",
+            "moduleName": "DataDomeSDK",
+            "declAttributes": [
+              "Convenience",
+              "AccessControl"
+            ],
+            "init_kind": "Convenience"
+          }
+        ],
+        "declKind": "Class",
+        "usr": "s:11DataDomeSDK8CallbackC",
+        "mangledName": "$s11DataDomeSDK8CallbackC",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "AccessControl",
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "Import",
+        "name": "Foundation",
+        "printedName": "Foundation",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "Import",
+        "name": "WebKit",
+        "printedName": "WebKit",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK"
+      },
+      {
+        "kind": "Import",
+        "name": "Combine",
+        "printedName": "Combine",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK"
+      },
+      {
+        "kind": "Import",
+        "name": "Foundation",
+        "printedName": "Foundation",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "Import",
+        "name": "UIKit",
+        "printedName": "UIKit",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK"
+      },
+      {
+        "kind": "Import",
+        "name": "WebKit",
+        "printedName": "WebKit",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK"
+      },
+      {
+        "kind": "Import",
+        "name": "UIKit",
+        "printedName": "UIKit",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "TypeDecl",
+        "name": "CaptchaDelegate",
+        "printedName": "CaptchaDelegate",
+        "children": [
+          {
+            "kind": "Function",
+            "name": "present",
+            "printedName": "present(captchaController:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "UIViewController",
+                "printedName": "UIKit.UIViewController",
+                "usr": "c:objc(cs)UIViewController"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "c:@M@DataDomeSDK@objc(pl)CaptchaDelegate(im)presentWithCaptchaController:",
+            "mangledName": "$s11DataDomeSDK15CaptchaDelegateP7present17captchaControllerySo06UIViewH0C_tF",
+            "moduleName": "DataDomeSDK",
+            "genericSig": "<τ_0_0 where τ_0_0 : DataDomeSDK.CaptchaDelegate>",
+            "sugared_genericSig": "<Self where Self : DataDomeSDK.CaptchaDelegate>",
+            "protocolReq": true,
+            "objc_name": "presentWithCaptchaController:",
+            "declAttributes": [
+              "ObjC",
+              "RawDocComment"
+            ],
+            "reqNewWitnessTableEntry": true,
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "dismiss",
+            "printedName": "dismiss(captchaController:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "UIViewController",
+                "printedName": "UIKit.UIViewController",
+                "usr": "c:objc(cs)UIViewController"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "c:@M@DataDomeSDK@objc(pl)CaptchaDelegate(im)dismissWithCaptchaController:",
+            "mangledName": "$s11DataDomeSDK15CaptchaDelegateP7dismiss17captchaControllerySo06UIViewH0C_tF",
+            "moduleName": "DataDomeSDK",
+            "genericSig": "<τ_0_0 where τ_0_0 : DataDomeSDK.CaptchaDelegate>",
+            "sugared_genericSig": "<Self where Self : DataDomeSDK.CaptchaDelegate>",
+            "protocolReq": true,
+            "objc_name": "dismissWithCaptchaController:",
+            "declAttributes": [
+              "ObjC",
+              "RawDocComment"
+            ],
+            "reqNewWitnessTableEntry": true,
+            "funcSelfKind": "NonMutating"
+          }
+        ],
+        "declKind": "Protocol",
+        "usr": "c:@M@DataDomeSDK@objc(pl)CaptchaDelegate",
+        "mangledName": "$s11DataDomeSDK15CaptchaDelegateP",
+        "moduleName": "DataDomeSDK",
+        "genericSig": "<τ_0_0 : AnyObject>",
+        "sugared_genericSig": "<Self : AnyObject>",
+        "declAttributes": [
+          "AccessControl",
+          "ObjC"
+        ]
+      },
+      {
+        "kind": "Import",
+        "name": "Foundation",
+        "printedName": "Foundation",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "Import",
+        "name": "Foundation",
+        "printedName": "Foundation",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "Import",
+        "name": "Foundation",
+        "printedName": "Foundation",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "Import",
+        "name": "Foundation",
+        "printedName": "Foundation",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "TypeDecl",
+        "name": "CompletionPrototype",
+        "printedName": "CompletionPrototype",
+        "children": [
+          {
+            "kind": "Constructor",
+            "name": "init",
+            "printedName": "init(data:response:error:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "CompletionPrototype",
+                "printedName": "DataDomeSDK.CompletionPrototype",
+                "usr": "s:11DataDomeSDK19CompletionPrototypeC"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Optional",
+                "printedName": "Foundation.Data?",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Data",
+                    "printedName": "Foundation.Data",
+                    "usr": "s:10Foundation4DataV"
+                  }
+                ],
+                "usr": "s:Sq"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Optional",
+                "printedName": "Foundation.URLResponse?",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "URLResponse",
+                    "printedName": "Foundation.URLResponse",
+                    "usr": "c:objc(cs)NSURLResponse"
+                  }
+                ],
+                "usr": "s:Sq"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Optional",
+                "printedName": "Swift.Error?",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Error",
+                    "printedName": "Swift.Error",
+                    "usr": "s:s5ErrorP"
+                  }
+                ],
+                "usr": "s:Sq"
+              }
+            ],
+            "declKind": "Constructor",
+            "usr": "s:11DataDomeSDK19CompletionPrototypeC4data8response5errorAC10Foundation0A0VSg_So13NSURLResponseCSgs5Error_pSgtcfc",
+            "mangledName": "$s11DataDomeSDK19CompletionPrototypeC4data8response5errorAC10Foundation0A0VSg_So13NSURLResponseCSgs5Error_pSgtcfc",
+            "moduleName": "DataDomeSDK",
+            "declAttributes": [
+              "AccessControl",
+              "RawDocComment"
+            ],
+            "init_kind": "Designated"
+          }
+        ],
+        "declKind": "Class",
+        "usr": "s:11DataDomeSDK19CompletionPrototypeC",
+        "mangledName": "$s11DataDomeSDK19CompletionPrototypeC",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "AccessControl",
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "Import",
+        "name": "Foundation",
+        "printedName": "Foundation",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "Import",
+        "name": "UIKit",
+        "printedName": "UIKit",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "Import",
+        "name": "Foundation",
+        "printedName": "Foundation",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "Import",
+        "name": "OSLog",
+        "printedName": "OSLog",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK"
+      },
+      {
+        "kind": "Import",
+        "name": "Foundation",
+        "printedName": "Foundation",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "TypeDecl",
+        "name": "FilterDelegate",
+        "printedName": "FilterDelegate",
+        "children": [
+          {
+            "kind": "Function",
+            "name": "shouldIgnore",
+            "printedName": "shouldIgnore(request:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Requestable",
+                "printedName": "DataDomeSDK.Requestable",
+                "usr": "s:11DataDomeSDK11RequestableP"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "s:11DataDomeSDK14FilterDelegateP12shouldIgnore7requestyAA11Requestable_p_tF",
+            "mangledName": "$s11DataDomeSDK14FilterDelegateP12shouldIgnore7requestyAA11Requestable_p_tF",
+            "moduleName": "DataDomeSDK",
+            "genericSig": "<τ_0_0 where τ_0_0 : DataDomeSDK.FilterDelegate>",
+            "sugared_genericSig": "<Self where Self : DataDomeSDK.FilterDelegate>",
+            "protocolReq": true,
+            "declAttributes": [
+              "RawDocComment"
+            ],
+            "reqNewWitnessTableEntry": true,
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "filter",
+            "printedName": "filter(request:didFailWith:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Requestable",
+                "printedName": "DataDomeSDK.Requestable",
+                "usr": "s:11DataDomeSDK11RequestableP"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Error",
+                "printedName": "Swift.Error",
+                "usr": "s:s5ErrorP"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "s:11DataDomeSDK14FilterDelegateP6filter7request11didFailWithyAA11Requestable_p_s5Error_ptF",
+            "mangledName": "$s11DataDomeSDK14FilterDelegateP6filter7request11didFailWithyAA11Requestable_p_s5Error_ptF",
+            "moduleName": "DataDomeSDK",
+            "genericSig": "<τ_0_0 where τ_0_0 : DataDomeSDK.FilterDelegate>",
+            "sugared_genericSig": "<Self where Self : DataDomeSDK.FilterDelegate>",
+            "protocolReq": true,
+            "declAttributes": [
+              "RawDocComment"
+            ],
+            "reqNewWitnessTableEntry": true,
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "filter",
+            "printedName": "filter(request:didResolveCaptcha:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Requestable",
+                "printedName": "DataDomeSDK.Requestable",
+                "usr": "s:11DataDomeSDK11RequestableP"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "s:11DataDomeSDK14FilterDelegateP6filter7request17didResolveCaptchayAA11Requestable_p_SStF",
+            "mangledName": "$s11DataDomeSDK14FilterDelegateP6filter7request17didResolveCaptchayAA11Requestable_p_SStF",
+            "moduleName": "DataDomeSDK",
+            "genericSig": "<τ_0_0 where τ_0_0 : DataDomeSDK.FilterDelegate>",
+            "sugared_genericSig": "<Self where Self : DataDomeSDK.FilterDelegate>",
+            "protocolReq": true,
+            "declAttributes": [
+              "RawDocComment"
+            ],
+            "reqNewWitnessTableEntry": true,
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "shouldRetry",
+            "printedName": "shouldRetry(request:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Requestable",
+                "printedName": "DataDomeSDK.Requestable",
+                "usr": "s:11DataDomeSDK11RequestableP"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "s:11DataDomeSDK14FilterDelegateP11shouldRetry7requestyAA11Requestable_p_tF",
+            "mangledName": "$s11DataDomeSDK14FilterDelegateP11shouldRetry7requestyAA11Requestable_p_tF",
+            "moduleName": "DataDomeSDK",
+            "genericSig": "<τ_0_0 where τ_0_0 : DataDomeSDK.FilterDelegate>",
+            "sugared_genericSig": "<Self where Self : DataDomeSDK.FilterDelegate>",
+            "protocolReq": true,
+            "declAttributes": [
+              "RawDocComment"
+            ],
+            "reqNewWitnessTableEntry": true,
+            "funcSelfKind": "NonMutating"
+          }
+        ],
+        "declKind": "Protocol",
+        "usr": "s:11DataDomeSDK14FilterDelegateP",
+        "mangledName": "$s11DataDomeSDK14FilterDelegateP",
+        "moduleName": "DataDomeSDK",
+        "genericSig": "<τ_0_0 : AnyObject>",
+        "sugared_genericSig": "<Self : AnyObject>",
+        "declAttributes": [
+          "AccessControl"
+        ]
+      },
+      {
+        "kind": "Import",
+        "name": "Foundation",
+        "printedName": "Foundation",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "TypeDecl",
+        "name": "Requestable",
+        "printedName": "Requestable",
+        "children": [
+          {
+            "kind": "Var",
+            "name": "url",
+            "printedName": "url",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Optional",
+                "printedName": "Foundation.URL?",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "URL",
+                    "printedName": "Foundation.URL",
+                    "usr": "s:10Foundation3URLV"
+                  }
+                ],
+                "usr": "s:Sq"
+              }
+            ],
+            "declKind": "Var",
+            "usr": "s:11DataDomeSDK11RequestableP3url10Foundation3URLVSgvp",
+            "mangledName": "$s11DataDomeSDK11RequestableP3url10Foundation3URLVSgvp",
+            "moduleName": "DataDomeSDK",
+            "protocolReq": true,
+            "accessors": [
+              {
+                "kind": "Accessor",
+                "name": "Get",
+                "printedName": "Get()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Optional",
+                    "printedName": "Foundation.URL?",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "URL",
+                        "printedName": "Foundation.URL",
+                        "usr": "s:10Foundation3URLV"
+                      }
+                    ],
+                    "usr": "s:Sq"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:11DataDomeSDK11RequestableP3url10Foundation3URLVSgvg",
+                "mangledName": "$s11DataDomeSDK11RequestableP3url10Foundation3URLVSgvg",
+                "moduleName": "DataDomeSDK",
+                "genericSig": "<τ_0_0 where τ_0_0 : DataDomeSDK.Requestable>",
+                "sugared_genericSig": "<Self where Self : DataDomeSDK.Requestable>",
+                "protocolReq": true,
+                "reqNewWitnessTableEntry": true,
+                "accessorKind": "get"
+              }
+            ]
+          },
+          {
+            "kind": "Function",
+            "name": "header",
+            "printedName": "header(forField:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Optional",
+                "printedName": "Swift.String?",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "String",
+                    "printedName": "Swift.String",
+                    "usr": "s:SS"
+                  }
+                ],
+                "usr": "s:Sq"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "s:11DataDomeSDK11RequestableP6header8forFieldSSSgSS_tF",
+            "mangledName": "$s11DataDomeSDK11RequestableP6header8forFieldSSSgSS_tF",
+            "moduleName": "DataDomeSDK",
+            "genericSig": "<τ_0_0 where τ_0_0 : DataDomeSDK.Requestable>",
+            "sugared_genericSig": "<Self where Self : DataDomeSDK.Requestable>",
+            "protocolReq": true,
+            "reqNewWitnessTableEntry": true,
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "uniqueIdentifier",
+            "printedName": "uniqueIdentifier()",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "s:11DataDomeSDK11RequestableP16uniqueIdentifierSSyF",
+            "mangledName": "$s11DataDomeSDK11RequestableP16uniqueIdentifierSSyF",
+            "moduleName": "DataDomeSDK",
+            "genericSig": "<τ_0_0 where τ_0_0 : DataDomeSDK.Requestable>",
+            "sugared_genericSig": "<Self where Self : DataDomeSDK.Requestable>",
+            "protocolReq": true,
+            "reqNewWitnessTableEntry": true,
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "uniqueIdentifier",
+            "printedName": "uniqueIdentifier()",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "s:11DataDomeSDK11RequestablePAAE16uniqueIdentifierSSyF",
+            "mangledName": "$s11DataDomeSDK11RequestablePAAE16uniqueIdentifierSSyF",
+            "moduleName": "DataDomeSDK",
+            "genericSig": "<τ_0_0 where τ_0_0 : DataDomeSDK.Requestable>",
+            "sugared_genericSig": "<Self where Self : DataDomeSDK.Requestable>",
+            "isFromExtension": true,
+            "funcSelfKind": "NonMutating"
+          }
+        ],
+        "declKind": "Protocol",
+        "usr": "s:11DataDomeSDK11RequestableP",
+        "mangledName": "$s11DataDomeSDK11RequestableP",
+        "moduleName": "DataDomeSDK",
+        "genericSig": "<τ_0_0 : AnyObject>",
+        "sugared_genericSig": "<Self : AnyObject>",
+        "declAttributes": [
+          "AccessControl"
+        ]
+      },
+      {
+        "kind": "Import",
+        "name": "Foundation",
+        "printedName": "Foundation",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "TypeDecl",
+        "name": "CacheManager",
+        "printedName": "CacheManager",
+        "children": [
+          {
+            "kind": "Var",
+            "name": "shared",
+            "printedName": "shared",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "CacheManager",
+                "printedName": "DataDomeSDK.CacheManager",
+                "usr": "s:11DataDomeSDK12CacheManagerC"
+              }
+            ],
+            "declKind": "Var",
+            "usr": "s:11DataDomeSDK12CacheManagerC6sharedACvpZ",
+            "mangledName": "$s11DataDomeSDK12CacheManagerC6sharedACvpZ",
+            "moduleName": "DataDomeSDK",
+            "static": true,
+            "declAttributes": [
+              "HasInitialValue",
+              "Final",
+              "HasStorage",
+              "AccessControl",
+              "RawDocComment"
+            ],
+            "isLet": true,
+            "hasStorage": true,
+            "accessors": [
+              {
+                "kind": "Accessor",
+                "name": "Get",
+                "printedName": "Get()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "CacheManager",
+                    "printedName": "DataDomeSDK.CacheManager",
+                    "usr": "s:11DataDomeSDK12CacheManagerC"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:11DataDomeSDK12CacheManagerC6sharedACvgZ",
+                "mangledName": "$s11DataDomeSDK12CacheManagerC6sharedACvgZ",
+                "moduleName": "DataDomeSDK",
+                "static": true,
+                "implicit": true,
+                "declAttributes": [
+                  "Final"
+                ],
+                "accessorKind": "get"
+              }
+            ]
+          },
+          {
+            "kind": "Var",
+            "name": "cookie",
+            "printedName": "cookie",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Optional",
+                "printedName": "Foundation.HTTPCookie?",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "HTTPCookie",
+                    "printedName": "Foundation.HTTPCookie",
+                    "usr": "c:objc(cs)NSHTTPCookie"
+                  }
+                ],
+                "usr": "s:Sq"
+              }
+            ],
+            "declKind": "Var",
+            "usr": "s:11DataDomeSDK12CacheManagerC6cookieSo12NSHTTPCookieCSgvp",
+            "mangledName": "$s11DataDomeSDK12CacheManagerC6cookieSo12NSHTTPCookieCSgvp",
+            "moduleName": "DataDomeSDK",
+            "declAttributes": [
+              "HasInitialValue",
+              "HasStorage",
+              "AccessControl",
+              "RawDocComment"
+            ],
+            "hasStorage": true,
+            "accessors": [
+              {
+                "kind": "Accessor",
+                "name": "Get",
+                "printedName": "Get()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Optional",
+                    "printedName": "Foundation.HTTPCookie?",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "HTTPCookie",
+                        "printedName": "Foundation.HTTPCookie",
+                        "usr": "c:objc(cs)NSHTTPCookie"
+                      }
+                    ],
+                    "usr": "s:Sq"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:11DataDomeSDK12CacheManagerC6cookieSo12NSHTTPCookieCSgvg",
+                "mangledName": "$s11DataDomeSDK12CacheManagerC6cookieSo12NSHTTPCookieCSgvg",
+                "moduleName": "DataDomeSDK",
+                "implicit": true,
+                "accessorKind": "get"
+              },
+              {
+                "kind": "Accessor",
+                "name": "Set",
+                "printedName": "Set()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Void",
+                    "printedName": "()"
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Optional",
+                    "printedName": "Foundation.HTTPCookie?",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "HTTPCookie",
+                        "printedName": "Foundation.HTTPCookie",
+                        "usr": "c:objc(cs)NSHTTPCookie"
+                      }
+                    ],
+                    "usr": "s:Sq"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:11DataDomeSDK12CacheManagerC6cookieSo12NSHTTPCookieCSgvs",
+                "mangledName": "$s11DataDomeSDK12CacheManagerC6cookieSo12NSHTTPCookieCSgvs",
+                "moduleName": "DataDomeSDK",
+                "implicit": true,
+                "accessorKind": "set"
+              },
+              {
+                "kind": "Accessor",
+                "name": "Modify",
+                "printedName": "Modify()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Void",
+                    "printedName": "()"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:11DataDomeSDK12CacheManagerC6cookieSo12NSHTTPCookieCSgvM",
+                "mangledName": "$s11DataDomeSDK12CacheManagerC6cookieSo12NSHTTPCookieCSgvM",
+                "moduleName": "DataDomeSDK",
+                "implicit": true,
+                "accessorKind": "_modify"
+              }
+            ]
+          },
+          {
+            "kind": "Function",
+            "name": "store",
+            "printedName": "store(_:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "HTTPCookie",
+                "printedName": "Foundation.HTTPCookie",
+                "usr": "c:objc(cs)NSHTTPCookie"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "s:11DataDomeSDK12CacheManagerC5storeyySo12NSHTTPCookieCF",
+            "mangledName": "$s11DataDomeSDK12CacheManagerC5storeyySo12NSHTTPCookieCF",
+            "moduleName": "DataDomeSDK",
+            "declAttributes": [
+              "AccessControl",
+              "RawDocComment"
+            ],
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "cookie",
+            "printedName": "cookie(from:for:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Optional",
+                "printedName": "Foundation.HTTPCookie?",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "HTTPCookie",
+                    "printedName": "Foundation.HTTPCookie",
+                    "usr": "c:objc(cs)NSHTTPCookie"
+                  }
+                ],
+                "usr": "s:Sq"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "s:11DataDomeSDK12CacheManagerC6cookie4from3forSo12NSHTTPCookieCSgSS_SStF",
+            "mangledName": "$s11DataDomeSDK12CacheManagerC6cookie4from3forSo12NSHTTPCookieCSgSS_SStF",
+            "moduleName": "DataDomeSDK",
+            "declAttributes": [
+              "AccessControl",
+              "RawDocComment"
+            ],
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "cache",
+            "printedName": "cache(callback:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Callback",
+                "printedName": "DataDomeSDK.Callback",
+                "usr": "s:11DataDomeSDK8CallbackC"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "s:11DataDomeSDK12CacheManagerC5cache8callbackyAA8CallbackC_tF",
+            "mangledName": "$s11DataDomeSDK12CacheManagerC5cache8callbackyAA8CallbackC_tF",
+            "moduleName": "DataDomeSDK",
+            "declAttributes": [
+              "AccessControl",
+              "RawDocComment"
+            ],
+            "funcSelfKind": "NonMutating"
+          }
+        ],
+        "declKind": "Class",
+        "usr": "s:11DataDomeSDK12CacheManagerC",
+        "mangledName": "$s11DataDomeSDK12CacheManagerC",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "AccessControl",
+          "RawDocComment"
+        ],
+        "hasMissingDesignatedInitializers": true
+      },
+      {
+        "kind": "Import",
+        "name": "Foundation",
+        "printedName": "Foundation",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "Import",
+        "name": "Foundation",
+        "printedName": "Foundation",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "TypeDecl",
+        "name": "ResponseFilter",
+        "printedName": "ResponseFilter",
+        "children": [
+          {
+            "kind": "Constructor",
+            "name": "init",
+            "printedName": "init(request:session:prototype:filterDelegate:captchaDelegate:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "ResponseFilter",
+                "printedName": "DataDomeSDK.ResponseFilter",
+                "usr": "s:11DataDomeSDK14ResponseFilterC"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Requestable",
+                "printedName": "DataDomeSDK.Requestable",
+                "usr": "s:11DataDomeSDK11RequestableP"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "URLSession",
+                "printedName": "Foundation.URLSession",
+                "usr": "c:objc(cs)NSURLSession"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "CompletionPrototype",
+                "printedName": "DataDomeSDK.CompletionPrototype",
+                "usr": "s:11DataDomeSDK19CompletionPrototypeC"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Optional",
+                "printedName": "DataDomeSDK.FilterDelegate?",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "FilterDelegate",
+                    "printedName": "DataDomeSDK.FilterDelegate",
+                    "usr": "s:11DataDomeSDK14FilterDelegateP"
+                  }
+                ],
+                "hasDefaultArg": true,
+                "usr": "s:Sq"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Optional",
+                "printedName": "DataDomeSDK.CaptchaDelegate?",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "CaptchaDelegate",
+                    "printedName": "DataDomeSDK.CaptchaDelegate",
+                    "usr": "c:@M@DataDomeSDK@objc(pl)CaptchaDelegate"
+                  }
+                ],
+                "hasDefaultArg": true,
+                "usr": "s:Sq"
+              }
+            ],
+            "declKind": "Constructor",
+            "usr": "s:11DataDomeSDK14ResponseFilterC7request7session9prototype14filterDelegate07captchaJ0AcA11Requestable_p_So12NSURLSessionCAA19CompletionPrototypeCAA0eJ0_pSgAA07CaptchaJ0_pSgtcfc",
+            "mangledName": "$s11DataDomeSDK14ResponseFilterC7request7session9prototype14filterDelegate07captchaJ0AcA11Requestable_p_So12NSURLSessionCAA19CompletionPrototypeCAA0eJ0_pSgAA07CaptchaJ0_pSgtcfc",
+            "moduleName": "DataDomeSDK",
+            "declAttributes": [
+              "Required",
+              "AccessControl",
+              "RawDocComment"
+            ],
+            "init_kind": "Designated"
+          },
+          {
+            "kind": "Function",
+            "name": "validate",
+            "printedName": "validate(mode:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "IntegrationMode",
+                "printedName": "DataDomeSDK.IntegrationMode",
+                "usr": "s:11DataDomeSDK15IntegrationModeO"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "s:11DataDomeSDK14ResponseFilterC8validate4modeyAA15IntegrationModeO_tF",
+            "mangledName": "$s11DataDomeSDK14ResponseFilterC8validate4modeyAA15IntegrationModeO_tF",
+            "moduleName": "DataDomeSDK",
+            "declAttributes": [
+              "AccessControl",
+              "RawDocComment"
+            ],
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "shouldIgnore",
+            "printedName": "shouldIgnore(request:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Requestable",
+                "printedName": "DataDomeSDK.Requestable",
+                "usr": "s:11DataDomeSDK11RequestableP"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "s:11DataDomeSDK14ResponseFilterC12shouldIgnore7requestyAA11Requestable_p_tF",
+            "mangledName": "$s11DataDomeSDK14ResponseFilterC12shouldIgnore7requestyAA11Requestable_p_tF",
+            "moduleName": "DataDomeSDK",
+            "declAttributes": [
+              "AccessControl"
+            ],
+            "isFromExtension": true,
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "filter",
+            "printedName": "filter(request:didFailWith:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Requestable",
+                "printedName": "DataDomeSDK.Requestable",
+                "usr": "s:11DataDomeSDK11RequestableP"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Error",
+                "printedName": "Swift.Error",
+                "usr": "s:s5ErrorP"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "s:11DataDomeSDK14ResponseFilterC6filter7request11didFailWithyAA11Requestable_p_s5Error_ptF",
+            "mangledName": "$s11DataDomeSDK14ResponseFilterC6filter7request11didFailWithyAA11Requestable_p_s5Error_ptF",
+            "moduleName": "DataDomeSDK",
+            "declAttributes": [
+              "AccessControl"
+            ],
+            "isFromExtension": true,
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "filter",
+            "printedName": "filter(request:didResolveCaptcha:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Requestable",
+                "printedName": "DataDomeSDK.Requestable",
+                "usr": "s:11DataDomeSDK11RequestableP"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "s:11DataDomeSDK14ResponseFilterC6filter7request17didResolveCaptchayAA11Requestable_p_SStF",
+            "mangledName": "$s11DataDomeSDK14ResponseFilterC6filter7request17didResolveCaptchayAA11Requestable_p_SStF",
+            "moduleName": "DataDomeSDK",
+            "declAttributes": [
+              "AccessControl"
+            ],
+            "isFromExtension": true,
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "shouldRetry",
+            "printedName": "shouldRetry(request:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Requestable",
+                "printedName": "DataDomeSDK.Requestable",
+                "usr": "s:11DataDomeSDK11RequestableP"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "s:11DataDomeSDK14ResponseFilterC11shouldRetry7requestyAA11Requestable_p_tF",
+            "mangledName": "$s11DataDomeSDK14ResponseFilterC11shouldRetry7requestyAA11Requestable_p_tF",
+            "moduleName": "DataDomeSDK",
+            "declAttributes": [
+              "AccessControl"
+            ],
+            "isFromExtension": true,
+            "funcSelfKind": "NonMutating"
+          }
+        ],
+        "declKind": "Class",
+        "usr": "s:11DataDomeSDK14ResponseFilterC",
+        "mangledName": "$s11DataDomeSDK14ResponseFilterC",
+        "moduleName": "DataDomeSDK",
+        "isOpen": true,
+        "declAttributes": [
+          "AccessControl"
+        ],
+        "conformances": [
+          {
+            "kind": "Conformance",
+            "name": "FilterDelegate",
+            "printedName": "FilterDelegate",
+            "usr": "s:11DataDomeSDK14FilterDelegateP",
+            "mangledName": "$s11DataDomeSDK14FilterDelegateP"
+          }
+        ]
+      },
+      {
+        "kind": "Import",
+        "name": "Foundation",
+        "printedName": "Foundation",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "Import",
+        "name": "UIKit",
+        "printedName": "UIKit",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "Import",
+        "name": "Foundation",
+        "printedName": "Foundation",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "TypeDecl",
+        "name": "DataDomeResponse",
+        "printedName": "DataDomeResponse",
+        "children": [
+          {
+            "kind": "Constructor",
+            "name": "init",
+            "printedName": "init(from:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "DataDomeResponse",
+                "printedName": "DataDomeSDK.DataDomeResponse",
+                "usr": "s:11DataDomeSDK0aB8ResponseV"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Decoder",
+                "printedName": "Swift.Decoder",
+                "usr": "s:s7DecoderP"
+              }
+            ],
+            "declKind": "Constructor",
+            "usr": "s:11DataDomeSDK0aB8ResponseV4fromACs7Decoder_p_tKcfc",
+            "mangledName": "$s11DataDomeSDK0aB8ResponseV4fromACs7Decoder_p_tKcfc",
+            "moduleName": "DataDomeSDK",
+            "implicit": true,
+            "throwing": true,
+            "init_kind": "Designated"
+          },
+          {
+            "kind": "Function",
+            "name": "encode",
+            "printedName": "encode(to:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Encoder",
+                "printedName": "Swift.Encoder",
+                "usr": "s:s7EncoderP"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "s:11DataDomeSDK0aB8ResponseV6encode2toys7Encoder_p_tKF",
+            "mangledName": "$s11DataDomeSDK0aB8ResponseV6encode2toys7Encoder_p_tKF",
+            "moduleName": "DataDomeSDK",
+            "implicit": true,
+            "throwing": true,
+            "funcSelfKind": "NonMutating"
+          }
+        ],
+        "declKind": "Struct",
+        "usr": "s:11DataDomeSDK0aB8ResponseV",
+        "mangledName": "$s11DataDomeSDK0aB8ResponseV",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "AccessControl",
+          "RawDocComment"
+        ],
+        "conformances": [
+          {
+            "kind": "Conformance",
+            "name": "Decodable",
+            "printedName": "Decodable",
+            "usr": "s:Se",
+            "mangledName": "$sSe"
+          },
+          {
+            "kind": "Conformance",
+            "name": "Encodable",
+            "printedName": "Encodable",
+            "usr": "s:SE",
+            "mangledName": "$sSE"
+          }
+        ]
+      },
+      {
+        "kind": "Import",
+        "name": "Foundation",
+        "printedName": "Foundation",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "TypeDecl",
+        "name": "EventTracker",
+        "printedName": "EventTracker",
+        "children": [
+          {
+            "kind": "Var",
+            "name": "shared",
+            "printedName": "shared",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "EventTracker",
+                "printedName": "DataDomeSDK.EventTracker",
+                "usr": "s:11DataDomeSDK12EventTrackerC"
+              }
+            ],
+            "declKind": "Var",
+            "usr": "s:11DataDomeSDK12EventTrackerC6sharedACvpZ",
+            "mangledName": "$s11DataDomeSDK12EventTrackerC6sharedACvpZ",
+            "moduleName": "DataDomeSDK",
+            "static": true,
+            "declAttributes": [
+              "HasInitialValue",
+              "Final",
+              "HasStorage",
+              "AccessControl",
+              "RawDocComment"
+            ],
+            "isLet": true,
+            "hasStorage": true,
+            "accessors": [
+              {
+                "kind": "Accessor",
+                "name": "Get",
+                "printedName": "Get()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "EventTracker",
+                    "printedName": "DataDomeSDK.EventTracker",
+                    "usr": "s:11DataDomeSDK12EventTrackerC"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:11DataDomeSDK12EventTrackerC6sharedACvgZ",
+                "mangledName": "$s11DataDomeSDK12EventTrackerC6sharedACvgZ",
+                "moduleName": "DataDomeSDK",
+                "static": true,
+                "implicit": true,
+                "declAttributes": [
+                  "Final"
+                ],
+                "accessorKind": "get"
+              }
+            ]
+          },
+          {
+            "kind": "Function",
+            "name": "log",
+            "printedName": "log(request:integrationMode:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Optional",
+                "printedName": "DataDomeSDK.Requestable?",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Requestable",
+                    "printedName": "DataDomeSDK.Requestable",
+                    "usr": "s:11DataDomeSDK11RequestableP"
+                  }
+                ],
+                "usr": "s:Sq"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "IntegrationMode",
+                "printedName": "DataDomeSDK.IntegrationMode",
+                "usr": "s:11DataDomeSDK15IntegrationModeO"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "s:11DataDomeSDK12EventTrackerC3log7request15integrationModeyAA11Requestable_pSg_AA011IntegrationI0OtF",
+            "mangledName": "$s11DataDomeSDK12EventTrackerC3log7request15integrationModeyAA11Requestable_pSg_AA011IntegrationI0OtF",
+            "moduleName": "DataDomeSDK",
+            "declAttributes": [
+              "Final",
+              "AccessControl",
+              "RawDocComment"
+            ],
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "log",
+            "printedName": "log(_:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "EventType",
+                "printedName": "DataDomeSDK.EventType",
+                "usr": "s:11DataDomeSDK9EventTypeO"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "s:11DataDomeSDK12EventTrackerC3logyyAA0D4TypeOF",
+            "mangledName": "$s11DataDomeSDK12EventTrackerC3logyyAA0D4TypeOF",
+            "moduleName": "DataDomeSDK",
+            "declAttributes": [
+              "Final",
+              "AccessControl",
+              "RawDocComment"
+            ],
+            "funcSelfKind": "NonMutating"
+          }
+        ],
+        "declKind": "Class",
+        "usr": "s:11DataDomeSDK12EventTrackerC",
+        "mangledName": "$s11DataDomeSDK12EventTrackerC",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "Final",
+          "AccessControl",
+          "RawDocComment"
+        ],
+        "hasMissingDesignatedInitializers": true
+      },
+      {
+        "kind": "Import",
+        "name": "Foundation",
+        "printedName": "Foundation",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "Import",
+        "name": "UIKit",
+        "printedName": "UIKit",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "Import",
+        "name": "WebKit",
+        "printedName": "WebKit",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK"
+      },
+      {
+        "kind": "Import",
+        "name": "Foundation",
+        "printedName": "Foundation",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "TypeDecl",
+        "name": "URLRequestable",
+        "printedName": "URLRequestable",
+        "children": [
+          {
+            "kind": "Var",
+            "name": "url",
+            "printedName": "url",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Optional",
+                "printedName": "Foundation.URL?",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "URL",
+                    "printedName": "Foundation.URL",
+                    "usr": "s:10Foundation3URLV"
+                  }
+                ],
+                "usr": "s:Sq"
+              }
+            ],
+            "declKind": "Var",
+            "usr": "s:11DataDomeSDK14URLRequestableC3url10Foundation3URLVSgvp",
+            "mangledName": "$s11DataDomeSDK14URLRequestableC3url10Foundation3URLVSgvp",
+            "moduleName": "DataDomeSDK",
+            "declAttributes": [
+              "AccessControl"
+            ],
+            "isFromExtension": true,
+            "accessors": [
+              {
+                "kind": "Accessor",
+                "name": "Get",
+                "printedName": "Get()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Optional",
+                    "printedName": "Foundation.URL?",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "URL",
+                        "printedName": "Foundation.URL",
+                        "usr": "s:10Foundation3URLV"
+                      }
+                    ],
+                    "usr": "s:Sq"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:11DataDomeSDK14URLRequestableC3url10Foundation3URLVSgvg",
+                "mangledName": "$s11DataDomeSDK14URLRequestableC3url10Foundation3URLVSgvg",
+                "moduleName": "DataDomeSDK",
+                "isFromExtension": true,
+                "accessorKind": "get"
+              }
+            ]
+          },
+          {
+            "kind": "Function",
+            "name": "header",
+            "printedName": "header(forField:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Optional",
+                "printedName": "Swift.String?",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "String",
+                    "printedName": "Swift.String",
+                    "usr": "s:SS"
+                  }
+                ],
+                "usr": "s:Sq"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "s:11DataDomeSDK14URLRequestableC6header8forFieldSSSgSS_tF",
+            "mangledName": "$s11DataDomeSDK14URLRequestableC6header8forFieldSSSgSS_tF",
+            "moduleName": "DataDomeSDK",
+            "declAttributes": [
+              "AccessControl"
+            ],
+            "isFromExtension": true,
+            "funcSelfKind": "NonMutating"
+          }
+        ],
+        "declKind": "Class",
+        "usr": "s:11DataDomeSDK14URLRequestableC",
+        "mangledName": "$s11DataDomeSDK14URLRequestableC",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "AccessControl"
+        ],
+        "hasMissingDesignatedInitializers": true,
+        "conformances": [
+          {
+            "kind": "Conformance",
+            "name": "Requestable",
+            "printedName": "Requestable",
+            "usr": "s:11DataDomeSDK11RequestableP",
+            "mangledName": "$s11DataDomeSDK11RequestableP"
+          }
+        ]
+      },
+      {
+        "kind": "Import",
+        "name": "Foundation",
+        "printedName": "Foundation",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "TypeDecl",
+        "name": "SynchronizedDictionary",
+        "printedName": "SynchronizedDictionary",
+        "children": [
+          {
+            "kind": "Constructor",
+            "name": "init",
+            "printedName": "init()",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "SynchronizedDictionary",
+                "printedName": "DataDomeSDK.SynchronizedDictionary<τ_0_0, τ_0_1>",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "GenericTypeParam",
+                    "printedName": "τ_0_0"
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "GenericTypeParam",
+                    "printedName": "τ_0_1"
+                  }
+                ],
+                "usr": "s:11DataDomeSDK22SynchronizedDictionaryC"
+              }
+            ],
+            "declKind": "Constructor",
+            "usr": "s:11DataDomeSDK22SynchronizedDictionaryCACyxq_Gycfc",
+            "mangledName": "$s11DataDomeSDK22SynchronizedDictionaryCACyxq_Gycfc",
+            "moduleName": "DataDomeSDK",
+            "genericSig": "<τ_0_0, τ_0_1 where τ_0_0 : Swift.Hashable>",
+            "sugared_genericSig": "<T, Element where T : Swift.Hashable>",
+            "declAttributes": [
+              "AccessControl"
+            ],
+            "init_kind": "Designated"
+          },
+          {
+            "kind": "Constructor",
+            "name": "init",
+            "printedName": "init(_:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "SynchronizedDictionary",
+                "printedName": "DataDomeSDK.SynchronizedDictionary<τ_0_0, τ_0_1>",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "GenericTypeParam",
+                    "printedName": "τ_0_0"
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "GenericTypeParam",
+                    "printedName": "τ_0_1"
+                  }
+                ],
+                "usr": "s:11DataDomeSDK22SynchronizedDictionaryC"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Dictionary",
+                "printedName": "[τ_0_0 : τ_0_1]",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "GenericTypeParam",
+                    "printedName": "τ_0_0"
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "GenericTypeParam",
+                    "printedName": "τ_0_1"
+                  }
+                ],
+                "usr": "s:SD"
+              }
+            ],
+            "declKind": "Constructor",
+            "usr": "s:11DataDomeSDK22SynchronizedDictionaryCyACyxq_GSDyxq_Gcfc",
+            "mangledName": "$s11DataDomeSDK22SynchronizedDictionaryCyACyxq_GSDyxq_Gcfc",
+            "moduleName": "DataDomeSDK",
+            "genericSig": "<τ_0_0, τ_0_1 where τ_0_0 : Swift.Hashable>",
+            "sugared_genericSig": "<T, Element where T : Swift.Hashable>",
+            "declAttributes": [
+              "Convenience",
+              "AccessControl"
+            ],
+            "init_kind": "Convenience"
+          },
+          {
+            "kind": "Var",
+            "name": "dictionary",
+            "printedName": "dictionary",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Dictionary",
+                "printedName": "[τ_0_0 : τ_0_1]",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "GenericTypeParam",
+                    "printedName": "τ_0_0"
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "GenericTypeParam",
+                    "printedName": "τ_0_1"
+                  }
+                ],
+                "usr": "s:SD"
+              }
+            ],
+            "declKind": "Var",
+            "usr": "s:11DataDomeSDK22SynchronizedDictionaryC10dictionarySDyxq_Gvp",
+            "mangledName": "$s11DataDomeSDK22SynchronizedDictionaryC10dictionarySDyxq_Gvp",
+            "moduleName": "DataDomeSDK",
+            "declAttributes": [
+              "AccessControl"
+            ],
+            "accessors": [
+              {
+                "kind": "Accessor",
+                "name": "Get",
+                "printedName": "Get()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Dictionary",
+                    "printedName": "[τ_0_0 : τ_0_1]",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "GenericTypeParam",
+                        "printedName": "τ_0_0"
+                      },
+                      {
+                        "kind": "TypeNominal",
+                        "name": "GenericTypeParam",
+                        "printedName": "τ_0_1"
+                      }
+                    ],
+                    "usr": "s:SD"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:11DataDomeSDK22SynchronizedDictionaryC10dictionarySDyxq_Gvg",
+                "mangledName": "$s11DataDomeSDK22SynchronizedDictionaryC10dictionarySDyxq_Gvg",
+                "moduleName": "DataDomeSDK",
+                "genericSig": "<τ_0_0, τ_0_1 where τ_0_0 : Swift.Hashable>",
+                "sugared_genericSig": "<T, Element where T : Swift.Hashable>",
+                "accessorKind": "get"
+              }
+            ]
+          },
+          {
+            "kind": "Subscript",
+            "name": "subscript",
+            "printedName": "subscript(_:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Optional",
+                "printedName": "τ_0_1?",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "GenericTypeParam",
+                    "printedName": "τ_0_1"
+                  }
+                ],
+                "usr": "s:Sq"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "GenericTypeParam",
+                "printedName": "τ_0_0"
+              }
+            ],
+            "declKind": "Subscript",
+            "usr": "s:11DataDomeSDK22SynchronizedDictionaryCyq_Sgxcip",
+            "mangledName": "$s11DataDomeSDK22SynchronizedDictionaryCyq_Sgxcip",
+            "moduleName": "DataDomeSDK",
+            "genericSig": "<τ_0_0, τ_0_1 where τ_0_0 : Swift.Hashable>",
+            "sugared_genericSig": "<T, Element where T : Swift.Hashable>",
+            "declAttributes": [
+              "RawDocComment"
+            ],
+            "isFromExtension": true,
+            "accessors": [
+              {
+                "kind": "Accessor",
+                "name": "Get",
+                "printedName": "Get()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Optional",
+                    "printedName": "τ_0_1?",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "GenericTypeParam",
+                        "printedName": "τ_0_1"
+                      }
+                    ],
+                    "usr": "s:Sq"
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "GenericTypeParam",
+                    "printedName": "τ_0_0"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:11DataDomeSDK22SynchronizedDictionaryCyq_Sgxcig",
+                "mangledName": "$s11DataDomeSDK22SynchronizedDictionaryCyq_Sgxcig",
+                "moduleName": "DataDomeSDK",
+                "genericSig": "<τ_0_0, τ_0_1 where τ_0_0 : Swift.Hashable>",
+                "sugared_genericSig": "<T, Element where T : Swift.Hashable>",
+                "isFromExtension": true,
+                "accessorKind": "get"
+              },
+              {
+                "kind": "Accessor",
+                "name": "Set",
+                "printedName": "Set()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Void",
+                    "printedName": "()"
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Optional",
+                    "printedName": "τ_0_1?",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "GenericTypeParam",
+                        "printedName": "τ_0_1"
+                      }
+                    ],
+                    "usr": "s:Sq"
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "GenericTypeParam",
+                    "printedName": "τ_0_0"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:11DataDomeSDK22SynchronizedDictionaryCyq_Sgxcis",
+                "mangledName": "$s11DataDomeSDK22SynchronizedDictionaryCyq_Sgxcis",
+                "moduleName": "DataDomeSDK",
+                "genericSig": "<τ_0_0, τ_0_1 where τ_0_0 : Swift.Hashable>",
+                "sugared_genericSig": "<T, Element where T : Swift.Hashable>",
+                "isFromExtension": true,
+                "accessorKind": "set"
+              },
+              {
+                "kind": "Accessor",
+                "name": "Modify",
+                "printedName": "Modify()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Void",
+                    "printedName": "()"
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "GenericTypeParam",
+                    "printedName": "τ_0_0"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:11DataDomeSDK22SynchronizedDictionaryCyq_SgxciM",
+                "mangledName": "$s11DataDomeSDK22SynchronizedDictionaryCyq_SgxciM",
+                "moduleName": "DataDomeSDK",
+                "genericSig": "<τ_0_0, τ_0_1 where τ_0_0 : Swift.Hashable>",
+                "sugared_genericSig": "<T, Element where T : Swift.Hashable>",
+                "implicit": true,
+                "isFromExtension": true,
+                "accessorKind": "_modify"
+              }
+            ]
+          },
+          {
+            "kind": "Function",
+            "name": "removeValue",
+            "printedName": "removeValue(forKey:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "GenericTypeParam",
+                "printedName": "τ_0_0"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "s:11DataDomeSDK22SynchronizedDictionaryC11removeValue6forKeyyx_tF",
+            "mangledName": "$s11DataDomeSDK22SynchronizedDictionaryC11removeValue6forKeyyx_tF",
+            "moduleName": "DataDomeSDK",
+            "genericSig": "<τ_0_0, τ_0_1 where τ_0_0 : Swift.Hashable>",
+            "sugared_genericSig": "<T, Element where T : Swift.Hashable>",
+            "declAttributes": [
+              "RawDocComment"
+            ],
+            "isFromExtension": true,
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "removeAll",
+            "printedName": "removeAll()",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "s:11DataDomeSDK22SynchronizedDictionaryC9removeAllyyF",
+            "mangledName": "$s11DataDomeSDK22SynchronizedDictionaryC9removeAllyyF",
+            "moduleName": "DataDomeSDK",
+            "genericSig": "<τ_0_0, τ_0_1 where τ_0_0 : Swift.Hashable>",
+            "sugared_genericSig": "<T, Element where T : Swift.Hashable>",
+            "isFromExtension": true,
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Var",
+            "name": "keys",
+            "printedName": "keys",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Array",
+                "printedName": "[τ_0_0]",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "GenericTypeParam",
+                    "printedName": "τ_0_0"
+                  }
+                ],
+                "usr": "s:Sa"
+              }
+            ],
+            "declKind": "Var",
+            "usr": "s:11DataDomeSDK22SynchronizedDictionaryC4keysSayxGvp",
+            "mangledName": "$s11DataDomeSDK22SynchronizedDictionaryC4keysSayxGvp",
+            "moduleName": "DataDomeSDK",
+            "declAttributes": [
+              "RawDocComment"
+            ],
+            "isFromExtension": true,
+            "accessors": [
+              {
+                "kind": "Accessor",
+                "name": "Get",
+                "printedName": "Get()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Array",
+                    "printedName": "[τ_0_0]",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "GenericTypeParam",
+                        "printedName": "τ_0_0"
+                      }
+                    ],
+                    "usr": "s:Sa"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:11DataDomeSDK22SynchronizedDictionaryC4keysSayxGvg",
+                "mangledName": "$s11DataDomeSDK22SynchronizedDictionaryC4keysSayxGvg",
+                "moduleName": "DataDomeSDK",
+                "genericSig": "<τ_0_0, τ_0_1 where τ_0_0 : Swift.Hashable>",
+                "sugared_genericSig": "<T, Element where T : Swift.Hashable>",
+                "isFromExtension": true,
+                "accessorKind": "get"
+              }
+            ]
+          }
+        ],
+        "declKind": "Class",
+        "usr": "s:11DataDomeSDK22SynchronizedDictionaryC",
+        "mangledName": "$s11DataDomeSDK22SynchronizedDictionaryC",
+        "moduleName": "DataDomeSDK",
+        "genericSig": "<τ_0_0, τ_0_1 where τ_0_0 : Swift.Hashable>",
+        "sugared_genericSig": "<T, Element where T : Swift.Hashable>",
+        "declAttributes": [
+          "AccessControl",
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "Import",
+        "name": "Foundation",
+        "printedName": "Foundation",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "TypeDecl",
+        "name": "EventType",
+        "printedName": "EventType",
+        "children": [
+          {
+            "kind": "Var",
+            "name": "responseValidation",
+            "printedName": "responseValidation",
+            "children": [
+              {
+                "kind": "TypeFunc",
+                "name": "Function",
+                "printedName": "(DataDomeSDK.EventType.Type) -> DataDomeSDK.EventType",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "EventType",
+                    "printedName": "DataDomeSDK.EventType",
+                    "usr": "s:11DataDomeSDK9EventTypeO"
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Metatype",
+                    "printedName": "DataDomeSDK.EventType.Type",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "EventType",
+                        "printedName": "DataDomeSDK.EventType",
+                        "usr": "s:11DataDomeSDK9EventTypeO"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "declKind": "EnumElement",
+            "usr": "s:11DataDomeSDK9EventTypeO18responseValidationyA2CmF",
+            "mangledName": "$s11DataDomeSDK9EventTypeO18responseValidationyA2CmF",
+            "moduleName": "DataDomeSDK",
+            "declAttributes": [
+              "RawDocComment"
+            ]
+          },
+          {
+            "kind": "Var",
+            "name": "captchaSuccess",
+            "printedName": "captchaSuccess",
+            "children": [
+              {
+                "kind": "TypeFunc",
+                "name": "Function",
+                "printedName": "(DataDomeSDK.EventType.Type) -> DataDomeSDK.EventType",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "EventType",
+                    "printedName": "DataDomeSDK.EventType",
+                    "usr": "s:11DataDomeSDK9EventTypeO"
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Metatype",
+                    "printedName": "DataDomeSDK.EventType.Type",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "EventType",
+                        "printedName": "DataDomeSDK.EventType",
+                        "usr": "s:11DataDomeSDK9EventTypeO"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "declKind": "EnumElement",
+            "usr": "s:11DataDomeSDK9EventTypeO14captchaSuccessyA2CmF",
+            "mangledName": "$s11DataDomeSDK9EventTypeO14captchaSuccessyA2CmF",
+            "moduleName": "DataDomeSDK",
+            "declAttributes": [
+              "RawDocComment"
+            ]
+          },
+          {
+            "kind": "Var",
+            "name": "touchDown",
+            "printedName": "touchDown",
+            "children": [
+              {
+                "kind": "TypeFunc",
+                "name": "Function",
+                "printedName": "(DataDomeSDK.EventType.Type) -> (Swift.Int, Swift.Int) -> DataDomeSDK.EventType",
+                "children": [
+                  {
+                    "kind": "TypeFunc",
+                    "name": "Function",
+                    "printedName": "(Swift.Int, Swift.Int) -> DataDomeSDK.EventType",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "EventType",
+                        "printedName": "DataDomeSDK.EventType",
+                        "usr": "s:11DataDomeSDK9EventTypeO"
+                      },
+                      {
+                        "kind": "TypeNominal",
+                        "name": "Tuple",
+                        "printedName": "(Swift.Int, Swift.Int)",
+                        "children": [
+                          {
+                            "kind": "TypeNominal",
+                            "name": "Int",
+                            "printedName": "Swift.Int",
+                            "usr": "s:Si"
+                          },
+                          {
+                            "kind": "TypeNominal",
+                            "name": "Int",
+                            "printedName": "Swift.Int",
+                            "usr": "s:Si"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Metatype",
+                    "printedName": "DataDomeSDK.EventType.Type",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "EventType",
+                        "printedName": "DataDomeSDK.EventType",
+                        "usr": "s:11DataDomeSDK9EventTypeO"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "declKind": "EnumElement",
+            "usr": "s:11DataDomeSDK9EventTypeO9touchDownyACSi_SitcACmF",
+            "mangledName": "$s11DataDomeSDK9EventTypeO9touchDownyACSi_SitcACmF",
+            "moduleName": "DataDomeSDK",
+            "declAttributes": [
+              "RawDocComment"
+            ]
+          },
+          {
+            "kind": "Var",
+            "name": "touchUp",
+            "printedName": "touchUp",
+            "children": [
+              {
+                "kind": "TypeFunc",
+                "name": "Function",
+                "printedName": "(DataDomeSDK.EventType.Type) -> (Swift.Int, Swift.Int) -> DataDomeSDK.EventType",
+                "children": [
+                  {
+                    "kind": "TypeFunc",
+                    "name": "Function",
+                    "printedName": "(Swift.Int, Swift.Int) -> DataDomeSDK.EventType",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "EventType",
+                        "printedName": "DataDomeSDK.EventType",
+                        "usr": "s:11DataDomeSDK9EventTypeO"
+                      },
+                      {
+                        "kind": "TypeNominal",
+                        "name": "Tuple",
+                        "printedName": "(Swift.Int, Swift.Int)",
+                        "children": [
+                          {
+                            "kind": "TypeNominal",
+                            "name": "Int",
+                            "printedName": "Swift.Int",
+                            "usr": "s:Si"
+                          },
+                          {
+                            "kind": "TypeNominal",
+                            "name": "Int",
+                            "printedName": "Swift.Int",
+                            "usr": "s:Si"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Metatype",
+                    "printedName": "DataDomeSDK.EventType.Type",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "EventType",
+                        "printedName": "DataDomeSDK.EventType",
+                        "usr": "s:11DataDomeSDK9EventTypeO"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "declKind": "EnumElement",
+            "usr": "s:11DataDomeSDK9EventTypeO7touchUpyACSi_SitcACmF",
+            "mangledName": "$s11DataDomeSDK9EventTypeO7touchUpyACSi_SitcACmF",
+            "moduleName": "DataDomeSDK",
+            "declAttributes": [
+              "RawDocComment"
+            ]
+          },
+          {
+            "kind": "Var",
+            "name": "touchMove",
+            "printedName": "touchMove",
+            "children": [
+              {
+                "kind": "TypeFunc",
+                "name": "Function",
+                "printedName": "(DataDomeSDK.EventType.Type) -> (Swift.Int, Swift.Int) -> DataDomeSDK.EventType",
+                "children": [
+                  {
+                    "kind": "TypeFunc",
+                    "name": "Function",
+                    "printedName": "(Swift.Int, Swift.Int) -> DataDomeSDK.EventType",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "EventType",
+                        "printedName": "DataDomeSDK.EventType",
+                        "usr": "s:11DataDomeSDK9EventTypeO"
+                      },
+                      {
+                        "kind": "TypeNominal",
+                        "name": "Tuple",
+                        "printedName": "(Swift.Int, Swift.Int)",
+                        "children": [
+                          {
+                            "kind": "TypeNominal",
+                            "name": "Int",
+                            "printedName": "Swift.Int",
+                            "usr": "s:Si"
+                          },
+                          {
+                            "kind": "TypeNominal",
+                            "name": "Int",
+                            "printedName": "Swift.Int",
+                            "usr": "s:Si"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Metatype",
+                    "printedName": "DataDomeSDK.EventType.Type",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "EventType",
+                        "printedName": "DataDomeSDK.EventType",
+                        "usr": "s:11DataDomeSDK9EventTypeO"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "declKind": "EnumElement",
+            "usr": "s:11DataDomeSDK9EventTypeO9touchMoveyACSi_SitcACmF",
+            "mangledName": "$s11DataDomeSDK9EventTypeO9touchMoveyACSi_SitcACmF",
+            "moduleName": "DataDomeSDK",
+            "declAttributes": [
+              "RawDocComment"
+            ]
+          }
+        ],
+        "declKind": "Enum",
+        "usr": "s:11DataDomeSDK9EventTypeO",
+        "mangledName": "$s11DataDomeSDK9EventTypeO",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "AccessControl",
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "Import",
+        "name": "Foundation",
+        "printedName": "Foundation",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "Import",
+        "name": "Foundation",
+        "printedName": "Foundation",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "Import",
+        "name": "Foundation",
+        "printedName": "Foundation",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "Import",
+        "name": "Foundation",
+        "printedName": "Foundation",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "TypeDecl",
+        "name": "ResponseValidator",
+        "printedName": "ResponseValidator",
+        "children": [
+          {
+            "kind": "Var",
+            "name": "delegate",
+            "printedName": "delegate",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Optional",
+                "printedName": "DataDomeSDK.ResponseValidatorDelegate?",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "ResponseValidatorDelegate",
+                    "printedName": "DataDomeSDK.ResponseValidatorDelegate",
+                    "usr": "s:11DataDomeSDK25ResponseValidatorDelegateP"
+                  }
+                ],
+                "usr": "s:Sq"
+              }
+            ],
+            "declKind": "Var",
+            "usr": "s:11DataDomeSDK17ResponseValidatorC8delegateAA0dE8Delegate_pSgvp",
+            "mangledName": "$s11DataDomeSDK17ResponseValidatorC8delegateAA0dE8Delegate_pSgvp",
+            "moduleName": "DataDomeSDK",
+            "declAttributes": [
+              "HasInitialValue",
+              "HasStorage",
+              "AccessControl",
+              "RawDocComment"
+            ],
+            "hasStorage": true,
+            "accessors": [
+              {
+                "kind": "Accessor",
+                "name": "Get",
+                "printedName": "Get()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Optional",
+                    "printedName": "DataDomeSDK.ResponseValidatorDelegate?",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "ResponseValidatorDelegate",
+                        "printedName": "DataDomeSDK.ResponseValidatorDelegate",
+                        "usr": "s:11DataDomeSDK25ResponseValidatorDelegateP"
+                      }
+                    ],
+                    "usr": "s:Sq"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:11DataDomeSDK17ResponseValidatorC8delegateAA0dE8Delegate_pSgvg",
+                "mangledName": "$s11DataDomeSDK17ResponseValidatorC8delegateAA0dE8Delegate_pSgvg",
+                "moduleName": "DataDomeSDK",
+                "implicit": true,
+                "accessorKind": "get"
+              },
+              {
+                "kind": "Accessor",
+                "name": "Set",
+                "printedName": "Set()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Void",
+                    "printedName": "()"
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Optional",
+                    "printedName": "DataDomeSDK.ResponseValidatorDelegate?",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "ResponseValidatorDelegate",
+                        "printedName": "DataDomeSDK.ResponseValidatorDelegate",
+                        "usr": "s:11DataDomeSDK25ResponseValidatorDelegateP"
+                      }
+                    ],
+                    "usr": "s:Sq"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:11DataDomeSDK17ResponseValidatorC8delegateAA0dE8Delegate_pSgvs",
+                "mangledName": "$s11DataDomeSDK17ResponseValidatorC8delegateAA0dE8Delegate_pSgvs",
+                "moduleName": "DataDomeSDK",
+                "implicit": true,
+                "accessorKind": "set"
+              },
+              {
+                "kind": "Accessor",
+                "name": "Modify",
+                "printedName": "Modify()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Void",
+                    "printedName": "()"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:11DataDomeSDK17ResponseValidatorC8delegateAA0dE8Delegate_pSgvM",
+                "mangledName": "$s11DataDomeSDK17ResponseValidatorC8delegateAA0dE8Delegate_pSgvM",
+                "moduleName": "DataDomeSDK",
+                "implicit": true,
+                "accessorKind": "_modify"
+              }
+            ]
+          },
+          {
+            "kind": "Constructor",
+            "name": "init",
+            "printedName": "init(request:response:data:integrationMode:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "ResponseValidator",
+                "printedName": "DataDomeSDK.ResponseValidator",
+                "usr": "s:11DataDomeSDK17ResponseValidatorC"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Requestable",
+                "printedName": "DataDomeSDK.Requestable",
+                "usr": "s:11DataDomeSDK11RequestableP"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Optional",
+                "printedName": "Foundation.HTTPURLResponse?",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "HTTPURLResponse",
+                    "printedName": "Foundation.HTTPURLResponse",
+                    "usr": "c:objc(cs)NSHTTPURLResponse"
+                  }
+                ],
+                "usr": "s:Sq"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Optional",
+                "printedName": "Foundation.Data?",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Data",
+                    "printedName": "Foundation.Data",
+                    "usr": "s:10Foundation4DataV"
+                  }
+                ],
+                "usr": "s:Sq"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "IntegrationMode",
+                "printedName": "DataDomeSDK.IntegrationMode",
+                "hasDefaultArg": true,
+                "usr": "s:11DataDomeSDK15IntegrationModeO"
+              }
+            ],
+            "declKind": "Constructor",
+            "usr": "s:11DataDomeSDK17ResponseValidatorC7request8response4data15integrationModeAcA11Requestable_p_So17NSHTTPURLResponseCSg10Foundation0A0VSgAA011IntegrationJ0Otcfc",
+            "mangledName": "$s11DataDomeSDK17ResponseValidatorC7request8response4data15integrationModeAcA11Requestable_p_So17NSHTTPURLResponseCSg10Foundation0A0VSgAA011IntegrationJ0Otcfc",
+            "moduleName": "DataDomeSDK",
+            "declAttributes": [
+              "AccessControl",
+              "RawDocComment"
+            ],
+            "init_kind": "Designated"
+          },
+          {
+            "kind": "Function",
+            "name": "validate",
+            "printedName": "validate()",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "s:11DataDomeSDK17ResponseValidatorC8validateyyF",
+            "mangledName": "$s11DataDomeSDK17ResponseValidatorC8validateyyF",
+            "moduleName": "DataDomeSDK",
+            "declAttributes": [
+              "AccessControl",
+              "RawDocComment"
+            ],
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "shouldIgnore",
+            "printedName": "shouldIgnore(request:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Requestable",
+                "printedName": "DataDomeSDK.Requestable",
+                "usr": "s:11DataDomeSDK11RequestableP"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "s:11DataDomeSDK17ResponseValidatorC12shouldIgnore7requestyAA11Requestable_p_tF",
+            "mangledName": "$s11DataDomeSDK17ResponseValidatorC12shouldIgnore7requestyAA11Requestable_p_tF",
+            "moduleName": "DataDomeSDK",
+            "declAttributes": [
+              "AccessControl",
+              "RawDocComment"
+            ],
+            "isFromExtension": true,
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "filter",
+            "printedName": "filter(request:didFailWith:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Requestable",
+                "printedName": "DataDomeSDK.Requestable",
+                "usr": "s:11DataDomeSDK11RequestableP"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Error",
+                "printedName": "Swift.Error",
+                "usr": "s:s5ErrorP"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "s:11DataDomeSDK17ResponseValidatorC6filter7request11didFailWithyAA11Requestable_p_s5Error_ptF",
+            "mangledName": "$s11DataDomeSDK17ResponseValidatorC6filter7request11didFailWithyAA11Requestable_p_s5Error_ptF",
+            "moduleName": "DataDomeSDK",
+            "declAttributes": [
+              "AccessControl",
+              "RawDocComment"
+            ],
+            "isFromExtension": true,
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "filter",
+            "printedName": "filter(request:didResolveCaptcha:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Requestable",
+                "printedName": "DataDomeSDK.Requestable",
+                "usr": "s:11DataDomeSDK11RequestableP"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "s:11DataDomeSDK17ResponseValidatorC6filter7request17didResolveCaptchayAA11Requestable_p_SStF",
+            "mangledName": "$s11DataDomeSDK17ResponseValidatorC6filter7request17didResolveCaptchayAA11Requestable_p_SStF",
+            "moduleName": "DataDomeSDK",
+            "declAttributes": [
+              "AccessControl",
+              "RawDocComment"
+            ],
+            "isFromExtension": true,
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "shouldRetry",
+            "printedName": "shouldRetry(request:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Requestable",
+                "printedName": "DataDomeSDK.Requestable",
+                "usr": "s:11DataDomeSDK11RequestableP"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "s:11DataDomeSDK17ResponseValidatorC11shouldRetry7requestyAA11Requestable_p_tF",
+            "mangledName": "$s11DataDomeSDK17ResponseValidatorC11shouldRetry7requestyAA11Requestable_p_tF",
+            "moduleName": "DataDomeSDK",
+            "declAttributes": [
+              "AccessControl",
+              "RawDocComment"
+            ],
+            "isFromExtension": true,
+            "funcSelfKind": "NonMutating"
+          }
+        ],
+        "declKind": "Class",
+        "usr": "s:11DataDomeSDK17ResponseValidatorC",
+        "mangledName": "$s11DataDomeSDK17ResponseValidatorC",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "AccessControl"
+        ],
+        "conformances": [
+          {
+            "kind": "Conformance",
+            "name": "FilterDelegate",
+            "printedName": "FilterDelegate",
+            "usr": "s:11DataDomeSDK14FilterDelegateP",
+            "mangledName": "$s11DataDomeSDK14FilterDelegateP"
+          }
+        ]
+      },
+      {
+        "kind": "Import",
+        "name": "Dispatch",
+        "printedName": "Dispatch",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "Import",
+        "name": "Foundation",
+        "printedName": "Foundation",
+        "declKind": "Import",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "TypeDecl",
+        "name": "DataDomeSDK",
+        "printedName": "DataDomeSDK",
+        "children": [
+          {
+            "kind": "Var",
+            "name": "bypassHTTPAccept",
+            "printedName": "bypassHTTPAccept",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Bool",
+                "printedName": "Swift.Bool",
+                "usr": "s:Sb"
+              }
+            ],
+            "declKind": "Var",
+            "usr": "c:@M@DataDomeSDK@objc(cs)DataDomeSDK(cpy)bypassHTTPAccept",
+            "mangledName": "$s11DataDomeSDKAAC16bypassHTTPAcceptSbvpZ",
+            "moduleName": "DataDomeSDK",
+            "static": true,
+            "declAttributes": [
+              "HasInitialValue",
+              "Final",
+              "HasStorage",
+              "AccessControl",
+              "ObjC"
+            ],
+            "hasStorage": true,
+            "accessors": [
+              {
+                "kind": "Accessor",
+                "name": "Get",
+                "printedName": "Get()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Bool",
+                    "printedName": "Swift.Bool",
+                    "usr": "s:Sb"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "c:@M@DataDomeSDK@objc(cs)DataDomeSDK(cm)bypassHTTPAccept",
+                "mangledName": "$s11DataDomeSDKAAC16bypassHTTPAcceptSbvgZ",
+                "moduleName": "DataDomeSDK",
+                "static": true,
+                "implicit": true,
+                "declAttributes": [
+                  "Final",
+                  "ObjC"
+                ],
+                "accessorKind": "get"
+              },
+              {
+                "kind": "Accessor",
+                "name": "Set",
+                "printedName": "Set()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Void",
+                    "printedName": "()"
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Bool",
+                    "printedName": "Swift.Bool",
+                    "usr": "s:Sb"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "c:@M@DataDomeSDK@objc(cs)DataDomeSDK(cm)setBypassHTTPAccept:",
+                "mangledName": "$s11DataDomeSDKAAC16bypassHTTPAcceptSbvsZ",
+                "moduleName": "DataDomeSDK",
+                "static": true,
+                "implicit": true,
+                "declAttributes": [
+                  "Final",
+                  "ObjC"
+                ],
+                "accessorKind": "set"
+              },
+              {
+                "kind": "Accessor",
+                "name": "Modify",
+                "printedName": "Modify()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Void",
+                    "printedName": "()"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:11DataDomeSDKAAC16bypassHTTPAcceptSbvMZ",
+                "mangledName": "$s11DataDomeSDKAAC16bypassHTTPAcceptSbvMZ",
+                "moduleName": "DataDomeSDK",
+                "static": true,
+                "implicit": true,
+                "declAttributes": [
+                  "Final"
+                ],
+                "accessorKind": "_modify"
+              }
+            ]
+          },
+          {
+            "kind": "Function",
+            "name": "setLogLevel",
+            "printedName": "setLogLevel(level:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "LogLevel",
+                "printedName": "DataDomeSDK.LogLevel",
+                "usr": "c:@M@DataDomeSDK@E@LogLevel"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "c:@M@DataDomeSDK@objc(cs)DataDomeSDK(cm)setLogLevelWithLevel:",
+            "mangledName": "$s11DataDomeSDKAAC11setLogLevel5levelyAA0eF0O_tFZ",
+            "moduleName": "DataDomeSDK",
+            "static": true,
+            "objc_name": "setLogLevelWithLevel:",
+            "declAttributes": [
+              "Final",
+              "AccessControl",
+              "ObjC",
+              "Available",
+              "RawDocComment"
+            ],
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "setResponsePageLanguage",
+            "printedName": "setResponsePageLanguage(_:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "c:@M@DataDomeSDK@objc(cs)DataDomeSDK(cm)setResponsePageLanguage:",
+            "mangledName": "$s11DataDomeSDKAAC23setResponsePageLanguageyySSFZ",
+            "moduleName": "DataDomeSDK",
+            "static": true,
+            "declAttributes": [
+              "Final",
+              "AccessControl",
+              "ObjC",
+              "RawDocComment"
+            ],
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "setKey",
+            "printedName": "setKey(_:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "c:@M@DataDomeSDK@objc(cs)DataDomeSDK(cm)setKey:",
+            "mangledName": "$s11DataDomeSDKAAC6setKeyyySSFZ",
+            "moduleName": "DataDomeSDK",
+            "static": true,
+            "declAttributes": [
+              "Final",
+              "AccessControl",
+              "ObjC"
+            ],
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "getCookie",
+            "printedName": "getCookie()",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Optional",
+                "printedName": "Foundation.HTTPCookie?",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "HTTPCookie",
+                    "printedName": "Foundation.HTTPCookie",
+                    "usr": "c:objc(cs)NSHTTPCookie"
+                  }
+                ],
+                "usr": "s:Sq"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "c:@M@DataDomeSDK@objc(cs)DataDomeSDK(cm)getCookie",
+            "mangledName": "$s11DataDomeSDKAAC9getCookieSo12NSHTTPCookieCSgyFZ",
+            "moduleName": "DataDomeSDK",
+            "static": true,
+            "declAttributes": [
+              "Final",
+              "AccessControl",
+              "ObjC",
+              "RawDocComment"
+            ],
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "setCookie",
+            "printedName": "setCookie(_:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "HTTPCookie",
+                "printedName": "Foundation.HTTPCookie",
+                "usr": "c:objc(cs)NSHTTPCookie"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "c:@M@DataDomeSDK@objc(cs)DataDomeSDK(cm)setCookie:",
+            "mangledName": "$s11DataDomeSDKAAC9setCookieyySo12NSHTTPCookieCFZ",
+            "moduleName": "DataDomeSDK",
+            "static": true,
+            "declAttributes": [
+              "Final",
+              "AccessControl",
+              "ObjC",
+              "RawDocComment"
+            ],
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "setCookie",
+            "printedName": "setCookie(cookie:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Optional",
+                "printedName": "Foundation.HTTPCookie?",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "HTTPCookie",
+                    "printedName": "Foundation.HTTPCookie",
+                    "usr": "c:objc(cs)NSHTTPCookie"
+                  }
+                ],
+                "usr": "s:Sq"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "c:@M@DataDomeSDK@objc(cs)DataDomeSDK(im)setCookieWithCookie:",
+            "mangledName": "$s11DataDomeSDKAAC9setCookie6cookieySo12NSHTTPCookieCSg_tF",
+            "moduleName": "DataDomeSDK",
+            "deprecated": true,
+            "objc_name": "setCookieWithCookie:",
+            "declAttributes": [
+              "AccessControl",
+              "ObjC",
+              "Available",
+              "RawDocComment"
+            ],
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "cancelCaptcha",
+            "printedName": "cancelCaptcha()",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "c:@M@DataDomeSDK@objc(cs)DataDomeSDK(cm)cancelCaptcha",
+            "mangledName": "$s11DataDomeSDKAAC13cancelCaptchayyFZ",
+            "moduleName": "DataDomeSDK",
+            "static": true,
+            "declAttributes": [
+              "Final",
+              "AccessControl",
+              "ObjC"
+            ],
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Constructor",
+            "name": "init",
+            "printedName": "init()",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "DataDomeSDK",
+                "printedName": "DataDomeSDK.DataDomeSDK",
+                "usr": "c:@M@DataDomeSDK@objc(cs)DataDomeSDK"
+              }
+            ],
+            "declKind": "Constructor",
+            "usr": "c:@M@DataDomeSDK@objc(cs)DataDomeSDK(im)init",
+            "mangledName": "$s11DataDomeSDKAACABycfc",
+            "moduleName": "DataDomeSDK",
+            "overriding": true,
+            "implicit": true,
+            "objc_name": "init",
+            "declAttributes": [
+              "Dynamic",
+              "ObjC",
+              "Override"
+            ],
+            "init_kind": "Designated"
+          },
+          {
+            "kind": "Function",
+            "name": "isProxyEnabled",
+            "printedName": "isProxyEnabled()",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Bool",
+                "printedName": "Swift.Bool",
+                "usr": "s:Sb"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "c:@CM@DataDomeSDK@objc(cs)DataDomeSDK(cm)isProxyEnabled",
+            "mangledName": "$s11DataDomeSDKAAC14isProxyEnabledSbyFZ",
+            "moduleName": "DataDomeSDK",
+            "static": true,
+            "declAttributes": [
+              "Final",
+              "ObjC",
+              "RawDocComment"
+            ],
+            "isFromExtension": true,
+            "funcSelfKind": "NonMutating"
+          }
+        ],
+        "declKind": "Class",
+        "usr": "c:@M@DataDomeSDK@objc(cs)DataDomeSDK",
+        "mangledName": "$s11DataDomeSDKAAC",
+        "moduleName": "DataDomeSDK",
+        "declAttributes": [
+          "AccessControl",
+          "ObjC"
+        ],
+        "superclassUsr": "c:objc(cs)NSObject",
+        "inheritsConvenienceInitializers": true,
+        "superclassNames": [
+          "ObjectiveC.NSObject"
+        ],
+        "conformances": [
+          {
+            "kind": "Conformance",
+            "name": "Equatable",
+            "printedName": "Equatable",
+            "usr": "s:SQ",
+            "mangledName": "$sSQ"
+          },
+          {
+            "kind": "Conformance",
+            "name": "Hashable",
+            "printedName": "Hashable",
+            "usr": "s:SH",
+            "mangledName": "$sSH"
+          },
+          {
+            "kind": "Conformance",
+            "name": "CVarArg",
+            "printedName": "CVarArg",
+            "usr": "s:s7CVarArgP",
+            "mangledName": "$ss7CVarArgP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "_KeyValueCodingAndObservingPublishing",
+            "printedName": "_KeyValueCodingAndObservingPublishing",
+            "usr": "s:10Foundation37_KeyValueCodingAndObservingPublishingP",
+            "mangledName": "$s10Foundation37_KeyValueCodingAndObservingPublishingP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "_KeyValueCodingAndObserving",
+            "printedName": "_KeyValueCodingAndObserving",
+            "usr": "s:10Foundation27_KeyValueCodingAndObservingP",
+            "mangledName": "$s10Foundation27_KeyValueCodingAndObservingP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "CustomStringConvertible",
+            "printedName": "CustomStringConvertible",
+            "usr": "s:s23CustomStringConvertibleP",
+            "mangledName": "$ss23CustomStringConvertibleP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "CustomDebugStringConvertible",
+            "printedName": "CustomDebugStringConvertible",
+            "usr": "s:s28CustomDebugStringConvertibleP",
+            "mangledName": "$ss28CustomDebugStringConvertibleP"
+          }
+        ]
+      },
+      {
+        "kind": "TypeDecl",
+        "name": "URLSession",
+        "printedName": "URLSession",
+        "children": [
+          {
+            "kind": "Function",
+            "name": "protectedDataTaskPublisher",
+            "printedName": "protectedDataTaskPublisher(forURL:captchaDelegate:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "AnyPublisher",
+                "printedName": "Combine.AnyPublisher<(data: Foundation.Data, response: Foundation.URLResponse), Foundation.URLError>",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Tuple",
+                    "printedName": "(data: Foundation.Data, response: Foundation.URLResponse)",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "Data",
+                        "printedName": "Foundation.Data",
+                        "usr": "s:10Foundation4DataV"
+                      },
+                      {
+                        "kind": "TypeNominal",
+                        "name": "URLResponse",
+                        "printedName": "Foundation.URLResponse",
+                        "usr": "c:objc(cs)NSURLResponse"
+                      }
+                    ]
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "URLError",
+                    "printedName": "Foundation.URLError",
+                    "usr": "s:10Foundation8URLErrorV"
+                  }
+                ],
+                "usr": "s:7Combine12AnyPublisherV"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "URL",
+                "printedName": "Foundation.URL",
+                "usr": "s:10Foundation3URLV"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Optional",
+                "printedName": "DataDomeSDK.CaptchaDelegate?",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "CaptchaDelegate",
+                    "printedName": "DataDomeSDK.CaptchaDelegate",
+                    "usr": "c:@M@DataDomeSDK@objc(pl)CaptchaDelegate"
+                  }
+                ],
+                "usr": "s:Sq"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "s:So12NSURLSessionC11DataDomeSDKE09protectedB13TaskPublisher6forURL15captchaDelegate7Combine03AnyG0Vy10Foundation0B0V4data_So13NSURLResponseC8responsetAJ8URLErrorVGAJ0I0V_AC07CaptchaK0_pSgtF",
+            "mangledName": "$sSo12NSURLSessionC11DataDomeSDKE09protectedB13TaskPublisher6forURL15captchaDelegate7Combine03AnyG0Vy10Foundation0B0V4data_So13NSURLResponseC8responsetAJ8URLErrorVGAJ0I0V_AC07CaptchaK0_pSgtF",
+            "moduleName": "DataDomeSDK",
+            "declAttributes": [
+              "RawDocComment"
+            ],
+            "isFromExtension": true,
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "protectedDataTaskPublisher",
+            "printedName": "protectedDataTaskPublisher(forRequest:captchaDelegate:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "AnyPublisher",
+                "printedName": "Combine.AnyPublisher<(data: Foundation.Data, response: Foundation.URLResponse), Foundation.URLError>",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Tuple",
+                    "printedName": "(data: Foundation.Data, response: Foundation.URLResponse)",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "Data",
+                        "printedName": "Foundation.Data",
+                        "usr": "s:10Foundation4DataV"
+                      },
+                      {
+                        "kind": "TypeNominal",
+                        "name": "URLResponse",
+                        "printedName": "Foundation.URLResponse",
+                        "usr": "c:objc(cs)NSURLResponse"
+                      }
+                    ]
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "URLError",
+                    "printedName": "Foundation.URLError",
+                    "usr": "s:10Foundation8URLErrorV"
+                  }
+                ],
+                "usr": "s:7Combine12AnyPublisherV"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "URLRequest",
+                "printedName": "Foundation.URLRequest",
+                "usr": "s:10Foundation10URLRequestV"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Optional",
+                "printedName": "DataDomeSDK.CaptchaDelegate?",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "CaptchaDelegate",
+                    "printedName": "DataDomeSDK.CaptchaDelegate",
+                    "usr": "c:@M@DataDomeSDK@objc(pl)CaptchaDelegate"
+                  }
+                ],
+                "usr": "s:Sq"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "s:So12NSURLSessionC11DataDomeSDKE09protectedB13TaskPublisher10forRequest15captchaDelegate7Combine03AnyG0Vy10Foundation0B0V4data_So13NSURLResponseC8responsetAJ8URLErrorVGAJ10URLRequestV_AC07CaptchaK0_pSgtF",
+            "mangledName": "$sSo12NSURLSessionC11DataDomeSDKE09protectedB13TaskPublisher10forRequest15captchaDelegate7Combine03AnyG0Vy10Foundation0B0V4data_So13NSURLResponseC8responsetAJ8URLErrorVGAJ10URLRequestV_AC07CaptchaK0_pSgtF",
+            "moduleName": "DataDomeSDK",
+            "declAttributes": [
+              "RawDocComment"
+            ],
+            "isFromExtension": true,
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "protectedDataTask",
+            "printedName": "protectedDataTask(withURL:captchaDelegate:completionHandler:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "URLSessionDataTask",
+                "printedName": "Foundation.URLSessionDataTask",
+                "usr": "c:objc(cs)NSURLSessionDataTask"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "URL",
+                "printedName": "Foundation.URL",
+                "usr": "s:10Foundation3URLV"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Optional",
+                "printedName": "DataDomeSDK.CaptchaDelegate?",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "CaptchaDelegate",
+                    "printedName": "DataDomeSDK.CaptchaDelegate",
+                    "usr": "c:@M@DataDomeSDK@objc(pl)CaptchaDelegate"
+                  }
+                ],
+                "usr": "s:Sq"
+              },
+              {
+                "kind": "TypeFunc",
+                "name": "Function",
+                "printedName": "(Foundation.Data?, Foundation.URLResponse?, Swift.Error?) -> ()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Void",
+                    "printedName": "()"
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Tuple",
+                    "printedName": "(Foundation.Data?, Foundation.URLResponse?, Swift.Error?)",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "Optional",
+                        "printedName": "Foundation.Data?",
+                        "children": [
+                          {
+                            "kind": "TypeNominal",
+                            "name": "Data",
+                            "printedName": "Foundation.Data",
+                            "usr": "s:10Foundation4DataV"
+                          }
+                        ],
+                        "usr": "s:Sq"
+                      },
+                      {
+                        "kind": "TypeNominal",
+                        "name": "Optional",
+                        "printedName": "Foundation.URLResponse?",
+                        "children": [
+                          {
+                            "kind": "TypeNominal",
+                            "name": "URLResponse",
+                            "printedName": "Foundation.URLResponse",
+                            "usr": "c:objc(cs)NSURLResponse"
+                          }
+                        ],
+                        "usr": "s:Sq"
+                      },
+                      {
+                        "kind": "TypeNominal",
+                        "name": "Optional",
+                        "printedName": "Swift.Error?",
+                        "children": [
+                          {
+                            "kind": "TypeNominal",
+                            "name": "Error",
+                            "printedName": "Swift.Error",
+                            "usr": "s:s5ErrorP"
+                          }
+                        ],
+                        "usr": "s:Sq"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "declKind": "Func",
+            "usr": "c:@CM@DataDomeSDK@@objc(cs)NSURLSession(im)protectedDataTaskWithURL:captchaDelegate:andCompletionHandler:",
+            "mangledName": "$sSo12NSURLSessionC11DataDomeSDKE09protectedB4Task7withURL15captchaDelegate17completionHandlerSo0abF0C10Foundation0H0V_AC07CaptchaJ0_pSgyAJ0B0VSg_So13NSURLResponseCSgs5Error_pSgtctF",
+            "moduleName": "DataDomeSDK",
+            "objc_name": "protectedDataTaskWithURL:captchaDelegate:andCompletionHandler:",
+            "declAttributes": [
+              "Dynamic",
+              "ObjC",
+              "RawDocComment"
+            ],
+            "isFromExtension": true,
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "protectedDataTask",
+            "printedName": "protectedDataTask(withURL:captchaDelegate:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Tuple",
+                "printedName": "(Foundation.Data, Foundation.URLResponse)",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Data",
+                    "printedName": "Foundation.Data",
+                    "usr": "s:10Foundation4DataV"
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "URLResponse",
+                    "printedName": "Foundation.URLResponse",
+                    "usr": "c:objc(cs)NSURLResponse"
+                  }
+                ]
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "URL",
+                "printedName": "Foundation.URL",
+                "usr": "s:10Foundation3URLV"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Optional",
+                "printedName": "DataDomeSDK.CaptchaDelegate?",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "CaptchaDelegate",
+                    "printedName": "DataDomeSDK.CaptchaDelegate",
+                    "usr": "c:@M@DataDomeSDK@objc(pl)CaptchaDelegate"
+                  }
+                ],
+                "usr": "s:Sq"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "c:@CM@DataDomeSDK@@objc(cs)NSURLSession(im)protectedDataTaskWithURL:captchaDelegate:completionHandler:",
+            "mangledName": "$sSo12NSURLSessionC11DataDomeSDKE09protectedB4Task7withURL15captchaDelegate10Foundation0B0V_So13NSURLResponseCtAG0H0V_AC07CaptchaJ0_pSgtYaKF",
+            "moduleName": "DataDomeSDK",
+            "intro_iOS": "13.0",
+            "declAttributes": [
+              "Dynamic",
+              "Available",
+              "RawDocComment",
+              "ObjC"
+            ],
+            "isFromExtension": true,
+            "throwing": true,
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "protectedDataTask",
+            "printedName": "protectedDataTask(withRequest:captchaDelegate:completionHandler:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "URLSessionDataTask",
+                "printedName": "Foundation.URLSessionDataTask",
+                "usr": "c:objc(cs)NSURLSessionDataTask"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "URLRequest",
+                "printedName": "Foundation.URLRequest",
+                "usr": "s:10Foundation10URLRequestV"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Optional",
+                "printedName": "DataDomeSDK.CaptchaDelegate?",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "CaptchaDelegate",
+                    "printedName": "DataDomeSDK.CaptchaDelegate",
+                    "usr": "c:@M@DataDomeSDK@objc(pl)CaptchaDelegate"
+                  }
+                ],
+                "usr": "s:Sq"
+              },
+              {
+                "kind": "TypeFunc",
+                "name": "Function",
+                "printedName": "(Foundation.Data?, Foundation.URLResponse?, Swift.Error?) -> ()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Void",
+                    "printedName": "()"
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Tuple",
+                    "printedName": "(Foundation.Data?, Foundation.URLResponse?, Swift.Error?)",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "Optional",
+                        "printedName": "Foundation.Data?",
+                        "children": [
+                          {
+                            "kind": "TypeNominal",
+                            "name": "Data",
+                            "printedName": "Foundation.Data",
+                            "usr": "s:10Foundation4DataV"
+                          }
+                        ],
+                        "usr": "s:Sq"
+                      },
+                      {
+                        "kind": "TypeNominal",
+                        "name": "Optional",
+                        "printedName": "Foundation.URLResponse?",
+                        "children": [
+                          {
+                            "kind": "TypeNominal",
+                            "name": "URLResponse",
+                            "printedName": "Foundation.URLResponse",
+                            "usr": "c:objc(cs)NSURLResponse"
+                          }
+                        ],
+                        "usr": "s:Sq"
+                      },
+                      {
+                        "kind": "TypeNominal",
+                        "name": "Optional",
+                        "printedName": "Swift.Error?",
+                        "children": [
+                          {
+                            "kind": "TypeNominal",
+                            "name": "Error",
+                            "printedName": "Swift.Error",
+                            "usr": "s:s5ErrorP"
+                          }
+                        ],
+                        "usr": "s:Sq"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "declKind": "Func",
+            "usr": "c:@CM@DataDomeSDK@@objc(cs)NSURLSession(im)protectedDataTaskWithRequest:captchaDelegate:andCompletionHandler:",
+            "mangledName": "$sSo12NSURLSessionC11DataDomeSDKE09protectedB4Task11withRequest15captchaDelegate17completionHandlerSo0abF0C10Foundation10URLRequestV_AC07CaptchaJ0_pSgyAJ0B0VSg_So13NSURLResponseCSgs5Error_pSgtctF",
+            "moduleName": "DataDomeSDK",
+            "objc_name": "protectedDataTaskWithRequest:captchaDelegate:andCompletionHandler:",
+            "declAttributes": [
+              "Dynamic",
+              "ObjC",
+              "RawDocComment"
+            ],
+            "isFromExtension": true,
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "protectedDataTask",
+            "printedName": "protectedDataTask(withRequest:captchaDelegate:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Tuple",
+                "printedName": "(Foundation.Data, Foundation.URLResponse)",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Data",
+                    "printedName": "Foundation.Data",
+                    "usr": "s:10Foundation4DataV"
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "URLResponse",
+                    "printedName": "Foundation.URLResponse",
+                    "usr": "c:objc(cs)NSURLResponse"
+                  }
+                ]
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "URLRequest",
+                "printedName": "Foundation.URLRequest",
+                "usr": "s:10Foundation10URLRequestV"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Optional",
+                "printedName": "DataDomeSDK.CaptchaDelegate?",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "CaptchaDelegate",
+                    "printedName": "DataDomeSDK.CaptchaDelegate",
+                    "usr": "c:@M@DataDomeSDK@objc(pl)CaptchaDelegate"
+                  }
+                ],
+                "usr": "s:Sq"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "c:@CM@DataDomeSDK@@objc(cs)NSURLSession(im)protectedDataTaskWithRequest:captchaDelegate:completionHandler:",
+            "mangledName": "$sSo12NSURLSessionC11DataDomeSDKE09protectedB4Task11withRequest15captchaDelegate10Foundation0B0V_So13NSURLResponseCtAG10URLRequestV_AC07CaptchaJ0_pSgtYaKF",
+            "moduleName": "DataDomeSDK",
+            "intro_iOS": "13.0",
+            "declAttributes": [
+              "Dynamic",
+              "Available",
+              "RawDocComment",
+              "ObjC"
+            ],
+            "isFromExtension": true,
+            "throwing": true,
+            "funcSelfKind": "NonMutating"
+          }
+        ],
+        "declKind": "Class",
+        "usr": "c:objc(cs)NSURLSession",
+        "moduleName": "Foundation",
+        "isOpen": true,
+        "intro_iOS": "7.0",
+        "objc_name": "NSURLSession",
+        "declAttributes": [
+          "Available",
+          "ObjC",
+          "SynthesizedProtocol",
+          "NonSendable",
+          "Sendable",
+          "Dynamic"
+        ],
+        "superclassUsr": "c:objc(cs)NSObject",
+        "isExternal": true,
+        "inheritsConvenienceInitializers": true,
+        "superclassNames": [
+          "ObjectiveC.NSObject"
+        ],
+        "conformances": [
+          {
+            "kind": "Conformance",
+            "name": "Sendable",
+            "printedName": "Sendable",
+            "usr": "s:s8SendableP",
+            "mangledName": "$ss8SendableP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "Equatable",
+            "printedName": "Equatable",
+            "usr": "s:SQ",
+            "mangledName": "$sSQ"
+          },
+          {
+            "kind": "Conformance",
+            "name": "Hashable",
+            "printedName": "Hashable",
+            "usr": "s:SH",
+            "mangledName": "$sSH"
+          },
+          {
+            "kind": "Conformance",
+            "name": "CVarArg",
+            "printedName": "CVarArg",
+            "usr": "s:s7CVarArgP",
+            "mangledName": "$ss7CVarArgP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "_KeyValueCodingAndObservingPublishing",
+            "printedName": "_KeyValueCodingAndObservingPublishing",
+            "usr": "s:10Foundation37_KeyValueCodingAndObservingPublishingP",
+            "mangledName": "$s10Foundation37_KeyValueCodingAndObservingPublishingP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "_KeyValueCodingAndObserving",
+            "printedName": "_KeyValueCodingAndObserving",
+            "usr": "s:10Foundation27_KeyValueCodingAndObservingP",
+            "mangledName": "$s10Foundation27_KeyValueCodingAndObservingP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "CustomStringConvertible",
+            "printedName": "CustomStringConvertible",
+            "usr": "s:s23CustomStringConvertibleP",
+            "mangledName": "$ss23CustomStringConvertibleP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "CustomDebugStringConvertible",
+            "printedName": "CustomDebugStringConvertible",
+            "usr": "s:s28CustomDebugStringConvertibleP",
+            "mangledName": "$ss28CustomDebugStringConvertibleP"
+          }
+        ]
+      },
+      {
+        "kind": "TypeDecl",
+        "name": "URLRequest",
+        "printedName": "URLRequest",
+        "children": [
+          {
+            "kind": "Function",
+            "name": "requestable",
+            "printedName": "requestable()",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "URLRequestable",
+                "printedName": "DataDomeSDK.URLRequestable",
+                "usr": "s:11DataDomeSDK14URLRequestableC"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "s:10Foundation10URLRequestV11DataDomeSDKE11requestableAD14URLRequestableCyF",
+            "mangledName": "$s10Foundation10URLRequestV11DataDomeSDKE11requestableAD14URLRequestableCyF",
+            "moduleName": "DataDomeSDK",
+            "isFromExtension": true,
+            "funcSelfKind": "NonMutating"
+          }
+        ],
+        "declKind": "Struct",
+        "usr": "s:10Foundation10URLRequestV",
+        "mangledName": "$s10Foundation10URLRequestV",
+        "moduleName": "Foundation",
+        "isExternal": true,
+        "conformances": [
+          {
+            "kind": "Conformance",
+            "name": "ReferenceConvertible",
+            "printedName": "ReferenceConvertible",
+            "children": [
+              {
+                "kind": "TypeWitness",
+                "name": "ReferenceType",
+                "printedName": "ReferenceType",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "NSURLRequest",
+                    "printedName": "Foundation.NSURLRequest",
+                    "usr": "c:objc(cs)NSURLRequest"
+                  }
+                ]
+              }
+            ],
+            "usr": "s:10Foundation20ReferenceConvertibleP",
+            "mangledName": "$s10Foundation20ReferenceConvertibleP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "Equatable",
+            "printedName": "Equatable",
+            "usr": "s:SQ",
+            "mangledName": "$sSQ"
+          },
+          {
+            "kind": "Conformance",
+            "name": "Hashable",
+            "printedName": "Hashable",
+            "usr": "s:SH",
+            "mangledName": "$sSH"
+          },
+          {
+            "kind": "Conformance",
+            "name": "Sendable",
+            "printedName": "Sendable",
+            "usr": "s:s8SendableP",
+            "mangledName": "$ss8SendableP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "CustomStringConvertible",
+            "printedName": "CustomStringConvertible",
+            "usr": "s:s23CustomStringConvertibleP",
+            "mangledName": "$ss23CustomStringConvertibleP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "CustomDebugStringConvertible",
+            "printedName": "CustomDebugStringConvertible",
+            "usr": "s:s28CustomDebugStringConvertibleP",
+            "mangledName": "$ss28CustomDebugStringConvertibleP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "CustomReflectable",
+            "printedName": "CustomReflectable",
+            "usr": "s:s17CustomReflectableP",
+            "mangledName": "$ss17CustomReflectableP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "_ObjectiveCBridgeable",
+            "printedName": "_ObjectiveCBridgeable",
+            "children": [
+              {
+                "kind": "TypeWitness",
+                "name": "_ObjectiveCType",
+                "printedName": "_ObjectiveCType",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "NSURLRequest",
+                    "printedName": "Foundation.NSURLRequest",
+                    "usr": "c:objc(cs)NSURLRequest"
+                  }
+                ]
+              }
+            ],
+            "usr": "s:s21_ObjectiveCBridgeableP",
+            "mangledName": "$ss21_ObjectiveCBridgeableP"
+          }
+        ]
+      }
+    ],
+    "json_format_version": 8
+  },
+  "ConstValues": [
+    {
+      "filePath": "\/var\/folders\/69\/qgnyrbkx23dbp0p6p_b6bc9m0000gn\/T\/_artifact_pull2795619431\/git\/Legacy\/DataDomeSDK\/Classes\/Logger\/LogLevel.swift",
+      "kind": "IntegerLiteral",
+      "offset": 431,
+      "length": 1,
+      "value": "0"
+    },
+    {
+      "filePath": "\/var\/folders\/69\/qgnyrbkx23dbp0p6p_b6bc9m0000gn\/T\/_artifact_pull2795619431\/git\/Legacy\/DataDomeSDK\/Classes\/Logger\/LogLevel.swift",
+      "kind": "IntegerLiteral",
+      "offset": 509,
+      "length": 1,
+      "value": "1"
+    },
+    {
+      "filePath": "\/var\/folders\/69\/qgnyrbkx23dbp0p6p_b6bc9m0000gn\/T\/_artifact_pull2795619431\/git\/Legacy\/DataDomeSDK\/Classes\/Logger\/LogLevel.swift",
+      "kind": "IntegerLiteral",
+      "offset": 579,
+      "length": 1,
+      "value": "2"
+    },
+    {
+      "filePath": "\/var\/folders\/69\/qgnyrbkx23dbp0p6p_b6bc9m0000gn\/T\/_artifact_pull2795619431\/git\/Legacy\/DataDomeSDK\/Classes\/Logger\/LogLevel.swift",
+      "kind": "IntegerLiteral",
+      "offset": 637,
+      "length": 1,
+      "value": "3"
+    },
+    {
+      "filePath": "\/var\/folders\/69\/qgnyrbkx23dbp0p6p_b6bc9m0000gn\/T\/_artifact_pull2795619431\/git\/Legacy\/DataDomeSDK\/Classes\/Logger\/LogLevel.swift",
+      "kind": "IntegerLiteral",
+      "offset": 685,
+      "length": 1,
+      "value": "4"
+    },
+    {
+      "filePath": "\/var\/folders\/69\/qgnyrbkx23dbp0p6p_b6bc9m0000gn\/T\/_artifact_pull2795619431\/git\/Legacy\/DataDomeSDK\/Classes\/Logger\/LogLevel.swift",
+      "kind": "IntegerLiteral",
+      "offset": 747,
+      "length": 1,
+      "value": "5"
+    },
+    {
+      "filePath": "\/var\/folders\/69\/qgnyrbkx23dbp0p6p_b6bc9m0000gn\/T\/_artifact_pull2795619431\/git\/Legacy\/DataDomeSDK\/Classes\/Logger\/LogLevel.swift",
+      "kind": "IntegerLiteral",
+      "offset": 431,
+      "length": 1,
+      "value": "0"
+    },
+    {
+      "filePath": "\/var\/folders\/69\/qgnyrbkx23dbp0p6p_b6bc9m0000gn\/T\/_artifact_pull2795619431\/git\/Legacy\/DataDomeSDK\/Classes\/Logger\/LogLevel.swift",
+      "kind": "IntegerLiteral",
+      "offset": 509,
+      "length": 1,
+      "value": "1"
+    },
+    {
+      "filePath": "\/var\/folders\/69\/qgnyrbkx23dbp0p6p_b6bc9m0000gn\/T\/_artifact_pull2795619431\/git\/Legacy\/DataDomeSDK\/Classes\/Logger\/LogLevel.swift",
+      "kind": "IntegerLiteral",
+      "offset": 579,
+      "length": 1,
+      "value": "2"
+    },
+    {
+      "filePath": "\/var\/folders\/69\/qgnyrbkx23dbp0p6p_b6bc9m0000gn\/T\/_artifact_pull2795619431\/git\/Legacy\/DataDomeSDK\/Classes\/Logger\/LogLevel.swift",
+      "kind": "IntegerLiteral",
+      "offset": 637,
+      "length": 1,
+      "value": "3"
+    },
+    {
+      "filePath": "\/var\/folders\/69\/qgnyrbkx23dbp0p6p_b6bc9m0000gn\/T\/_artifact_pull2795619431\/git\/Legacy\/DataDomeSDK\/Classes\/Logger\/LogLevel.swift",
+      "kind": "IntegerLiteral",
+      "offset": 685,
+      "length": 1,
+      "value": "4"
+    },
+    {
+      "filePath": "\/var\/folders\/69\/qgnyrbkx23dbp0p6p_b6bc9m0000gn\/T\/_artifact_pull2795619431\/git\/Legacy\/DataDomeSDK\/Classes\/Logger\/LogLevel.swift",
+      "kind": "IntegerLiteral",
+      "offset": 747,
+      "length": 1,
+      "value": "5"
+    },
+    {
+      "filePath": "\/var\/folders\/69\/qgnyrbkx23dbp0p6p_b6bc9m0000gn\/T\/_artifact_pull2795619431\/git\/Legacy\/DataDomeSDK\/Classes\/Core\/Event Tracker\/IntegrationMode.swift",
+      "kind": "StringLiteral",
+      "offset": 224,
+      "length": 12,
+      "value": "\"URLSession\""
+    },
+    {
+      "filePath": "\/var\/folders\/69\/qgnyrbkx23dbp0p6p_b6bc9m0000gn\/T\/_artifact_pull2795619431\/git\/Legacy\/DataDomeSDK\/Classes\/Core\/Event Tracker\/IntegrationMode.swift",
+      "kind": "StringLiteral",
+      "offset": 258,
+      "length": 11,
+      "value": "\"Alamofire\""
+    },
+    {
+      "filePath": "\/var\/folders\/69\/qgnyrbkx23dbp0p6p_b6bc9m0000gn\/T\/_artifact_pull2795619431\/git\/Legacy\/DataDomeSDK\/Classes\/Core\/Event Tracker\/IntegrationMode.swift",
+      "kind": "StringLiteral",
+      "offset": 288,
+      "length": 8,
+      "value": "\"Apollo\""
+    },
+    {
+      "filePath": "\/var\/folders\/69\/qgnyrbkx23dbp0p6p_b6bc9m0000gn\/T\/_artifact_pull2795619431\/git\/Legacy\/DataDomeSDK\/Classes\/Core\/Event Tracker\/IntegrationMode.swift",
+      "kind": "StringLiteral",
+      "offset": 224,
+      "length": 12,
+      "value": "\"URLSession\""
+    },
+    {
+      "filePath": "\/var\/folders\/69\/qgnyrbkx23dbp0p6p_b6bc9m0000gn\/T\/_artifact_pull2795619431\/git\/Legacy\/DataDomeSDK\/Classes\/Core\/Event Tracker\/IntegrationMode.swift",
+      "kind": "StringLiteral",
+      "offset": 258,
+      "length": 11,
+      "value": "\"Alamofire\""
+    },
+    {
+      "filePath": "\/var\/folders\/69\/qgnyrbkx23dbp0p6p_b6bc9m0000gn\/T\/_artifact_pull2795619431\/git\/Legacy\/DataDomeSDK\/Classes\/Core\/Event Tracker\/IntegrationMode.swift",
+      "kind": "StringLiteral",
+      "offset": 288,
+      "length": 8,
+      "value": "\"Apollo\""
+    },
+    {
+      "filePath": "\/var\/folders\/69\/qgnyrbkx23dbp0p6p_b6bc9m0000gn\/T\/_artifact_pull2795619431\/git\/Legacy\/DataDomeSDK\/Classes\/Core\/Event Tracker\/Session.swift",
+      "kind": "StringLiteral",
+      "offset": 1763,
+      "length": 13,
+      "value": "\"Unspecified\""
+    },
+    {
+      "filePath": "\/var\/folders\/69\/qgnyrbkx23dbp0p6p_b6bc9m0000gn\/T\/_artifact_pull2795619431\/git\/Legacy\/DataDomeSDK\/Classes\/Core\/Event Tracker\/Session.swift",
+      "kind": "StringLiteral",
+      "offset": 1982,
+      "length": 8,
+      "value": "\"Unkown\""
+    },
+    {
+      "filePath": "\/var\/folders\/69\/qgnyrbkx23dbp0p6p_b6bc9m0000gn\/T\/_artifact_pull2795619431\/git\/Legacy\/DataDomeSDK\/Classes\/Core\/Event Tracker\/Session.swift",
+      "kind": "StringLiteral",
+      "offset": 2217,
+      "length": 8,
+      "value": "\"Unkown\""
+    },
+    {
+      "filePath": "\/var\/folders\/69\/qgnyrbkx23dbp0p6p_b6bc9m0000gn\/T\/_artifact_pull2795619431\/git\/Legacy\/DataDomeSDK\/Classes\/Core\/Event Tracker\/Session.swift",
+      "kind": "StringLiteral",
+      "offset": 2281,
+      "length": 28,
+      "value": "\"CFBundleShortVersionString\""
+    },
+    {
+      "filePath": "\/var\/folders\/69\/qgnyrbkx23dbp0p6p_b6bc9m0000gn\/T\/_artifact_pull2795619431\/git\/Legacy\/DataDomeSDK\/Classes\/Core\/Event Tracker\/Session.swift",
+      "kind": "StringLiteral",
+      "offset": 2348,
+      "length": 8,
+      "value": "\"Unkown\""
+    },
+    {
+      "filePath": "\/var\/folders\/69\/qgnyrbkx23dbp0p6p_b6bc9m0000gn\/T\/_artifact_pull2795619431\/git\/Legacy\/DataDomeSDK\/Classes\/Core\/Event Tracker\/Session.swift",
+      "kind": "StringLiteral",
+      "offset": 3346,
+      "length": 16,
+      "value": "\"DEVICE-unknown\""
+    },
+    {
+      "filePath": "\/var\/folders\/69\/qgnyrbkx23dbp0p6p_b6bc9m0000gn\/T\/_artifact_pull2795619431\/git\/Legacy\/DataDomeSDK\/Classes\/Core\/Event Tracker\/Gestures\/GestureRecognizer.swift",
+      "kind": "IntegerLiteral",
+      "offset": 522,
+      "length": 1,
+      "value": "0"
+    },
+    {
+      "filePath": "\/var\/folders\/69\/qgnyrbkx23dbp0p6p_b6bc9m0000gn\/T\/_artifact_pull2795619431\/git\/Legacy\/DataDomeSDK\/Classes\/Core\/Event Tracker\/Gestures\/GestureRecognizer.swift",
+      "kind": "IntegerLiteral",
+      "offset": 640,
+      "length": 1,
+      "value": "0"
+    },
+    {
+      "filePath": "\/var\/folders\/69\/qgnyrbkx23dbp0p6p_b6bc9m0000gn\/T\/_artifact_pull2795619431\/git\/Legacy\/DataDomeSDK\/Classes\/Core\/Event Tracker\/Gestures\/GestureRecognizer.swift",
+      "kind": "IntegerLiteral",
+      "offset": 762,
+      "length": 1,
+      "value": "0"
+    },
+    {
+      "filePath": "\/var\/folders\/69\/qgnyrbkx23dbp0p6p_b6bc9m0000gn\/T\/_artifact_pull2795619431\/git\/Legacy\/DataDomeSDK\/Classes\/Core\/Event Tracker\/Gestures\/GestureRecognizer.swift",
+      "kind": "IntegerLiteral",
+      "offset": 884,
+      "length": 1,
+      "value": "0"
+    },
+    {
+      "filePath": "\/var\/folders\/69\/qgnyrbkx23dbp0p6p_b6bc9m0000gn\/T\/_artifact_pull2795619431\/git\/Legacy\/DataDomeSDK\/Classes\/Logger\/Logger.swift",
+      "kind": "StringLiteral",
+      "offset": 540,
+      "length": 17,
+      "value": "\"co.datadome.sdk\""
+    },
+    {
+      "filePath": "\/var\/folders\/69\/qgnyrbkx23dbp0p6p_b6bc9m0000gn\/T\/_artifact_pull2795619431\/git\/Legacy\/DataDomeSDK\/Classes\/Logger\/Logger.swift",
+      "kind": "BooleanLiteral",
+      "offset": 597,
+      "length": 4,
+      "value": "true"
+    },
+    {
+      "filePath": "\/var\/folders\/69\/qgnyrbkx23dbp0p6p_b6bc9m0000gn\/T\/_artifact_pull2795619431\/git\/Legacy\/DataDomeSDK\/Classes\/Core\/Event Tracker\/EventTracker.swift",
+      "kind": "StringLiteral",
+      "offset": 435,
+      "length": 34,
+      "value": "\"https:\/\/api-sdk.datadome.co\/sdk\/\""
+    },
+    {
+      "filePath": "\/var\/folders\/69\/qgnyrbkx23dbp0p6p_b6bc9m0000gn\/T\/_artifact_pull2795619431\/git\/Legacy\/DataDomeSDK\/Classes\/Core\/Event Tracker\/EventTracker.swift",
+      "kind": "IntegerLiteral",
+      "offset": 582,
+      "length": 1,
+      "value": "5"
+    },
+    {
+      "filePath": "\/var\/folders\/69\/qgnyrbkx23dbp0p6p_b6bc9m0000gn\/T\/_artifact_pull2795619431\/git\/Legacy\/DataDomeSDK\/Classes\/Core\/Event Tracker\/EventTracker.swift",
+      "kind": "IntegerLiteral",
+      "offset": 679,
+      "length": 2,
+      "value": "80"
+    },
+    {
+      "filePath": "\/var\/folders\/69\/qgnyrbkx23dbp0p6p_b6bc9m0000gn\/T\/_artifact_pull2795619431\/git\/Legacy\/DataDomeSDK\/Classes\/Core\/Event Tracker\/EventTracker.swift",
+      "kind": "IntegerLiteral",
+      "offset": 792,
+      "length": 2,
+      "value": "10"
+    },
+    {
+      "filePath": "\/var\/folders\/69\/qgnyrbkx23dbp0p6p_b6bc9m0000gn\/T\/_artifact_pull2795619431\/git\/Legacy\/DataDomeSDK\/Classes\/Core\/Event Tracker\/EventTracker.swift",
+      "kind": "BooleanLiteral",
+      "offset": 939,
+      "length": 4,
+      "value": "true"
+    },
+    {
+      "filePath": "\/var\/folders\/69\/qgnyrbkx23dbp0p6p_b6bc9m0000gn\/T\/_artifact_pull2795619431\/git\/Legacy\/DataDomeSDK\/Classes\/Core\/Event Tracker\/EventTracker.swift",
+      "kind": "BooleanLiteral",
+      "offset": 985,
+      "length": 5,
+      "value": "false"
+    },
+    {
+      "filePath": "\/var\/folders\/69\/qgnyrbkx23dbp0p6p_b6bc9m0000gn\/T\/_artifact_pull2795619431\/git\/Legacy\/DataDomeSDK\/Classes\/Core\/Captcha\/WebViewController.swift",
+      "kind": "StringLiteral",
+      "offset": 181,
+      "length": 17,
+      "value": "\"DataDomeSDK.WebViewController\""
+    },
+    {
+      "filePath": "\/var\/folders\/69\/qgnyrbkx23dbp0p6p_b6bc9m0000gn\/T\/_artifact_pull2795619431\/git\/Legacy\/DataDomeSDK\/Classes\/Core\/Event Tracker\/Event.swift",
+      "kind": "IntegerLiteral",
+      "offset": 556,
+      "length": 4,
+      "value": "1000"
+    },
+    {
+      "filePath": "\/var\/folders\/69\/qgnyrbkx23dbp0p6p_b6bc9m0000gn\/T\/_artifact_pull2795619431\/git\/Legacy\/DataDomeSDK\/Classes\/Core\/Captcha\/DeviceCheckResponsePageOptions.swift",
+      "kind": "IntegerLiteral",
+      "offset": 531,
+      "length": 1,
+      "value": "1"
+    },
+    {
+      "filePath": "\/var\/folders\/69\/qgnyrbkx23dbp0p6p_b6bc9m0000gn\/T\/_artifact_pull2795619431\/git\/Legacy\/DataDomeSDK\/Classes\/Core\/Captcha\/DeviceCheckResponsePageOptions.swift",
+      "kind": "IntegerLiteral",
+      "offset": 536,
+      "length": 1,
+      "value": "0"
+    },
+    {
+      "filePath": "\/var\/folders\/69\/qgnyrbkx23dbp0p6p_b6bc9m0000gn\/T\/_artifact_pull2795619431\/git\/Legacy\/DataDomeSDK\/Classes\/DataDomeSDK.swift",
+      "kind": "BooleanLiteral",
+      "offset": 284,
+      "length": 5,
+      "value": "false"
+    }
+  ]
+}
