@@ -1,1 +1,1 @@
-{"heapBlockScan": true, "note": "عدّل هنا فقط — الماسح يقرأ كل 45ث بدون إعادة بناء"}
+{"heapBlockScan": true, "probeBss": ["0x1180442f8","0x118044308","0x118045318","0x118044300","0x118048800","0x11805d640","0x11825b830"], "note": "candidates from static xref analysis"}
