@@ -969,13 +969,13 @@ static int DGFindNameBlocksHeap(FILE *dbg){
 /* فك FName (تخطيط 4.23+: Id>>16=block, Id&0xFFFF=offset داخل البلوك) */
 static BOOL DGDecodeFName(uint32_t nameId, char *out, int outLen){
     out[0]=0;
-    if(!DGNamePool||!nameId) return NO;
-    uint64_t blocksPtr=0;
-    if(!DGReadQ(DGNamePool,&blocksPtr)||!blocksPtr) return NO;
+    if(!DGNamePool) return NO;
+    /* DGNamePool = عنوان Blocks[0] مباشرة — المصفوفة عنده، لا تفك مرجعًا إضافيًا */
     uint32_t blockIdx=nameId>>16, off=nameId&0xFFFF;
     if(blockIdx>512||off>0xFF00) return NO;
     uint64_t block=0;
-    if(!DGReadQ(blocksPtr+(uint64_t)blockIdx*8,&block)||!block) return NO;
+    if(!DGReadQ(DGNamePool+(uint64_t)blockIdx*8,&block)||!block) return NO;
+    if(!DGInRegions(block)) return NO;
     uint64_t got=0;
     uint8_t *h=DGSafeRead(block+off,2,&got);
     if(!h||got<2){ if(h)DGFreeRead(h,got); return NO; }
