@@ -1246,6 +1246,7 @@ static int DGFindGObjects(FILE *dbg){
         uint64_t got=0;
         uint8_t *buf=DGSafeRead(cursor,want,&got);
         if(!buf){ cursor+=want; continue; }
+        if(got<24){ DGFreeRead(buf,got); cursor+=got?got:want; continue; }
         uint64_t lim=got-24;
         for(uint64_t q=0;q<lim;q+=8){
             uint64_t table; memcpy(&table,buf+q,8);
@@ -1285,7 +1286,6 @@ static int DGFindGObjects(FILE *dbg){
         }
         DGFreeRead(buf,got);
         cursor+=got?got:want;
-        if(!got) cursor+=want;
     }
     fprintf(dbg,"GOBJ funnel: cheap=%d nameHits=%d\n",cheap,nameHits);
     fflush(dbg);
@@ -1307,7 +1307,7 @@ static void DGUE4Scan(void){
     NSString *outp=[NSTemporaryDirectory() stringByAppendingPathComponent:@"deltaguard_ue4.txt"];
     FILE *dbg=fopen([outp UTF8String],"w");
     if(!dbg) return;
-    fprintf(dbg,"=== OBSERVATORY v0.9.7 attempt %d regions=%u ===\n",DGUE4ScanCount,DGRegionCount);
+    fprintf(dbg,"=== OBSERVATORY v0.9.8 attempt %d regions=%u ===\n",DGUE4ScanCount,DGRegionCount);
     fflush(dbg);
     if(!DGGameTextLo){ fprintf(dbg,"FAIL ranges\n"); fclose(dbg); return; }
 
@@ -1330,63 +1330,11 @@ static void DGUE4Scan(void){
     }
     if(DGNamePool){ fprintf(dbg,"PHASE1 OK pool=0x%llx\n",(unsigned long long)DGNamePool);
         fprintf(dbg,"PHASE2: البحث عن GObjects بالتحقق من الأسماء...\n");
-        DGFindGObjects(dbg);
+        if(DGFindGObjects(dbg)) found=YES;
     }
     else fprintf(dbg,"PHASE1 pending\n");
     fflush(dbg);
-
-    /* المرحلة 2: جدول الكائنات مع تحقق بالأسماء */
-    int cheap=0, withNames=0, verified=0;
-    if(DGNamePool){
-        snprintf(DGUE4Stat,sizeof(DGUE4Stat),"محاولة %d: البحث عن جدول الكائنات (تحقق بالأسماء)...",DGUE4ScanCount);
-        uint64_t cursor=DGGameDataLo;
-        while(cursor<DGGameDataHi && !found){
-            uint64_t want=DGGameDataHi-cursor; if(want>33554432) want=33554432;
-            uint64_t got=0;
-            uint8_t *buf=DGSafeRead(cursor,want,&got);
-            if(!buf){ cursor+=want; continue; }
-            uint64_t lim=got-24;
-            for(uint64_t q=0;q<lim && !found;q+=8){
-                uint64_t table; memcpy(&table,buf+q,8);
-                if(!table||(table&7)||!DGInRegions(table)) continue;
-                uint64_t c0=0,c1=0;
-                if(!DGReadQ(table,&c0)||!DGInRegions(c0)) continue;
-                if(!DGReadQ(table+8,&c1)||!DGInRegions(c1)) continue;
-                long long stride=(long long)(c1-c0);
-                if(stride<0x8000||stride>0x800000) continue;
-                cheap++;
-                /* تحقق بالأسماء على خطوتي عنصر */
-                int nameScore18=0,nameScore20=0; char sample[64]="";
-                for(int i=0;i<12;i++){
-                    uint64_t item=c0+(uint64_t)i*0x18;
-                    uint64_t obj=0;
-                    if(!DGReadQ(item,&obj)||!obj||!DGInRegions(obj)) continue;
-                    char nm[64];
-                    if(DGObjName(obj,0x18,nm,sizeof nm)){ nameScore18++; if(!sample[0]) strncpy(sample,nm,63); }
-                    if(DGObjName(obj,0x20,nm,sizeof nm)){ nameScore20++; if(!sample[0]) strncpy(sample,nm,63); }
-                }
-                int bestN=MAX(nameScore18,nameScore20);
-                if(bestN>=1&&withNames<40){
-                    withNames++;
-                    fprintf(dbg,"OBJTABLE? @ 0x%llx stride=0x%llx names18=%d names20=%d sample=%s\n",
-                        (unsigned long long)table,(unsigned long long)stride,nameScore18,nameScore20,sample);
-                    fflush(dbg);
-                }
-                if(bestN>=3){
-                    found=YES; DGUE4FoundFlag=YES;
-                    snprintf(DGUE4Stat,sizeof(DGUE4Stat),"تم: GUObjectArray @ 0x%llx — يمكنك الخروج",(unsigned long long)table);
-                    snprintf(DGUE4FoundAddr,sizeof(DGUE4FoundAddr),"0x%llx",(unsigned long long)table);
-                    dispatch_async(dispatch_get_main_queue(),^{ DGHaptic(); DGHaptic(); });
-                    fprintf(dbg,"VERIFIED GObjects @ 0x%llx (name-verified, itemStride=%s, sample=%s)\n",
-                        (unsigned long long)table,nameScore20>nameScore18?"0x20":"0x18",sample);
-                }
-            }
-            DGFreeRead(buf,got);
-            cursor+=got?got:want;
-            if(!got) cursor+=want;
-        }
-    }
-    fprintf(dbg,"END pool=%s cheap=%d nameHits=%d\n",DGNamePool?"YES":"NO",cheap,withNames);
+    fprintf(dbg,"END pool=%s gobjects=%s\n",DGNamePool?"YES":"NO",found?"FOUND":"PENDING");
     fclose(dbg);
 }
 
@@ -2262,7 +2210,7 @@ static UIView *DGToggleRow(CGFloat y, NSString *text, SEL action, UISwitch * __s
 
 + (NSString *)statsText{
     NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
-    return [NSString stringWithFormat:@"الذاكرة: %@ | التشغيل: %02d:%02d\nDeltaGuard v0.9.7 — UE4",
+    return [NSString stringWithFormat:@"الذاكرة: %@ | التشغيل: %02d:%02d\nDeltaGuard v0.9.8 — UE4",
         DGMemoryString(),(int)(up/60),((int)up)%60];
 }
 
