@@ -8,7 +8,7 @@ permissions:
 
 env:
   THEOS: ${{ github.workspace }}/theos
-  DELTAGUARD_VERSION: 0.8.1
+  DELTAGUARD_VERSION: 0.8.4
 jobs:
   build-deltaguard-ios:
     name: Build DeltaGuardIOS native app
@@ -17,6 +17,10 @@ jobs:
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
+        with:
+          filter: blob:none
+          sparse-checkout: DeltaGuardIOS
+          sparse-checkout-cone-mode: true
       - name: Install dependencies
         run: brew install dpkg ldid
       - name: Install Theos
