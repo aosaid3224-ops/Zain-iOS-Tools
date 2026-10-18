@@ -903,7 +903,11 @@ static void DGFindPoolPtr(uint64_t entry, FILE *dbg){
                         DGFreeRead(blk,g2);
                     }
                     if(!ok) continue;
-                    if(!DGVerifyPoolStruct(lo+off+q)) continue; /* صارم: رفض الذاكرة العابرة */
+                    uint64_t gotv=0; uint8_t *bv=DGSafeRead(lo+off+q,24,&gotv);
+                    if(bv){ uint32_t nbv,cbv,curv; memcpy(&nbv,bv+8,4); memcpy(&cbv,bv+12,4); memcpy(&curv,bv+16,4);
+                        fprintf(dbg,"CAND @ 0x%llx nb=%u cb=%u cur=%u\n",(unsigned long long)(lo+off+q),nbv,cbv,curv);
+                        DGFreeRead(bv,gotv); fflush(dbg); }
+                    if(!DGVerifyPoolStruct(lo+off+q)) continue; /* صارم + مستقر */
                     hits++;
                     fprintf(dbg,"POOLPTR @ 0x%llx -> 0x%llx VERIFIED-STRICT ctx=", (unsigned long long)(lo+off+q),(unsigned long long)p);
                     uint64_t gc=0; uint8_t *cx=DGSafeRead(lo+off+q>64?lo+off+q-64:lo+off+q,64,&gc);
@@ -1327,27 +1331,42 @@ static int DGFindGObjects(FILE *dbg){
     return 0;
 }
 
-/* تحقق صارم: هل العنوان A يحوي بنية FNamePool حقيقية؟ */
-static BOOL DGVerifyPoolStruct(uint64_t A){
-    uint64_t got=0; uint8_t *b=DGSafeRead(A,32,&got);
-    if(!b||got<24){ if(b)DGFreeRead(b,got); return NO; }
-    uint64_t blocks; uint32_t nb,cb,cur,pad;
-    memcpy(&blocks,b,8); memcpy(&nb,b+8,4); memcpy(&cb,b+12,4); memcpy(&cur,b+16,4); memcpy(&pad,b+20,4);
-    DGFreeRead(b,got);
-    if(!blocks||(blocks&7)) return NO;
-    if(nb<1||nb>512) return NO;
-    if(cb>=nb) return NO;
-    if(cur==0||cur>0x20000) return NO;
-    /* blocks يجب أن يشير لبلوك يحوي None (XOR-aware) */
-    uint64_t g2=0; uint8_t *blk=DGSafeRead(blocks,96,&g2);
-    if(!blk) return NO;
+/* تحقق مزدوج: بنية + استقرار زمني (الحقيقي ثابت، العابر يتغير) */
+static BOOL DGBlockHasNoneP(uint64_t blocks){
+    uint64_t g2=0; uint8_t *blk=DGSafeRead(blocks,128,&g2);
+    if(!blk) return 0;
     int ok=0;
-    for(uint64_t i=0;i+8<g2&&!ok;i+=2){
+    for(uint64_t i=0;i+8<g2&&!ok;i+=2)
         for(int k=0;k<DGXorKeyCount;k++)
             if(DGMatchNone(blk+i+2,DGXorKeys[k])) ok=1;
-    }
     DGFreeRead(blk,g2);
-    return ok!=0;
+    return ok;
+}
+static BOOL DGVerifyPoolStruct(uint64_t A){
+    uint64_t got=0; uint8_t *b1=DGSafeRead(A,32,&got);
+    if(!b1||got<24){ if(b1)DGFreeRead(b1,got); return NO; }
+    uint64_t blocks; uint32_t nb,cb,cur;
+    memcpy(&blocks,b1,8); memcpy(&nb,b1+8,4); memcpy(&cb,b1+12,4); memcpy(&cur,b1+16,4);
+    uint8_t snap[32]; memcpy(snap,b1,got<32?got:32);
+    DGFreeRead(b1,got);
+    if(!blocks||(blocks&7)) return NO;
+    if(!DGBlockHasNoneP(blocks)) return NO;
+    /* نعومة الحقول (لو البنية مختلفة لا نرفض — نكتفي بالمؤشر المستقر) */
+    if(nb>4096) return NO;
+    if(cur>0x40000) return NO;
+    /* الاستقرار الزمني: أعد القراءة بعد 250ms وقارن */
+    usleep(250000);
+    uint64_t got2=0; uint8_t *b2=DGSafeRead(A,32,&got2);
+    if(!b2||got2<24){ if(b2)DGFreeRead(b2,got2); return NO; }
+    BOOL stable=(memcmp(snap,b2,got2<32?got2:32)==0);
+    uint64_t blocks2; memcpy(&blocks2,b2,8);
+    DGFreeRead(b2,got2);
+    if(!stable) return NO;
+    if(blocks2!=blocks) return NO;
+    if(!DGBlockHasNoneP(blocks2)) return NO;
+    /* حقول ثانوية للتشخيص */
+    fprintf(stderr,"");
+    return YES;
 }
 
 static void DGUE4Scan(void){
