@@ -871,6 +871,7 @@ static BOOL DGMatchNone(const uint8_t *p, uint8_t k){
 }
 
 static uint64_t DGNamePool=0;
+static void DGDumpRegion2(uint64_t at, uint64_t bytes, const char *name, FILE *dbg);
 /* ابحث في كل الذاكرة عن مؤشر لبلوك معروف — مع تحقق XOR أن Blocks[0] هو بداية بول حقيقية */
 static void DGFindPoolPtr(uint64_t entry, FILE *dbg){
     uint64_t page=entry&~0xFFFFULL;
