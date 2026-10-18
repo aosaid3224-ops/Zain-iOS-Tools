@@ -1237,73 +1237,83 @@ static int DGFindPakIndex(FILE *dbg){
     return hits;
 }
 
-static uint64_t DGPhase2Resume=0;
-/* المرحلة 2: GUObjectArray — تحقق بالأسماء المفكوكة عبر GNamePool المؤكد */
+static uint32_t DGPhase2RI=0;
+static uint64_t DGPhase2OFF=0;
+/* المرحلة 2: GUObjectArray — كل الذاكرة المقروءة مع استئناف */
 static int DGFindGObjects(FILE *dbg){
     if(!DGNamePool) return 0;
     int cheap=0, nameHits=0;
-    uint64_t start=DGPhase2Resume;
-    if(start<DGGameDataLo||start>=DGGameDataHi) start=DGGameDataLo;
-    uint64_t cursor=start;
-    while(cursor<DGGameDataHi && cheap<2000){
-        uint64_t want=DGGameDataHi-cursor; if(want>33554432) want=33554432;
-        uint64_t got=0;
-        uint8_t *buf=DGSafeRead(cursor,want,&got);
-        if(!buf){ cursor+=want; continue; }
-        if(got<=24){ DGFreeRead(buf,got); cursor+=got?got:want; continue; }
-        uint64_t lim=got-24;
-        uint64_t q=0;
-        for(q=0;q<lim && cheap<2000;q+=8){
-            uint64_t table; memcpy(&table,buf+q,8);
-            if(!table||(table&7)||!DGInRegions(table)) continue;
-            uint64_t c0=0,c1=0;
-            if(!DGReadQ(table,&c0)||!DGInRegions(c0)) continue;
-            if(!DGReadQ(table+8,&c1)||!DGInRegions(c1)) continue;
-            long long stride=(long long)(c1-c0);
-            if(stride<0x8000||stride>0x800000) continue;
-            cheap++;
-            if(cheap%500==0){ fprintf(dbg,"PHASE2 progress: %d/2000 candidates\n",cheap); fflush(dbg); }
-            int n18=0,n20=0; char sample[64]=""; char sample2[64]="";
-            for(int i=0;i<6;i++){
-                uint64_t item=c0+(uint64_t)i*0x18;
-                uint64_t obj=0;
-                if(!DGReadQ(item,&obj)||!obj||!DGInRegions(obj)) continue;
-                char nm[64];
-                if(DGObjName(obj,0x18,nm,sizeof nm)){ n18++; if(!sample[0]) strncpy(sample,nm,63); }
-                if(DGObjName(obj,0x20,nm,sizeof nm)){ n20++; if(!sample2[0]) strncpy(sample2,nm,63); }
+    int cap=4000;
+    id capObj=DGScanCfg[@"phase2Cap"];
+    if([capObj isKindOfClass:[NSNumber class]]) cap=[capObj intValue];
+    if(cap<500) cap=500;
+    uint32_t ri=DGPhase2RI;
+    uint64_t startOff=DGPhase2OFF;
+    for(; ri<DGRegionCount && cheap<cap; ri++){
+        uint64_t lo=DGRegions[ri*2], hi=DGRegions[ri*2+1];
+        uint64_t sz=hi-lo;
+        if(sz<0x1000||sz>0x40000000ULL) continue;
+        if(DGGameTextLo && lo>=DGGameTextLo && lo<DGGameTextHi) continue;
+        uint64_t off=(ri==DGPhase2RI)?startOff:0;
+        while(off+24<sz && cheap<cap){
+            uint64_t want=sz-off; if(want>33554432) want=33554432;
+            uint64_t got=0;
+            uint8_t *buf=DGSafeRead(lo+off,want,&got);
+            if(!buf){ off+=want; continue; }
+            uint64_t lim=got-24;
+            for(uint64_t q=0;q<lim && cheap<cap;q+=8){
+                uint64_t table; memcpy(&table,buf+q,8);
+                if(!table||(table&7)||!DGInRegions(table)) continue;
+                uint64_t c0=0,c1=0;
+                if(!DGReadQ(table,&c0)||!DGInRegions(c0)) continue;
+                if(!DGReadQ(table+8,&c1)||!DGInRegions(c1)) continue;
+                long long stride=(long long)(c1-c0);
+                if(stride<0x8000||stride>0x800000) continue;
+                cheap++;
+                if(cheap%1000==0){ fprintf(dbg,"PHASE2 progress: %d/%d (region %u)\\n",cheap,cap,ri); fflush(dbg); }
+                int n18=0,n20=0; char sample[64]=""; char sample2[64]="";
+                for(int i=0;i<6;i++){
+                    uint64_t item=c0+(uint64_t)i*0x18;
+                    uint64_t obj=0;
+                    if(!DGReadQ(item,&obj)||!obj||!DGInRegions(obj)) continue;
+                    char nm[64];
+                    if(DGObjName(obj,0x18,nm,sizeof nm)){ n18++; if(!sample[0]) strncpy(sample,nm,63); }
+                    if(DGObjName(obj,0x20,nm,sizeof nm)){ n20++; if(!sample2[0]) strncpy(sample2,nm,63); }
+                }
+                int bestN=MAX(n18,n20);
+                if(bestN>=1 && nameHits<30){
+                    nameHits++;
+                    fprintf(dbg,"OBJTABLE? @ 0x%llx stride=0x%llx names18=%d names20=%d sample=%s/%s\n",
+                        (unsigned long long)table,(unsigned long long)stride,n18,n20,sample,sample2);
+                    fflush(dbg);
+                }
+                if(bestN>=3){
+                    fprintf(dbg,"VERIFIED GObjects @ 0x%llx (itemStride=%s, samples=%s|%s)\n",
+                        (unsigned long long)table,n20>n18?"0x20":"0x18",sample,sample2);
+                    snprintf(DGUE4Stat,sizeof(DGUE4Stat),"تم: GObjects @ 0x%llx — اكتمل الاكتشاف كاملًا",(unsigned long long)table);
+                    snprintf(DGUE4FoundAddr,sizeof(DGUE4FoundAddr),"0x%llx",(unsigned long long)table);
+                    DGUE4FoundFlag=YES;
+                    dispatch_async(dispatch_get_main_queue(),^{ DGHaptic(); DGHaptic(); DGHaptic(); });
+                    DGFreeRead(buf,got);
+                    return 1;
+                }
             }
-            int bestN=MAX(n18,n20);
-            if(bestN>=1 && nameHits<30){
-                nameHits++;
-                fprintf(dbg,"OBJTABLE? @ 0x%llx stride=0x%llx names18=%d names20=%d sample=%s/%s\n",
-                    (unsigned long long)table,(unsigned long long)stride,n18,n20,sample,sample2);
-                fflush(dbg);
-            }
-            if(bestN>=3){
-                fprintf(dbg,"VERIFIED GObjects @ 0x%llx (itemStride=%s, samples=%s|%s)\n",
-                    (unsigned long long)table,n20>n18?"0x20":"0x18",sample,sample2);
-                snprintf(DGUE4Stat,sizeof(DGUE4Stat),"تم: GObjects @ 0x%llx — اكتمل الاكتشاف كاملًا",(unsigned long long)table);
-                snprintf(DGUE4FoundAddr,sizeof(DGUE4FoundAddr),"0x%llx",(unsigned long long)table);
-                DGUE4FoundFlag=YES;
-                dispatch_async(dispatch_get_main_queue(),^{ DGHaptic(); DGHaptic(); DGHaptic(); });
-                DGFreeRead(buf,got);
-                return 1;
-            }
-        }
-        if(cheap>=2000){
-            DGPhase2Resume=cursor+q;
-            if(DGPhase2Resume>=DGGameDataHi) DGPhase2Resume=DGGameDataLo;
+            DGPhase2OFF=off+got;
             DGFreeRead(buf,got);
-            fprintf(dbg,"PHASE2 resume saved @ 0x%llx\n",(unsigned long long)DGPhase2Resume);
-            fflush(dbg);
-            return 0;
+            if(!got){ off+=want; DGPhase2OFF=off; }
+            off+=got?got:0;
+            if(got<want && got>0) break;
         }
-        DGFreeRead(buf,got);
-        cursor+=lim;
+        if(cheap<cap){ DGPhase2RI=ri+1; DGPhase2OFF=0; }
+        if(cheap>=cap) break;
     }
-    DGPhase2Resume=DGGameDataLo;
-    fprintf(dbg,"PHASE2 resume saved @ 0x%llx (wrapped)\n",(unsigned long long)DGPhase2Resume);
-    fflush(dbg);
+    if(cheap>=cap && !DGUE4FoundFlag){
+        DGPhase2RI=ri; DGPhase2OFF=DGPhase2OFF;
+        fprintf(dbg,"PHASE2 resume @ region %u off 0x%llx\n",ri,(unsigned long long)DGPhase2OFF);
+    } else if(!DGUE4FoundFlag){
+        DGPhase2RI=0; DGPhase2OFF=0;
+        fprintf(dbg,"PHASE2 full cycle done — restarting\n");
+    }
     fprintf(dbg,"GOBJ funnel: cheap=%d nameHits=%d\n",cheap,nameHits);
     fflush(dbg);
     return 0;
