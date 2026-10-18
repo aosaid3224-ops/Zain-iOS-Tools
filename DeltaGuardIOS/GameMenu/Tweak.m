@@ -852,7 +852,7 @@ static void DGLoadScanCfg(void){
 }
 static BOOL DGCfgBool(NSString *k,BOOL d){ id v=DGScanCfg[k]; return v?[v boolValue]:d; }
 static uint8_t DGXorKeys[8]={0,14,0,0,0,0,0,0};
-static int DGXorKeyCount=2;
+static int DGXorKeyCount=2; /* مدمج: نصي + XOR 0x0E المؤكد */
 static uint8_t DGDetectedXorKey=0;
 static BOOL DGDetectedXorKeyValid=NO;
 static void DGLoadXorKeys(void){
@@ -1251,7 +1251,7 @@ static void DGUE4Scan(void){
 
     DGProbeBss(dbg);
     /* المرحلة 0 (اختياري عبر config): مسح heap المباشر لبلوكات الأسماء */
-    if(DGCfgBool(@"heapBlockScan",NO)){
+    if(DGCfgBool(@"heapBlockScan",YES)){
         snprintf(DGUE4Stat,sizeof(DGUE4Stat),"محاولة %d: مسح heap عن بلوكات الأسماء...",DGUE4ScanCount);
         DGFindNameBlocksHeap(dbg);
     }
