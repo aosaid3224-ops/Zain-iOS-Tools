@@ -1350,6 +1350,29 @@ static void DGUE4Scan(void){
     if(DGCfgBool(@"densityScan",NO)) DGFindPoolByDensity(dbg);
     if(!DGNamePool) DGFindNamePool(dbg);
     if(DGNamePool){
+        /* تشخيص بنية البلوك: dump أول 96 بايت + موضع None الدقيق */
+        uint64_t blk0=0;
+        if(DGReadQ(DGNamePool,&blk0)&&DGInRegions(blk0)){
+            uint64_t g=0; uint8_t *raw=DGSafeRead(blk0,96,&g);
+            if(raw){
+                fprintf(dbg,"BLOCK0 @ 0x%llx head96=",(unsigned long long)blk0);
+                for(uint64_t k=0;k<g;k++) fprintf(dbg,"%02x",raw[k]);
+                fprintf(dbg,"\n");
+                uint8_t *xr=DGSafeRead(blk0,96,&g);
+                if(xr){ for(uint64_t k=0;k<g;k++) xr[k]^=0x0E;
+                    fprintf(dbg,"BLOCK0 xor0E= ");
+                    for(uint64_t k=0;k<g;k++) fprintf(dbg,"%02x",xr[k]);
+                    fprintf(dbg,"\n");
+                    for(uint64_t k=0;k+8<g;k+=2){
+                        if(memcmp(xr+k,"None",4)==0){ fprintf(dbg,"NONE xor0E @ +0x%llx\n",(unsigned long long)k); break; }
+                        if(memcmp(raw+k,"None",4)==0){ fprintf(dbg,"NONE raw @ +0x%llx\n",(unsigned long long)k); break; }
+                    }
+                    DGFreeRead(xr,g);
+                }
+                DGFreeRead(raw,g);
+            }
+        }
+        fflush(dbg);
         /* فحص ذاتي: فك أسماء معروفة من البول المؤكد */
         char sn[64]; int good=0;
         for(uint32_t sid=0; sid<64 && good<12; sid++){
