@@ -922,6 +922,7 @@ static int DGFindNameBlocksHeap(FILE *dbg){
                     if(density>100){
                         fprintf(dbg,"NAMEBLOCK @ 0x%llx density=%d\n",(unsigned long long)entry,density);
                         blocks++;
+                        DGDumpRegion2(entry,262144,"nameblock_dump.bin",dbg);
                         DGFindPoolPtr(entry,dbg);
                         if(blocks>=8) break;
                     } else if(density>=50 && noneHits<=400){
@@ -1120,6 +1121,7 @@ static int DGFindPoolByDensity(FILE *dbg){
             DGFreeRead(b4k,g4);
             if(d4k>200||none){
                 dense++;
+                if(none) DGDumpRegion2(p,262144,"dense_dump.bin",dbg);
                 fprintf(dbg,"DENSEBLOCK ptr=0x%llx block=0x%llx d256=%d d4k=%d noneKey=%d ctx=",
                     (unsigned long long)(cursor+q),(unsigned long long)p,d256,d4k,none?none-1:-1);
                 uint64_t gc=0; uint8_t *cx=DGSafeRead(cursor+q>64?cursor+q-64:cursor+q,64,&gc);
@@ -1139,6 +1141,34 @@ static int DGFindPoolByDensity(FILE *dbg){
 }
 
 /* البحث عن فهرس Pak المفكوك في الذاكرة الحية (.uasset كثيف) */
+static void DGDumpRegion(uint64_t at, uint64_t bytes, const char *name, FILE *dbg){
+    uint64_t base=at&~0xFFFULL;
+    uint64_t got=0;
+    uint8_t *b=DGSafeRead(base,bytes,&got);
+    if(!b){ if(dbg)fprintf(dbg,"DUMP %s FAILED\n",name); return; }
+    NSString *p=[NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithUTF8String:name]];
+    [b writeToFile:p atomically:NO]; /* NSData? b ليس NSData — استخدم fileHandle */
+    DGFreeRead(b,got);
+    if(dbg)fprintf(dbg,"DUMP %s @ 0x%llx size=%llu -> %s\n",name,(unsigned long long)base,(unsigned long long)got,[p UTF8String]);
+    fflush(dbg);
+}
+/* نسخة صحيحة بالـ fileHandle */
+static void DGDumpRegion2(uint64_t at, uint64_t bytes, const char *name, FILE *dbg){
+    uint64_t base=at&~0xFFFULL;
+    uint64_t got=0;
+    uint8_t *b=DGSafeRead(base,bytes,&got);
+    if(!b){ if(dbg)fprintf(dbg,"DUMP %s FAILED\n",name); return; }
+    NSString *p=[NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithUTF8String:name]];
+    [[NSFileManager defaultManager] removeItemAtPath:p error:nil];
+    [[NSFileManager defaultManager] createFileAtPath:p contents:nil attributes:nil];
+    NSFileHandle *fh=[NSFileHandle fileHandleForWritingAtPath:p];
+    [fh writeData:[NSData dataWithBytesNoCopy:b length:(NSUInteger)got freeWhenDone:NO]];
+    [fh closeFile];
+    DGFreeRead(b,got);
+    if(dbg)fprintf(dbg,"DUMP %s @ 0x%llx size=%llu\n",name,(unsigned long long)base,(unsigned long long)got);
+    fflush(dbg);
+}
+
 static int DGFindPakIndex(FILE *dbg){
     int hits=0, regions=0;
     for(uint32_t ri=0; ri<DGRegionCount && hits<3; ri++){
@@ -1169,6 +1199,7 @@ static int DGFindPakIndex(FILE *dbg){
                     memcpy(first+prefix,".uasset",7);
                     first[prefix+7]=0;
                     fprintf(dbg,"PAKIDX @ 0x%llx density=%d first=%s\n",(unsigned long long)(lo+off+q),d,first);
+                    DGDumpRegion2(lo+off+q,262144,"pakidx_dump.bin",dbg);
                     fflush(dbg);
                     break;
                 }
