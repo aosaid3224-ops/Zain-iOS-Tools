@@ -920,6 +920,7 @@ static void DGFindPoolPtr(uint64_t entry, FILE *dbg){
 
 static int DGFindNameBlocksHeap(FILE *dbg){
     int blocks=0, regions=0, noneHits=0;
+    int poolPtrCalls=0;
     for(uint32_t ri=0; ri<DGRegionCount && blocks<8; ri++){
         uint64_t lo=DGRegions[ri*2], hi=DGRegions[ri*2+1];
         uint64_t sz=hi-lo;
@@ -943,14 +944,13 @@ static int DGFindNameBlocksHeap(FILE *dbg){
                     int weakD=[[DGScanCfg objectForKey:@"weakMin"] intValue];
                     if(weakD<=0) weakD=25;
                     if(minD<=0) minD=45;
-                    if(density>minD && blocks<8){
+                    if(density>=minD && blocks<8){
                         fprintf(dbg,"NAMEBLOCK @ 0x%llx density=%d\n",(unsigned long long)entry,density);
                         blocks++;
-                        DGFindPoolPtr(entry,dbg);
+                        if(poolPtrCalls<6){ DGFindPoolPtr(entry,dbg); poolPtrCalls++; }
                     } else if(density>=weakD && noneHits<=600){
                         fprintf(dbg,"WEAKBLOCK @ 0x%llx density=%d\n",(unsigned long long)entry,density);
-                        static int weakPtr=0;
-                        if(weakPtr<6){ DGFindPoolPtr(entry,dbg); weakPtr++; }
+                        if(poolPtrCalls<6){ DGFindPoolPtr(entry,dbg); poolPtrCalls++; }
                     }
                 }
             }
@@ -959,7 +959,7 @@ static int DGFindNameBlocksHeap(FILE *dbg){
             off+=got;
         }
     }
-    fprintf(dbg,"HEAPSCAN regions=%d noneHits=%d blocks=%d\n",regions,noneHits,blocks);
+    fprintf(dbg,"HEAPSCAN regions=%d noneHits=%d blocks=%d poolptrCalls=%d\n",regions,noneHits,blocks,poolPtrCalls);
     fflush(dbg);
     return blocks;
 }
@@ -1251,7 +1251,7 @@ static void DGUE4Scan(void){
     NSString *outp=[NSTemporaryDirectory() stringByAppendingPathComponent:@"deltaguard_ue4.txt"];
     FILE *dbg=fopen([outp UTF8String],"w");
     if(!dbg) return;
-    fprintf(dbg,"=== OBSERVATORY v0.9.6 attempt %d regions=%u ===\n",DGUE4ScanCount,DGRegionCount);
+    fprintf(dbg,"=== OBSERVATORY v0.9.7 attempt %d regions=%u ===\n",DGUE4ScanCount,DGRegionCount);
     fflush(dbg);
     if(!DGGameTextLo){ fprintf(dbg,"FAIL ranges\n"); fclose(dbg); return; }
 
@@ -2203,7 +2203,7 @@ static UIView *DGToggleRow(CGFloat y, NSString *text, SEL action, UISwitch * __s
 
 + (NSString *)statsText{
     NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
-    return [NSString stringWithFormat:@"الذاكرة: %@ | التشغيل: %02d:%02d\nDeltaGuard v0.9.6 — UE4",
+    return [NSString stringWithFormat:@"الذاكرة: %@ | التشغيل: %02d:%02d\nDeltaGuard v0.9.7 — UE4",
         DGMemoryString(),(int)(up/60),((int)up)%60];
 }
 
