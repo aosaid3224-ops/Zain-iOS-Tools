@@ -1237,11 +1237,15 @@ static int DGFindPakIndex(FILE *dbg){
     return hits;
 }
 
+static uint64_t DGPhase2Resume=0;
 /* المرحلة 2: GUObjectArray — تحقق بالأسماء المفكوكة عبر GNamePool المؤكد */
 static int DGFindGObjects(FILE *dbg){
     if(!DGNamePool) return 0;
     int cheap=0, nameHits=0;
-    uint64_t cursor=DGGameDataLo;
+    uint64_t start=DGPhase2Resume;
+    if(start<DGGameDataLo||start>=DGGameDataHi) start=DGGameDataLo;
+    uint64_t cursor=start;
+    BOOL wrapped=NO;
     while(cursor<DGGameDataHi && cheap<2000){
         uint64_t want=DGGameDataHi-cursor; if(want>33554432) want=33554432;
         uint64_t got=0;
