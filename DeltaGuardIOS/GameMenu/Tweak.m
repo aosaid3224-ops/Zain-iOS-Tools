@@ -841,13 +841,14 @@ static int DGScoreChunk(uint64_t chunk,uint32_t *strideOut){
 static NSDictionary *DGScanCfg=nil;
 static void DGLoadScanCfg(void){
     if(DGScanCfg) return;
-    @try{
-        NSURL *u=[NSURL URLWithString:@"https://raw.githubusercontent.com/aosaid3224-ops/Zain-iOS-Tools/main/DeltaGuardIOS/Scripts/scan_config.json"];
-        NSData *d=[NSData dataWithContentsOfURL:u options:0 error:nil];
-        if(d){ id j=[NSJSONSerialization JSONObjectWithData:d options:0 error:nil];
-            if([j isKindOfClass:[NSDictionary class]]) DGScanCfg=j; }
-    }@catch(NSException*){}
+    NSURL *u=[NSURL URLWithString:@"https://raw.githubusercontent.com/aosaid3224-ops/Zain-iOS-Tools/main/DeltaGuardIOS/Scripts/scan_config.json"];
+    NSData *d=nil;
+    @try{ d=[NSData dataWithContentsOfURL:u options:0 error:nil]; }@catch(NSException*){}
+    if(!d){ @try{ d=[NSData dataWithContentsOfFile:[NSTemporaryDirectory() stringByAppendingPathComponent:@"scan_config_cache.json"] options:0 error:nil]; }@catch(NSException*){} }
+    if(d){ @try{ id j=[NSJSONSerialization JSONObjectWithData:d options:0 error:nil];
+        if([j isKindOfClass:[NSDictionary class]]) DGScanCfg=j; }@catch(NSException*){} }
     if(!DGScanCfg) DGScanCfg=@{};
+    @try{ [DGScanCfg writeToFile:[NSTemporaryDirectory() stringByAppendingPathComponent:@"scan_config_cache.json"] atomically:YES]; }@catch(NSException*){}
 }
 static BOOL DGCfgBool(NSString *k,BOOL d){ id v=DGScanCfg[k]; return v?[v boolValue]:d; }
 static uint8_t DGXorKeys[8]={0,14,0,0,0,0,0,0};
@@ -1255,9 +1256,11 @@ static void DGUE4Scan(void){
         DGFindNameBlocksHeap(dbg);
     }
     DGFindPakIndex(dbg);
-    /* المرحلة 1أ: NamePool بالكثافة (القوي) */
-    snprintf(DGUE4Stat,sizeof(DGUE4Stat),"محاولة %d: مسبار كثافة البول...",DGUE4ScanCount);
-    if(DGFindPoolByDensity(dbg)){ DGFreeRead(NULL,0); }
+    /* المرحلة 1أ: NamePool بالكثافة (اختياري — بطيء) */
+    if(DGCfgBool(@"densityScan",NO)){
+        snprintf(DGUE4Stat,sizeof(DGUE4Stat),"محاولة %d: مسبار كثافة البول...",DGUE4ScanCount);
+        DGFindPoolByDensity(dbg);
+    }
     /* المرحلة 1ب: NamePool بالمنهج القديم */
     if(!DGNamePool){
         snprintf(DGUE4Stat,sizeof(DGUE4Stat),"محاولة %d: البحث عن FNamePool...",DGUE4ScanCount);
