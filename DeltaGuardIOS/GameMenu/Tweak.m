@@ -1138,6 +1138,47 @@ static int DGFindPoolByDensity(FILE *dbg){
     return confirmed>0;
 }
 
+/* البحث عن فهرس Pak المفكوك في الذاكرة الحية (.uasset كثيف) */
+static int DGFindPakIndex(FILE *dbg){
+    int hits=0, regions=0;
+    for(uint32_t ri=0; ri<DGRegionCount && hits<3; ri++){
+        uint64_t lo=DGRegions[ri*2], hi=DGRegions[ri*2+1];
+        uint64_t sz=hi-lo;
+        if(sz<0x10000 || sz>0x40000000ULL) continue;
+        if(DGGameTextLo && lo>=DGGameTextLo && lo<DGGameTextHi) continue;
+        regions++;
+        uint64_t off=0;
+        while(off+0x20000<sz && hits<3){
+            uint64_t want=sz-off; if(want>33554432) want=33554432;
+            uint64_t got=0;
+            uint8_t *buf=DGSafeRead(lo+off,want,&got);
+            if(!buf) break;
+            for(uint64_t q=0;q+16<got;q++){
+                if(buf[q]=='.'&&buf[q+1]=='u'&&buf[q+2]=='a'&&buf[q+3]=='s'&&buf[q+4]=='s'&&buf[q+5]=='e'&&buf[q+6]=='t'){
+                    hits++;
+                    /* كثافة النافذة */
+                    int d=0; char first[96]={0};
+                    for(uint64_t i=q;i+8<got&&i<q+0x20000;i++){
+                        if(buf[i]=='.'&&buf[i+1]=='u'&&(buf[i+2]=='a'||buf[i+2]=='u')) d++;
+                    }
+                    /* اجذب أول مسار كامل قبل .uasset */
+                    uint64_t s=q; while(s>0&&buf[s-1]>32&&buf[s-1]<0x7f&&q-s<90) s--;
+                    memcpy(first,buf+s,q-s+7); first[q-s+7]=0;
+                    fprintf(dbg,"PAKIDX @ 0x%llx density=%d first=%s\n",(unsigned long long)(lo+off+q),d,first);
+                    fflush(dbg);
+                    break;
+                }
+            }
+            DGFreeRead(buf,got);
+            if(!got) break;
+            off+=got;
+        }
+    }
+    fprintf(dbg,"PAKIDX scan: regions=%d hits=%d\n",regions,hits);
+    fflush(dbg);
+    return hits;
+}
+
 static void DGUE4Scan(void){
     static NSTimeInterval lastTry=0;
     static BOOL found=NO;
@@ -1163,6 +1204,7 @@ static void DGUE4Scan(void){
         snprintf(DGUE4Stat,sizeof(DGUE4Stat),"محاولة %d: مسح heap عن بلوكات الأسماء...",DGUE4ScanCount);
         DGFindNameBlocksHeap(dbg);
     }
+    DGFindPakIndex(dbg);
     /* المرحلة 1أ: NamePool بالكثافة (القوي) */
     snprintf(DGUE4Stat,sizeof(DGUE4Stat),"محاولة %d: مسبار كثافة البول...",DGUE4ScanCount);
     if(DGFindPoolByDensity(dbg)){ DGFreeRead(NULL,0); }
