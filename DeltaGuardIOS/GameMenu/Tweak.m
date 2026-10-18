@@ -1245,15 +1245,15 @@ static int DGFindGObjects(FILE *dbg){
     uint64_t start=DGPhase2Resume;
     if(start<DGGameDataLo||start>=DGGameDataHi) start=DGGameDataLo;
     uint64_t cursor=start;
-    BOOL wrapped=NO;
     while(cursor<DGGameDataHi && cheap<2000){
         uint64_t want=DGGameDataHi-cursor; if(want>33554432) want=33554432;
         uint64_t got=0;
         uint8_t *buf=DGSafeRead(cursor,want,&got);
         if(!buf){ cursor+=want; continue; }
-        if(got<24){ DGFreeRead(buf,got); cursor+=got?got:want; continue; }
+        if(got<=24){ DGFreeRead(buf,got); cursor+=got?got:want; continue; }
         uint64_t lim=got-24;
-        for(uint64_t q=0;q<lim && cheap<2000;q+=8){
+        uint64_t q=0;
+        for(q=0;q<lim && cheap<2000;q+=8){
             uint64_t table; memcpy(&table,buf+q,8);
             if(!table||(table&7)||!DGInRegions(table)) continue;
             uint64_t c0=0,c1=0;
@@ -1262,7 +1262,7 @@ static int DGFindGObjects(FILE *dbg){
             long long stride=(long long)(c1-c0);
             if(stride<0x8000||stride>0x800000) continue;
             cheap++;
-            if(cheap%500==0){ fprintf(dbg,"PHASE2 progress: %d candidates\n",cheap); fflush(dbg); }
+            if(cheap%500==0){ fprintf(dbg,"PHASE2 progress: %d/2000 candidates\n",cheap); fflush(dbg); }
             int n18=0,n20=0; char sample[64]=""; char sample2[64]="";
             for(int i=0;i<6;i++){
                 uint64_t item=c0+(uint64_t)i*0x18;
@@ -1290,9 +1290,20 @@ static int DGFindGObjects(FILE *dbg){
                 return 1;
             }
         }
+        if(cheap>=2000){
+            DGPhase2Resume=cursor+q;
+            if(DGPhase2Resume>=DGGameDataHi) DGPhase2Resume=DGGameDataLo;
+            DGFreeRead(buf,got);
+            fprintf(dbg,"PHASE2 resume saved @ 0x%llx\n",(unsigned long long)DGPhase2Resume);
+            fflush(dbg);
+            return 0;
+        }
         DGFreeRead(buf,got);
-        cursor+=got?got:want;
+        cursor+=lim;
     }
+    DGPhase2Resume=DGGameDataLo;
+    fprintf(dbg,"PHASE2 resume saved @ 0x%llx (wrapped)\n",(unsigned long long)DGPhase2Resume);
+    fflush(dbg);
     fprintf(dbg,"GOBJ funnel: cheap=%d nameHits=%d\n",cheap,nameHits);
     fflush(dbg);
     return 0;
@@ -1315,7 +1326,7 @@ static void DGUE4Scan(void){
     if(!dbg) return;
     /* حالة الجلسة: هل البول محلول فعلًا؟ */
     if(DGNamePool){ fprintf(dbg,"POOL already solved @ 0x%llx — skip to PHASE2\n",(unsigned long long)DGNamePool); fflush(dbg); }
-    fprintf(dbg,"=== OBSERVATORY v0.10.0 attempt %d regions=%u ===\n",DGUE4ScanCount,DGRegionCount);
+    fprintf(dbg,"=== OBSERVATORY v0.10.1 attempt %d regions=%u ===\n",DGUE4ScanCount,DGRegionCount);
     fflush(dbg);
     if(!DGGameTextLo){ fprintf(dbg,"FAIL ranges\n"); fclose(dbg); return; }
 
@@ -2221,7 +2232,7 @@ static UIView *DGToggleRow(CGFloat y, NSString *text, SEL action, UISwitch * __s
 
 + (NSString *)statsText{
     NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
-    return [NSString stringWithFormat:@"الذاكرة: %@ | التشغيل: %02d:%02d\nDeltaGuard v0.10.0 — UE4",
+    return [NSString stringWithFormat:@"الذاكرة: %@ | التشغيل: %02d:%02d\nDeltaGuard v0.10.1 — UE4",
         DGMemoryString(),(int)(up/60),((int)up)%60];
 }
 
