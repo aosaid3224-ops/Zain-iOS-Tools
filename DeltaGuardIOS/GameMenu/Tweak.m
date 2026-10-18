@@ -902,12 +902,13 @@ static void DGFindPoolPtr(uint64_t entry, FILE *dbg){
                         DGFreeRead(blk,g2);
                     }
                     if(!ok) continue;
+                    if(!DGVerifyPoolStruct(lo+off+q)) continue; /* صارم: رفض الذاكرة العابرة */
                     hits++;
-                    fprintf(dbg,"POOLPTR @ 0x%llx -> 0x%llx xorKey=0x%x ctx=", (unsigned long long)(lo+off+q),(unsigned long long)p,ok-1);
+                    fprintf(dbg,"POOLPTR @ 0x%llx -> 0x%llx VERIFIED-STRICT ctx=", (unsigned long long)(lo+off+q),(unsigned long long)p);
                     uint64_t gc=0; uint8_t *cx=DGSafeRead(lo+off+q>64?lo+off+q-64:lo+off+q,64,&gc);
                     if(cx){ for(uint64_t kk=0;kk<gc;kk++) fprintf(dbg,"%02x",cx[kk]); DGFreeRead(cx,gc); }
                     fprintf(dbg,"\n");
-                    if(hits==1){ DGNamePool=lo+off+q; fprintf(dbg,"NAMEPOOL STRUCT @ 0x%llx CONFIRMED\n",(unsigned long long)DGNamePool); }
+                    if(hits==1){ DGNamePool=lo+off+q; fprintf(dbg,"NAMEPOOL STRUCT @ 0x%llx CONFIRMED-STRICT\n",(unsigned long long)DGNamePool); }
                     fflush(dbg);
                 }
             }
@@ -1323,6 +1324,29 @@ static int DGFindGObjects(FILE *dbg){
     fprintf(dbg,"GOBJ funnel: cheap=%d nameHits=%d\n",cheap,nameHits);
     fflush(dbg);
     return 0;
+}
+
+/* تحقق صارم: هل العنوان A يحوي بنية FNamePool حقيقية؟ */
+static BOOL DGVerifyPoolStruct(uint64_t A){
+    uint64_t got=0; uint8_t *b=DGSafeRead(A,32,&got);
+    if(!b||got<24){ if(b)DGFreeRead(b,got); return NO; }
+    uint64_t blocks; uint32_t nb,cb,cur,pad;
+    memcpy(&blocks,b,8); memcpy(&nb,b+8,4); memcpy(&cb,b+12,4); memcpy(&cur,b+16,4); memcpy(&pad,b+20,4);
+    DGFreeRead(b,got);
+    if(!blocks||(blocks&7)) return NO;
+    if(nb<1||nb>512) return NO;
+    if(cb>=nb) return NO;
+    if(cur==0||cur>0x20000) return NO;
+    /* blocks يجب أن يشير لبلوك يحوي None (XOR-aware) */
+    uint64_t g2=0; uint8_t *blk=DGSafeRead(blocks,96,&g2);
+    if(!blk) return NO;
+    int ok=0;
+    for(uint64_t i=0;i+8<g2&&!ok;i+=2){
+        for(int k=0;k<DGXorKeyCount;k++)
+            if(DGMatchNone(blk+i+2,DGXorKeys[k])) ok=1;
+    }
+    DGFreeRead(blk,g2);
+    return ok!=0;
 }
 
 static void DGUE4Scan(void){
