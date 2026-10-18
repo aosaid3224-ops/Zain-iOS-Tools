@@ -1,1 +1,1 @@
-{"heapBlockScan": true, "xorKeys": [0, 14, 32, 85, 170, 255], "probeBss": ["0x1180442f8","0x118044308","0x118045318"], "note": "0=plain 14=PC-XOR 32/85/170/255=mobile candidates"}
+{"heapBlockScan": true, "densityScan": false, "xorKeys": [0, 14], "probeBss": [], "note": "fast cycle: heap+poolptr+pakidx فقط"}
