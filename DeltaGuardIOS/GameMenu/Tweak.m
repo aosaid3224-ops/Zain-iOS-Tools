@@ -1141,17 +1141,6 @@ static int DGFindPoolByDensity(FILE *dbg){
 }
 
 /* البحث عن فهرس Pak المفكوك في الذاكرة الحية (.uasset كثيف) */
-static void DGDumpRegion(uint64_t at, uint64_t bytes, const char *name, FILE *dbg){
-    uint64_t base=at&~0xFFFULL;
-    uint64_t got=0;
-    uint8_t *b=DGSafeRead(base,bytes,&got);
-    if(!b){ if(dbg)fprintf(dbg,"DUMP %s FAILED\n",name); return; }
-    NSString *p=[NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithUTF8String:name]];
-    [b writeToFile:p atomically:NO]; /* NSData? b ليس NSData — استخدم fileHandle */
-    DGFreeRead(b,got);
-    if(dbg)fprintf(dbg,"DUMP %s @ 0x%llx size=%llu -> %s\n",name,(unsigned long long)base,(unsigned long long)got,[p UTF8String]);
-    fflush(dbg);
-}
 /* نسخة صحيحة بالـ fileHandle */
 static void DGDumpRegion2(uint64_t at, uint64_t bytes, const char *name, FILE *dbg){
     uint64_t base=at&~0xFFFULL;
