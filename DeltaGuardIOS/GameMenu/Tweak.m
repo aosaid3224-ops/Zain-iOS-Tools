@@ -3,6 +3,7 @@
 #import <CommonCrypto/CommonCrypto.h>
 #include <mach/vm_map.h>
 #include <stdlib.h>
+#include <unistd.h>
 #import <objc/runtime.h>
 #include <dlfcn.h>
 #include <math.h>
@@ -909,11 +910,11 @@ static void DGFindPoolPtr(uint64_t entry, FILE *dbg){
                         DGFreeRead(bv,gotv); fflush(dbg); }
                     if(!DGVerifyPoolStruct(lo+off+q)) continue; /* صارم + مستقر */
                     hits++;
-                    fprintf(dbg,"POOLPTR @ 0x%llx -> 0x%llx VERIFIED-STRICT ctx=", (unsigned long long)(lo+off+q),(unsigned long long)p);
+                    fprintf(dbg,"POOLPTR @ 0x%llx -> 0x%llx VERIFIED-STABLE ctx=", (unsigned long long)(lo+off+q),(unsigned long long)p);
                     uint64_t gc=0; uint8_t *cx=DGSafeRead(lo+off+q>64?lo+off+q-64:lo+off+q,64,&gc);
                     if(cx){ for(uint64_t kk=0;kk<gc;kk++) fprintf(dbg,"%02x",cx[kk]); DGFreeRead(cx,gc); }
                     fprintf(dbg,"\n");
-                    if(hits==1){ DGNamePool=lo+off+q; fprintf(dbg,"NAMEPOOL STRUCT @ 0x%llx CONFIRMED-STRICT\n",(unsigned long long)DGNamePool); }
+                    if(hits==1){ DGNamePool=lo+off+q; fprintf(dbg,"NAMEPOOL STRUCT @ 0x%llx CONFIRMED-STABLE\n",(unsigned long long)DGNamePool); }
                     fflush(dbg);
                 }
             }
@@ -1331,7 +1332,7 @@ static int DGFindGObjects(FILE *dbg){
     return 0;
 }
 
-/* تحقق مزدوج: بنية + استقرار زمني (الحقيقي ثابت، العابر يتغير) */
+/* تحقق مزدوج: بنية + مقارنة زمنية للمرشح */
 static BOOL DGBlockHasNoneP(uint64_t blocks){
     uint64_t g2=0; uint8_t *blk=DGSafeRead(blocks,128,&g2);
     if(!blk) return 0;
@@ -1345,9 +1346,10 @@ static BOOL DGBlockHasNoneP(uint64_t blocks){
 static BOOL DGVerifyPoolStruct(uint64_t A){
     uint64_t got=0; uint8_t *b1=DGSafeRead(A,32,&got);
     if(!b1||got<24){ if(b1)DGFreeRead(b1,got); return NO; }
-    uint64_t blocks; uint32_t nb,cb,cur;
-    memcpy(&blocks,b1,8); memcpy(&nb,b1+8,4); memcpy(&cb,b1+12,4); memcpy(&cur,b1+16,4);
-    uint8_t snap[32]; memcpy(snap,b1,got<32?got:32);
+    uint64_t blocks; uint32_t nb,cur;
+    memcpy(&blocks,b1,8); memcpy(&nb,b1+8,4); memcpy(&cur,b1+16,4);
+    uint64_t snapLen=got<32?got:32;
+    uint8_t snap[32]; memcpy(snap,b1,snapLen);
     DGFreeRead(b1,got);
     if(!blocks||(blocks&7)) return NO;
     if(!DGBlockHasNoneP(blocks)) return NO;
@@ -1358,14 +1360,12 @@ static BOOL DGVerifyPoolStruct(uint64_t A){
     usleep(250000);
     uint64_t got2=0; uint8_t *b2=DGSafeRead(A,32,&got2);
     if(!b2||got2<24){ if(b2)DGFreeRead(b2,got2); return NO; }
-    BOOL stable=(memcmp(snap,b2,got2<32?got2:32)==0);
+    BOOL stable=(got2==snapLen&&memcmp(snap,b2,snapLen)==0);
     uint64_t blocks2; memcpy(&blocks2,b2,8);
     DGFreeRead(b2,got2);
     if(!stable) return NO;
     if(blocks2!=blocks) return NO;
     if(!DGBlockHasNoneP(blocks2)) return NO;
-    /* حقول ثانوية للتشخيص */
-    fprintf(stderr,"");
     return YES;
 }
 
@@ -1385,7 +1385,7 @@ static void DGUE4Scan(void){
     FILE *dbg=fopen([outp UTF8String],"w");
     if(!dbg) return;
     if(DGNamePool){ fprintf(dbg,"POOL already solved @ 0x%llx\n",(unsigned long long)DGNamePool); fflush(dbg); }
-    fprintf(dbg,"=== OBSERVATORY v0.10.8 attempt %d regions=%u ===\n",DGUE4ScanCount,DGRegionCount);
+    fprintf(dbg,"=== OBSERVATORY v0.10.9 attempt %d regions=%u ===\n",DGUE4ScanCount,DGRegionCount);
     fflush(dbg);
     if(!DGGameTextLo){ fprintf(dbg,"FAIL ranges\n"); fclose(dbg); return; }
     DGProbeBss(dbg);
@@ -2317,7 +2317,7 @@ static UIView *DGToggleRow(CGFloat y, NSString *text, SEL action, UISwitch * __s
 
 + (NSString *)statsText{
     NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
-    return [NSString stringWithFormat:@"الذاكرة: %@ | التشغيل: %02d:%02d\nDeltaGuard v0.10.8 — UE4",
+    return [NSString stringWithFormat:@"الذاكرة: %@ | التشغيل: %02d:%02d\nDeltaGuard v0.10.9 — UE4",
         DGMemoryString(),(int)(up/60),((int)up)%60];
 }
 
