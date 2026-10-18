@@ -916,14 +916,16 @@ static int DGFindNameBlocksHeap(FILE *dbg){
                 if(buf[q-1]==0&&buf[q-2]<0x40&&(buf[q]==0x4E||buf[q]==0x40)&&((buf[q]=='N'&&buf[q+1]=='o'&&buf[q+2]=='n'&&buf[q+3]=='e'&&buf[q+4]==0)||(buf[q]==0x40&&buf[q+1]==0x61&&buf[q+2]==0x62&&buf[q+3]==0x65&&buf[q+4]==0x0E))){
                     noneHits++;
                     int density=0;
-                    for(uint64_t i=q-2;i+8<got && i<q+2048;i+=4)
-                        if(buf[i]<0x10&&buf[i+1]<0x10&&buf[i+2]>=0x20&&buf[i+2]<0x7f) density++;
-                    if(density>130){
-                        uint64_t entry=lo+off+q-2;
+                    for(uint64_t i=q-2;i+8<got && i<q+2048;i+=2)
+                        if(buf[i]<0x40&&buf[i+1]==0&&buf[i+2]>=0x20&&buf[i+2]<0x7f) density++;
+                    uint64_t entry=lo+off+q-2;
+                    if(density>100){
                         fprintf(dbg,"NAMEBLOCK @ 0x%llx density=%d\n",(unsigned long long)entry,density);
                         blocks++;
                         DGFindPoolPtr(entry,dbg);
                         if(blocks>=8) break;
+                    } else if(density>=50 && noneHits<=400){
+                        fprintf(dbg,"WEAKBLOCK @ 0x%llx density=%d\n",(unsigned long long)entry,density);
                     }
                 }
             }
