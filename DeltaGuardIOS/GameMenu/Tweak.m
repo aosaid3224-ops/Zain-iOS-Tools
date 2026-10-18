@@ -1087,8 +1087,8 @@ static void DGProbeBss(FILE *dbg){
 /* مسبار الكثافة: كل مؤشر heap في __DATA ← تحقق كثافة 4KB (الحقيقي >250 إدخال) */
 static int DGBlockDensity256(const uint8_t *b, uint64_t n){
     int d=0;
-    for(uint64_t i=0;i+8<n;i+=2)
-        if(b[i]<0x40&&b[i+1]==0&&((b[i+2]>=0x20&&b[i+2]<0x7f)||b[i+2]==0)) d++;
+    for(uint64_t i=0;i+10<n;i+=2)
+        if(b[i]<0x40&&b[i+1]==0&&b[i+2]>=0x20&&b[i+2]<0x7f&&b[i+3]>=0x20&&b[i+3]<0x7f) d++;
     return d;
 }
 static int DGFindPoolByDensity(FILE *dbg){
@@ -1108,7 +1108,7 @@ static int DGFindPoolByDensity(FILE *dbg){
             if(!b256) continue;
             int d256=(g2>=64)?DGBlockDensity256(b256,g2):0;
             DGFreeRead(b256,g2);
-            if(d256<18) continue;
+            if(d256<24) continue;
             preHits++;
             uint64_t g4=0; uint8_t *b4k=DGSafeRead(p,4096,&g4);
             if(!b4k) continue;
@@ -1118,7 +1118,7 @@ static int DGFindPoolByDensity(FILE *dbg){
             for(int k=0;k<DGXorKeyCount;k++)
                 if(g4>=8 && DGMatchNone(b4k+2,DGXorKeys[k])) none=DGXorKeys[k]+1;
             DGFreeRead(b4k,g4);
-            if(d4k>250||none){
+            if(d4k>200||none){
                 dense++;
                 fprintf(dbg,"DENSEBLOCK ptr=0x%llx block=0x%llx d256=%d d4k=%d noneKey=%d ctx=",
                     (unsigned long long)(cursor+q),(unsigned long long)p,d256,d4k,none?none-1:-1);
