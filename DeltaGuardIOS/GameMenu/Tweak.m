@@ -1352,8 +1352,14 @@ static void DGUE4Scan(void){
     if(DGNamePool){
         /* تشخيص بنية البلوك: dump أول 96 بايت + موضع None الدقيق */
         uint64_t blk0=0;
-        if(DGReadQ(DGNamePool,&blk0)&&DGInRegions(blk0)){
+        /* dump struct البول نفسه أولًا */
+        { uint64_t gs=0; uint8_t *sp=DGSafeRead(DGNamePool,64,&gs);
+          if(sp){ fprintf(dbg,"POOLSTRUCT @ 0x%llx s64=",(unsigned long long)DGNamePool);
+            for(uint64_t k=0;k<gs;k++) fprintf(dbg,"%02x",sp[k]);
+            fprintf(dbg,"\n"); DGFreeRead(sp,gs); } }
+        if(DGReadQ(DGNamePool,&blk0)&&blk0>0x1000){
             uint64_t g=0; uint8_t *raw=DGSafeRead(blk0,96,&g);
+            if(!raw) fprintf(dbg,"BLOCK0 UNREADABLE blk0=0x%llx\n",(unsigned long long)blk0);
             if(raw){
                 fprintf(dbg,"BLOCK0 @ 0x%llx head96=",(unsigned long long)blk0);
                 for(uint64_t k=0;k<g;k++) fprintf(dbg,"%02x",raw[k]);
