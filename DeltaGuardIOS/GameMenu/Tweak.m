@@ -1255,13 +1255,20 @@ static int DGFindGObjects(FILE *dbg){
         if(sz<0x1000||sz>0x40000000ULL) continue;
         if(DGGameTextLo && lo>=DGGameTextLo && lo<DGGameTextHi) continue;
         uint64_t off=(ri==DGPhase2RI)?startOff:0;
-        while(off+24<sz && cheap<cap){
+        while(off+24<=sz && cheap<cap){
             uint64_t want=sz-off; if(want>33554432) want=33554432;
             uint64_t got=0;
             uint8_t *buf=DGSafeRead(lo+off,want,&got);
-            if(!buf){ off+=want; continue; }
+            if(!buf){ off+=want; DGPhase2OFF=off; continue; }
+            if(got<24){
+                DGFreeRead(buf,got);
+                off+=got?got:want;
+                DGPhase2OFF=off;
+                continue;
+            }
             uint64_t lim=got-24;
-            for(uint64_t q=0;q<lim && cheap<cap;q+=8){
+            uint64_t q=0;
+            for(;q<=lim && cheap<cap;q+=8){
                 uint64_t table; memcpy(&table,buf+q,8);
                 if(!table||(table&7)||!DGInRegions(table)) continue;
                 uint64_t c0=0,c1=0;
@@ -1298,17 +1305,16 @@ static int DGFindGObjects(FILE *dbg){
                     return 1;
                 }
             }
-            DGPhase2OFF=off+got;
+            uint64_t advance=q;
+            DGPhase2OFF=off+advance;
             DGFreeRead(buf,got);
-            if(!got){ off+=want; DGPhase2OFF=off; }
-            off+=got?got:0;
-            if(got<want && got>0) break;
+            off+=advance;
         }
         if(cheap<cap){ DGPhase2RI=ri+1; DGPhase2OFF=0; }
         if(cheap>=cap) break;
     }
     if(cheap>=cap && !DGUE4FoundFlag){
-        DGPhase2RI=ri; DGPhase2OFF=DGPhase2OFF;
+        DGPhase2RI=ri;
         fprintf(dbg,"PHASE2 resume @ region %u off 0x%llx\n",ri,(unsigned long long)DGPhase2OFF);
     } else if(!DGUE4FoundFlag){
         DGPhase2RI=0; DGPhase2OFF=0;
@@ -1335,7 +1341,7 @@ static void DGUE4Scan(void){
     FILE *dbg=fopen([outp UTF8String],"w");
     if(!dbg) return;
     if(DGNamePool){ fprintf(dbg,"POOL already solved @ 0x%llx\n",(unsigned long long)DGNamePool); fflush(dbg); }
-    fprintf(dbg,"=== OBSERVATORY v0.10.2 attempt %d regions=%u ===\n",DGUE4ScanCount,DGRegionCount);
+    fprintf(dbg,"=== OBSERVATORY v0.10.3 attempt %d regions=%u ===\n",DGUE4ScanCount,DGRegionCount);
     fflush(dbg);
     if(!DGGameTextLo){ fprintf(dbg,"FAIL ranges\n"); fclose(dbg); return; }
     DGProbeBss(dbg);
@@ -2226,7 +2232,7 @@ static UIView *DGToggleRow(CGFloat y, NSString *text, SEL action, UISwitch * __s
 
 + (NSString *)statsText{
     NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
-    return [NSString stringWithFormat:@"الذاكرة: %@ | التشغيل: %02d:%02d\nDeltaGuard v0.10.2 — UE4",
+    return [NSString stringWithFormat:@"الذاكرة: %@ | التشغيل: %02d:%02d\nDeltaGuard v0.10.3 — UE4",
         DGMemoryString(),(int)(up/60),((int)up)%60];
 }
 

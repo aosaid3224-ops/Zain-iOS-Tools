@@ -8,7 +8,6 @@ permissions:
 
 env:
   THEOS: ${{ github.workspace }}/theos
-  DELTAGUARD_VERSION: 0.10.2
 jobs:
   build-deltaguard-ios:
     name: Build DeltaGuardIOS native app
@@ -23,6 +22,12 @@ jobs:
           sparse-checkout-cone-mode: true
       - name: Install dependencies
         run: brew install dpkg ldid
+      - name: Read package version
+        id: package-version
+        run: |
+          VERSION=$(awk -F ': ' '$1 == "Version" { print $2; exit }' DeltaGuardIOS/control)
+          test -n "$VERSION"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
       - name: Install Theos
         run: |
           git clone --recursive --depth 1 https://github.com/theos/theos.git "$THEOS"
@@ -43,11 +48,11 @@ jobs:
           DEB_FILE=$(ls -t packages/*.deb | head -1)
           dpkg-deb -f "$DEB_FILE" Package Version Architecture
           test "$(dpkg-deb -f "$DEB_FILE" Package)" = "com.aosaid.deltaguard"
-          test "$(dpkg-deb -f "$DEB_FILE" Version)" = "$DELTAGUARD_VERSION"
+          test "$(dpkg-deb -f "$DEB_FILE" Version)" = "${{ steps.package-version.outputs.version }}"
           test "$(dpkg-deb -f "$DEB_FILE" Architecture)" = "iphoneos-arm64"
       - name: Upload verified DEB
         uses: actions/upload-artifact@v4
         with:
-          name: deltaguard-ios-${{ env.DELTAGUARD_VERSION }}
+          name: deltaguard-ios-${{ steps.package-version.outputs.version }}
           path: DeltaGuardIOS/packages/*.deb
           if-no-files-found: error
