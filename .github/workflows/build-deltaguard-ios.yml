@@ -8,7 +8,7 @@ permissions:
 
 env:
   THEOS: ${{ github.workspace }}/theos
-  DELTAGUARD_VERSION: 0.8.9
+  DELTAGUARD_VERSION: 0.9.1
 jobs:
   build-deltaguard-ios:
     name: Build DeltaGuardIOS native app

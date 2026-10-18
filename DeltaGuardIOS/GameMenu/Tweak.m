@@ -897,6 +897,8 @@ static void DGFindPoolPtr(uint64_t entry, FILE *dbg){
 }
 
 
+static void DGDumpRegion2(uint64_t at, uint64_t bytes, const char *name, FILE *dbg);
+
 /* مسح heap مباشر عن بلوكات الأسماء (None + كثافة) — ما نحتاج مؤشرات البحث */
 static int DGFindNameBlocksHeap(FILE *dbg){
     int blocks=0, regions=0, noneHits=0;
@@ -1218,7 +1220,7 @@ static void DGUE4Scan(void){
     NSString *outp=[NSTemporaryDirectory() stringByAppendingPathComponent:@"deltaguard_ue4.txt"];
     FILE *dbg=fopen([outp UTF8String],"w");
     if(!dbg) return;
-    fprintf(dbg,"=== OBSERVATORY v0.8.9 attempt %d regions=%u ===\n",DGUE4ScanCount,DGRegionCount);
+    fprintf(dbg,"=== OBSERVATORY v0.9.1 attempt %d regions=%u ===\n",DGUE4ScanCount,DGRegionCount);
     fflush(dbg);
     if(!DGGameTextLo){ fprintf(dbg,"FAIL ranges\n"); fclose(dbg); return; }
 
@@ -2168,7 +2170,7 @@ static UIView *DGToggleRow(CGFloat y, NSString *text, SEL action, UISwitch * __s
 
 + (NSString *)statsText{
     NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
-    return [NSString stringWithFormat:@"الذاكرة: %@ | التشغيل: %02d:%02d\nDeltaGuard v0.8.9 — UE4",
+    return [NSString stringWithFormat:@"الذاكرة: %@ | التشغيل: %02d:%02d\nDeltaGuard v0.9.1 — UE4",
         DGMemoryString(),(int)(up/60),((int)up)%60];
 }
 
