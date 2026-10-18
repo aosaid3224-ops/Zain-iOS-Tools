@@ -1011,6 +1011,35 @@ static int DGFindNamePool(FILE *dbg){
     return 0;
 }
 
+static uint64_t DGSlide=0;
+static void DGProbeBss(FILE *dbg){
+    NSArray *arr=DGScanCfg[@"probeBss"];
+    if(![arr isKindOfClass:[NSArray class]]||!arr.count) return;
+    if(!DGSlide) DGSlide=DGGameTextLo-0x100000000ULL;
+    fprintf(dbg,"PROBE slide=0x%llx bss=%llu candidates\n",(unsigned long long)DGSlide,(unsigned long long)arr.count);
+    for(NSString *s in arr){
+        uint64_t file=strtoull([s UTF8String],0,16);
+        uint64_t live=file+DGSlide;
+        fprintf(dbg,"PROBE 0x%llx live=0x%llx ",(unsigned long long)file,(unsigned long long)live);
+        uint64_t got=0; uint8_t *b=DGSafeRead(live,64,&got);
+        if(!b||got<32){ fprintf(dbg,"UNREADABLE\n"); if(b)DGFreeRead(b,got); continue; }
+        for(uint64_t k=0;k<got;k++) fprintf(dbg,"%02x",b[k]);
+        fprintf(dbg," | ");
+        uint64_t q0=0; memcpy(&q0,b,8);
+        uint32_t v8,v12,v16,v20;
+        memcpy(&v8,b+8,4); memcpy(&v12,b+12,4); memcpy(&v16,b+16,4); memcpy(&v20,b+20,4);
+        if(q0&&!(q0&7)&&DGInRegions(q0)){
+            if(DGGameTextLo<=q0&&q0<DGGameTextHi) fprintf(dbg,"VTAB-GLOBAL");
+            else if(DGBlockHasNone(q0)) fprintf(dbg,"POOL-LIKE(Blocks[0] has None)");
+            else fprintf(dbg,"PTR");
+        } else if(v8<=0x1000&&v12<0x20000&&v8) fprintf(dbg,"INTS(NumBlocks=%u Cursor=%u)",v8,v16);
+        else fprintf(dbg,"?");
+        fprintf(dbg,"\n");
+        DGFreeRead(b,got);
+        fflush(dbg);
+    }
+}
+
 static void DGUE4Scan(void){
     static NSTimeInterval lastTry=0;
     static BOOL found=NO;
@@ -1029,6 +1058,7 @@ static void DGUE4Scan(void){
     fflush(dbg);
     if(!DGGameTextLo){ fprintf(dbg,"FAIL ranges\n"); fclose(dbg); return; }
 
+    DGProbeBss(dbg);
     /* المرحلة 0 (اختياري عبر config): مسح heap المباشر لبلوكات الأسماء */
     if(DGCfgBool(@"heapBlockScan",NO)){
         snprintf(DGUE4Stat,sizeof(DGUE4Stat),"محاولة %d: مسح heap عن بلوكات الأسماء...",DGUE4ScanCount);
