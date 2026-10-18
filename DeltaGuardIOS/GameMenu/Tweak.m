@@ -850,6 +850,20 @@ static void DGLoadScanCfg(void){
     if(!DGScanCfg) DGScanCfg=@{};
 }
 static BOOL DGCfgBool(NSString *k,BOOL d){ id v=DGScanCfg[k]; return v?[v boolValue]:d; }
+static uint8_t DGXorKeys[8]={0,14,0,0,0,0,0,0};
+static int DGXorKeyCount=2;
+static void DGLoadXorKeys(void){
+    id arr=DGScanCfg[@"xorKeys"];
+    if([arr isKindOfClass:[NSArray class]]&&arr.count>0){
+        int n=(int)MIN((NSUInteger)8,arr.count);
+        for(int i=0;i<n;i++) DGXorKeys[i]=(uint8_t)[arr[i] intValue];
+        DGXorKeyCount=n;
+    }
+}
+/* تحقق None مع كل مفاتيح XOR */
+static BOOL DGMatchNone(const uint8_t *p, uint8_t k){
+    return (p[0]==('N'^k)&&p[1]==('o'^k)&&p[2]==('n'^k)&&p[3]==('e'^k)&&p[4]==(0^k));
+}
 
 /* ابحث في __DATA عن مؤشر يشير لنافذة 64KB حول بلوك معروف = GNamePool.Blocks */
 static void DGFindPoolPtr(uint64_t entry, FILE *dbg){
@@ -894,7 +908,7 @@ static int DGFindNameBlocksHeap(FILE *dbg){
             uint8_t *buf=DGSafeRead(lo+off,want,&got);
             if(!buf) break;
             for(uint64_t q=2;q+2100<got;q++){
-                if(buf[q]=='N'&&buf[q+1]=='o'&&buf[q+2]=='n'&&buf[q+3]=='e'&&buf[q+4]==0&&buf[q-1]==0&&buf[q-2]<0x40){
+                if(buf[q-1]==0&&buf[q-2]<0x40&&(buf[q]==0x4E||buf[q]==0x40)&&((buf[q]=='N'&&buf[q+1]=='o'&&buf[q+2]=='n'&&buf[q+3]=='e'&&buf[q+4]==0)||(buf[q]==0x40&&buf[q+1]==0x61&&buf[q+2]==0x62&&buf[q+3]==0x65&&buf[q+4]==0x0E))){
                     noneHits++;
                     int density=0;
                     for(uint64_t i=q-2;i+8<got && i<q+2048;i+=4)
@@ -938,10 +952,21 @@ static BOOL DGDecodeFName(uint32_t nameId, char *out, int outLen){
     uint8_t *s=DGSafeRead(block+off+2,(uint64_t)outLen,&got);
     if(!s) return NO;
     int n=(int)(got<(uint64_t)outLen?got:(uint64_t)outLen);
-    memcpy(out,s,n); out[n-1]=0;
     DGFreeRead(s,got);
-    for(int i=0;out[i];i++){ if(out[i]<32||out[i]>126){out[0]=0;return NO;} }
-    return out[0]!=0;
+    uint8_t raw[80];
+    if(n>79) n=79;
+    memcpy(raw,s,n); raw[n]=0;
+    /* جرب كل مفتاح XOR — اقبل أول نتيجة أحرفها صالحة */
+    for(int k=0;k<DGXorKeyCount;k++){
+        uint8_t kk=DGXorKeys[k];
+        for(int i=0;i<n;i++) out[i]=(char)(raw[i]^kk);
+        out[n]=0;
+        BOOL ok=out[0]!=0;
+        for(int i=0;out[i]&&ok;i++){ if(out[i]<32||out[i]>126) ok=NO; }
+        if(ok) return YES;
+    }
+    out[0]=0;
+    return NO;
 }
 static BOOL DGObjName(uint64_t obj, uint32_t nameOff, char *out, int outLen){
     out[0]=0;
@@ -960,9 +985,11 @@ static int DGBlockHasNone(uint64_t block){
     if(!e) return 0;
     int found=0;
     for(uint64_t i=0;i+8<got;i+=2){
-        if(e[i+2]=='N'&&e[i+3]=='o'&&e[i+4]=='n'&&e[i+5]=='e'&&e[i+6]==0&&e[i+1]==0&&e[i]<0x40){
-            found=1; break;
+        if(e[i+1]!=0||e[i]>=0x40) continue;
+        for(int k=0;k<DGXorKeyCount;k++){
+            if(DGMatchNone(e+i+2,DGXorKeys[k])){ found=DGXorKeys[k]+1; break; }
         }
+        if(found) break;
     }
     DGFreeRead(e,got);
     return found;
@@ -1051,6 +1078,7 @@ static void DGUE4Scan(void){
     DGInitGameRanges();
     DGCollectRegions();
     DGLoadScanCfg();
+    DGLoadXorKeys();
     NSString *outp=[NSTemporaryDirectory() stringByAppendingPathComponent:@"deltaguard_ue4.txt"];
     FILE *dbg=fopen([outp UTF8String],"w");
     if(!dbg) return;
