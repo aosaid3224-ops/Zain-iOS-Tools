@@ -1,1 +1,1 @@
-{"heapBlockScan": true, "densityScan": false, "xorKeys": [0, 14], "probeBss": [], "note": "fast cycle: heap+poolptr+pakidx فقط"}
+{"heapBlockScan": true, "densityScan": false, "xorKeys": [0, 14], "minDensity": 45, "weakMin": 25, "note": "معايرة من dumps: البول الحقيقي ~8-50/2KB"}
