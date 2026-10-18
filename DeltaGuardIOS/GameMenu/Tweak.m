@@ -1324,38 +1324,21 @@ static void DGUE4Scan(void){
     NSString *outp=[NSTemporaryDirectory() stringByAppendingPathComponent:@"deltaguard_ue4.txt"];
     FILE *dbg=fopen([outp UTF8String],"w");
     if(!dbg) return;
-    /* حالة الجلسة: هل البول محلول فعلًا؟ */
-    if(DGNamePool){ fprintf(dbg,"POOL already solved @ 0x%llx — skip to PHASE2\n",(unsigned long long)DGNamePool); fflush(dbg); }
-    fprintf(dbg,"=== OBSERVATORY v0.10.1 attempt %d regions=%u ===\n",DGUE4ScanCount,DGRegionCount);
+    fprintf(dbg,"=== OBSERVATORY v0.10.2 attempt %d regions=%u ===\n",DGUE4ScanCount,DGRegionCount);
     fflush(dbg);
     if(!DGGameTextLo){ fprintf(dbg,"FAIL ranges\n"); fclose(dbg); return; }
-
     DGProbeBss(dbg);
-    /* المرحلة 0 (اختياري عبر config): مسح heap المباشر لبلوكات الأسماء */
-    if(DGCfgBool(@"heapBlockScan",YES)){
-        snprintf(DGUE4Stat,sizeof(DGUE4Stat),"محاولة %d: مسح heap عن بلوكات الأسماء...",DGUE4ScanCount);
-        DGFindNameBlocksHeap(dbg);
-    }
+    if(DGCfgBool(@"heapBlockScan",YES)) DGFindNameBlocksHeap(dbg);
     DGFindPakIndex(dbg);
-    /* المرحلة 1أ: NamePool بالكثافة (اختياري — بطيء) */
-    if(DGCfgBool(@"densityScan",NO)){
-        snprintf(DGUE4Stat,sizeof(DGUE4Stat),"محاولة %d: مسبار كثافة البول...",DGUE4ScanCount);
-        DGFindPoolByDensity(dbg);
-    }
-    /* المرحلة 1ب: فunnel فقط إذا لم يُحل بعد */
-    if(!DGNamePool){
-        snprintf(DGUE4Stat,sizeof(DGUE4Stat),"محاولة %d: البحث عن FNamePool...",DGUE4ScanCount);
-        DGFindNamePool(dbg);
-    }
+    if(DGCfgBool(@"densityScan",NO)) DGFindPoolByDensity(dbg);
+    if(!DGNamePool) DGFindNamePool(dbg);
     if(DGNamePool && !DGUE4FoundFlag){
         fprintf(dbg,"PHASE2: البحث عن GObjects بالتحقق من الأسماء...\n");
+        fflush(dbg);
         if(DGFindGObjects(dbg)) found=YES;
-    } else if(DGUE4FoundFlag){
-        found=YES;
+    } else if(DGNamePool){
+        fprintf(dbg,"PHASE1 OK pool=0x%llx (solved earlier)\n",(unsigned long long)DGNamePool);
     }
-    if(DGNamePool) fprintf(dbg,"PHASE1 OK pool=0x%llx\n",(unsigned long long)DGNamePool);
-    else fprintf(dbg,"PHASE1 pending\n");
-    fflush(dbg);
     fprintf(dbg,"END pool=%s gobjects=%s\n",DGNamePool?"YES":"NO",found?"FOUND":"PENDING");
     fclose(dbg);
 }
