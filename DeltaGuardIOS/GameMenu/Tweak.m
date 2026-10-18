@@ -852,7 +852,10 @@ static void DGLoadScanCfg(void){
 static BOOL DGCfgBool(NSString *k,BOOL d){ id v=DGScanCfg[k]; return v?[v boolValue]:d; }
 static uint8_t DGXorKeys[8]={0,14,0,0,0,0,0,0};
 static int DGXorKeyCount=2;
+static uint8_t DGDetectedXorKey=0;
+static BOOL DGDetectedXorKeyValid=NO;
 static void DGLoadXorKeys(void){
+    DGDetectedXorKeyValid=NO;
     id arr=DGScanCfg[@"xorKeys"];
     if([arr isKindOfClass:[NSArray class]]&&arr.count>0){
         int n=(int)MIN((NSUInteger)8,arr.count);
@@ -952,13 +955,20 @@ static BOOL DGDecodeFName(uint32_t nameId, char *out, int outLen){
     uint8_t *s=DGSafeRead(block+off+2,(uint64_t)outLen,&got);
     if(!s) return NO;
     int n=(int)(got<(uint64_t)outLen?got:(uint64_t)outLen);
-    DGFreeRead(s,got);
     uint8_t raw[80];
     if(n>79) n=79;
     memcpy(raw,s,n); raw[n]=0;
-    /* جرب كل مفتاح XOR — اقبل أول نتيجة أحرفها صالحة */
+    DGFreeRead(s,got);
+    /* ابدأ بالمفتاح الذي تحقق عبر None، ثم جرّب بقية الإعدادات */
+    uint8_t keys[9]; int keyCount=0;
+    if(DGDetectedXorKeyValid) keys[keyCount++]=DGDetectedXorKey;
     for(int k=0;k<DGXorKeyCount;k++){
-        uint8_t kk=DGXorKeys[k];
+        uint8_t kk=DGXorKeys[k]; BOOL duplicate=NO;
+        for(int j=0;j<keyCount;j++) if(keys[j]==kk) duplicate=YES;
+        if(!duplicate&&keyCount<9) keys[keyCount++]=kk;
+    }
+    for(int k=0;k<keyCount;k++){
+        uint8_t kk=keys[k];
         for(int i=0;i<n;i++) out[i]=(char)(raw[i]^kk);
         out[n]=0;
         BOOL ok=out[0]!=0;
@@ -987,7 +997,10 @@ static int DGBlockHasNone(uint64_t block){
     for(uint64_t i=0;i+8<got;i+=2){
         if(e[i+1]!=0||e[i]>=0x40) continue;
         for(int k=0;k<DGXorKeyCount;k++){
-            if(DGMatchNone(e+i+2,DGXorKeys[k])){ found=DGXorKeys[k]+1; break; }
+            if(DGMatchNone(e+i+2,DGXorKeys[k])){
+                DGDetectedXorKey=DGXorKeys[k]; DGDetectedXorKeyValid=YES;
+                found=DGXorKeys[k]+1; break;
+            }
         }
         if(found) break;
     }
@@ -1082,7 +1095,7 @@ static void DGUE4Scan(void){
     NSString *outp=[NSTemporaryDirectory() stringByAppendingPathComponent:@"deltaguard_ue4.txt"];
     FILE *dbg=fopen([outp UTF8String],"w");
     if(!dbg) return;
-    fprintf(dbg,"=== OBSERVATORY v0.8.5 attempt %d regions=%u ===\n",DGUE4ScanCount,DGRegionCount);
+    fprintf(dbg,"=== OBSERVATORY v0.8.6 attempt %d regions=%u ===\n",DGUE4ScanCount,DGRegionCount);
     fflush(dbg);
     if(!DGGameTextLo){ fprintf(dbg,"FAIL ranges\n"); fclose(dbg); return; }
 
@@ -2026,7 +2039,7 @@ static UIView *DGToggleRow(CGFloat y, NSString *text, SEL action, UISwitch * __s
 
 + (NSString *)statsText{
     NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
-    return [NSString stringWithFormat:@"الذاكرة: %@ | التشغيل: %02d:%02d\nDeltaGuard v0.8.5 — UE4",
+    return [NSString stringWithFormat:@"الذاكرة: %@ | التشغيل: %02d:%02d\nDeltaGuard v0.8.6 — UE4",
         DGMemoryString(),(int)(up/60),((int)up)%60];
 }
 
