@@ -856,8 +856,10 @@ static uint8_t DGDetectedXorKey=0;
 static BOOL DGDetectedXorKeyValid=NO;
 static void DGLoadXorKeys(void){
     DGDetectedXorKeyValid=NO;
-    id arr=DGScanCfg[@"xorKeys"];
-    if([arr isKindOfClass:[NSArray class]]&&arr.count>0){
+    id value=DGScanCfg[@"xorKeys"];
+    if([value isKindOfClass:[NSArray class]]){
+        NSArray *arr=(NSArray *)value;
+        if(arr.count==0) return;
         int n=(int)MIN((NSUInteger)8,arr.count);
         for(int i=0;i<n;i++) DGXorKeys[i]=(uint8_t)[arr[i] intValue];
         DGXorKeyCount=n;
