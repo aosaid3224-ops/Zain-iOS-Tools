@@ -1236,6 +1236,62 @@ static int DGFindPakIndex(FILE *dbg){
     return hits;
 }
 
+/* المرحلة 2: GUObjectArray — تحقق بالأسماء المفكوكة عبر GNamePool المؤكد */
+static int DGFindGObjects(FILE *dbg){
+    if(!DGNamePool) return 0;
+    int cheap=0, nameHits=0;
+    uint64_t cursor=DGGameDataLo;
+    while(cursor<DGGameDataHi){
+        uint64_t want=DGGameDataHi-cursor; if(want>33554432) want=33554432;
+        uint64_t got=0;
+        uint8_t *buf=DGSafeRead(cursor,want,&got);
+        if(!buf){ cursor+=want; continue; }
+        uint64_t lim=got-24;
+        for(uint64_t q=0;q<lim;q+=8){
+            uint64_t table; memcpy(&table,buf+q,8);
+            if(!table||(table&7)||!DGInRegions(table)) continue;
+            uint64_t c0=0,c1=0;
+            if(!DGReadQ(table,&c0)||!DGInRegions(c0)) continue;
+            if(!DGReadQ(table+8,&c1)||!DGInRegions(c1)) continue;
+            long long stride=(long long)(c1-c0);
+            if(stride<0x8000||stride>0x800000) continue;
+            cheap++;
+            int n18=0,n20=0; char sample[64]=""; char sample2[64]="";
+            for(int i=0;i<12;i++){
+                uint64_t item=c0+(uint64_t)i*0x18;
+                uint64_t obj=0;
+                if(!DGReadQ(item,&obj)||!obj||!DGInRegions(obj)) continue;
+                char nm[64];
+                if(DGObjName(obj,0x18,nm,sizeof nm)){ n18++; if(!sample[0]) strncpy(sample,nm,63); }
+                if(DGObjName(obj,0x20,nm,sizeof nm)){ n20++; if(!sample2[0]) strncpy(sample2,nm,63); }
+            }
+            int bestN=MAX(n18,n20);
+            if(bestN>=1 && nameHits<30){
+                nameHits++;
+                fprintf(dbg,"OBJTABLE? @ 0x%llx stride=0x%llx names18=%d names20=%d sample=%s/%s\n",
+                    (unsigned long long)table,(unsigned long long)stride,n18,n20,sample,sample2);
+                fflush(dbg);
+            }
+            if(bestN>=3){
+                fprintf(dbg,"VERIFIED GObjects @ 0x%llx (itemStride=%s, samples=%s|%s)\n",
+                    (unsigned long long)table,n20>n18?"0x20":"0x18",sample,sample2);
+                snprintf(DGUE4Stat,sizeof(DGUE4Stat),"تم: GObjects @ 0x%llx — اكتمل الاكتشاف كاملًا",(unsigned long long)table);
+                snprintf(DGUE4FoundAddr,sizeof(DGUE4FoundAddr),"0x%llx",(unsigned long long)table);
+                DGUE4FoundFlag=YES;
+                dispatch_async(dispatch_get_main_queue(),^{ DGHaptic(); DGHaptic(); DGHaptic(); });
+                DGFreeRead(buf,got);
+                return 1;
+            }
+        }
+        DGFreeRead(buf,got);
+        cursor+=got?got:want;
+        if(!got) cursor+=want;
+    }
+    fprintf(dbg,"GOBJ funnel: cheap=%d nameHits=%d\n",cheap,nameHits);
+    fflush(dbg);
+    return 0;
+}
+
 static void DGUE4Scan(void){
     static NSTimeInterval lastTry=0;
     static BOOL found=NO;
@@ -1272,7 +1328,10 @@ static void DGUE4Scan(void){
         snprintf(DGUE4Stat,sizeof(DGUE4Stat),"محاولة %d: البحث عن FNamePool...",DGUE4ScanCount);
         DGFindNamePool(dbg);
     }
-    if(DGNamePool) fprintf(dbg,"PHASE1 OK pool=0x%llx\n",(unsigned long long)DGNamePool);
+    if(DGNamePool){ fprintf(dbg,"PHASE1 OK pool=0x%llx\n",(unsigned long long)DGNamePool);
+        fprintf(dbg,"PHASE2: البحث عن GObjects بالتحقق من الأسماء...\n");
+        DGFindGObjects(dbg);
+    }
     else fprintf(dbg,"PHASE1 pending\n");
     fflush(dbg);
 
