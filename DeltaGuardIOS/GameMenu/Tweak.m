@@ -875,7 +875,8 @@ static uint64_t DGNamePool=0;
 static void DGDumpRegion2(uint64_t at, uint64_t bytes, const char *name, FILE *dbg);
 /* ابحث في كل الذاكرة عن مؤشر لبلوك معروف — مع تحقق XOR أن Blocks[0] هو بداية بول حقيقية */
 static void DGFindPoolPtr(uint64_t entry, FILE *dbg){
-    uint64_t page=entry&~0xFFFFULL;
+    uint64_t loW=(entry>0x50000?entry-0x40000:0x1000)&~0xFFFULL;
+    uint64_t hiW=entry+0x20000;
     int hits=0;
     for(uint32_t ri=0; ri<DGRegionCount && hits<8; ri++){
         uint64_t lo=DGRegions[ri*2], hi=DGRegions[ri*2+1];
@@ -890,7 +891,7 @@ static void DGFindPoolPtr(uint64_t entry, FILE *dbg){
             if(!buf) break;
             for(uint64_t q=0;q+8<=got && hits<8;q+=8){
                 uint64_t p; memcpy(&p,buf+q,8);
-                if(p>=page && p<page+0x10000){
+                if(p>=loW && p<hiW){
                     /* تحقق: p يجب أن يشير لبداية بلوك يحوي None بأي مفتاح */
                     uint64_t g2=0; uint8_t *blk=DGSafeRead(p,64,&g2);
                     int ok=0;
