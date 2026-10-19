@@ -2482,13 +2482,20 @@ static void DGIndexSweep(FILE *dbg){
             for(int k=0;kPlayerClassIdx[k];k++) if(kPlayerClassIdx[k]==cidx){ cname=kPlayerClassNames[k]; break; }
             if(players<20) fprintf(dbg,"IDXPLAYER #%d clsIdx=%u(%s) self=%u %s obj=0x%llx\n",players,cidx,cname,selfIdx,selfIdx>5000?"INSTANCE":"CDO",(unsigned long long)obj);
             players++;
-            if(selfIdx<=5000){ continue; } /* CDO — تخطَّ النسخ/مواقعه */
-            if(DGTrackN<DG_MAX_TRACK && (cidx==2118||cidx==4819||cidx==2116||cidx==2115||cidx==4825||cidx==2131||cidx==208)){
+            /* المميز الحقيقي: CDO = Outer(obj+0x10) == Class(obj+0x8) */
+            uint64_t outer=0;
+            DGReadQ(obj+0x10,&outer);
+            uint64_t mycls=0;
+            DGReadQ(obj+0x8,&mycls);
+            BOOL isCDO=(outer&&mycls&&outer==mycls);
+            if(isCDO){ if(players<20) fprintf(dbg,"IDXSKIP CDO cls=%u self=%u\n",cidx,selfIdx); continue; }
+            if(players<25) fprintf(dbg,"IDXREAL cls=%u self=%u obj=0x%llx outer=0x%llx\n",cidx,selfIdx,(unsigned long long)obj,(unsigned long long)outer);
+            if(DGTrackN<DG_MAX_TRACK && (cidx==2118||cidx==4819||cidx==2116||cidx==2115||cidx==4825||cidx==2131)){
                 DGTrackObj[DGTrackN]=obj; DGTrackCls[DGTrackN]=cidx; DGTrackSelf[DGTrackN]=selfIdx; DGTrackN++;
             }
             /* المكونات (كبسولة/حركة): dump نافذة المواقع مباشرة — فيها الإحداثيات */
             if(cidx==2116||cidx==2115||cidx==4825||cidx==2131){
-                uint8_t *pw=DGSafeRead(obj+0x140,256,&g);
+                uint8_t *pw=DGSafeRead(obj+0x140,768,&g);
                 if(pw){ fprintf(dbg,"COMPPOS cls=%u self=%u @ obj+0x140 : ",cidx,selfIdx);
                     for(uint64_t x=0;x<g;x++) fprintf(dbg,"%02x",pw[x]);
                     fprintf(dbg,"\n"); DGFreeRead(pw,g); }
@@ -2522,15 +2529,15 @@ static void DGIndexSweep(FILE *dbg){
     fflush(dbg);
 }
 /* متتبع المواقع: عينتان متباعدتان — المتغير بينهما = إحداثيات */
-static uint8_t DGTrackS0[DG_MAX_TRACK][512];
-static uint8_t DGTrackS1[DG_MAX_TRACK][512];
+static uint8_t DGTrackS0[DG_MAX_TRACK][768];
+static uint8_t DGTrackS1[DG_MAX_TRACK][768];
 static int DGTrackPhase=0;
 static void DGTrackPositions(FILE *dbg){
     if(!DGTrackN) return;
     if(DGTrackPhase==0){
         for(int t=0;t<DGTrackN;t++){
-            uint64_t g=0; uint8_t *b=DGSafeRead(DGTrackObj[t]+0x140,512,&g);
-            if(b){ memcpy(DGTrackS0[t],b,g<512?g:512); DGFreeRead(b,g); }
+            uint64_t g=0; uint8_t *b=DGSafeRead(DGTrackObj[t]+0x140,768,&g);
+            if(b){ memcpy(DGTrackS0[t],b,g<768?g:768); DGFreeRead(b,g); }
         }
         DGTrackPhase=1;
         fprintf(dbg,"TRACK T0 captured n=%d — تحرك 5 ثوانٍ الآن!\n",DGTrackN);
@@ -2539,11 +2546,11 @@ static void DGTrackPositions(FILE *dbg){
     }
     /* Phase 1: العينة الثانية + الفروقات */
     for(int t=0;t<DGTrackN;t++){
-        uint64_t g=0; uint8_t *b=DGSafeRead(DGTrackObj[t]+0x140,512,&g);
+        uint64_t g=0; uint8_t *b=DGSafeRead(DGTrackObj[t]+0x140,768,&g);
         if(!b) continue;
-        memcpy(DGTrackS1[t],b,g<512?g:512); DGFreeRead(b,g);
+        memcpy(DGTrackS1[t],b,g<768?g:768); DGFreeRead(b,g);
         fprintf(dbg,"TRACKDIFF cls=%u self=%u obj=0x%llx changed=[",DGTrackCls[t],DGTrackSelf[t],(unsigned long long)DGTrackObj[t]);
-        for(int off=0;off+4<=512;off+=4){
+        for(int off=0;off+4<=768;off+=4){
             if(memcmp(DGTrackS0[t]+off,DGTrackS1[t]+off,4)!=0){
                 float f0,f1; memcpy(&f0,DGTrackS0[t]+off,4); memcpy(&f1,DGTrackS1[t]+off,4);
                 fprintf(dbg,"%+d:%.2f→%.2f ",off,f0,f1);
