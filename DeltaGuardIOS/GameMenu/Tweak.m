@@ -2532,7 +2532,8 @@ static void DGIndexSweep(FILE *dbg){
 static uint8_t DGTrackS0[DG_MAX_TRACK][2048]; /* v0.27: نافذة 2048B تكشف بنية الكاركتر الكاملة */
 static uint8_t DGTrackS1[DG_MAX_TRACK][2048];
 static int DGTrackPhase=0;
-static int DGTrackT1Count=0; /* v0.27: حتى 4 عينات T1 لالتقاط الحركة بكل تأكيد */
+static int DGTrackT1Count=0;
+static char DGTrackStat[128]=""; /* v0.28.1: حالة التتبع المعزولة للوحة */ /* v0.27: حتى 4 عينات T1 لالتقاط الحركة بكل تأكيد */
 static void DGTrackPositions(FILE *dbg){
     if(!DGTrackN) return;
     if(DGTrackPhase==0){
@@ -2551,13 +2552,13 @@ static void DGTrackPositions(FILE *dbg){
         }
         DGTrackPhase=1; DGTrackT1Count=0;
         fprintf(dbg,"TRACK T0 captured n=%d win=2048B — تحرك الآن (4 عينات T1 كل 5 ثوانٍ)!\n",DGTrackN);
-        snprintf(DGUE4Stat,sizeof(DGUE4Stat),"TRACK T0 ✓ n=%d — تحرك الآن",DGTrackN);
+        snprintf(DGTrackStat,sizeof(DGTrackStat),"T0 ✓ — يمين 3ث ثم وقف (%d متتبع)",DGTrackN);
         fflush(dbg);
         return;
     }
     if(DGTrackT1Count>=4){
         fprintf(dbg,"TRACK DONE — القيم المتغيرة = الإحداثيات!\n");
-        snprintf(DGUE4Stat,sizeof(DGUE4Stat),"TRACK DONE ✓ ابعث اللوغ");
+        snprintf(DGTrackStat,sizeof(DGTrackStat),"DONE ✓ — ابعث اللوغ الآن");
         fflush(dbg);
         DGTrackPhase=2;
         return;
@@ -2577,7 +2578,9 @@ static void DGTrackPositions(FILE *dbg){
         }
         fprintf(dbg,"]\n");
     }
-    snprintf(DGUE4Stat,sizeof(DGUE4Stat),"T1 #%d ✓ سكون الآن",DGTrackT1Count);
+    if(DGTrackT1Count==1) snprintf(DGTrackStat,sizeof(DGTrackStat),"T1#1 ✓ — يسار 3ث ثم وقف");
+    else if(DGTrackT1Count==2) snprintf(DGTrackStat,sizeof(DGTrackStat),"T1#2 ✓ — أمام 3ث ثم وقف");
+    else snprintf(DGTrackStat,sizeof(DGTrackStat),"T1#%d ✓ — سكون",DGTrackT1Count);
     fflush(dbg);
 }
 /* v0.28: إعادة مسح خفيفة — تلتقط الشخصيات المُspawned بعد أول sweep (دخول الرماية لاحقاً) */
@@ -2615,7 +2618,7 @@ static int DGTrackRescan(FILE *dbg){
             fprintf(dbg,"TRACKNEW cls=%u self=%u obj=0x%llx outer=0x%llx\n",cidx,selfIdx,(unsigned long long)obj,(unsigned long long)outer);
         }
     }
-    if(added){ fflush(dbg); snprintf(DGUE4Stat,sizeof(DGUE4Stat),"TRACKNEW +%d — T0 جديد خلال 5ث",added); }
+    if(added){ fflush(dbg); snprintf(DGTrackStat,sizeof(DGTrackStat),"TRACKNEW +%d ✓ سكون — T0 خلال 5ث",added); }
     return added;
 }
 
@@ -3792,7 +3795,8 @@ static UIView *DGToggleRow(CGFloat y, NSString *text, SEL action, UISwitch * __s
 
     /* (3.5) حالة ماسح UE4 — حي */
     if(DGUE4Label){
-        DGUE4Label.text=[NSString stringWithFormat:@"UE4: %s",DGUE4Stat];
+        const char *dgSt=(DGTrackN>0&&DGTrackStat[0])?DGTrackStat:DGUE4Stat;
+        DGUE4Label.text=[NSString stringWithFormat:@"UE4: %s",dgSt];
         DGUE4Label.textColor=DGUE4FoundFlag?[UIColor systemGreenColor]:[UIColor colorWithRed:1 green:0.85 blue:0.3 alpha:1];
     }
 
