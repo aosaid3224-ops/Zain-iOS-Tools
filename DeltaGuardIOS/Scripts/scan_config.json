@@ -1,1 +1,1 @@
-{"heapBlockScan": true, "densityScan": false, "xorKeys": [0, 14, 210], "minDensity": 45, "weakMin": 25, "probes": [{"addr": "bsslive", "n": 96, "follow": 2}], "buildMark": "DF-X7K2-9914", "note": "probe ذكي: يتبع مؤشرات BSSLIVE تلقائيًا لعمق 2"}
+{"heapBlockScan": true, "densityScan": false, "xorKeys": [0, 14, 210], "minDensity": 45, "weakMin": 25, "probes": [], "buildMark": "DF-X7K2-9914", "note": "v15: DGHUNT مستقل — لا probes يدوية"}
