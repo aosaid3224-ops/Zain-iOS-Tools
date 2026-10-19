@@ -1884,6 +1884,29 @@ static void DGUE4Scan(void){
             }
         }
         fprintf(dbg,"POOLSAMPLE total=%d (walked)\n",good);
+        /* STRSCAN: مسح السلاسل المثبت من تحليل الـ dumps (≥4 أحرف) */
+        { int sg=0;
+          for(int b2=0;b2<DGSnapCount && sg<30;b2++){
+            const uint8_t *blk=DGBlockSnap[b2];
+            for(uint64_t i2=0;i2+4<0x8000 && sg<30;i2++){
+                for(int k=0;k<DGXorKeyCount;k++){
+                    uint8_t kk=DGXorKeys[k];
+                    if((blk[i2]^kk)<0x20||(blk[i2]^kk)>0x7e) continue;
+                    uint64_t L=0;
+                    while(i2+L<0x8000&&L<47&&(blk[i2+L]^kk)>=0x20&&(blk[i2+L]^kk)<0x7f) L++;
+                    if(L>=4 && (i2+L>=0x8000 || (blk[i2+L]^kk)==0)){
+                        char nm[48];
+                        for(uint64_t c=0;c<L;c++) nm[c]=(char)(blk[i2+c]^kk);
+                        nm[L]=0;
+                        fprintf(dbg,"STRSCAN reg#%d len=%llu %s\n",b2,(unsigned long long)L,nm);
+                        sg++; i2+=L;
+                        break;
+                    }
+                }
+            }
+          }
+          fprintf(dbg,"STRSCAN total=%d\n",sg);
+        }
         fflush(dbg);
     }
     if(preferRegistered&&DGSnapCount){
