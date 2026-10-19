@@ -2583,44 +2583,38 @@ static void __attribute__((unused)) DGTrackPositions(FILE *dbg){
     else snprintf(DGTrackStat,sizeof(DGTrackStat),"T1#%d ✓ — سكون",DGTrackT1Count);
     fflush(dbg);
 }
-/* v0.35: SDK — قراءة المواقع والكاميرا بالأوفستات المؤكدة من dump اللعبة (بلا فلاتر تخمين)
-   AActor: ReplicatedMovement@0x9C (Location@+0x18=0xB4) | RootComponent@0x180
-   USceneComponent: RelativeLocation@0x164 | PlayerController: PlayerCameraManager@0x408
-   PlayerCameraManager: CameraCachePrivate@0x2B60 (POV: loc@+0 rot@+0xC fov@+0x18) */
-static void DGV3(FILE *dbg, uint64_t addr, const char *tag, uint32_t self){
-    uint64_t g=0; uint8_t *b=DGSafeRead(addr,12,&g);
-    if(b&&g>=12){ float v[3]; memcpy(v,b,12);
-        fprintf(dbg,"%s self=%u (%.1f,%.1f,%.1f)\n",tag,self,v[0],v[1],v[2]); DGFreeRead(b,g); return; }
-    if(b)DGFreeRead(b,g);
-    fprintf(dbg,"%s self=%u READFAIL\n",tag,self);
+/* v0.36: RAWF — التفريغ الخام النووي: كل بايت عائم في الكائنات الحية ومكوناتها — بلا فلاتر، بلا افتراضات */
+static void DGRawDump(FILE *dbg, uint64_t obj, uint32_t self, const char *tag){
+    fprintf(dbg,"RAWQ %s self=%u obj=0x%llx |",tag,self,(unsigned long long)obj);
+    for(uint64_t o=0x100;o<0x200;o+=8){ uint64_t q=0; if(DGReadQ(obj+o,&q)) fprintf(dbg," +%llx:%llx",(unsigned long long)o,(unsigned long long)q); }
+    fprintf(dbg,"\n");
+    for(uint64_t bs=0x100;bs<0x600;bs+=0x40){
+        uint64_t g=0; uint8_t *b=DGSafeRead(obj+bs,0x40,&g);
+        if(!b){ fprintf(dbg,"RAWF %s self=%u +%llx FAIL\n",tag,self,(unsigned long long)bs); continue; }
+        fprintf(dbg,"RAWF %s self=%u +%llx |",tag,self,(unsigned long long)bs);
+        for(int i=0;i+4<=(int)g;i+=4){ float v; memcpy(&v,b+i,4); fprintf(dbg," %.1f",v); }
+        fprintf(dbg,"\n"); DGFreeRead(b,g);
+    }
+    fflush(dbg);
 }
 static void DGTrackLivePrint(FILE *dbg){
     for(int t=0;t<DGTrackN;t++){
         uint64_t obj=DGTrackObj[t]; uint32_t c=DGTrackCls[t];
-        if(c==2117||c==2118){          /* GPCharacter*: موقع مباشر + عبر الكبسولة */
-            DGV3(dbg,obj+0xB4,"POSREP",DGTrackSelf[t]);
+        if(c==2117||c==2118){          /* شخصية حية: تفريغها الخام + كبسولتها */
+            DGRawDump(dbg,obj,DGTrackSelf[t],"CH");
             uint64_t rc=0;
             if(DGReadQ(obj+0x180,&rc)&&rc>=0x100000000ULL&&rc<0x400000000ULL){
                 fprintf(dbg,"ROOT self=%u rc=0x%llx\n",DGTrackSelf[t],(unsigned long long)rc);
-                DGV3(dbg,rc+0x164,"POSCAP",DGTrackSelf[t]);
+                DGRawDump(dbg,rc,DGTrackSelf[t],"RC");
             } else fprintf(dbg,"ROOT self=%u BAD\n",DGTrackSelf[t]);
-        } else if(c==2115||c==2116){   /* كبسولة مباشرة */
-            DGV3(dbg,obj+0x164,"CAPS",DGTrackSelf[t]);
-        } else if(c==213){             /* LuaPlayerController → الكاميرا الكاملة */
-            uint64_t pcm=0;
-            if(DGReadQ(obj+0x408,&pcm)&&pcm>=0x100000000ULL&&pcm<0x400000000ULL){
-                uint64_t g=0; uint8_t *b=DGSafeRead(pcm+0x2B60,0x20,&g);
-                if(b&&g>=0x1C){ float v[6],fov; memcpy(v,b,24); memcpy(&fov,b+24,4);
-                    fprintf(dbg,"CAM self=%u loc=(%.1f,%.1f,%.1f) rot=(%.1f,%.1f,%.1f) fov=%.1f\n",DGTrackSelf[t],v[0],v[1],v[2],v[3],v[4],v[5],fov);
-                    DGFreeRead(b,g);
-                } else { fprintf(dbg,"CAM self=%u READFAIL\n",DGTrackSelf[t]); if(b)DGFreeRead(b,g); }
-            } else fprintf(dbg,"CAM self=%u NOPCM\n",DGTrackSelf[t]);
-        } else if(c==208||c==209||c==1923||c==1924||c==206){
-            DGV3(dbg,obj+0xB4,"POSREP",DGTrackSelf[t]);
+        } else if(c==2115||c==2116){   /* كبسولات/مكونات مباشرة */
+            DGRawDump(dbg,obj,DGTrackSelf[t],"CP");
+        } else if(c==213){             /* المتحكم: تفريغ خام لصيد مؤشر الكاميرا */
+            DGRawDump(dbg,obj,DGTrackSelf[t],"PC");
         }
     }
     fflush(dbg);
-    snprintf(DGTrackStat,sizeof(DGTrackStat),"SDK ✓ n=%d",DGTrackN);
+    snprintf(DGTrackStat,sizeof(DGTrackStat),"RAW ✓ n=%d",DGTrackN);
 }
 
 static int DGTrackRescan(FILE *dbg);
