@@ -1675,6 +1675,47 @@ static void DGRunProbes(FILE *dbg){
     fflush(dbg);
 }
 
+static uint64_t DGWatchBase=0;
+static uint8_t DGWatchLast[32];
+static BOOL DGWatchInit=NO;
+/* مرصد bss: بعد التهيئة، امسح bss كاملًا عن بنية GUObjectArray الحية */
+static int DGWatchBss(FILE *dbg){
+    uint64_t lo=0x117c6ca40, hi=0x1186d9340;
+    if(DGGameTextLo){ lo+=DGGameTextLo-0x100000000ULL; hi+=DGGameTextLo-0x100000000ULL; }
+    int found=0;
+    uint64_t cursor=lo;
+    while(cursor<hi && found<12){
+        uint64_t want=hi-cursor; if(want>33554432) want=33554432;
+        uint64_t got=0;
+        uint8_t *buf=DGSafeRead(cursor,want,&got);
+        if(!buf){ cursor+=want; continue; }
+        uint64_t lim=got-32;
+        for(uint64_t q=0;q<lim && found<12;q+=8){
+            uint64_t objects; uint32_t a,b,c,d;
+            memcpy(&objects,buf+q,8);
+            memcpy(&a,buf+q+16,4); memcpy(&b,buf+q+20,4);
+            memcpy(&c,buf+q+24,4); memcpy(&d,buf+q+28,4);
+            if(a<0x40000||a>0x8000000) continue;
+            if(b<1||b>=a) continue;
+            if(c<8||c>65536||d<1||d>c) continue;
+            if(a%c) continue;
+            uint32_t per=a/c; if(per<256||per>65536) continue;
+            if(objects && ((objects&7)||!DGInRegions(objects))) continue;
+            if(!DGWatchBase) DGWatchBase=cursor+q;
+            fprintf(dbg,"BSSLIVE @ 0x%llx objects=0x%llx Max=0x%x Num=%u Chunks=%u/%u raw=",(unsigned long long)(cursor+q),(unsigned long long)objects,a,b,d,c);
+            for(int k=0;k<32;k++) fprintf(dbg,"%02x",buf[q+k]);
+            fprintf(dbg,"\n");
+            found++;
+        }
+        DGFreeRead(buf,got);
+        cursor+=got?got:want;
+        if(!got) cursor+=want;
+    }
+    fprintf(dbg,"BSSWATCH done found=%d\n",found);
+    fflush(dbg);
+    return found;
+}
+
 static void DGUE4Scan(void){
     static NSTimeInterval lastTry=0;
     static BOOL found=NO;
@@ -1696,6 +1737,21 @@ static void DGUE4Scan(void){
     if(!dbg) return;
     if(DGNamePool){ fprintf(dbg,"POOL already solved @ 0x%llx\n",(unsigned long long)DGNamePool); fflush(dbg); }
     if(DGSnapCount){ fprintf(dbg,"REGISTERED SNAPSHOTS ready=%d\n",DGSnapCount); fflush(dbg); }
+    { static BOOL bssWatched=NO; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
+      if(!bssWatched && up>100.0){ bssWatched=YES; fprintf(dbg,"--- BSS WATCH (t+%ds) ---\n",(int)up); DGWatchBss(dbg); }
+      if(DGWatchBase){
+          uint64_t g=0; uint8_t *b=DGSafeRead(DGWatchBase,32,&g);
+          if(b&&g>=16){
+              if(!DGWatchInit){ memcpy(DGWatchLast,b,32); DGWatchInit=YES; }
+              else if(memcmp(DGWatchLast,b,g<32?g:32)!=0){
+                  fprintf(dbg,"WATCHDIFF t+%lds @ 0x%llx : ",(long)up,(unsigned long long)DGWatchBase);
+                  for(uint64_t k=0;k<g;k++) fprintf(dbg,"%02x",b[k]);
+                  fprintf(dbg,"\n");
+                  memcpy(DGWatchLast,b,g<32?g:32);
+              }
+              DGFreeRead(b,g);
+          }
+      } }
     { static uint32_t sLastRegions=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
       fprintf(dbg,"\n=== ATTEMPT %d | t+%lds | regions=%u\n",DGUE4ScanCount,(long)up,DGRegionCount);
       if(sLastRegions && DGRegionCount>sLastRegions+8) fprintf(dbg,"STATE: +%u regions (تحول مشهد/تحميل)\n",DGRegionCount-sLastRegions);
