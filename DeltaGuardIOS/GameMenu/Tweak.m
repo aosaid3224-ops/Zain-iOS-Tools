@@ -1876,7 +1876,7 @@ static int DGWatchAll(FILE *dbg){
 }
 
 /* ===== وحدة الصيد المستقلّة v15: بلوكات + ترجمة + كائنات — ذرّية، بلا اعتماديات ===== */
-#define DG_MAX_TRACK 24
+#define DG_MAX_TRACK 48
 static uint64_t DGTrackObj[DG_MAX_TRACK];
 static uint32_t DGTrackCls[DG_MAX_TRACK];
 static uint32_t DGTrackSelf[DG_MAX_TRACK];
@@ -2490,7 +2490,7 @@ static void DGIndexSweep(FILE *dbg){
             BOOL isCDO=(outer&&mycls&&outer==mycls);
             if(isCDO){ if(players<20) fprintf(dbg,"IDXSKIP CDO cls=%u self=%u\n",cidx,selfIdx); continue; }
             if(players<25) fprintf(dbg,"IDXREAL cls=%u self=%u obj=0x%llx outer=0x%llx\n",cidx,selfIdx,(unsigned long long)obj,(unsigned long long)outer);
-            if(DGTrackN<DG_MAX_TRACK && (cidx==2118||cidx==4819||cidx==2116||cidx==2115||cidx==4825||cidx==2131)){
+            if(DGTrackN<DG_MAX_TRACK && (cidx==2118||cidx==4819||cidx==2116||cidx==2115||cidx==4825||cidx==2131||cidx==2117)){
                 DGTrackObj[DGTrackN]=obj; DGTrackCls[DGTrackN]=cidx; DGTrackSelf[DGTrackN]=selfIdx; DGTrackN++;
             }
             /* المكونات (كبسولة/حركة): dump نافذة المواقع مباشرة — فيها الإحداثيات */
@@ -2529,28 +2529,45 @@ static void DGIndexSweep(FILE *dbg){
     fflush(dbg);
 }
 /* متتبع المواقع: عينتان متباعدتان — المتغير بينهما = إحداثيات */
-static uint8_t DGTrackS0[DG_MAX_TRACK][768];
-static uint8_t DGTrackS1[DG_MAX_TRACK][768];
+static uint8_t DGTrackS0[DG_MAX_TRACK][2048]; /* v0.27: نافذة 2048B تكشف بنية الكاركتر الكاملة */
+static uint8_t DGTrackS1[DG_MAX_TRACK][2048];
 static int DGTrackPhase=0;
+static int DGTrackT1Count=0; /* v0.27: حتى 4 عينات T1 لالتقاط الحركة بكل تأكيد */
 static void DGTrackPositions(FILE *dbg){
     if(!DGTrackN) return;
     if(DGTrackPhase==0){
         for(int t=0;t<DGTrackN;t++){
-            uint64_t g=0; uint8_t *b=DGSafeRead(DGTrackObj[t]+0x140,768,&g);
-            if(b){ memcpy(DGTrackS0[t],b,g<768?g:768); DGFreeRead(b,g); }
+            uint64_t g=0; uint8_t *b=DGSafeRead(DGTrackObj[t]+0x140,2048,&g);
+            if(b){ memcpy(DGTrackS0[t],b,g<2048?g:2048); DGFreeRead(b,g); }
+            /* v0.27: PTRDUMP للكاركتر الحقيقي — كل مؤشرات المكونات (RootComponent وغيره) */
+            if(DGTrackCls[t]==2117){
+                fprintf(dbg,"PTRDUMP cls=2117 self=%u obj=0x%llx ptrs=[",DGTrackSelf[t],(unsigned long long)DGTrackObj[t]);
+                for(int po=0x20;po<=0x400;po+=8){
+                    uint64_t q=0; if(!DGReadQ(DGTrackObj[t]+po,&q)) continue;
+                    if(q>=0x100000000ULL&&q<0x400000000ULL&&!(q&7)) fprintf(dbg,"+0x%x:0x%llx ",po,(unsigned long long)q);
+                }
+                fprintf(dbg,"]\n");
+            }
         }
-        DGTrackPhase=1;
-        fprintf(dbg,"TRACK T0 captured n=%d — تحرك 5 ثوانٍ الآن!\n",DGTrackN);
+        DGTrackPhase=1; DGTrackT1Count=0;
+        fprintf(dbg,"TRACK T0 captured n=%d win=2048B — تحرك الآن (4 عينات T1 كل 5 ثوانٍ)!\n",DGTrackN);
         fflush(dbg);
         return;
     }
-    /* Phase 1: العينة الثانية + الفروقات */
+    if(DGTrackT1Count>=4){
+        fprintf(dbg,"TRACK DONE — القيم المتغيرة = الإحداثيات!\n");
+        fflush(dbg);
+        DGTrackPhase=2;
+        return;
+    }
+    DGTrackT1Count++;
+    /* العينات T1#1..#4: كل واحدة فرصة لالتقاط حركتك بين 5-ثوانٍ ticks */
     for(int t=0;t<DGTrackN;t++){
-        uint64_t g=0; uint8_t *b=DGSafeRead(DGTrackObj[t]+0x140,768,&g);
+        uint64_t g=0; uint8_t *b=DGSafeRead(DGTrackObj[t]+0x140,2048,&g);
         if(!b) continue;
-        memcpy(DGTrackS1[t],b,g<768?g:768); DGFreeRead(b,g);
-        fprintf(dbg,"TRACKDIFF cls=%u self=%u obj=0x%llx changed=[",DGTrackCls[t],DGTrackSelf[t],(unsigned long long)DGTrackObj[t]);
-        for(int off=0;off+4<=768;off+=4){
+        memcpy(DGTrackS1[t],b,g<2048?g:2048); DGFreeRead(b,g);
+        fprintf(dbg,"TRACKDIFF #%d cls=%u self=%u obj=0x%llx changed=[",DGTrackT1Count,DGTrackCls[t],DGTrackSelf[t],(unsigned long long)DGTrackObj[t]);
+        for(int off=0;off+4<=2048;off+=4){
             if(memcmp(DGTrackS0[t]+off,DGTrackS1[t]+off,4)!=0){
                 float f0,f1; memcpy(&f0,DGTrackS0[t]+off,4); memcpy(&f1,DGTrackS1[t]+off,4);
                 fprintf(dbg,"%+d:%.2f→%.2f ",off,f0,f1);
@@ -2558,9 +2575,7 @@ static void DGTrackPositions(FILE *dbg){
         }
         fprintf(dbg,"]\n");
     }
-    fprintf(dbg,"TRACK DONE — القيم المتغيرة = الإحداثيات!\n");
     fflush(dbg);
-    DGTrackPhase=2;
 }
 static void DGUE4Scan(void){
     static NSTimeInterval lastTry=0;
