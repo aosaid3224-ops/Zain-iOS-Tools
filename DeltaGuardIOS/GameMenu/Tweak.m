@@ -2255,20 +2255,38 @@ static void DGSemanticScan(FILE *dbg){
 /* ===== v19 FINAL SWEEP: أسماء + كلاسات لاعبين + اكتشاف مواقع — دفعة واحدة ===== */
 static int DGTryPoolCandidate(uint64_t npTry, FILE *dbg, uint64_t candFile){
     uint64_t blocks=0,block=0;
-    if(!(DGReadQ(npTry-8,&blocks)&&DGReadQ(blocks,&block))) return 0;
-    uint64_t g3=0; uint8_t *e=DGSafeRead(block,32,&g3);
-    if(!e||g3<6){ if(e)DGFreeRead(e,g3); return 0; }
-    uint16_t hdr=0; memcpy(&hdr,e,2); uint32_t len=hdr>>6;
-    int ok=0;
-    if(len==4){ char nm[8]={0}; memcpy(nm,e+2,4); DGDecName(nm,4);
-        if(!memcmp(nm,"None",4)) ok=1;
-        else { memcpy(nm,e+2,4); nm[4]=0; if(!memcmp(nm,"None",4)) ok=1; } }
+    if(!(DGReadQ(npTry-8,&blocks)&&DGReadQ(blocks,&block))){
+        fprintf(dbg,"POOLCAND 0x%llx: blocks@0x%llx=0x%llx FAIL-read\n",(unsigned long long)candFile,(unsigned long long)(npTry-8),(unsigned long long)blocks);
+        return 0;
+    }
+    fprintf(dbg,"POOLCAND 0x%llx: blocks=0x%llx block0=0x%llx\n",(unsigned long long)candFile,(unsigned long long)blocks,(unsigned long long)block);
+    uint64_t g3=0; uint8_t *e=DGSafeRead(block,64,&g3);
+    if(!e||g3<6){ if(e)DGFreeRead(e,g3); fprintf(dbg,"POOLCAND: block unreadable\n"); return 0; }
+    fprintf(dbg,"POOLCAND head64=");
+    for(uint64_t x=0;x<g3;x++) fprintf(dbg,"%02x",e[x]);
+    fprintf(dbg,"\n");
+    /* تحقق إحصائي: امشِ 30 إدخالًا في البلوك — عدّ الأسماء الصالحة المفكوكة */
+    int valid=0;
+    for(uint64_t off=0;off+80<g3&&off<0x2000;off+=2){
+        uint16_t hdr; memcpy(&hdr,e+off,2);
+        uint32_t len=hdr>>6;
+        if(len<2||len>60) continue;
+        char t[80]={0};
+        for(uint32_t i=0;i<len&&off+2+i<g3;i++) t[i]=(char)(e[off+2+i]^0); /* raw أولاً */
+        BOOL okraw=1; for(uint32_t i=0;t[i]&&okraw;i++) if(t[i]<32||t[i]>126) okraw=0;
+        memcpy(t,e+off+2,len); DGDecName(t,len);
+        BOOL okdec=1; for(uint32_t i=0;t[i]&&okdec;i++) if(t[i]<32||t[i]>126) okdec=0;
+        if((okraw&&t[0])||(okdec&&t[0])) valid++;
+        off+=len;
+    }
+    fprintf(dbg,"POOLCAND valid-entries=%d/30\n",valid);
     DGFreeRead(e,g3);
-    if(ok){ DGGNamePool=npTry;
-        fprintf(dbg,"NAMEPOOL-DIRECT @ 0x%llx None ✓ (cand 0x%llx)\n",(unsigned long long)npTry,(unsigned long long)candFile); }
-    return ok;
+    if(valid>=8){ DGGNamePool=npTry;
+        fprintf(dbg,"NAMEPOOL-DIRECT @ 0x%llx ✓ statistical (cand 0x%llx)\n",(unsigned long long)npTry,(unsigned long long)candFile);
+        return 1;
+    }
+    return 0;
 }
-
 static void DGFinalSweep(FILE *dbg){
     fprintf(dbg,"===== FINAL SWEEP START =====\n"); fflush(dbg);
     /* ① البول */
