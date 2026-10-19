@@ -2534,7 +2534,7 @@ static uint8_t DGTrackS1[DG_MAX_TRACK][2048];
 static int DGTrackPhase=0;
 static int DGTrackT1Count=0;
 static char DGTrackStat[128]=""; /* v0.28.1: حالة التتبع المعزولة للوحة */ /* v0.27: حتى 4 عينات T1 لالتقاط الحركة بكل تأكيد */
-static void DGTrackPositions(FILE *dbg){
+static void __attribute__((unused)) DGTrackPositions(FILE *dbg){
     if(!DGTrackN) return;
     if(DGTrackPhase==0){
         for(int t=0;t<DGTrackN;t++){
@@ -2582,6 +2582,40 @@ static void DGTrackPositions(FILE *dbg){
     else if(DGTrackT1Count==2) snprintf(DGTrackStat,sizeof(DGTrackStat),"T1#2 ✓ — أمام 3ث ثم وقف");
     else snprintf(DGTrackStat,sizeof(DGTrackStat),"T1#%d ✓ — سكون",DGTrackT1Count);
     fflush(dbg);
+}
+/* v0.29: قارئ المواقع الحي — يكتشف FTransform تلقائياً بفلتر الكواترنيون |q|≈1 — churn-proof */
+static void DGTrackLivePrint(FILE *dbg){
+    for(int t=0;t<DGTrackN;t++){
+        uint64_t obj=DGTrackObj[t]; uint64_t g=0;
+        uint8_t *b=DGSafeRead(obj+0x140,2048,&g);
+        if(!b){ fprintf(dbg,"LIVE cls=%u self=%u DEAD\n",DGTrackCls[t],DGTrackSelf[t]); continue; }
+        fprintf(dbg,"LIVE cls=%u self=%u obj=0x%llx T=[",DGTrackCls[t],DGTrackSelf[t],(unsigned long long)obj);
+        int found=0; int lim=(int)(g<2048?g:2048);
+        for(int off=0;off+0x34<=lim&&found<6;off+=4){
+            float q[4],tr[3],sc[3];
+            memcpy(q,b+off,16); memcpy(tr,b+off+16,12); memcpy(sc,b+off+28,12);
+            float n=q[0]*q[0]+q[1]*q[1]+q[2]*q[2]+q[3]*q[3];
+            if(n>0.9f&&n<1.1f && tr[0]>-100000&&tr[0]<100000 && tr[1]>-100000&&tr[1]<100000 && tr[2]>-100000&&tr[2]<100000
+               && sc[0]>0.1f&&sc[0]<10&&sc[1]>0.1f&&sc[1]<10&&sc[2]>0.1f&&sc[2]<10){
+                fprintf(dbg,"@%x(q %.2f %.2f %.2f %.2f p %.1f %.1f %.1f) ",off,q[0],q[1],q[2],q[3],tr[0],tr[1],tr[2]);
+                found++;
+            }
+        }
+        fprintf(dbg,"]\n");
+        DGFreeRead(b,g);
+    }
+    fflush(dbg);
+    snprintf(DGTrackStat,sizeof(DGTrackStat),"LIVE ✓ n=%d — تحرك وشاهد اللوغ",DGTrackN);
+}
+static int DGTrackRescan(FILE *dbg);
+static NSTimeInterval DGTrackLastTick=0;
+static void DGTrackTick(FILE *dbg){
+    if(!DGGUObj||!DGTrackN) return;
+    NSTimeInterval now=[[NSDate date] timeIntervalSince1970];
+    if(now-DGTrackLastTick<5.0) return;
+    DGTrackLastTick=now;
+    DGTrackRescan(dbg);   /* ضد churn: نلتقط الوافدين الجدد كل دورة */
+    DGTrackLivePrint(dbg);
 }
 /* v0.28: إعادة مسح خفيفة — تلتقط الشخصيات المُspawned بعد أول sweep (دخول الرماية لاحقاً) */
 static int DGTrackRescan(FILE *dbg){
@@ -2678,18 +2712,10 @@ static void DGUE4Scan(void){
     }
     { static BOOL semaDone=NO; if(!semaDone && !DGGUObj){ semaDone=YES; fprintf(dbg,"--- SEMASCAN START (fallback) ---\n"); DGSemanticScan(dbg); } }
     if(DGGUObj){ static BOOL swept=NO; if(!swept){ swept=YES; DGIndexSweep(dbg); DGFinalSweep(dbg); } }
-    { static NSTimeInterval lastR=0; NSTimeInterval nowR=[[NSDate date] timeIntervalSince1970];
-      if(DGTrackPhase==2 && nowR-lastR>45.0){ lastR=nowR; if(DGTrackRescan(dbg)>0){ DGTrackPhase=0;
-          fprintf(dbg,"TRACK RESET — كائنات جديدة! T0 جديد خلال 5 ثوانٍ: سكون ثم تحرك\n"); fflush(dbg); } } }
-    if(DGTrackN && DGTrackPhase<2){ static NSTimeInterval lastT=0; NSTimeInterval now=[[NSDate date] timeIntervalSince1970];
-        if(now-lastT>5.0){ lastT=now; DGTrackPositions(dbg); } }
+    DGTrackTick(dbg); /* v0.29: موحّد — يمنع تعدد الاستدعاءات */
     DGResolveOfficial(dbg);
     if(DGGUObj){ static BOOL swept=NO; if(!swept){ swept=YES; DGIndexSweep(dbg); DGFinalSweep(dbg); } }
-    { static NSTimeInterval lastR=0; NSTimeInterval nowR=[[NSDate date] timeIntervalSince1970];
-      if(DGTrackPhase==2 && nowR-lastR>45.0){ lastR=nowR; if(DGTrackRescan(dbg)>0){ DGTrackPhase=0;
-          fprintf(dbg,"TRACK RESET — كائنات جديدة! T0 جديد خلال 5 ثوانٍ: سكون ثم تحرك\n"); fflush(dbg); } } }
-    if(DGTrackN && DGTrackPhase<2){ static NSTimeInterval lastT=0; NSTimeInterval now=[[NSDate date] timeIntervalSince1970];
-        if(now-lastT>5.0){ lastT=now; DGTrackPositions(dbg); } }
+    DGTrackTick(dbg); /* v0.29: موحّد — يمنع تعدد الاستدعاءات */
     { static NSTimeInterval lastHunt=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
       if(up>60.0 && up-lastHunt>120.0){ lastHunt=up; fprintf(dbg,"--- DGHUNT (t+%ds) ---\n",(int)up); DGHHunt(dbg); } }
     { static BOOL bssWatched=NO; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
@@ -2741,18 +2767,10 @@ static void DGUE4Scan(void){
         }
     { static BOOL semaDone=NO; if(!semaDone && !DGGUObj){ semaDone=YES; fprintf(dbg,"--- SEMASCAN START (fallback) ---\n"); DGSemanticScan(dbg); } }
     if(DGGUObj){ static BOOL swept=NO; if(!swept){ swept=YES; DGIndexSweep(dbg); DGFinalSweep(dbg); } }
-    { static NSTimeInterval lastR=0; NSTimeInterval nowR=[[NSDate date] timeIntervalSince1970];
-      if(DGTrackPhase==2 && nowR-lastR>45.0){ lastR=nowR; if(DGTrackRescan(dbg)>0){ DGTrackPhase=0;
-          fprintf(dbg,"TRACK RESET — كائنات جديدة! T0 جديد خلال 5 ثوانٍ: سكون ثم تحرك\n"); fflush(dbg); } } }
-    if(DGTrackN && DGTrackPhase<2){ static NSTimeInterval lastT=0; NSTimeInterval now=[[NSDate date] timeIntervalSince1970];
-        if(now-lastT>5.0){ lastT=now; DGTrackPositions(dbg); } }
+    DGTrackTick(dbg); /* v0.29: موحّد — يمنع تعدد الاستدعاءات */
     DGResolveOfficial(dbg);
     if(DGGUObj){ static BOOL swept=NO; if(!swept){ swept=YES; DGIndexSweep(dbg); DGFinalSweep(dbg); } }
-    { static NSTimeInterval lastR=0; NSTimeInterval nowR=[[NSDate date] timeIntervalSince1970];
-      if(DGTrackPhase==2 && nowR-lastR>45.0){ lastR=nowR; if(DGTrackRescan(dbg)>0){ DGTrackPhase=0;
-          fprintf(dbg,"TRACK RESET — كائنات جديدة! T0 جديد خلال 5 ثوانٍ: سكون ثم تحرك\n"); fflush(dbg); } } }
-    if(DGTrackN && DGTrackPhase<2){ static NSTimeInterval lastT=0; NSTimeInterval now=[[NSDate date] timeIntervalSince1970];
-        if(now-lastT>5.0){ lastT=now; DGTrackPositions(dbg); } }
+    DGTrackTick(dbg); /* v0.29: موحّد — يمنع تعدد الاستدعاءات */
     { static NSTimeInterval lastHunt=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
       if(up>60.0 && up-lastHunt>120.0){ lastHunt=up; fprintf(dbg,"--- DGHUNT (t+%ds) ---\n",(int)up); DGHHunt(dbg); } }
     { static BOOL bssWatched=NO; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
@@ -2805,18 +2823,10 @@ static void DGUE4Scan(void){
     }
     { static BOOL semaDone=NO; if(!semaDone && !DGGUObj){ semaDone=YES; fprintf(dbg,"--- SEMASCAN START (fallback) ---\n"); DGSemanticScan(dbg); } }
     if(DGGUObj){ static BOOL swept=NO; if(!swept){ swept=YES; DGIndexSweep(dbg); DGFinalSweep(dbg); } }
-    { static NSTimeInterval lastR=0; NSTimeInterval nowR=[[NSDate date] timeIntervalSince1970];
-      if(DGTrackPhase==2 && nowR-lastR>45.0){ lastR=nowR; if(DGTrackRescan(dbg)>0){ DGTrackPhase=0;
-          fprintf(dbg,"TRACK RESET — كائنات جديدة! T0 جديد خلال 5 ثوانٍ: سكون ثم تحرك\n"); fflush(dbg); } } }
-    if(DGTrackN && DGTrackPhase<2){ static NSTimeInterval lastT=0; NSTimeInterval now=[[NSDate date] timeIntervalSince1970];
-        if(now-lastT>5.0){ lastT=now; DGTrackPositions(dbg); } }
+    DGTrackTick(dbg); /* v0.29: موحّد — يمنع تعدد الاستدعاءات */
     DGResolveOfficial(dbg);
     if(DGGUObj){ static BOOL swept=NO; if(!swept){ swept=YES; DGIndexSweep(dbg); DGFinalSweep(dbg); } }
-    { static NSTimeInterval lastR=0; NSTimeInterval nowR=[[NSDate date] timeIntervalSince1970];
-      if(DGTrackPhase==2 && nowR-lastR>45.0){ lastR=nowR; if(DGTrackRescan(dbg)>0){ DGTrackPhase=0;
-          fprintf(dbg,"TRACK RESET — كائنات جديدة! T0 جديد خلال 5 ثوانٍ: سكون ثم تحرك\n"); fflush(dbg); } } }
-    if(DGTrackN && DGTrackPhase<2){ static NSTimeInterval lastT=0; NSTimeInterval now=[[NSDate date] timeIntervalSince1970];
-        if(now-lastT>5.0){ lastT=now; DGTrackPositions(dbg); } }
+    DGTrackTick(dbg); /* v0.29: موحّد — يمنع تعدد الاستدعاءات */
     { static NSTimeInterval lastHunt=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
       if(up>60.0 && up-lastHunt>120.0){ lastHunt=up; fprintf(dbg,"--- DGHUNT (t+%ds) ---\n",(int)up); DGHHunt(dbg); } }
     { static BOOL bssWatched=NO; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
