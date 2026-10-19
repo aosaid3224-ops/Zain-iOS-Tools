@@ -1715,7 +1715,7 @@ static void DGRunProbes(FILE *dbg){
 
 /* مرصد bss: بعد التهيئة، امسح bss كاملًا عن بنية GUObjectArray الحية */
 static int DGWatchBss(FILE *dbg){
-    uint64_t lo=0x117c6ca40, hi=0x1186d9340;
+    uint64_t lo=0x117c6ca40, hi=0x1189952d0; /* __bss + __common كامل */
     if(DGGameTextLo){ lo+=DGGameTextLo-0x100000000ULL; hi+=DGGameTextLo-0x100000000ULL; }
     int found=0;
     uint64_t cursor=lo;
@@ -1832,6 +1832,48 @@ static int DGEmergencySnapshot(FILE *dbg){
     return n;
 }
 
+/* بصمة GUObjectArray على كل الذاكرة القابلة للكتابة (heap شامل) — TiMi قد تخصصه ديناميكيًا */
+static int DGWatchAll(FILE *dbg){
+    int found=0;
+    for(uint32_t ri=0; ri<DGRegionCount && found<8; ri++){
+        uint64_t lo=DGRegions[ri*2], hi=DGRegions[ri*2+1];
+        uint64_t sz=hi-lo;
+        if(sz<0x1000||sz>0x40000000ULL) continue;
+        if(DGGameTextLo && lo>=DGGameTextLo && lo<DGGameTextHi) continue; /* لا كود */
+        uint64_t off=0;
+        while(off+32<sz && found<8){
+            uint64_t want=sz-off; if(want>33554432) want=33554432;
+            uint64_t got=0;
+            uint8_t *buf=DGSafeRead(lo+off,want,&got);
+            if(!buf){ off+=want; continue; }
+            uint64_t lim=got-32;
+            for(uint64_t q=0;q<lim && found<8;q+=8){
+                uint32_t a,b,c,d;
+                memcpy(&a,buf+q+16,4); memcpy(&b,buf+q+20,4);
+                memcpy(&c,buf+q+24,4); memcpy(&d,buf+q+28,4);
+                if(!(a>=0x40000&&a<=0x10000000&&b>=1000&&b<a&&c>=8&&c<=65536&&d>=1&&d<=c&&(a%c)==0)) continue;
+                uint32_t per=a/c; if(per<256||per>65536) continue;
+                /* مؤشرات +0x0 و +0x8: واحد منها objects (ربما XOR مشفر) */
+                uint64_t p0,p1; memcpy(&p0,buf+q,8); memcpy(&p1,buf+q+8,8);
+                int p0m=(p0>=0x100000000ULL&&!(p0&7)&&p0<0x140000000ULL);
+                int p1m=(p1>=0x100000000ULL&&!(p1&7)&&p1<0x140000000ULL);
+                if(!p0m&&!p1m) continue;
+                fprintf(dbg,"GLOBHIT @ 0x%llx Max=0x%x Num=%u Chunks=%u/%u p0=0x%llx p1=0x%llx raw=",(unsigned long long)(lo+off+q),a,b,d,c,(unsigned long long)p0,(unsigned long long)p1);
+                for(int k=0;k<32;k++) fprintf(dbg,"%02x",buf[q+k]);
+                fprintf(dbg,"\n");
+                if(!DGWatchBase) DGWatchBase=lo+off+q;
+                found++;
+            }
+            DGFreeRead(buf,got);
+            off+=got?got:want;
+            if(!got) off+=want;
+        }
+    }
+    fprintf(dbg,"WATCHALL done found=%d\n",found);
+    fflush(dbg);
+    return found;
+}
+
 static void DGUE4Scan(void){
     static NSTimeInterval lastTry=0;
     static BOOL found=NO;
@@ -1856,7 +1898,7 @@ static void DGUE4Scan(void){
     { static NSTimeInterval lastSweep=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
       if(DGSnapCount>=2 && up>120.0 && up-lastSweep>300.0){ lastSweep=up; fprintf(dbg,"--- OBJSWEEP (t+%ds) ---\n",(int)up); DGObjectSweep(dbg); } }
     { static BOOL bssWatched=NO; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
-      if(!bssWatched && up>100.0){ bssWatched=YES; fprintf(dbg,"--- BSS WATCH (t+%ds) ---\n",(int)up); DGWatchBss(dbg); }
+      if(!bssWatched && up>100.0){ bssWatched=YES; fprintf(dbg,"--- BSS WATCH (t+%ds) ---\n",(int)up); DGWatchBss(dbg); fprintf(dbg,"--- WATCH ALL (heap-inclusive) ---\n"); DGWatchAll(dbg); }
       if(DGWatchBase){
           uint64_t g=0; uint8_t *b=DGSafeRead(DGWatchBase,32,&g);
           if(b&&g>=16){
@@ -1873,7 +1915,7 @@ static void DGUE4Scan(void){
     { static NSTimeInterval lastSweep=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
       if(DGSnapCount>=2 && up>120.0 && up-lastSweep>300.0){ lastSweep=up; fprintf(dbg,"--- OBJSWEEP (t+%ds) ---\n",(int)up); DGObjectSweep(dbg); } }
     { static BOOL bssWatched=NO; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
-      if(!bssWatched && up>100.0){ bssWatched=YES; fprintf(dbg,"--- BSS WATCH (t+%ds) ---\n",(int)up); DGWatchBss(dbg); }
+      if(!bssWatched && up>100.0){ bssWatched=YES; fprintf(dbg,"--- BSS WATCH (t+%ds) ---\n",(int)up); DGWatchBss(dbg); fprintf(dbg,"--- WATCH ALL (heap-inclusive) ---\n"); DGWatchAll(dbg); }
       if(DGWatchBase){
           uint64_t g=0; uint8_t *b=DGSafeRead(DGWatchBase,32,&g);
           if(b&&g>=16){
@@ -1890,7 +1932,7 @@ static void DGUE4Scan(void){
     { static NSTimeInterval lastSweep=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
       if(DGSnapCount>=2 && up>120.0 && up-lastSweep>300.0){ lastSweep=up; fprintf(dbg,"--- OBJSWEEP (t+%ds) ---\n",(int)up); DGObjectSweep(dbg); } }
     { static BOOL bssWatched=NO; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
-      if(!bssWatched && up>100.0){ bssWatched=YES; fprintf(dbg,"--- BSS WATCH (t+%ds) ---\n",(int)up); DGWatchBss(dbg); }
+      if(!bssWatched && up>100.0){ bssWatched=YES; fprintf(dbg,"--- BSS WATCH (t+%ds) ---\n",(int)up); DGWatchBss(dbg); fprintf(dbg,"--- WATCH ALL (heap-inclusive) ---\n"); DGWatchAll(dbg); }
       if(DGWatchBase){
           uint64_t g=0; uint8_t *b=DGSafeRead(DGWatchBase,32,&g);
           if(b&&g>=16){
