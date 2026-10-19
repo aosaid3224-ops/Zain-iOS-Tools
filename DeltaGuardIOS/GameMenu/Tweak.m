@@ -1710,6 +1710,7 @@ static int DGWatchBss(FILE *dbg){
         uint64_t lim=got-32;
         for(uint64_t q=0;q<lim && found<12;q+=8){
             /* تخطيطا A(+0x10) و B(+0x0) — مع تجاهل قيمة objects (قد تكون XOR مشفرة) */
+            uint64_t objects=0; memcpy(&objects,buf+q,8);
             int lay=0; uint32_t a=0,b=0,c=0,d=0;
             memcpy(&a,buf+q+16,4); memcpy(&b,buf+q+20,4);
             memcpy(&c,buf+q+24,4); memcpy(&d,buf+q+28,4);
