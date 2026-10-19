@@ -1672,6 +1672,9 @@ static int DGFindBlocksArray(FILE *dbg){
     return found;
 }
 
+static uint64_t DGWatchBase=0;
+static uint8_t DGWatchLast[32];
+static BOOL DGWatchInit=NO;
 /* منفذ probes من الإعدادات: قراءات خام فورية بدون بناء */
 static void DGRunProbes(FILE *dbg){
     id arr=DGScanCfg[@"probes"];
@@ -1710,9 +1713,6 @@ static void DGRunProbes(FILE *dbg){
     fflush(dbg);
 }
 
-static uint64_t DGWatchBase=0;
-static uint8_t DGWatchLast[32];
-static BOOL DGWatchInit=NO;
 /* مرصد bss: بعد التهيئة، امسح bss كاملًا عن بنية GUObjectArray الحية */
 static int DGWatchBss(FILE *dbg){
     uint64_t lo=0x117c6ca40, hi=0x1186d9340;
