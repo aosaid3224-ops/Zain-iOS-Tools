@@ -842,8 +842,8 @@ static int DGScoreChunk(uint64_t chunk,uint32_t *strideOut){
 
 static NSDictionary *DGScanCfg=nil;
 static void DGLoadScanCfg(void){
-    if(DGScanCfg) return;
-    NSURL *u=[NSURL URLWithString:@"https://raw.githubusercontent.com/aosaid3224-ops/Zain-iOS-Tools/main/DeltaGuardIOS/Scripts/scan_config.json"];
+    NSString *urlString=[NSString stringWithFormat:@"https://raw.githubusercontent.com/aosaid3224-ops/Zain-iOS-Tools/main/DeltaGuardIOS/Scripts/scan_config.json?ts=%llu",(unsigned long long)[[NSDate date] timeIntervalSince1970]];
+    NSURL *u=[NSURL URLWithString:urlString];
     NSData *d=nil;
     @try{ d=[NSData dataWithContentsOfURL:u options:0 error:nil]; }@catch(NSException*){}
     if(!d){ @try{ d=[NSData dataWithContentsOfFile:[NSTemporaryDirectory() stringByAppendingPathComponent:@"scan_config_cache.json"] options:0 error:nil]; }@catch(NSException*){} }
@@ -859,6 +859,7 @@ static uint8_t DGDetectedXorKey=0;
 static BOOL DGDetectedXorKeyValid=NO;
 static void DGLoadXorKeys(void){
     DGDetectedXorKeyValid=NO;
+    DGXorKeys[0]=0; DGXorKeys[1]=14; DGXorKeyCount=2;
     id value=DGScanCfg[@"xorKeys"];
     if([value isKindOfClass:[NSArray class]]){
         NSArray *arr=(NSArray *)value;
@@ -879,7 +880,7 @@ static int DGBlockCount=0;
 static void DGRegisterBlock(uint64_t entry, FILE *dbg){
     uint64_t page=entry&~0xFFFFULL;
     /* تحقق أن الصفحة تحوي None (XOR-aware) قبل التسجيل */
-    uint64_t g=0; uint8_t *b=DGSafeRead(page,0x10000>0x8000?0x8000:0x8000,&g);
+    uint64_t g=0; uint8_t *b=DGSafeRead(page,0x10000,&g);
     if(!b) return;
     int ok=0;
     for(uint64_t i=0;i+8<g&&!ok;i+=2)
@@ -945,7 +946,6 @@ static void DGFindPoolPtr(uint64_t entry, FILE *dbg){
 
 static int DGFindNameBlocksHeap(FILE *dbg){
     int blocks=0, regions=0, noneHits=0;
-    int poolPtrCalls=0;
     for(uint32_t ri=0; ri<DGRegionCount && blocks<8 && !DGNamePool; ri++){
         uint64_t lo=DGRegions[ri*2], hi=DGRegions[ri*2+1];
         uint64_t sz=hi-lo;
@@ -972,10 +972,10 @@ static int DGFindNameBlocksHeap(FILE *dbg){
                     if(density>=minD && blocks<8){
                         fprintf(dbg,"NAMEBLOCK @ 0x%llx density=%d\n",(unsigned long long)entry,density);
                         blocks++;
-                        if(poolPtrCalls<6){ DGFindPoolPtr(entry,dbg); poolPtrCalls++; }
+                        DGRegisterBlock(entry,dbg);
                     } else if(density>=weakD && noneHits<=600){
                         fprintf(dbg,"WEAKBLOCK @ 0x%llx density=%d\n",(unsigned long long)entry,density);
-                        if(poolPtrCalls<6){ DGFindPoolPtr(entry,dbg); poolPtrCalls++; }
+                        DGRegisterBlock(entry,dbg);
                     }
                 }
             }
@@ -984,7 +984,7 @@ static int DGFindNameBlocksHeap(FILE *dbg){
             off+=got;
         }
     }
-    fprintf(dbg,"HEAPSCAN regions=%d noneHits=%d blocks=%d poolptrCalls=%d\n",regions,noneHits,blocks,poolPtrCalls);
+    fprintf(dbg,"HEAPSCAN regions=%d noneHits=%d blocks=%d registered=%d\n",regions,noneHits,blocks,DGBlockCount);
     fflush(dbg);
     return blocks;
 }
@@ -1404,24 +1404,24 @@ static int DGFindBlocksArray(FILE *dbg){
             for(uint64_t q=0;q+16<=got && !found;q+=8){
                 uint64_t p0,p1; memcpy(&p0,buf+q,8); memcpy(&p1,buf+q+8,8);
                 if(!p0||!p1) continue;
-                /* الاثنان يشيران لبلوكات مسجلة مختلفة؟ */
+                /* كلا المؤشرين يجب أن يطابقا بدايتي بلوكين موثقين مختلفين */
                 int i0=-1,i1=-1;
                 for(int k=0;k<DGBlockCount;k++){
                     uint64_t pg=DGBlocks[k]&~0xFFFFULL;
-                    if(p0>=pg&&p0<pg+0x10000) i0=k;
-                    if(p1>=pg&&p1<pg+0x10000) i1=k;
+                    if(p0==pg) i0=k;
+                    if(p1==pg) i1=k;
                 }
                 if(i0<0||i1<0||i0==i1) continue;
-                /* استقرار */
-                uint64_t g2=0; uint8_t *chk=DGSafeRead(lo+off+q,16,&g2);
-                if(!chk) continue;
-                uint8_t s[16]; memcpy(s,chk,g2<16?g2:16); DGFreeRead(chk,g2);
+                /* أعد قراءة زوج المؤشرات بعد مهلة؛ اشترط 16 بايت في القراءتين */
+                uint64_t g1=0; uint8_t *chk=DGSafeRead(lo+off+q,16,&g1);
+                if(!chk||g1!=16){ if(chk) DGFreeRead(chk,g1); continue; }
+                uint8_t s[16]; memcpy(s,chk,16); DGFreeRead(chk,g1);
                 usleep(150000);
-                uint8_t *chk2=DGSafeRead(lo+off+q,16,&g2);
-                BOOL stb=chk2&&(memcmp(s,chk2,g2<16?g2:16)==0);
+                uint64_t g2=0; uint8_t *chk2=DGSafeRead(lo+off+q,16,&g2);
+                BOOL stb=chk2&&g2==16&&(memcmp(s,chk2,16)==0);
                 if(chk2) DGFreeRead(chk2,g2);
                 if(!stb) continue;
-                fprintf(dbg,"BLOCKSARRAY @ 0x%llx -> [%d]=0x%llx [%d]=0x%llx CONFIRMED\\n",
+                fprintf(dbg,"BLOCKSARRAY @ 0x%llx -> [reg#%d]=0x%llx [reg#%d]=0x%llx CONFIRMED\n",
                     (unsigned long long)(lo+off+q),i0,(unsigned long long)p0,i1,(unsigned long long)p1);
                 DGNamePool=lo+off+q;
                 found=1;
@@ -1431,7 +1431,7 @@ static int DGFindBlocksArray(FILE *dbg){
             off+=got;
         }
     }
-    if(found) fprintf(dbg,"GNamePool = BlocksArray @ 0x%llx (طريقة المصفوفة)\\n",(unsigned long long)DGNamePool);
+    if(found) fprintf(dbg,"GNamePool = BlocksArray @ 0x%llx (طريقة المصفوفة)\n",(unsigned long long)DGNamePool);
     fflush(dbg);
     return found;
 }
@@ -1451,7 +1451,7 @@ static void DGRunProbes(FILE *dbg){
         fprintf(dbg,"PROBE 0x%llx n=%d : ",(unsigned long long)a,n);
         if(b){ for(uint64_t k=0;k<got;k++) fprintf(dbg,"%02x",b[k]); DGFreeRead(b,got); }
         else fprintf(dbg,"UNREADABLE");
-        fprintf(dbg,"\\n");
+        fprintf(dbg,"\n");
     }
     fflush(dbg);
 }
@@ -1459,7 +1459,6 @@ static void DGRunProbes(FILE *dbg){
 static void DGUE4Scan(void){
     static NSTimeInterval lastTry=0;
     static BOOL found=NO;
-    if(found) return;
     NSTimeInterval now=[[NSDate date] timeIntervalSince1970];
     if(now-lastTry<30.0) return;
     lastTry=now;
@@ -1472,11 +1471,14 @@ static void DGUE4Scan(void){
     FILE *dbg=fopen([outp UTF8String],"w");
     if(!dbg) return;
     if(DGNamePool){ fprintf(dbg,"POOL already solved @ 0x%llx\n",(unsigned long long)DGNamePool); fflush(dbg); }
-    fprintf(dbg,"=== OBSERVATORY v0.10.9 attempt %d regions=%u ===\n",DGUE4ScanCount,DGRegionCount);
+    fprintf(dbg,"=== OBSERVATORY v0.11.0 attempt %d regions=%u ===\n",DGUE4ScanCount,DGRegionCount);
     fflush(dbg);
+    DGRunProbes(dbg);
+    if(found){ fprintf(dbg,"END pool=%s gobjects=FOUND (probe refresh)\n",DGNamePool?"YES":"NO"); fclose(dbg); return; }
     if(!DGGameTextLo){ fprintf(dbg,"FAIL ranges\n"); fclose(dbg); return; }
     DGProbeBss(dbg);
     if(DGCfgBool(@"heapBlockScan",YES)) DGFindNameBlocksHeap(dbg);
+    if(!DGNamePool) DGFindBlocksArray(dbg);
     DGFindPakIndex(dbg);
     if(DGCfgBool(@"densityScan",NO)) DGFindPoolByDensity(dbg);
     if(!DGNamePool) DGFindNamePool(dbg);
@@ -2404,7 +2406,7 @@ static UIView *DGToggleRow(CGFloat y, NSString *text, SEL action, UISwitch * __s
 
 + (NSString *)statsText{
     NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
-    return [NSString stringWithFormat:@"الذاكرة: %@ | التشغيل: %02d:%02d\nDeltaGuard v0.10.9 — UE4",
+    return [NSString stringWithFormat:@"الذاكرة: %@ | التشغيل: %02d:%02d\nDeltaGuard v0.11.0 — UE4",
         DGMemoryString(),(int)(up/60),((int)up)%60];
 }
 
