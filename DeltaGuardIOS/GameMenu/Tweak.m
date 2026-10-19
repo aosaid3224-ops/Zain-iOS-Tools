@@ -2187,7 +2187,10 @@ static BOOL DGSemaVerifyNamePool(uint64_t cand, FILE *dbg, uint64_t fromIns){
     if(!e) return NO;
     BOOL ok=NO;
     if(g>=6){ uint16_t hdr=0; memcpy(&hdr,e,2); uint32_t len=hdr>>6;
-        if(len==4){ char nm[8]={0}; memcpy(nm,e+2,4); DGDecName(nm,4); if(memcmp(nm,"None",4)==0) ok=YES; } }
+        if(len==4){ char nm[8]={0}; memcpy(nm,e+2,4);
+            DGDecName(nm,4); if(memcmp(nm,"None",4)==0) ok=YES;          /* فك رسمي */
+            if(!ok){ memcpy(nm,e+2,4); nm[4]=0; if(memcmp(nm,"None",4)==0) ok=YES; } /* صريح */
+        } }
     DGFreeRead(e,g);
     if(!ok) return NO;
     DGGNamePool=cand;
