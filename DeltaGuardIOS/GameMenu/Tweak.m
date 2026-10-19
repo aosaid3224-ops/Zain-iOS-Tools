@@ -1046,6 +1046,7 @@ static BOOL DGObjName(uint64_t obj, uint32_t nameOff, char *out, int outLen){
     if(!b||got<4){ if(b)DGFreeRead(b,got); return NO; }
     uint32_t id; memcpy(&id,b,4); DGFreeRead(b,got);
     if(!id) return NO;
+    if(DGSnapCount) return DGDecodeFromSnap(id,out,outLen);
     return DGDecodeFName(id,out,outLen);
 }
 
@@ -1368,6 +1369,49 @@ static BOOL DGBlockHasNoneP(uint64_t blocks){
     DGFreeRead(blk,g2);
     return ok;
 }
+#define DG_SNAP_BLOCKS 8
+#define DG_SNAP_SIZE 0x10000
+static uint8_t *DGBlockSnap[DG_SNAP_BLOCKS];
+static int DGSnapCount=0;
+/* لقطة ذرية: انسخ كل بلوكات البول لحظة العثور — تعطيل إعادة التخصيص */
+static void DGSnapshotPool(FILE *dbg){
+    if(DGSnapCount||!DGNamePool) return;
+    for(int i=0;i<DG_SNAP_BLOCKS;i++){
+        uint64_t b=0;
+        if(!DGReadQ(DGNamePool+(uint64_t)i*8,&b)||!b||b<0x10000) break;
+        uint64_t got=0; uint8_t *d=DGSafeRead(b,DG_SNAP_SIZE,&got);
+        if(!d||got<0x100){ if(d)DGFreeRead(d,got); break; }
+        DGBlockSnap[i]=(uint8_t*)malloc(got);
+        memcpy(DGBlockSnap[i],d,got);
+        DGFreeRead(d,got);
+        DGSnapCount=i+1;
+    }
+    if(dbg){ fprintf(dbg,"SNAPSHOT %d blocks captured\n",DGSnapCount); fflush(dbg); }
+}
+/* فك من اللقطة — مستقر حتى لو تحركت البلوكات الأصلية */
+static BOOL DGDecodeFromSnap(uint32_t nameId, char *out, int outLen){
+    out[0]=0;
+    if(!DGSnapCount) return NO;
+    uint32_t bi=nameId>>16, off=nameId&0xFFFF;
+    if(bi>=(uint32_t)DGSnapCount||off>0xFF00) return NO;
+    const uint8_t *blk=DGBlockSnap[bi];
+    uint16_t hdr; memcpy(&hdr,blk+off,2);
+    if(hdr&1) return NO;
+    uint8_t raw[80]={0};
+    uint64_t nn=72; if(off+2+nn>0x10000) nn=0x10000-(off+2);
+    memcpy(raw,blk+off+2,nn);
+    for(int k=0;k<DGXorKeyCount;k++){
+        uint64_t L=strnlen((char*)raw,71);
+        char t[72];
+        for(uint64_t i=0;i<=L;i++) t[i]=(char)(raw[i]^DGXorKeys[k]);
+        t[L<71?L:71]=0;
+        BOOL ok=t[0]&&L>=1;
+        for(uint64_t i=0;t[i]&&ok;i++) if(t[i]<32||t[i]>126) ok=NO;
+        if(ok){ strncpy(out,t,outLen-1); out[outLen-1]=0; return YES; }
+    }
+    return NO;
+}
+
 static BOOL DGVerifyPoolStruct(uint64_t A){
     uint64_t got=0; uint8_t *b1=DGSafeRead(A,32,&got);
     if(!b1||got<24){ if(b1)DGFreeRead(b1,got); return NO; }
@@ -1521,10 +1565,11 @@ static void DGUE4Scan(void){
         }
         fflush(dbg);
         /* فحص ذاتي: فك أسماء معروفة من البول المؤكد */
-        /* مشي الإدخالات الحقيقي: block0 من البداية — header + اسم + قفز بالطول */
+        DGSnapshotPool(dbg);
+        /* مشي الإدخالات على اللقطة الذرية */
         int good=0;
         uint64_t blk0w=0;
-        if(DGReadQ(DGNamePool,&blk0w)&&blk0w){
+        if(DGSnapCount && (blk0w=(uint64_t)DGBlockSnap[0])){
             uint32_t off=0;
             for(int e=0;e<256 && off<0x4000 && good<16;e++){
                 char name[80]={0}; uint32_t next=off;
