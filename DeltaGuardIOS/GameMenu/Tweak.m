@@ -1722,6 +1722,19 @@ static int DGWatchBss(FILE *dbg){
             fprintf(dbg,"BSSLIVE @ 0x%llx objects=0x%llx Max=0x%x Num=%u Chunks=%u/%u raw=",(unsigned long long)(cursor+q),(unsigned long long)objects,a,b,d,c);
             for(int k=0;k<32;k++) fprintf(dbg,"%02x",buf[q+k]);
             fprintf(dbg,"\n");
+            /* AUTOPROBE: اتبع حتى 4 مؤشرات heap من البنية */
+            int followed=0;
+            for(int k2=0;k2<32&&followed<4;k2+=8){
+                uint64_t p; memcpy(&p,buf+q+k2,8);
+                if(p<0x100000000ULL||(p&7)||p>=0x140000000ULL) continue;
+                uint64_t g2=0; uint8_t *t2=DGSafeRead(p,128,&g2);
+                if(!t2) continue;
+                fprintf(dbg,"AUTOPROBE 0x%llx <= 0x%llx+%d : ",(unsigned long long)p,(unsigned long long)(cursor+q),k2);
+                for(uint64_t x=0;x<g2;x++) fprintf(dbg,"%02x",t2[x]);
+                fprintf(dbg,"\n");
+                DGFreeRead(t2,g2);
+                followed++;
+            }
             found++;
         }
         DGFreeRead(buf,got);
