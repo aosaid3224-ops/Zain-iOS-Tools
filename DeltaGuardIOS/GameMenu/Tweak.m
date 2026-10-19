@@ -2165,6 +2165,7 @@ static int DGWalkObjects(FILE *dbg){
 
 /* ===== v17: المسح الدلالي النهائي — بلا أنماط، تأكيد رياضي بالقراءة ===== */
 static int DGSemaNumVerified=0, DGSemaNameVerified=0;
+static uint32_t DGMaxSeen=0;
 
 static BOOL DGSemaVerifyGUObj(uint64_t cand, FILE *dbg, uint64_t fromIns){
     uint64_t tobj=cand+0x10; /* TUObjectArray */
@@ -2173,10 +2174,20 @@ static BOOL DGSemaVerifyGUObj(uint64_t cand, FILE *dbg, uint64_t fromIns){
     uint32_t num=0,maxe=0,mc=0,nc=0;
     memcpy(&num,vb,4); memcpy(&maxe,vb+4,4); memcpy(&mc,vb+8,4); memcpy(&nc,vb+12,4);
     DGFreeRead(vb,g);
-    if(!(num>5000&&num<0x2000000&&maxe>=num&&maxe<=0x10000000&&mc>=8&&mc<=65536&&nc>=1&&nc<=mc)) return NO;
-    DGGUObj=cand;
-    fprintf(dbg,"GUOBJ-SEMA @ ins 0x%llx → 0x%llx VERIFIED Num=%u Max=0x%x Chunks=%u/%u\n",
-        (unsigned long long)fromIns,(unsigned long long)cand,num,maxe,nc,mc);
+    /* البصمة الصارمة الحقيقية: Max ملايين + قسمة متسقة + نسبة مشغولية معقولة */
+    if(!(num>5000&&num<0x400000&&maxe>=0x100000&&maxe<=0x10000000)) return NO;
+    if(num>=maxe/2) return NO;                          /* الاستخدام الحقيقي << السعة */
+    if(mc<8||mc>65536||nc<1||nc>mc) return NO;
+    if(maxe%mc) return NO;                              /* القسمة يجب أن تتسق تمامًا */
+    uint32_t per=maxe/mc; if(per<0x1000||per>0x20000) return NO;
+    /* Objects pointer يجب أن يكون غير صفري */
+    uint64_t op=0;
+    if(!DGReadQ(cand+0x20,&op)||!op) return NO;
+    if(!DGGUObj || maxe>DGMaxSeen){ /* الأكبر سعة = الحقيقي */
+        DGGUObj=cand; DGMaxSeen=maxe;
+        fprintf(dbg,"GUOBJ-SEMA @ ins 0x%llx → 0x%llx VERIFIED Num=%u Max=0x%x Chunks=%u/%u per=0x%x\n",
+            (unsigned long long)fromIns,(unsigned long long)cand,num,maxe,nc,mc,per);
+    }
     return YES;
 }
 static BOOL DGSemaVerifyNamePool(uint64_t cand, FILE *dbg, uint64_t fromIns){
@@ -2226,9 +2237,8 @@ static void DGSemanticScan(FILE *dbg){
                     uint64_t addr=pg+(((w2>>10)&0xFFF)<<(12*((w2>>22)&1)));
                     if(addr<bssLo||addr>=bssHi) break;
                     checked++;
-                    if(!DGGUObj&&DGSemaVerifyGUObj(addr,dbg,DGTextLo+off+q)){ verified++; break; }
-                    if(DGGUObj&&!DGGNamePool&&DGSemaVerifyNamePool(addr,dbg,DGTextLo+off+q)){ verified++; break; }
-                    if(!DGGNamePool&&checked<2000&&DGSemaVerifyNamePool(addr,dbg,DGTextLo+off+q)){ verified++; break; }
+                    if(DGSemaVerifyGUObj(addr,dbg,DGTextLo+off+q)){ if(maxe==DGMaxSeen) verified++; break; }
+                    if(!DGGNamePool&&DGSemaVerifyNamePool(addr,dbg,DGTextLo+off+q)){ verified++; break; }
                     break;
                 }
             }
