@@ -2118,7 +2118,8 @@ static BOOL DGOfficialName(uint32_t id, char *out, int outLen){
     uint64_t blocks=0, block=0;
     uint64_t at=(DGBlocksOff<0)?(DGGNamePool-(uint64_t)(-DGBlocksOff)):(DGGNamePool+(uint64_t)DGBlocksOff);
     if(!DGReadQ(at,&blocks)||!blocks) return NO;
-    if(!DGReadQ(blocks+(uint64_t)bi*8,&block)||!block) return NO;
+    uint32_t bidx=bi;
+    if(!DGReadQ(blocks+(uint64_t)bidx*8,&block)||!block){ if(!DGReadQ(blocks,&block)||!block) return NO; }
     uint64_t g=0; uint8_t *e=DGSafeRead(block+uoff,80,&g);
     if(!e||g<4){ if(e)DGFreeRead(e,g); return NO; }
     uint16_t hdr; memcpy(&hdr,e,2);
@@ -2272,27 +2273,39 @@ static int DGTryPoolCandidate(uint64_t npTry, FILE *dbg, uint64_t candFile){
     fprintf(dbg,"POOLCAND 0x%llx: all offsets failed\n",(unsigned long long)candFile);
     return 0;
 }
+/* تحقق صحيح: None في أي موضع + عدّ صالح من أفضل بداية */
 static int DGStatCount(uint64_t block){
     uint64_t g3=0; uint8_t *e=DGSafeRead(block,0x4000,&g3);
-    if(!e||g3<0x100) return 0;
+    if(!e||g3<0x200){ if(e)DGFreeRead(e,g3); return 0; }
+    /* ① ابحث عن None مفكوكة أو صريحة في أي موضع 2-aligned */
+    int noneAt=-1;
+    for(uint64_t off=0;off+8<g3&&off<0x1000;off+=2){
+        uint16_t hdr; memcpy(&hdr,e+off,2);
+        if((hdr>>6)!=4) continue;
+        char nm[8]={0}; memcpy(nm,e+off+2,4); DGDecName(nm,4);
+        if(!memcmp(nm,"None",4)){ noneAt=(int)off; break; }
+        memcpy(nm,e+off+2,4); nm[4]=0;
+        if(!memcmp(nm,"None",4)){ noneAt=(int)off; break; }
+    }
+    if(noneAt<0){ DGFreeRead(e,g3); return 0; }
+    /* ② من موضع None: عدّ الأسماء الصالحة التالية */
     int valid=0;
-    for(uint64_t off=0;off+80<g3&&valid<40;off+=2){
+    uint64_t off=(uint64_t)noneAt;
+    for(int steps=0;steps<40&&off+80<g3;steps++){
         uint16_t hdr; memcpy(&hdr,e+off,2);
         uint32_t len=hdr>>6;
-        if(len<2||len>60) continue;
-        if(off+2+len>g3) break;
+        if(len<2||len>60||off+2+len>g3){ off+=2; continue; }
         char t[80]={0};
         memcpy(t,e+off+2,len);
         BOOL ok=1; for(uint32_t i=0;t[i]&&ok;i++) if(t[i]<32||t[i]>126) ok=0;
         if(!ok){ memcpy(t,e+off+2,len); DGDecName(t,len); ok=1;
             for(uint32_t i=0;t[i]&&ok;i++) if(t[i]<32||t[i]>126) ok=0; }
         if(ok&&t[0]) valid++;
-        off+=len;
+        off+=2+len;
     }
     DGFreeRead(e,g3);
-    return valid;
+    return valid>=3 ? valid+1000 : 0; /* +1000 = يحمل علامة None-موجود */
 }
-
 static void DGFinalSweep(FILE *dbg){
     fprintf(dbg,"===== FINAL SWEEP START =====\n"); fflush(dbg);
     /* ① البول */
