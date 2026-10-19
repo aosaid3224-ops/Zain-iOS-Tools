@@ -2280,7 +2280,7 @@ static void DGFinalSweep(FILE *dbg){
     /* ②+③+④ المشي الشامل */
     uint64_t objObjects=DGGUObj+0x10;
     uint64_t objectsPtr=0;
-    if(!DGReadQ(objObjects+0x10,&objectsPtr)||!objectsPtr){ if(!DGReadQ(objects+0x8,&objectsPtr)||!objectsPtr){ fprintf(dbg,"SWEEP: no objects ptr\n"); return; } }
+    if(!DGReadQ(objObjects+0x10,&objectsPtr)||!objectsPtr){ if(!DGReadQ(objObjects+0x8,&objectsPtr)||!objectsPtr){ fprintf(dbg,"SWEEP: no objects ptr\n"); return; } }
     int names=0, players=0;
     for(int c=0;c<3&&names<200;c++){
         uint64_t chunk=0;
@@ -2434,7 +2434,6 @@ static void DGUE4Scan(void){
                 if(e)DGFreeRead(e,g3);
             }
         }
-    }
     { static BOOL semaDone=NO; if(!semaDone && !DGGUObj){ semaDone=YES; fprintf(dbg,"--- SEMASCAN START (fallback) ---\n"); DGSemanticScan(dbg); } }
     if(DGGUObj){ static BOOL swept=NO; if(!swept){ swept=YES; DGFinalSweep(dbg); } }
     DGResolveOfficial(dbg);
