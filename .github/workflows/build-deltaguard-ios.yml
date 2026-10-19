@@ -5,7 +5,7 @@ on:
 
 concurrency:
   group: deltaguard-dev-publish
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 permissions:
   contents: read
