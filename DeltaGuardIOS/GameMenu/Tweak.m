@@ -2583,7 +2583,7 @@ static void __attribute__((unused)) DGTrackPositions(FILE *dbg){
     else snprintf(DGTrackStat,sizeof(DGTrackStat),"T1#%d ✓ — سكون",DGTrackT1Count);
     fflush(dbg);
 }
-/* v0.32: LOC — الموقع بالعنقود الذكي: ترجمة كل مكوّن عند rc+0x210 المؤكد، والموضع الأكثر تكراراً = جسم الشخصية */
+/* v0.33: مسح دقيق 0x40B حتى +0x600 (يصل +0x4D4 مؤكد) + رقم كلاس المكون الحقيقي + LOC بالعنقود */
 static float DGAb(float x){ return x<0?-x:x; }
 static void DGTrackLivePrint(FILE *dbg){
     for(int t=0;t<DGTrackN;t++){
@@ -2592,21 +2592,40 @@ static void DGTrackLivePrint(FILE *dbg){
             fprintf(dbg,"LIVE cls=%u self=%u obj=0x%llx STATIC\n",DGTrackCls[t],DGTrackSelf[t],(unsigned long long)obj);
             continue;
         }
-        float px[64],py[64],pz[64]; int pn=0;
-        for(int po=0x120;po<=0x400&&pn<64;po+=8){
-            uint64_t rc=0; if(!DGReadQ(obj+po,&rc)||!rc||rc<0x100000000ULL||rc>=0x400000000ULL||(rc&7)) continue;
-            uint64_t g=0; uint8_t *b=DGSafeRead(rc+0x210,12,&g);
-            if(!b||g<12){ if(b)DGFreeRead(b,g); continue; }
-            float v[3]; memcpy(v,b,12); DGFreeRead(b,g);
-            if(v[0]>-200000&&v[0]<200000&&v[1]>-200000&&v[1]<200000&&v[2]>-200000&&v[2]<200000
-               &&(v[0]!=0.f||v[1]!=0.f||v[2]!=0.f)){
-                px[pn]=v[0]; py[pn]=v[1]; pz[pn]=v[2]; pn++;
+        float cx[64],cy[64],cz[64]; int cn=0;
+        fprintf(dbg,"CHAR self=%u obj=0x%llx\n",DGTrackSelf[t],(unsigned long long)obj);
+        for(int po=0x120;po<=0x400&&cn<64;po+=8){
+            uint64_t p=0; if(!DGReadQ(obj+po,&p)||!p||p<0x100000000ULL||p>=0x400000000ULL||(p&7)) continue;
+            uint64_t tcls=0; uint32_t tc=0xFFFFFFFF;
+            if(DGReadQ(p+0x8,&tcls)&&tcls){ uint64_t g0=0; uint8_t *ib=DGSafeRead(tcls+0x24,4,&g0);
+                if(ib&&g0>=4){ memcpy(&tc,ib,4); DGFreeRead(ib,g0); } }
+            /* مسح دقيق 0x40B — يخترق نهاية الكائنات الصغيرة ويصل +0x4D4 */
+            char tb[256]; tb[0]=0; int found=0;
+            for(uint64_t bs=0x100;bs<0x600&&found<4;bs+=0x40){
+                uint64_t gg=0; uint8_t *b=DGSafeRead(p+bs,0x40,&gg);
+                if(!b||gg<0x34){ if(b)DGFreeRead(b,gg); continue; }
+                int lim=(int)gg;
+                for(int off=0;off+0x34<=lim&&found<4;off+=4){
+                    float q[4],tr[3],sc[3];
+                    memcpy(q,b+off,16); memcpy(tr,b+off+16,12); memcpy(sc,b+off+28,12);
+                    float n=q[0]*q[0]+q[1]*q[1]+q[2]*q[2]+q[3]*q[3];
+                    BOOL identity=(q[0]==1.f&&q[1]==0.f&&q[2]==0.f&&q[3]==0.f&&tr[0]==0.f&&tr[1]==0.f&&tr[2]==0.f);
+                    if(!identity && n>0.9f&&n<1.1f && tr[0]>-200000&&tr[0]<200000 && tr[1]>-200000&&tr[1]<200000 && tr[2]>-200000&&tr[2]<200000
+                       && sc[0]>0.1f&&sc[0]<10&&sc[1]>0.1f&&sc[1]<10&&sc[2]>0.1f&&sc[2]<10){
+                        int used=(int)strlen(tb);
+                        if(used<190) snprintf(tb+used,256-used,"@%llx(p %.1f %.1f %.1f) ",(unsigned long long)(bs+off),tr[0],tr[1],tr[2]);
+                        if(cn<64){ cx[cn]=tr[0]; cy[cn]=tr[1]; cz[cn]=tr[2]; cn++; }
+                        found++;
+                    }
+                }
+                DGFreeRead(b,gg);
             }
+            if(found) fprintf(dbg,"  +0x%x cls=%u obj=0x%llx T=[%s]\n",(unsigned)po,tc,(unsigned long long)p,tb);
         }
-        if(!pn){ fprintf(dbg,"LOC self=%u obj=0x%llx NONE\n",DGTrackSelf[t],(unsigned long long)obj); continue; }
+        if(!cn){ fprintf(dbg,"LOC self=%u NONE\n",DGTrackSelf[t]); continue; }
         int best=0,bestc=0;
-        for(int i=0;i<pn;i++){ int c=0; for(int j=0;j<pn;j++){ if(DGAb(px[i]-px[j])<2.f&&DGAb(py[i]-py[j])<2.f&&DGAb(pz[i]-pz[j])<2.f) c++; } if(c>bestc){ bestc=c; best=i; } }
-        fprintf(dbg,"LOC self=%u obj=0x%llx pos=(%.1f,%.1f,%.1f) cluster=%d/%d\n",DGTrackSelf[t],(unsigned long long)obj,px[best],py[best],pz[best],bestc,pn);
+        for(int i=0;i<cn;i++){ int c=0; for(int j=0;j<cn;j++){ if(DGAb(cx[i]-cx[j])<2.f&&DGAb(cy[i]-cy[j])<2.f&&DGAb(cz[i]-cz[j])<2.f) c++; } if(c>bestc){ bestc=c; best=i; } }
+        fprintf(dbg,"LOC self=%u pos=(%.1f,%.1f,%.1f) cluster=%d/%d\n",DGTrackSelf[t],cx[best],cy[best],cz[best],bestc,cn);
     }
     fflush(dbg);
     snprintf(DGTrackStat,sizeof(DGTrackStat),"LOC ✓ n=%d",DGTrackN);
