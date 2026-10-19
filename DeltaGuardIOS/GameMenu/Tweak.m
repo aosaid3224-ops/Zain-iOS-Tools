@@ -2108,6 +2108,61 @@ static void DGResolveOfficial(FILE *dbg){
     fflush(dbg);
 }
 
+/* قراءة اسم عبر GNamePool الرسمي: block=id>>18, off=(id&0x3FFFF)*2, len=hdr>>6, فك حقيقي */
+static BOOL DGOfficialName(uint32_t id, char *out, int outLen){
+    out[0]=0;
+    if(!DGGNamePool||!id) return NO;
+    uint32_t bi=id>>18, uoff=(id&0x3FFFF)*2;
+    uint64_t blocks=0, block=0;
+    /* BlocksOff = struct-8 (الملف الرسمي: BlocksOff -= sizeof(void*)) */
+    if(!DGReadQ(DGGNamePool-8,&blocks)||!blocks) return NO;
+    if(!DGReadQ(blocks+(uint64_t)bi*8,&block)||!block) return NO;
+    uint64_t g=0; uint8_t *e=DGSafeRead(block+uoff,80,&g);
+    if(!e||g<4){ if(e)DGFreeRead(e,g); return NO; }
+    uint16_t hdr; memcpy(&hdr,e,2);
+    uint32_t len=hdr>>6;
+    if(len<2||len>=(uint32_t)outLen||len+2>g){ DGFreeRead(e,g); return NO; }
+    memcpy(out,e+2,len);
+    DGFreeRead(e,g);
+    DGDecName(out,len);
+    out[len]=0;
+    for(uint32_t i=0;out[i];i++) if(out[i]<32||out[i]>126){ out[0]=0; return NO; }
+    return YES;
+}
+
+/* مشي الكائنات: Objects@+0x10 → chunks → items(0x18) → obj → name@+0x1c */
+static int DGWalkObjects(FILE *dbg){
+    if(!DGGUObj) return 0;
+    uint64_t base=DGGUObj; /* FUObjectArray */
+    uint64_t objObjects=base+0x10; /* TUObjectArray (الملف الرسمي) */
+    uint64_t objectsPtr=0;
+    if(!DGReadQ(objObjects+0x10,&objectsPtr)||!objectsPtr){ /* Objects قد يكون بعد GC ptrs */
+        if(!DGReadQ(objObjects+0x8,&objectsPtr)||!objectsPtr) return 0;
+    }
+    int printed=0;
+    for(int c=0;c<4&&printed<40;c++){
+        uint64_t chunk=0;
+        if(!DGReadQ(objectsPtr+(uint64_t)c*8,&chunk)||!chunk) break;
+        for(int i=0;i<64&&printed<40;i++){
+            uint64_t item=chunk+(uint64_t)i*0x18;
+            uint64_t obj=0;
+            if(!DGReadQ(item,&obj)||!obj||obj<0x100000000ULL||(obj&7)) continue;
+            uint64_t got=0; uint8_t *nb=DGSafeRead(obj+0x1c,4,&got);
+            if(!nb||got<4){ if(nb)DGFreeRead(nb,got); continue; }
+            uint32_t nid; memcpy(&nid,nb,4); DGFreeRead(nb,got);
+            char nm[80]="";
+            if(nid&&DGOfficialName(nid,nm,sizeof nm)&&strlen(nm)>=3){
+                fprintf(dbg,"OBJWALK [%d/%d] %s @ 0x%llx\n",c,i,nm,(unsigned long long)obj);
+                printed++;
+            }
+        }
+    }
+    fprintf(dbg,"OBJWALK done printed=%d\n",printed);
+    fflush(dbg);
+    return printed;
+}
+
+
 static void DGUE4Scan(void){
     static NSTimeInterval lastTry=0;
     static BOOL found=NO;
