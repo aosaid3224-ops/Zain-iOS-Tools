@@ -1876,6 +1876,11 @@ static int DGWatchAll(FILE *dbg){
 }
 
 /* ===== وحدة الصيد المستقلّة v15: بلوكات + ترجمة + كائنات — ذرّية، بلا اعتماديات ===== */
+#define DG_MAX_TRACK 24
+static uint64_t DGTrackObj[DG_MAX_TRACK];
+static uint32_t DGTrackCls[DG_MAX_TRACK];
+static uint32_t DGTrackSelf[DG_MAX_TRACK];
+static int DGTrackN=0;
 #define DGH_BLK 12
 static uint8_t *DGHBlk[DGH_BLK];
 static uint32_t DGHBlkLen[DGH_BLK];
@@ -2478,6 +2483,9 @@ static void DGIndexSweep(FILE *dbg){
             if(players<20) fprintf(dbg,"IDXPLAYER #%d clsIdx=%u(%s) self=%u %s obj=0x%llx\n",players,cidx,cname,selfIdx,selfIdx>5000?"INSTANCE":"CDO",(unsigned long long)obj);
             players++;
             if(selfIdx<=5000){ continue; } /* CDO — تخطَّ النسخ/مواقعه */
+            if(DGTrackN<DG_MAX_TRACK && (cidx==2118||cidx==4819||cidx==2116||cidx==2115||cidx==4825||cidx==2131||cidx==208)){
+                DGTrackObj[DGTrackN]=obj; DGTrackCls[DGTrackN]=cidx; DGTrackSelf[DGTrackN]=selfIdx; DGTrackN++;
+            }
             /* المكونات (كبسولة/حركة): dump نافذة المواقع مباشرة — فيها الإحداثيات */
             if(cidx==2116||cidx==2115||cidx==4825||cidx==2131){
                 uint8_t *pw=DGSafeRead(obj+0x140,256,&g);
@@ -2512,6 +2520,40 @@ static void DGIndexSweep(FILE *dbg){
     }
     fprintf(dbg,"IDXSWEEP END items=%d players=%d\n",items,players);
     fflush(dbg);
+}
+/* متتبع المواقع: عينتان متباعدتان — المتغير بينهما = إحداثيات */
+static uint8_t DGTrackS0[DG_MAX_TRACK][512];
+static uint8_t DGTrackS1[DG_MAX_TRACK][512];
+static int DGTrackPhase=0;
+static void DGTrackPositions(FILE *dbg){
+    if(!DGTrackN) return;
+    if(DGTrackPhase==0){
+        for(int t=0;t<DGTrackN;t++){
+            uint64_t g=0; uint8_t *b=DGSafeRead(DGTrackObj[t]+0x140,512,&g);
+            if(b){ memcpy(DGTrackS0[t],b,g<512?g:512); DGFreeRead(b,g); }
+        }
+        DGTrackPhase=1;
+        fprintf(dbg,"TRACK T0 captured n=%d — تحرك 5 ثوانٍ الآن!\n",DGTrackN);
+        fflush(dbg);
+        return;
+    }
+    /* Phase 1: العينة الثانية + الفروقات */
+    for(int t=0;t<DGTrackN;t++){
+        uint64_t g=0; uint8_t *b=DGSafeRead(DGTrackObj[t]+0x140,512,&g);
+        if(!b) continue;
+        memcpy(DGTrackS1[t],b,g<512?g:512); DGFreeRead(b,g);
+        fprintf(dbg,"TRACKDIFF cls=%u self=%u obj=0x%llx changed=[",DGTrackCls[t],DGTrackSelf[t],(unsigned long long)DGTrackObj[t]);
+        for(int off=0;off+4<=512;off+=4){
+            if(memcmp(DGTrackS0[t]+off,DGTrackS1[t]+off,4)!=0){
+                float f0,f1; memcpy(&f0,DGTrackS0[t]+off,4); memcpy(&f1,DGTrackS1[t]+off,4);
+                fprintf(dbg,"%+d:%.2f→%.2f ",off,f0,f1);
+            }
+        }
+        fprintf(dbg,"]\n");
+    }
+    fprintf(dbg,"TRACK DONE — القيم المتغيرة = الإحداثيات!\n");
+    fflush(dbg);
+    DGTrackPhase=2;
 }
 static void DGUE4Scan(void){
     static NSTimeInterval lastTry=0;
@@ -2569,8 +2611,12 @@ static void DGUE4Scan(void){
     }
     { static BOOL semaDone=NO; if(!semaDone && !DGGUObj){ semaDone=YES; fprintf(dbg,"--- SEMASCAN START (fallback) ---\n"); DGSemanticScan(dbg); } }
     if(DGGUObj){ static BOOL swept=NO; if(!swept){ swept=YES; DGIndexSweep(dbg); DGFinalSweep(dbg); } }
+    if(DGTrackN && DGTrackPhase<2){ static NSTimeInterval lastT=0; NSTimeInterval now=[[NSDate date] timeIntervalSince1970];
+        if(now-lastT>5.0){ lastT=now; DGTrackPositions(dbg); } }
     DGResolveOfficial(dbg);
     if(DGGUObj){ static BOOL swept=NO; if(!swept){ swept=YES; DGIndexSweep(dbg); DGFinalSweep(dbg); } }
+    if(DGTrackN && DGTrackPhase<2){ static NSTimeInterval lastT=0; NSTimeInterval now=[[NSDate date] timeIntervalSince1970];
+        if(now-lastT>5.0){ lastT=now; DGTrackPositions(dbg); } }
     { static NSTimeInterval lastHunt=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
       if(up>60.0 && up-lastHunt>120.0){ lastHunt=up; fprintf(dbg,"--- DGHUNT (t+%ds) ---\n",(int)up); DGHHunt(dbg); } }
     { static BOOL bssWatched=NO; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
@@ -2622,8 +2668,12 @@ static void DGUE4Scan(void){
         }
     { static BOOL semaDone=NO; if(!semaDone && !DGGUObj){ semaDone=YES; fprintf(dbg,"--- SEMASCAN START (fallback) ---\n"); DGSemanticScan(dbg); } }
     if(DGGUObj){ static BOOL swept=NO; if(!swept){ swept=YES; DGIndexSweep(dbg); DGFinalSweep(dbg); } }
+    if(DGTrackN && DGTrackPhase<2){ static NSTimeInterval lastT=0; NSTimeInterval now=[[NSDate date] timeIntervalSince1970];
+        if(now-lastT>5.0){ lastT=now; DGTrackPositions(dbg); } }
     DGResolveOfficial(dbg);
     if(DGGUObj){ static BOOL swept=NO; if(!swept){ swept=YES; DGIndexSweep(dbg); DGFinalSweep(dbg); } }
+    if(DGTrackN && DGTrackPhase<2){ static NSTimeInterval lastT=0; NSTimeInterval now=[[NSDate date] timeIntervalSince1970];
+        if(now-lastT>5.0){ lastT=now; DGTrackPositions(dbg); } }
     { static NSTimeInterval lastHunt=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
       if(up>60.0 && up-lastHunt>120.0){ lastHunt=up; fprintf(dbg,"--- DGHUNT (t+%ds) ---\n",(int)up); DGHHunt(dbg); } }
     { static BOOL bssWatched=NO; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
@@ -2676,8 +2726,12 @@ static void DGUE4Scan(void){
     }
     { static BOOL semaDone=NO; if(!semaDone && !DGGUObj){ semaDone=YES; fprintf(dbg,"--- SEMASCAN START (fallback) ---\n"); DGSemanticScan(dbg); } }
     if(DGGUObj){ static BOOL swept=NO; if(!swept){ swept=YES; DGIndexSweep(dbg); DGFinalSweep(dbg); } }
+    if(DGTrackN && DGTrackPhase<2){ static NSTimeInterval lastT=0; NSTimeInterval now=[[NSDate date] timeIntervalSince1970];
+        if(now-lastT>5.0){ lastT=now; DGTrackPositions(dbg); } }
     DGResolveOfficial(dbg);
     if(DGGUObj){ static BOOL swept=NO; if(!swept){ swept=YES; DGIndexSweep(dbg); DGFinalSweep(dbg); } }
+    if(DGTrackN && DGTrackPhase<2){ static NSTimeInterval lastT=0; NSTimeInterval now=[[NSDate date] timeIntervalSince1970];
+        if(now-lastT>5.0){ lastT=now; DGTrackPositions(dbg); } }
     { static NSTimeInterval lastHunt=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
       if(up>60.0 && up-lastHunt>120.0){ lastHunt=up; fprintf(dbg,"--- DGHUNT (t+%ds) ---\n",(int)up); DGHHunt(dbg); } }
     { static BOOL bssWatched=NO; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
