@@ -1,1 +1,1 @@
-{"heapBlockScan": true, "densityScan": false, "xorKeys": [0, 14], "minDensity": 45, "weakMin": 25, "probes": [], "note": "دورة سريعة: استكشاف بلوكات + لقطات inline فقط"}
+{"heapBlockScan": true, "densityScan": false, "xorKeys": [0, 14], "minDensity": 45, "weakMin": 25, "probes": [{"addr": "0x11825b830", "n": 128, "rel": true}, {"addr": "0x11825b830", "n": 64, "rel": true}, {"addr": "0x118451278", "n": 96, "rel": true}], "note": "تحقق ساكن→حي: عائلة 0x11825b830 (أزواج مؤشرات) و 0x118451278 (أعداد)"}
