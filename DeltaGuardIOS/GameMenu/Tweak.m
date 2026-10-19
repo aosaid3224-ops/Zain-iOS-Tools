@@ -853,8 +853,8 @@ static void DGLoadScanCfg(void){
     @try{ [DGScanCfg writeToFile:[NSTemporaryDirectory() stringByAppendingPathComponent:@"scan_config_cache.json"] atomically:YES]; }@catch(NSException*){}
 }
 static BOOL DGCfgBool(NSString *k,BOOL d){ id v=DGScanCfg[k]; return v?[v boolValue]:d; }
-static uint8_t DGXorKeys[8]={0,14,0,0,0,0,0,0};
-static int DGXorKeyCount=2; /* مدمج: نصي + XOR 0x0E المؤكد */
+static uint8_t DGXorKeys[8]={0,14,0xD2,0,0,0,0,0};
+static int DGXorKeyCount=3; /* مدمج: نصي + XOR 0x0E المؤكد */
 static uint8_t DGDetectedXorKey=0;
 static BOOL DGDetectedXorKeyValid=NO;
 static void DGLoadXorKeys(void){
@@ -1566,19 +1566,34 @@ static BOOL DGDecodeFromSnap(uint32_t nameId, char *out, int outLen){
 /* فك عبر كل snapshot مسجل؛ لا نقبل أول تطابق عشوائي إذا اختلفت نتائج المرشحين. */
 static BOOL DGDecodeAnyBlock(uint32_t nameId, char *out, int outLen){
     if(out&&outLen>0) out[0]=0;
-    if(!out||outLen<=1||!DGSnapCount||!DGSnapFromRegistered) return NO;
-    uint32_t off=nameId&0xFFFF;
-    char selected[80]={0}; int matches=0;
-    for(int b=0;b<DGSnapCount;b++){
-        char candidate[80]={0};
-        if(!DGDecodeNameEntry((uint64_t)DGBlockSnap[b],off,candidate,sizeof(candidate),NULL)) continue;
-        if(!DGIsPlausibleName(candidate)) continue;
-        if(!matches){ strncpy(selected,candidate,sizeof(selected)-1); matches=1; }
-        else if(strcmp(selected,candidate)!=0) return NO;
+    if(!out||outLen<=1||!DGSnapCount) return NO;
+    /* حقائق Offsets.hpp: block=id>>18, off=(id&0x3FFFF)*2 — أول نتيجة معقولة تفوز (لا إجماع) */
+    uint32_t bi=nameId>>18, uoff=(nameId&0x3FFFF)*2;
+    if(uoff>0xFF00) return NO;
+    int order[8]; int n=0;
+    if(bi<(uint32_t)DGSnapCount) order[n++]=(int)bi;
+    for(int b=0;b<DGSnapCount&&n<8;b++){ int f=0; for(int k=0;k<n;k++) if(order[k]==b){f=1;break;} if(!f) order[n++]=b; }
+    for(int k=0;k<n;k++){
+        const uint8_t *blk=(const uint8_t*)DGBlockSnap[order[k]];
+        if(!blk) continue;
+        uint16_t hdr; memcpy(&hdr,blk+uoff,2);
+        uint32_t len=hdr>>6;
+        if(len<2||len>=outLen||len>72) continue;
+        uint32_t L=len;
+        char t[80];
+        BOOL ok=YES;
+        for(int kk=0;kk<DGXorKeyCount&&ok;kk++){
+            ok=YES;
+            for(uint32_t i=0;i<L;i++){
+                char c=(char)(blk[uoff+2+i]^DGXorKeys[kk]);
+                t[i]=c;
+                if(c<32||c>126) ok=NO;
+            }
+            t[L]=0;
+            if(ok&&t[0]){ strncpy(out,t,outLen-1); out[outLen-1]=0; return YES; }
+        }
     }
-    if(!matches||strlen(selected)>=(size_t)outLen) return NO;
-    strcpy(out,selected);
-    return YES;
+    return NO;
 }
 
 static BOOL DGVerifyPoolStruct(uint64_t A){
@@ -1694,16 +1709,14 @@ static int DGWatchBss(FILE *dbg){
         if(!buf){ cursor+=want; continue; }
         uint64_t lim=got-32;
         for(uint64_t q=0;q<lim && found<12;q+=8){
-            uint64_t objects; uint32_t a,b,c,d;
-            memcpy(&objects,buf+q,8);
+            /* تخطيطا A(+0x10) و B(+0x0) — مع تجاهل قيمة objects (قد تكون XOR مشفرة) */
+            int lay=0; uint32_t a=0,b=0,c=0,d=0;
             memcpy(&a,buf+q+16,4); memcpy(&b,buf+q+20,4);
             memcpy(&c,buf+q+24,4); memcpy(&d,buf+q+28,4);
-            if(a<0x40000||a>0x8000000) continue;
-            if(b<1||b>=a) continue;
-            if(c<8||c>65536||d<1||d>c) continue;
-            if(a%c) continue;
-            uint32_t per=a/c; if(per<256||per>65536) continue;
-            if(objects && ((objects&7)||!DGInRegions(objects))) continue;
+            if(a>=0x40000&&a<=0x10000000&&b>=1000&&b<a&&c>=8&&c<=65536&&d>=1&&d<=c&&(a%c)==0) lay=1;
+            if(!lay){ memcpy(&a,buf+q,4); memcpy(&b,buf+q+4,4); memcpy(&c,buf+q+8,4); memcpy(&d,buf+q+12,4);
+                if(a>=0x40000&&a<=0x10000000&&b>=1000&&b<a&&c>=8&&c<=65536&&d>=1&&d<=c&&(a%c)==0) lay=2; }
+            if(!lay) continue;
             if(!DGWatchBase) DGWatchBase=cursor+q;
             fprintf(dbg,"BSSLIVE @ 0x%llx objects=0x%llx Max=0x%x Num=%u Chunks=%u/%u raw=",(unsigned long long)(cursor+q),(unsigned long long)objects,a,b,d,c);
             for(int k=0;k<32;k++) fprintf(dbg,"%02x",buf[q+k]);
@@ -1744,15 +1757,15 @@ static int DGObjectSweep(FILE *dbg){
                 scanned++;
                 if(v<tLo||v>=tHi) continue;
                 /* UObject محتمل — ترجم اسمه من اللقطة */
-                uint64_t got2=0; uint8_t *nb=DGSafeRead(obj+0x18,4,&got2);
+                uint64_t got2=0; uint8_t *nb=DGSafeRead(obj+0x1c,4,&got2);
                 if(!nb||got2<4) continue;
                 uint32_t nid; memcpy(&nid,nb,4); DGFreeRead(nb,got2);
                 char nm[64]="";
                 if(nid && DGDecodeAnyBlock(nid,nm,sizeof nm)){
                     /* UObject مؤكد بالاسم! اقرأ كلاسه أيضًا */
                     uint64_t cls=0; char cn[64]="";
-                    if(DGReadQ(obj+0x10,&cls)&&cls){
-                        uint8_t *cb=DGSafeRead(cls+0x18,4,&got2);
+                    if(DGReadQ(obj+0x8,&cls)&&cls){
+                        uint8_t *cb=DGSafeRead(cls+0x1c,4,&got2);
                         if(cb&&got2>=4){ uint32_t cid; memcpy(&cid,cb,4); DGFreeRead(cb,got2); DGDecodeAnyBlock(cid,cn,sizeof cn); }
                     }
                     fprintf(dbg,"OBJHIT @ 0x%llx name=%s class=%s vtab=0x%llx\\n",
