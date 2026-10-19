@@ -1680,15 +1680,32 @@ static void DGRunProbes(FILE *dbg){
         if(![p isKindOfClass:[NSDictionary class]]) continue;
         NSString *as=p[@"addr"];
         if(!as) continue;
-        uint64_t a=strtoull([as UTF8String],0,16);
+        uint64_t a;
+        if([as isEqualToString:@"bsslive"]){ a=DGWatchBase; if(!a){ fprintf(dbg,"PROBE bsslive: لا مرشح بعد\n"); continue; } }
+        else a=strtoull([as UTF8String],0,16);
         int n=[[p objectForKey:@"n"] intValue]; if(n<=0||n>4096) n=128;
         if([p[@"rel"] boolValue]){ if(!DGGameTextLo) continue; a+=DGGameTextLo-0x100000000ULL; }
         if(a<0x1000) continue;
-        uint64_t got=0; uint8_t *b=DGSafeRead(a,(uint64_t)n,&got);
-        fprintf(dbg,"PROBE 0x%llx n=%d : ",(unsigned long long)a,n);
-        if(b){ for(uint64_t k=0;k<got;k++) fprintf(dbg,"%02x",b[k]); DGFreeRead(b,got); }
-        else fprintf(dbg,"UNREADABLE");
-        fprintf(dbg,"\n");
+        int follow=[[p objectForKey:@"follow"] intValue];
+        /* قراءة متتالية مع تتبع مؤشرات heap */
+        uint64_t queue[16]; int qh=0,qt=0; queue[qt++]=(a<<8)|(uint64_t)(n<4096?n:4096);
+        int seen=0;
+        while(qh<qt&&seen<8){
+            uint64_t pack=queue[qh++]; uint64_t ad=pack>>8; int nn=(int)(pack&0xFF);
+            uint64_t got=0; uint8_t *b=DGSafeRead(ad,(uint64_t)nn,&got);
+            fprintf(dbg,"PROBE 0x%llx n=%d : ",(unsigned long long)ad,nn);
+            if(!b){ fprintf(dbg,"UNREADABLE\n"); continue; }
+            for(uint64_t k=0;k<got;k++) fprintf(dbg,"%02x",b[k]);
+            fprintf(dbg,"\n");
+            if(follow>0){
+                for(uint64_t k=0;k+8<=got&&qt<16;k+=8){
+                    uint64_t v; memcpy(&v,b+k,8);
+                    if(v>=0x100000000ULL&&!(v&7)&&v<0x140000000ULL){ queue[qt++]=(v<<8)|128; }
+                }
+            }
+            DGFreeRead(b,got);
+            seen++;
+        }
     }
     fflush(dbg);
 }
