@@ -2030,76 +2030,82 @@ static uint64_t DGDecodeADRL(uint64_t ins){
     return pg+add;
 }
 
-/* الحل الكامل: GUObjectArray + GNamePool بالبصمات الرسمية */
+/* نسخة م robust: مرساة قصيرة نادرة + ADRL + تحقق ذاتي بالقراءة الحية */
 static void DGResolveOfficial(FILE *dbg){
     if(!DGTextLo){ if(DGGameTextLo){ DGTextLo=DGGameTextLo; DGTextHi=DGGameTextHi; } else return; }
+    /* مرساة GUObjectArray: 94 E0 23 00 — نادرة في __text */
     if(!DGGUObj){
-        const char *p1="\x94\xE0\x23\x00\x91????\x94\x08\x7D\x80\x52";
-        uint64_t ins=DGPatScan(p1,13);
-        if(ins){ DGGUObj=DGDecodeADRL(ins+0x11);
-            if(dbg) fprintf(dbg,"GUOBJ-PATTERN @ 0x%llx → 0x%llx\n",(unsigned long long)ins,(unsigned long long)DGGUObj); }
-    }
-    if(!DGGNamePool){
-        const char *p2="\x4F\xD3????\x7D\x92????????\x91";
-        uint64_t ins=DGPatScan(p2,14);
-        if(ins){ DGGNamePool=DGDecodeADRL(ins+6);
-            if(dbg) fprintf(dbg,"NAMEPOOL-PATTERN @ 0x%llx → 0x%llx\n",(unsigned long long)ins,(unsigned long long)DGGNamePool); }
-    }
-    fflush(dbg);
-}
-
-/* قراءة اسم عبر GNamePool الرسمي: block=id>>18, off=(id&0x3FFFF)*2, len=hdr>>6, فك حقيقي */
-static BOOL DGOfficialName(uint32_t id, char *out, int outLen){
-    out[0]=0;
-    if(!DGGNamePool||!id) return NO;
-    uint32_t bi=id>>18, uoff=(id&0x3FFFF)*2;
-    uint64_t blocks=0, block=0;
-    /* BlocksOff = struct-8 (الملف الرسمي: BlocksOff -= sizeof(void*)) */
-    if(!DGReadQ(DGGNamePool-8,&blocks)||!blocks) return NO;
-    if(!DGReadQ(blocks+(uint64_t)bi*8,&block)||!block) return NO;
-    uint64_t g=0; uint8_t *e=DGSafeRead(block+uoff,80,&g);
-    if(!e||g<4){ if(e)DGFreeRead(e,g); return NO; }
-    uint16_t hdr; memcpy(&hdr,e,2);
-    uint32_t len=hdr>>6;
-    if(len<2||len>=(uint32_t)outLen||len+2>g){ DGFreeRead(e,g); return NO; }
-    memcpy(out,e+2,len);
-    DGFreeRead(e,g);
-    DGDecName(out,len);
-    out[len]=0;
-    for(uint32_t i=0;out[i];i++) if(out[i]<32||out[i]>126){ out[0]=0; return NO; }
-    return YES;
-}
-
-/* مشي الكائنات: Objects@+0x10 → chunks → items(0x18) → obj → name@+0x1c */
-static int DGWalkObjects(FILE *dbg){
-    if(!DGGUObj) return 0;
-    uint64_t base=DGGUObj; /* FUObjectArray */
-    uint64_t objObjects=base+0x10; /* TUObjectArray (الملف الرسمي) */
-    uint64_t objectsPtr=0;
-    if(!DGReadQ(objObjects+0x10,&objectsPtr)||!objectsPtr){ /* Objects قد يكون بعد GC ptrs */
-        if(!DGReadQ(objObjects+0x8,&objectsPtr)||!objectsPtr) return 0;
-    }
-    int printed=0;
-    for(int c=0;c<4&&printed<40;c++){
-        uint64_t chunk=0;
-        if(!DGReadQ(objectsPtr+(uint64_t)c*8,&chunk)||!chunk) break;
-        for(int i=0;i<64&&printed<40;i++){
-            uint64_t item=chunk+(uint64_t)i*0x18;
-            uint64_t obj=0;
-            if(!DGReadQ(item,&obj)||!obj||obj<0x100000000ULL||(obj&7)) continue;
-            uint64_t got=0; uint8_t *nb=DGSafeRead(obj+0x1c,4,&got);
-            if(!nb||got<4){ if(nb)DGFreeRead(nb,got); continue; }
-            uint32_t nid; memcpy(&nid,nb,4); DGFreeRead(nb,got);
-            char nm[80]="";
-            if(nid&&DGOfficialName(nid,nm,sizeof nm)&&strlen(nm)>=3){
-                fprintf(dbg,"OBJWALK [%d/%d] %s @ 0x%llx\n",c,i,nm,(unsigned long long)obj);
-                printed++;
+        const char *anchor="\x94\xE0\x23\x00";
+        uint64_t pos=0, sz=DGTextHi-DGTextLo;
+        int tried=0;
+        while(pos<sz && !DGGUObj && tried<40){
+            uint64_t want=sz-pos; if(want>33554432) want=33554432;
+            uint64_t got=0;
+            uint8_t *buf=DGSafeRead(DGTextLo+pos,want,&got);
+            if(!buf){ pos+=want; continue; }
+            for(uint64_t q=0;q+0x18<=got && !DGGUObj && tried<40;q++){
+                if(buf[q]!=0x94||buf[q+1]!=0xE0||buf[q+2]!=0x23||buf[q+3]!=0x00) continue;
+                tried++;
+                uint64_t ins=DGTextLo+pos+q;
+                uint64_t cand=DGDecodeADRL(ins+0x11);
+                if(!cand) continue;
+                /* تحقق ذاتي: TUObjectArray عند cand+0x10: Num@+4، Objects@+0x10 */
+                uint64_t tobj=cand+0x10;
+                uint64_t g2=0; uint8_t *vb=DGSafeRead(tobj+0x4,16,&g2);
+                if(!vb||g2<16){ if(vb)DGFreeRead(vb,g2); continue; }
+                uint32_t num=0,maxe=0,mc=0,nc=0;
+                memcpy(&num,vb,4); memcpy(&maxe,vb+4,4); memcpy(&mc,vb+8,4); memcpy(&nc,vb+12,4);
+                DGFreeRead(vb,g2);
+                if(num>5000&&num<0x2000000&&maxe>=num&&maxe<=0x10000000&&mc>=8&&mc<=65536&&nc>=1&&nc<=mc){
+                    DGGUObj=cand;
+                    fprintf(dbg,"GUOBJ-ANCHOR @ 0x%llx → 0x%llx VERIFIED Num=%u Max=0x%x Chunks=%u/%u\n",
+                        (unsigned long long)ins,(unsigned long long)cand,num,maxe,nc,mc);
+                }
             }
+            DGFreeRead(buf,got);
+            pos+=got?got:want;
+            if(!got) pos+=want;
         }
     }
-    fprintf(dbg,"OBJWALK done printed=%d\n",printed);
+    /* مرساة GNamePool: 4F D3 (نادرة نسبيًا) مع تحقق None */
+    if(!DGGNamePool){
+        const char *anchor2="\x4F\xD3";
+        uint64_t pos=0, sz=DGTextHi-DGTextLo;
+        int tried=0;
+        while(pos<sz && !DGGNamePool && tried<200){
+            uint64_t want=sz-pos; if(want>33554432) want=33554432;
+            uint64_t got=0;
+            uint8_t *buf=DGSafeRead(DGTextLo+pos,want,&got);
+            if(!buf){ pos+=want; continue; }
+            for(uint64_t q=0;q+0x20<=got && !DGGNamePool && tried<200;q++){
+                if(buf[q]!=0x4F||buf[q+1]!=0xD3) continue;
+                tried++;
+                uint64_t ins=DGTextLo+pos+q;
+                uint64_t cand=DGDecodeADRL(ins+6);
+                if(!cand) continue;
+                /* BlocksOff = cand-8 → Blocks[0] → block → None? */
+                uint64_t blocks=0,block=0;
+                if(!DGReadQ(cand-8,&blocks)||!blocks) continue;
+                if(!DGReadQ(blocks,&block)||!block) continue;
+                uint64_t g2=0; uint8_t *e=DGSafeRead(block,64,&g2);
+                if(!e) continue;
+                uint16_t hdr=0; if(g2>=2) memcpy(&hdr,e,2);
+                uint32_t len=hdr>>6;
+                if(len==4&&g2>=6){
+                    char nm[8]={0}; memcpy(nm,e+2,4);
+                    DGDecName(nm,4);
+                    if(memcmp(nm,"None",4)==0){ DGGNamePool=cand;
+                        fprintf(dbg,"NAMEPOOL-ANCHOR @ 0x%llx → 0x%llx VERIFIED None\n",(unsigned long long)ins,(unsigned long long)cand);
+                    }
+                }
+                DGFreeRead(e,g2);
+            }
+            DGFreeRead(buf,got);
+            pos+=got?got:want;
+            if(!got) pos+=want;
+        }
+    }
     fflush(dbg);
-    return printed;
 }
 
 static void DGUE4Scan(void){
