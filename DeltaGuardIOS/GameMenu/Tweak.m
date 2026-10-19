@@ -2583,7 +2583,7 @@ static void __attribute__((unused)) DGTrackPositions(FILE *dbg){
     else snprintf(DGTrackStat,sizeof(DGTrackStat),"T1#%d ✓ — سكون",DGTrackT1Count);
     fflush(dbg);
 }
-/* v0.33: مسح دقيق 0x40B حتى +0x600 (يصل +0x4D4 مؤكد) + رقم كلاس المكون الحقيقي + LOC بالعنقود */
+/* v0.34: PTRMAP — خريطة كل مؤشرات الشخصية (+0x28..+0x800) بأرقام كلاساتها + كشف تحويلات float AND double */
 static float DGAb(float x){ return x<0?-x:x; }
 static void DGTrackLivePrint(FILE *dbg){
     for(int t=0;t<DGTrackN;t++){
@@ -2592,43 +2592,57 @@ static void DGTrackLivePrint(FILE *dbg){
             fprintf(dbg,"LIVE cls=%u self=%u obj=0x%llx STATIC\n",DGTrackCls[t],DGTrackSelf[t],(unsigned long long)obj);
             continue;
         }
-        float cx[64],cy[64],cz[64]; int cn=0;
-        fprintf(dbg,"CHAR self=%u obj=0x%llx\n",DGTrackSelf[t],(unsigned long long)obj);
-        for(int po=0x120;po<=0x400&&cn<64;po+=8){
+        char map[512]; map[0]=0;
+        float cx[48],cy[48],cz[48]; int cn=0;
+        int hits=0;
+        for(int po=0x28;po<=0x800&&hits<44;po+=8){
             uint64_t p=0; if(!DGReadQ(obj+po,&p)||!p||p<0x100000000ULL||p>=0x400000000ULL||(p&7)) continue;
             uint64_t tcls=0; uint32_t tc=0xFFFFFFFF;
             if(DGReadQ(p+0x8,&tcls)&&tcls){ uint64_t g0=0; uint8_t *ib=DGSafeRead(tcls+0x24,4,&g0);
                 if(ib&&g0>=4){ memcpy(&tc,ib,4); DGFreeRead(ib,g0); } }
-            /* مسح دقيق 0x40B — يخترق نهاية الكائنات الصغيرة ويصل +0x4D4 */
-            char tb[256]; tb[0]=0; int found=0;
-            for(uint64_t bs=0x100;bs<0x600&&found<4;bs+=0x40){
+            if(tc>10000) continue;
+            hits++;
+            int used=(int)strlen(map);
+            if(used<440) snprintf(map+used,512-used,"+%x:%u ",po,tc);
+            /* فحص التحويل: float و double */
+            for(uint64_t bs=0x40;bs<0x800;bs+=0x40){
                 uint64_t gg=0; uint8_t *b=DGSafeRead(p+bs,0x40,&gg);
                 if(!b||gg<0x34){ if(b)DGFreeRead(b,gg); continue; }
                 int lim=(int)gg;
-                for(int off=0;off+0x34<=lim&&found<4;off+=4){
+                for(int off=0;off+0x34<=lim;off+=4){
                     float q[4],tr[3],sc[3];
                     memcpy(q,b+off,16); memcpy(tr,b+off+16,12); memcpy(sc,b+off+28,12);
                     float n=q[0]*q[0]+q[1]*q[1]+q[2]*q[2]+q[3]*q[3];
-                    BOOL identity=(q[0]==1.f&&q[1]==0.f&&q[2]==0.f&&q[3]==0.f&&tr[0]==0.f&&tr[1]==0.f&&tr[2]==0.f);
-                    if(!identity && n>0.9f&&n<1.1f && tr[0]>-200000&&tr[0]<200000 && tr[1]>-200000&&tr[1]<200000 && tr[2]>-200000&&tr[2]<200000
+                    BOOL ident=(q[0]==1.f&&q[1]==0.f&&q[2]==0.f&&q[3]==0.f&&tr[0]==0.f&&tr[1]==0.f&&tr[2]==0.f);
+                    if(!ident && n>0.9f&&n<1.1f && tr[0]>-200000&&tr[0]<200000 && tr[1]>-200000&&tr[1]<200000 && tr[2]>-200000&&tr[2]<200000
                        && sc[0]>0.1f&&sc[0]<10&&sc[1]>0.1f&&sc[1]<10&&sc[2]>0.1f&&sc[2]<10){
-                        int used=(int)strlen(tb);
-                        if(used<190) snprintf(tb+used,256-used,"@%llx(p %.1f %.1f %.1f) ",(unsigned long long)(bs+off),tr[0],tr[1],tr[2]);
-                        if(cn<64){ cx[cn]=tr[0]; cy[cn]=tr[1]; cz[cn]=tr[2]; cn++; }
-                        found++;
+                        fprintf(dbg,"  +%x cls=%u 0x%llx FT@%llx(%.1f,%.1f,%.1f)\n",po,tc,(unsigned long long)p,(unsigned long long)(bs+off),tr[0],tr[1],tr[2]);
+                        if(cn<48){ cx[cn]=tr[0]; cy[cn]=tr[1]; cz[cn]=tr[2]; cn++; }
+                        break;
+                    }
+                    if(off+0x50<=lim){
+                        double qd[4],td[3];
+                        memcpy(qd,b+off,32); memcpy(td,b+off+32,24);
+                        double nd=qd[0]*qd[0]+qd[1]*qd[1]+qd[2]*qd[2]+qd[3]*qd[3];
+                        if(nd>0.999&&nd<1.001 && td[0]>-1e6&&td[0]<1e6 && td[1]>-1e6&&td[1]<1e6 && td[2]>-1e6&&td[2]<1e6
+                           && !(qd[0]==1.0&&qd[1]==0.0&&qd[2]==0.0&&qd[3]==0.0&&td[0]==0.0&&td[1]==0.0&&td[2]==0.0)){
+                            fprintf(dbg,"  +%x cls=%u 0x%llx DT@%llx(%.1f,%.1f,%.1f)\n",po,tc,(unsigned long long)p,(unsigned long long)(bs+off),td[0],td[1],td[2]);
+                            if(cn<48){ cx[cn]=(float)td[0]; cy[cn]=(float)td[1]; cz[cn]=(float)td[2]; cn++; }
+                            break;
+                        }
                     }
                 }
                 DGFreeRead(b,gg);
             }
-            if(found) fprintf(dbg,"  +0x%x cls=%u obj=0x%llx T=[%s]\n",(unsigned)po,tc,(unsigned long long)p,tb);
         }
+        fprintf(dbg,"MAP self=%u obj=0x%llx | %s\n",DGTrackSelf[t],(unsigned long long)obj,map);
         if(!cn){ fprintf(dbg,"LOC self=%u NONE\n",DGTrackSelf[t]); continue; }
         int best=0,bestc=0;
         for(int i=0;i<cn;i++){ int c=0; for(int j=0;j<cn;j++){ if(DGAb(cx[i]-cx[j])<2.f&&DGAb(cy[i]-cy[j])<2.f&&DGAb(cz[i]-cz[j])<2.f) c++; } if(c>bestc){ bestc=c; best=i; } }
         fprintf(dbg,"LOC self=%u pos=(%.1f,%.1f,%.1f) cluster=%d/%d\n",DGTrackSelf[t],cx[best],cy[best],cz[best],bestc,cn);
     }
     fflush(dbg);
-    snprintf(DGTrackStat,sizeof(DGTrackStat),"LOC ✓ n=%d",DGTrackN);
+    snprintf(DGTrackStat,sizeof(DGTrackStat),"MAP ✓ n=%d",DGTrackN);
 }
 
 static int DGTrackRescan(FILE *dbg);
