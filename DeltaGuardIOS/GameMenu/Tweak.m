@@ -1513,14 +1513,41 @@ static void DGUE4Scan(void){
         }
         fflush(dbg);
         /* فحص ذاتي: فك أسماء معروفة من البول المؤكد */
-        char sn[64]; int good=0;
-        for(uint32_t sid=0; sid<64 && good<12; sid++){
-            if(DGDecodeFName(sid,sn,sizeof sn)&&sn[0]){
-                fprintf(dbg,"POOLSAMPLE id=%u name=%s\n",sid,sn);
-                good++;
+        /* مشي الإدخالات الحقيقي: block0 من البداية — header + اسم + قفز بالطول */
+        int good=0;
+        uint64_t blk0w=0;
+        if(DGReadQ(DGNamePool,&blk0w)&&blk0w){
+            uint64_t off=0;
+            for(int e=0;e<24 && off<0x4000 && good<16;e++){
+                uint64_t g=0; uint8_t *h=DGSafeRead(blk0w+off,2,&g);
+                if(!h||g<2){ if(h)DGFreeRead(h,g); break; }
+                uint16_t hdr; memcpy(&hdr,h,2); DGFreeRead(h,g);
+                if(hdr&1){ off+=2; continue; } /* wide — تخطَّ */
+                uint8_t raw[80]={0};
+                uint64_t g2=0; uint8_t *nb=DGSafeRead(blk0w+off+2,72,&g2);
+                if(!nb) break;
+                uint64_t nn=g2<72?g2:72; memcpy(raw,nb,nn); DGFreeRead(nb,g2);
+                /* جرب مفاتيح XOR */
+                char best[72]=""; int blen=0;
+                for(int k=0;k<DGXorKeyCount;k++){
+                    char t[72]; uint64_t L=strnlen((char*)raw,71);
+                    for(uint64_t i=0;i<=L;i++) t[i]=(char)(raw[i]^DGXorKeys[k]);
+                    t[L<71?L:71]=0;
+                    BOOL ok=t[0]&&L>=2;
+                    for(uint64_t i=0;t[i]&&ok;i++) if(t[i]<32||t[i]>126) ok=NO;
+                    if(ok){ strncpy(best,t,71); blen=(int)L; break; }
+                }
+                if(best[0]){
+                    fprintf(dbg,"POOLSAMPLE off=0x%llx name=%s\n",(unsigned long long)off,best);
+                    good++;
+                    off += 2 + (uint64_t)blen + 1;
+                } else {
+                    off += 2 + 1;
+                }
+                off = (off + 1) & ~1ULL; /* محاذاة 2 */
             }
         }
-        fprintf(dbg,"POOLSAMPLE total=%d\n",good);
+        fprintf(dbg,"POOLSAMPLE total=%d (walked)\n",good);
         fflush(dbg);
     }
     if(DGNamePool && !DGUE4FoundFlag){
