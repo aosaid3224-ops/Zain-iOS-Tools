@@ -2637,6 +2637,7 @@ static void DGUE4Scan(void){
     fprintf(dbg,"END pool=%s gobjects=%s\n",(DGNamePool||DGSnapCount)?"YES":"NO",found?"FOUND":"PENDING");
     fclose(dbg);
 }
+}
 
 /* بدائل يدوية إذا غابت الدوال عن التصدير */
 static void* DGUnbox(void *obj){
