@@ -2377,7 +2377,6 @@ static void DGUE4Scan(void){
                                 fprintf(dbg,"NAMEPOOL-DIRECT @ 0x%llx None(plain) ✓\n",(unsigned long long)npTry); } }
                     } }
                 if(e)DGFreeRead(e,g3);
-            }
             } /* for pi */
         }
     }
