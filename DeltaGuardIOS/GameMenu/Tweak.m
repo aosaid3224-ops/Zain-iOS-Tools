@@ -2452,10 +2452,10 @@ static void DGIndexSweep(FILE *dbg){
     }
     uint32_t perChunk=0x10000; /* NumElementsPerChunk الرسمي */
     int players=0, items=0, validated=0;
-    for(int c=0;c<6&&players<12;c++){
+    for(int c=0;c<8&&players<40;c++){
         uint64_t chunk=0;
         if(!DGReadQ(objectsPtr+(uint64_t)c*8,&chunk)||!chunk) continue;
-        for(uint32_t i=0;i<perChunk&&players<12;i++){
+        for(uint32_t i=0;i<perChunk&&players<40;i++){
             uint64_t item=chunk+(uint64_t)i*0x18;
             uint64_t obj=0;
             if(!DGReadQ(item,&obj)||!obj||obj<0x100000000ULL||(obj&7)) continue;
@@ -2478,6 +2478,13 @@ static void DGIndexSweep(FILE *dbg){
             if(players<20) fprintf(dbg,"IDXPLAYER #%d clsIdx=%u(%s) self=%u %s obj=0x%llx\n",players,cidx,cname,selfIdx,selfIdx>5000?"INSTANCE":"CDO",(unsigned long long)obj);
             players++;
             if(selfIdx<=5000){ continue; } /* CDO — تخطَّ النسخ/مواقعه */
+            /* المكونات (كبسولة/حركة): dump نافذة المواقع مباشرة — فيها الإحداثيات */
+            if(cidx==2116||cidx==2115||cidx==4825||cidx==2131){
+                uint8_t *pw=DGSafeRead(obj+0x140,256,&g);
+                if(pw){ fprintf(dbg,"COMPPOS cls=%u self=%u @ obj+0x140 : ",cidx,selfIdx);
+                    for(uint64_t x=0;x<g;x++) fprintf(dbg,"%02x",pw[x]);
+                    fprintf(dbg,"\n"); DGFreeRead(pw,g); }
+            }
             /* تفريغ كامل للكائن + قبول فهارس المكونات الحقيقية */
             uint8_t *od=DGSafeRead(obj,768,&g);
             if(od){ fprintf(dbg,"OBJDUMP #%d obj=0x%llx : ",players,(unsigned long long)obj);
