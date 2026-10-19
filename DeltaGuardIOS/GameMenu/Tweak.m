@@ -896,11 +896,17 @@ static void DGRegisterBlock(uint64_t entry, FILE *dbg){
             if(DGMatchNone(b+i+2,DGXorKeys[k])){
                 DGDetectedXorKey=DGXorKeys[k]; DGDetectedXorKeyValid=YES; ok=1; break;
             }
+    if(!ok){ DGFreeRead(b,g); return; }
+    /* لقطة ذرية فورية — البلوكات تتحرك خلال دقائق */
+    if(DGBlockCount<DG_SNAP_BLOCKS && g>=0x1000){
+        DGBlockSnap[DGBlockCount]=(uint8_t*)malloc(g);
+        memcpy(DGBlockSnap[DGBlockCount],b,g);
+        DGSnapCount=DGBlockCount+1;
+    }
     DGFreeRead(b,g);
-    if(!ok) return;
     for(int i=0;i<DGBlockCount;i++) if((DGBlocks[i]&~0xFFFFULL)==page) return;
     if(DGBlockCount<16){ DGBlocks[DGBlockCount++]=page;
-        if(dbg){ fprintf(dbg,"BLOCKREG %d @ 0x%llx\n",DGBlockCount-1,(unsigned long long)page); fflush(dbg); } }
+        if(dbg){ fprintf(dbg,"BLOCKREG %d @ 0x%llx SNAP-INLINE\n",DGBlockCount-1,(unsigned long long)page); fflush(dbg); } }
 }
 static void DGDumpRegion2(uint64_t at, uint64_t bytes, const char *name, FILE *dbg);
 /* ابحث في كل الذاكرة عن مؤشر لبلوك معروف — مع تحقق XOR أن Blocks[0] هو بداية بول حقيقية */
