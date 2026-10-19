@@ -887,9 +887,11 @@ static uint64_t DGBlocks[16];
 static int DGBlockCount=0;
 static void DGRegisterBlock(uint64_t entry, FILE *dbg){
     uint64_t page=entry&~0xFFFFULL;
+    for(int i=0;i<DGBlockCount;i++) if(DGBlocks[i]==page) return;
+    if(DGBlockCount>=16) return;
     /* تحقق أن الصفحة تحوي None (XOR-aware) قبل التسجيل */
     uint64_t g=0; uint8_t *b=DGSafeRead(page,0x10000,&g);
-    if(!b) return;
+    if(!b||g!=DG_SNAP_SIZE){ if(b)DGFreeRead(b,g); return; }
     int ok=0;
     for(uint64_t i=0;i+8<g&&!ok;i+=2)
         for(int k=0;k<DGXorKeyCount;k++)
@@ -898,15 +900,23 @@ static void DGRegisterBlock(uint64_t entry, FILE *dbg){
             }
     if(!ok){ DGFreeRead(b,g); return; }
     /* لقطة ذرية فورية — البلوكات تتحرك خلال دقائق */
-    if(DGBlockCount<DG_SNAP_BLOCKS && g>=0x1000){
-        DGBlockSnap[DGBlockCount]=(uint8_t*)malloc(g);
-        memcpy(DGBlockSnap[DGBlockCount],b,g);
-        DGSnapCount=DGBlockCount+1;
+    int regIndex=DGBlockCount;
+    BOOL snapInline=NO;
+    if(regIndex<DG_SNAP_BLOCKS && DGSnapCount<DG_SNAP_BLOCKS){
+        uint8_t *copy=(uint8_t*)malloc(DG_SNAP_SIZE);
+        if(copy){
+            memcpy(copy,b,DG_SNAP_SIZE);
+            int snapIndex=DGSnapCount++;
+            DGBlockSnap[snapIndex]=copy;
+            DGBlockRegIndex[snapIndex]=regIndex;
+            DGSnapFromRegistered=YES;
+            snapInline=YES;
+        }
     }
     DGFreeRead(b,g);
-    for(int i=0;i<DGBlockCount;i++) if((DGBlocks[i]&~0xFFFFULL)==page) return;
-    if(DGBlockCount<16){ DGBlocks[DGBlockCount++]=page;
-        if(dbg){ fprintf(dbg,"BLOCKREG %d @ 0x%llx SNAP-INLINE\n",DGBlockCount-1,(unsigned long long)page); fflush(dbg); } }
+    DGBlocks[regIndex]=page;
+    DGBlockCount++;
+    if(dbg){ fprintf(dbg,"BLOCKREG %d @ 0x%llx %s\n",regIndex,(unsigned long long)page,snapInline?"SNAP-INLINE":"LIVE-ONLY"); fflush(dbg); }
 }
 static void DGDumpRegion2(uint64_t at, uint64_t bytes, const char *name, FILE *dbg);
 /* ابحث في كل الذاكرة عن مؤشر لبلوك معروف — مع تحقق XOR أن Blocks[0] هو بداية بول حقيقية */
@@ -1426,33 +1436,67 @@ static BOOL DGValidateRegisteredSnapshot(uint8_t *block,uint32_t *noneOff){
 }
 /* انسخ البلوكات المسجلة فقط بعد تحقق المحتوى نفسه، لا من بنية struct مشتبه بها. */
 static void DGSnapshotPool(FILE *dbg){
-    if(DGSnapCount) return;
     /* لا نرجع إلى struct إذا وُجدت مرشحات مسجلة؛ نلتقط الصفحات الموثقة مباشرة. */
     if(DGBlockCount>0){
-        int n=0;
-        for(int i=0;i<DGBlockCount && n<DG_SNAP_BLOCKS;i++){
-            uint64_t got=0; uint8_t *d=DGSafeRead(DGBlocks[i],DG_SNAP_SIZE,&got);
-            if(!d||got!=DG_SNAP_SIZE){ if(d)DGFreeRead(d,got); if(dbg) fprintf(dbg,"SNAPSHOT skip reg#%d (unreadable/short)\n",i); continue; }
+        uint8_t *copies[DG_SNAP_BLOCKS]={0};
+        uint32_t noneOffsets[DG_SNAP_BLOCKS]={0};
+        int regIndices[DG_SNAP_BLOCKS]={0};
+        BOOL seen[16]={NO};
+        int n=0,inlineCount=0,liveCount=0;
+        /* لا نخلط snapshots قديمة من struct مع snapshots sourced from registered. */
+        if(!DGSnapFromRegistered){
+            for(int i=0;i<DGSnapCount;i++) if(DGBlockSnap[i]) free(DGBlockSnap[i]);
+            memset(DGBlockSnap,0,sizeof(DGBlockSnap));
+            memset(DGBlockNoneOff,0,sizeof(DGBlockNoneOff));
+            memset(DGBlockRegIndex,0,sizeof(DGBlockRegIndex));
+            DGSnapCount=0;
+        }
+        /* تحقق snapshots المأخوذة inline أولاً؛ لا تعِد قراءة عنوانها الحي. */
+        for(int i=0;i<DGSnapCount&&i<DG_SNAP_BLOCKS&&n<DG_SNAP_BLOCKS;i++){
+            uint8_t *copy=DGBlockSnap[i];
+            int reg=DGBlockRegIndex[i];
+            if(!copy) continue;
+            uint32_t noneOff=0;
+            if(reg<0||reg>=DGBlockCount||seen[reg]||!DGValidateRegisteredSnapshot(copy,&noneOff)){
+                free(copy);
+                if(dbg) fprintf(dbg,"SNAPSHOT reject inline slot=%d reg#%d (validation failed)\n",i,reg);
+                continue;
+            }
+            copies[n]=copy; noneOffsets[n]=noneOff; regIndices[n]=reg; seen[reg]=YES;
+            n++; inlineCount++;
+        }
+        /* Fallback حي فقط للصفحات التي لم تنجح لها لقطة inline، مع فحص كامل. */
+        for(int reg=0;reg<DGBlockCount&&n<DG_SNAP_BLOCKS;reg++){
+            if(seen[reg]) continue;
+            uint64_t got=0; uint8_t *d=DGSafeRead(DGBlocks[reg],DG_SNAP_SIZE,&got);
+            if(!d||got!=DG_SNAP_SIZE){ if(d)DGFreeRead(d,got); if(dbg) fprintf(dbg,"SNAPSHOT skip reg#%d (unreadable/short)\n",reg); continue; }
             uint8_t *copy=(uint8_t*)malloc(DG_SNAP_SIZE);
-            if(!copy){ DGFreeRead(d,got); if(dbg) fprintf(dbg,"SNAPSHOT skip reg#%d (alloc failed)\n",i); continue; }
+            if(!copy){ DGFreeRead(d,got); if(dbg) fprintf(dbg,"SNAPSHOT skip reg#%d (alloc failed)\n",reg); continue; }
             memcpy(copy,d,DG_SNAP_SIZE);
             DGFreeRead(d,got);
             uint32_t noneOff=0;
             if(!DGValidateRegisteredSnapshot(copy,&noneOff)){
                 free(copy);
-                if(dbg) fprintf(dbg,"SNAPSHOT skip reg#%d (None/entry validation failed)\n",i);
+                if(dbg) fprintf(dbg,"SNAPSHOT skip reg#%d (None/entry validation failed)\n",reg);
                 continue;
             }
-            DGBlockSnap[n]=copy;
-            DGBlockNoneOff[n]=noneOff;
-            DGBlockRegIndex[n]=i;
-            n++;
+            copies[n]=copy; noneOffsets[n]=noneOff; regIndices[n]=reg; seen[reg]=YES;
+            n++; liveCount++;
+        }
+        memset(DGBlockSnap,0,sizeof(DGBlockSnap));
+        memset(DGBlockNoneOff,0,sizeof(DGBlockNoneOff));
+        memset(DGBlockRegIndex,0,sizeof(DGBlockRegIndex));
+        for(int i=0;i<n;i++){
+            DGBlockSnap[i]=copies[i];
+            DGBlockNoneOff[i]=noneOffsets[i];
+            DGBlockRegIndex[i]=regIndices[i];
         }
         DGSnapCount=n;
         DGSnapFromRegistered=(n>0);
-        if(dbg){ fprintf(dbg,"SNAPSHOT %d blocks captured (from registered; None+entries validated)\n",DGSnapCount); fflush(dbg); }
+        if(dbg){ fprintf(dbg,"SNAPSHOT %d blocks captured (inline-captured=%d live-fallback=%d; registered validated)\n",DGSnapCount,inlineCount,liveCount); fflush(dbg); }
         return;
     }
+    if(DGSnapCount) return;
     if(!DGNamePool) return;
     for(int attempt=0;attempt<3&&!DGSnapCount;attempt++){
         uint64_t ptrs[DG_SNAP_BLOCKS]={0};
@@ -1646,7 +1690,7 @@ static void DGUE4Scan(void){
     if(!dbg) return;
     if(DGNamePool){ fprintf(dbg,"POOL already solved @ 0x%llx\n",(unsigned long long)DGNamePool); fflush(dbg); }
     if(DGSnapCount){ fprintf(dbg,"REGISTERED SNAPSHOTS ready=%d\n",DGSnapCount); fflush(dbg); }
-    fprintf(dbg,"=== OBSERVATORY v0.11.3 attempt %d regions=%u ===\n",DGUE4ScanCount,DGRegionCount);
+    fprintf(dbg,"=== OBSERVATORY v0.11.4 attempt %d regions=%u ===\n",DGUE4ScanCount,DGRegionCount);
     fflush(dbg);
     DGRunProbes(dbg);
     if(found){ fprintf(dbg,"END pool=%s gobjects=FOUND (probe refresh)\n",(DGNamePool||DGSnapCount)?"YES":"NO"); fclose(dbg); return; }
@@ -2618,7 +2662,7 @@ static UIView *DGToggleRow(CGFloat y, NSString *text, SEL action, UISwitch * __s
 
 + (NSString *)statsText{
     NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
-    return [NSString stringWithFormat:@"الذاكرة: %@ | التشغيل: %02d:%02d\nDeltaGuard v0.11.3 — UE4",
+    return [NSString stringWithFormat:@"الذاكرة: %@ | التشغيل: %02d:%02d\nDeltaGuard v0.11.4 — UE4",
         DGMemoryString(),(int)(up/60),((int)up)%60];
 }
 
