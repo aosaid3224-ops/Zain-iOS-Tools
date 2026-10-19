@@ -2163,6 +2163,81 @@ static int DGWalkObjects(FILE *dbg){
 }
 
 
+/* ===== v17: المسح الدلالي النهائي — بلا أنماط، تأكيد رياضي بالقراءة ===== */
+static int DGSemaNumVerified=0, DGSemaNameVerified=0;
+
+static BOOL DGSemaVerifyGUObj(uint64_t cand, FILE *dbg, uint64_t fromIns){
+    uint64_t tobj=cand+0x10; /* TUObjectArray */
+    uint64_t g=0; uint8_t *vb=DGSafeRead(tobj+0x4,16,&g);
+    if(!vb||g<16){ if(vb)DGFreeRead(vb,g); return NO; }
+    uint32_t num=0,maxe=0,mc=0,nc=0;
+    memcpy(&num,vb,4); memcpy(&maxe,vb+4,4); memcpy(&mc,vb+8,4); memcpy(&nc,vb+12,4);
+    DGFreeRead(vb,g);
+    if(!(num>5000&&num<0x2000000&&maxe>=num&&maxe<=0x10000000&&mc>=8&&mc<=65536&&nc>=1&&nc<=mc)) return NO;
+    DGGUObj=cand;
+    fprintf(dbg,"GUOBJ-SEMA @ ins 0x%llx → 0x%llx VERIFIED Num=%u Max=0x%x Chunks=%u/%u\n",
+        (unsigned long long)fromIns,(unsigned long long)cand,num,maxe,nc,mc);
+    return YES;
+}
+static BOOL DGSemaVerifyNamePool(uint64_t cand, FILE *dbg, uint64_t fromIns){
+    uint64_t blocks=0,block=0;
+    if(!DGReadQ(cand-8,&blocks)||!blocks) return NO;
+    if(!DGReadQ(blocks,&block)||!block) return NO;
+    uint64_t g=0; uint8_t *e=DGSafeRead(block,64,&g);
+    if(!e) return NO;
+    BOOL ok=NO;
+    if(g>=6){ uint16_t hdr=0; memcpy(&hdr,e,2); uint32_t len=hdr>>6;
+        if(len==4){ char nm[8]={0}; memcpy(nm,e+2,4); DGDecName(nm,4); if(memcmp(nm,"None",4)==0) ok=YES; } }
+    DGFreeRead(e,g);
+    if(!ok) return NO;
+    DGGNamePool=cand;
+    fprintf(dbg,"NAMEPOOL-SEMA @ ins 0x%llx → 0x%llx VERIFIED None\n",(unsigned long long)fromIns,(unsigned long long)cand);
+    return YES;
+}
+
+/* امشِ على كل ADRP في __text — هدفه ضمن bss؟ → جرب ADD → تحقق دلالي */
+static void DGSemanticScan(FILE *dbg){
+    if(!DGTextLo){ if(DGGameTextLo){ DGTextLo=DGGameTextLo; DGTextHi=DGGameTextHi; } else return; }
+    uint64_t bssLo=0x117c6ca40+(DGTextLo-0x100000000ULL);
+    uint64_t bssHi=0x1189952d0+(DGTextLo-0x100000000ULL);
+    uint64_t sz=DGTextHi-DGTextLo;
+    uint64_t off=0;
+    int verified=0, checked=0;
+    while(off+16<sz && verified<4 && checked<4000){
+        uint64_t want=sz-off; if(want>33554432) want=33554432;
+        uint64_t got=0;
+        uint8_t *buf=DGSafeRead(DGTextLo+off,want,&got);
+        if(!buf){ off+=want; continue; }
+        uint64_t lim=got-16;
+        for(uint64_t q=0;q<lim && verified<4 && checked<4000;q+=4){
+            uint32_t w; memcpy(&w,buf+q,4);
+            if((w&0x9F000000)!=0x90000000) continue; /* ADRP فقط */
+            uint32_t rd=w&31;
+            uint64_t imm=(((uint64_t)(w>>5)&0x7FFFF)<<14)|(((uint64_t)(w>>29)&3)<<12);
+            uint64_t pg=((DGTextLo+off+q)&~0xFFFULL)+imm;
+            if(pg<bssLo||pg>=bssHi) continue;
+            /* ADD rd,rd,#imm في التعليمات الثلاث التالية */
+            for(int k=1;k<=3;k++){
+                uint32_t w2; memcpy(&w2,buf+q+k*4,4);
+                if((w2&0xFF000000)==0x91000000&&(w2&31)==rd&&((w2>>5)&31)==rd){
+                    uint64_t addr=pg+(((w2>>10)&0xFFF)<<(12*((w2>>22)&1)));
+                    if(addr<bssLo||addr>=bssHi) break;
+                    checked++;
+                    if(!DGGUObj&&DGSemaVerifyGUObj(addr,dbg,DGTextLo+off+q)){ verified++; break; }
+                    if(DGGUObj&&!DGGNamePool&&DGSemaVerifyNamePool(addr,dbg,DGTextLo+off+q)){ verified++; break; }
+                    if(!DGGNamePool&&checked<2000&&DGSemaVerifyNamePool(addr,dbg,DGTextLo+off+q)){ verified++; break; }
+                    break;
+                }
+            }
+        }
+        DGFreeRead(buf,got);
+        off+=got?got:want;
+        if(!got) off+=want;
+    }
+    fprintf(dbg,"SEMASCAN done checked=%d verified=%d GUObj=%d Pool=%d\n",checked,verified,DGGUObj!=0,DGGNamePool!=0);
+    fflush(dbg);
+}
+
 static void DGUE4Scan(void){
     static NSTimeInterval lastTry=0;
     static BOOL found=NO;
@@ -2186,6 +2261,7 @@ static void DGUE4Scan(void){
     if(DGSnapCount){ fprintf(dbg,"REGISTERED SNAPSHOTS ready=%d\n",DGSnapCount); fflush(dbg); }
     { static NSTimeInterval lastSweep=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
       if(DGSnapCount>=2 && up>120.0 && up-lastSweep>300.0){ lastSweep=up; fprintf(dbg,"--- OBJSWEEP (t+%ds) ---\n",(int)up); DGObjectSweep(dbg); } }
+    DGSemanticScan(dbg);
     DGResolveOfficial(dbg);
     if(DGGUObj && DGGNamePool){ static BOOL walked=NO; if(!walked){ walked=YES; fprintf(dbg,"--- OFFICIAL WALK ---\n"); DGWalkObjects(dbg); } }
     { static NSTimeInterval lastHunt=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
@@ -2207,6 +2283,7 @@ static void DGUE4Scan(void){
       } }
     { static NSTimeInterval lastSweep=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
       if(DGSnapCount>=2 && up>120.0 && up-lastSweep>300.0){ lastSweep=up; fprintf(dbg,"--- OBJSWEEP (t+%ds) ---\n",(int)up); DGObjectSweep(dbg); } }
+    DGSemanticScan(dbg);
     DGResolveOfficial(dbg);
     if(DGGUObj && DGGNamePool){ static BOOL walked=NO; if(!walked){ walked=YES; fprintf(dbg,"--- OFFICIAL WALK ---\n"); DGWalkObjects(dbg); } }
     { static NSTimeInterval lastHunt=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
@@ -2228,6 +2305,7 @@ static void DGUE4Scan(void){
       } }
     { static NSTimeInterval lastSweep=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
       if(DGSnapCount>=2 && up>120.0 && up-lastSweep>300.0){ lastSweep=up; fprintf(dbg,"--- OBJSWEEP (t+%ds) ---\n",(int)up); DGObjectSweep(dbg); } }
+    DGSemanticScan(dbg);
     DGResolveOfficial(dbg);
     if(DGGUObj && DGGNamePool){ static BOOL walked=NO; if(!walked){ walked=YES; fprintf(dbg,"--- OFFICIAL WALK ---\n"); DGWalkObjects(dbg); } }
     { static NSTimeInterval lastHunt=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
