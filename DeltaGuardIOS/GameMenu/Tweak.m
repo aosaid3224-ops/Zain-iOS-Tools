@@ -2583,30 +2583,49 @@ static void __attribute__((unused)) DGTrackPositions(FILE *dbg){
     else snprintf(DGTrackStat,sizeof(DGTrackStat),"T1#%d ✓ — سكون",DGTrackT1Count);
     fflush(dbg);
 }
-/* v0.29: قارئ المواقع الحي — يكتشف FTransform تلقائياً بفلتر الكواترنيون |q|≈1 — churn-proof */
+/* v0.30: متتبع المؤشرات الحي — يتبع مؤشرات الشخصية إلى مكوناتها (كبسولة/مش/كاميرا) ويكشف تحويلاتها */
 static void DGTrackLivePrint(FILE *dbg){
     for(int t=0;t<DGTrackN;t++){
-        uint64_t obj=DGTrackObj[t]; uint64_t g=0;
-        uint8_t *b=DGSafeRead(obj+0x140,2048,&g);
-        if(!b){ fprintf(dbg,"LIVE cls=%u self=%u DEAD\n",DGTrackCls[t],DGTrackSelf[t]); continue; }
-        fprintf(dbg,"LIVE cls=%u self=%u obj=0x%llx T=[",DGTrackCls[t],DGTrackSelf[t],(unsigned long long)obj);
-        int found=0; int lim=(int)(g<2048?g:2048);
-        for(int off=0;off+0x34<=lim&&found<6;off+=4){
-            float q[4],tr[3],sc[3];
-            memcpy(q,b+off,16); memcpy(tr,b+off+16,12); memcpy(sc,b+off+28,12);
-            float n=q[0]*q[0]+q[1]*q[1]+q[2]*q[2]+q[3]*q[3];
-            if(n>0.9f&&n<1.1f && tr[0]>-100000&&tr[0]<100000 && tr[1]>-100000&&tr[1]<100000 && tr[2]>-100000&&tr[2]<100000
-               && sc[0]>0.1f&&sc[0]<10&&sc[1]>0.1f&&sc[1]<10&&sc[2]>0.1f&&sc[2]<10){
-                fprintf(dbg,"@%x(q %.2f %.2f %.2f %.2f p %.1f %.1f %.1f) ",off,q[0],q[1],q[2],q[3],tr[0],tr[1],tr[2]);
-                found++;
-            }
+        uint64_t obj=DGTrackObj[t];
+        if(DGTrackCls[t]!=2117 && DGTrackCls[t]!=2118){
+            fprintf(dbg,"LIVE cls=%u self=%u obj=0x%llx STATIC\n",DGTrackCls[t],DGTrackSelf[t],(unsigned long long)obj);
+            continue;
         }
-        fprintf(dbg,"]\n");
-        DGFreeRead(b,g);
+        fprintf(dbg,"LIVE2 self=%u obj=0x%llx\n",DGTrackSelf[t],(unsigned long long)obj);
+        for(int po=0x20;po<=0x600;po+=8){
+            uint64_t p=0; if(!DGReadQ(obj+po,&p)) continue;
+            if(p<0x100000000ULL||p>=0x400000000ULL||(p&7)) continue;
+            uint64_t tcls=0; if(!DGReadQ(p+0x8,&tcls)||!tcls) continue;
+            uint32_t tcidx=0; uint64_t g=0;
+            uint8_t *ib=DGSafeRead(tcls+0x24,4,&g);
+            if(!ib||g<4){ if(ib)DGFreeRead(ib,g); continue; }
+            memcpy(&tcidx,ib,4); DGFreeRead(ib,g);
+            if(tcidx>200000) continue;
+            uint8_t *b=DGSafeRead(p+0x140,2048,&g);
+            int found=0;
+            if(b){
+                int lim=(int)(g<2048?g:2048);
+                for(int off=0;off+0x34<=lim&&found<3;off+=4){
+                    float q[4],tr[3],sc[3];
+                    memcpy(q,b+off,16); memcpy(tr,b+off+16,12); memcpy(sc,b+off+28,12);
+                    float n=q[0]*q[0]+q[1]*q[1]+q[2]*q[2]+q[3]*q[3];
+                    BOOL identity=(q[0]==1.f&&q[1]==0.f&&q[2]==0.f&&q[3]==0.f&&tr[0]==0.f&&tr[1]==0.f&&tr[2]==0.f);
+                    if(!identity && n>0.9f&&n<1.1f && tr[0]>-100000&&tr[0]<100000 && tr[1]>-100000&&tr[1]<100000 && tr[2]>-100000&&tr[2]<100000
+                       && sc[0]>0.1f&&sc[0]<10&&sc[1]>0.1f&&sc[1]<10&&sc[2]>0.1f&&sc[2]<10){
+                        if(found==0) fprintf(dbg,"  +0x%x → cls=%u obj=0x%llx T=[",po,tcidx,(unsigned long long)p);
+                        fprintf(dbg,"@%x(p %.1f %.1f %.1f) ",off,tr[0],tr[1],tr[2]);
+                        found++;
+                    }
+                }
+                DGFreeRead(b,g);
+            }
+            if(found) fprintf(dbg,"]\n");
+        }
     }
     fflush(dbg);
-    snprintf(DGTrackStat,sizeof(DGTrackStat),"LIVE ✓ n=%d — تحرك وشاهد اللوغ",DGTrackN);
+    snprintf(DGTrackStat,sizeof(DGTrackStat),"LIVE2 ✓ n=%d — اتبع المؤشرات",DGTrackN);
 }
+
 static int DGTrackRescan(FILE *dbg);
 static NSTimeInterval DGTrackLastTick=0;
 static void DGTrackTick(FILE *dbg){
