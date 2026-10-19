@@ -2294,6 +2294,7 @@ static void DGFinalSweep(FILE *dbg){
         uint64_t slide=DGTextLo-0x100000000ULL;
         static const uint64_t kC[]={0x118870040ULL,0x118871040ULL,0x118872040ULL,0x11886f040ULL};
         for(int i=0;i<4&&!DGGNamePool;i++) DGTryPoolCandidate(kC[i]+slide,dbg,kC[i]);
+        if(!DGGNamePool){ fprintf(dbg,"--- POOLSEMA (fallback) ---\n"); DGPoolSemanticScan(dbg); }
     }
     /* ②+③+④ المشي الشامل */
     uint64_t objObjects=DGGUObj+0x10;
@@ -2341,6 +2342,78 @@ static void DGFinalSweep(FILE *dbg){
         }
     }
     fprintf(dbg,"===== FINAL SWEEP END: names=%d players=%d pool=%d =====\n",names,players,DGGNamePool!=0);
+    fflush(dbg);
+}
+
+/* ماسح GNamePool الدلالي: كل ADRP→bss ← 4 مواضع Blocks ← تحقق إحصائي */
+static int DGStatValidateBlock(uint64_t block, FILE *dbg){
+    uint64_t g3=0; uint8_t *e=DGSafeRead(block,0x4000,&g3);
+    if(!e||g3<0x100) return 0;
+    int valid=0;
+    for(uint64_t off=0;off+80<g3&&valid<40;off+=2){
+        uint16_t hdr; memcpy(&hdr,e+off,2);
+        uint32_t len=hdr>>6;
+        if(len<2||len>60){ continue; }
+        if(off+2+len>g3) break;
+        char t[80]={0};
+        memcpy(t,e+off+2,len);
+        /* جرب: raw و dec */
+        BOOL ok=1; for(uint32_t i=0;t[i]&&ok;i++) if(t[i]<32||t[i]>126) ok=0;
+        if(!ok){ memcpy(t,e+off+2,len); DGDecName(t,len); ok=1;
+            for(uint32_t i=0;t[i]&&ok;i++) if(t[i]<32||t[i]>126) ok=0; }
+        if(ok&&t[0]) valid++;
+        off+=len;
+    }
+    DGFreeRead(e,g3);
+    return valid;
+}
+static void DGPoolSemanticScan(FILE *dbg){
+    if(DGGNamePool||!DGTextLo) return;
+    uint64_t bssLo=0x117c6ca40+(DGTextLo-0x100000000ULL);
+    uint64_t bssHi=0x1189952d0+(DGTextLo-0x100000000ULL);
+    uint64_t sz=DGTextHi-DGTextLo;
+    uint64_t off=0; int checked=0;
+    static const int64_t kOffs[4]={-8, 0x28, 0x30, 0x38};
+    while(off+16<sz && !DGGNamePool && checked<3000){
+        uint64_t want=sz-off; if(want>33554432) want=33554432;
+        uint64_t got=0;
+        uint8_t *buf=DGSafeRead(DGTextLo+off,want,&got);
+        if(!buf){ off+=want; continue; }
+        uint64_t lim=got-16;
+        for(uint64_t q=0;q<lim && !DGGNamePool && checked<3000;q+=4){
+            uint32_t w; memcpy(&w,buf+q,4);
+            if((w&0x9F000000)!=0x90000000) continue;
+            uint32_t rd=w&31;
+            uint64_t imm=(((uint64_t)(w>>5)&0x7FFFF)<<14)|(((uint64_t)(w>>29)&3)<<12);
+            uint64_t pg=((DGTextLo+off+q)&~0xFFFULL)+imm;
+            if(pg<bssLo||pg>=bssHi) continue;
+            for(int k=1;k<=3;k++){
+                uint32_t w2; memcpy(&w2,buf+q+k*4,4);
+                if((w2&0xFF000000)==0x91000000&&(w2&31)==rd&&((w2>>5)&31)==rd){
+                    uint64_t addr=pg+(((w2>>10)&0xFFF)<<(12*((w2>>22)&1)));
+                    if(addr<bssLo||addr>=bssHi) break;
+                    checked++;
+                    if(checked%200==0){ fprintf(dbg,"POOLSEMA checked=%d\n",checked); fflush(dbg); }
+                    for(int oi=0;oi<4&&!DGGNamePool;oi++){
+                        uint64_t blocks=0,block=0;
+                        int64_t oo=kOffs[oi];
+                        uint64_t at=(oo<0)?(addr-(uint64_t)(-oo)):(addr+(uint64_t)oo);
+                        if(!DGReadQ(at,&blocks)||!blocks) continue;
+                        if(!DGReadQ(blocks,&block)||!block) continue;
+                        int valid=DGStatValidateBlock(block,dbg);
+                        if(valid>=8){ DGGNamePool=addr;
+                            fprintf(dbg,"NAMEPOOL-SEMA @ 0x%llx (Blocks at %+lld) valid=%d ✓✓✓\n",(unsigned long long)addr,(long long)oo,valid);
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+        DGFreeRead(buf,got);
+        off+=got?got:want;
+        if(!got) off+=want;
+    }
+    fprintf(dbg,"POOLSEMA done checked=%d pool=%d\n",checked,DGGNamePool!=0);
     fflush(dbg);
 }
 
