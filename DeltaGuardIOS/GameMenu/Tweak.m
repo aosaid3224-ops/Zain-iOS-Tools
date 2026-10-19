@@ -1664,6 +1664,7 @@ static void DGRunProbes(FILE *dbg){
         if(!as) continue;
         uint64_t a=strtoull([as UTF8String],0,16);
         int n=[[p objectForKey:@"n"] intValue]; if(n<=0||n>4096) n=128;
+        if([p[@"rel"] boolValue]){ if(!DGGameTextLo) continue; a+=DGGameTextLo-0x100000000ULL; }
         if(a<0x1000) continue;
         uint64_t got=0; uint8_t *b=DGSafeRead(a,(uint64_t)n,&got);
         fprintf(dbg,"PROBE 0x%llx n=%d : ",(unsigned long long)a,n);
