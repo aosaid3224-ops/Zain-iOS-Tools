@@ -1719,6 +1719,57 @@ static int DGWatchBss(FILE *dbg){
     return found;
 }
 
+/* كاسح الكائنات المباشر: vtable داخل __TEXT + ترجمة اسم من اللقطة = UObject حي */
+static int DGObjectSweep(FILE *dbg){
+    if(!DGSnapCount||!DGGameTextLo) return 0;
+    uint64_t tLo=DGGameTextLo, tHi=DGGameTextHi;
+    int hits=0, scanned=0;
+    for(uint32_t ri=0; ri<DGRegionCount && hits<20; ri++){
+        uint64_t lo=DGRegions[ri*2], hi=DGRegions[ri*2+1];
+        uint64_t sz=hi-lo;
+        if(sz<0x1000||sz>0x40000000ULL) continue;
+        if(lo>=tLo&&lo<tHi) continue; /* لا كود */
+        uint64_t off=0;
+        while(off+0x18<sz && hits<20){
+            uint64_t want=sz-off; if(want>33554432) want=33554432;
+            uint64_t got=0;
+            uint8_t *buf=DGSafeRead(lo+off,want,&got);
+            if(!buf) break;
+            uint64_t lim=got-0x18;
+            for(uint64_t q=0;q<lim && hits<20;q+=0x18*4){ /* عينة كل 4 خانات */
+                uint64_t obj; memcpy(&obj,buf+q,8);
+                if(obj<0x100000000ULL||(obj&7)||obj>=tLo) continue;
+                uint64_t v=0;
+                if(!DGReadQ(obj,&v)) continue;
+                scanned++;
+                if(v<tLo||v>=tHi) continue;
+                /* UObject محتمل — ترجم اسمه من اللقطة */
+                uint64_t got2=0; uint8_t *nb=DGSafeRead(obj+0x18,4,&got2);
+                if(!nb||got2<4) continue;
+                uint32_t nid; memcpy(&nid,nb,4); DGFreeRead(nb,got2);
+                char nm[64]="";
+                if(nid && DGDecodeAnyBlock(nid,nm,sizeof nm)){
+                    /* UObject مؤكد بالاسم! اقرأ كلاسه أيضًا */
+                    uint64_t cls=0; char cn[64]="";
+                    if(DGReadQ(obj+0x10,&cls)&&cls){
+                        uint8_t *cb=DGSafeRead(cls+0x18,4,&got2);
+                        if(cb&&got2>=4){ uint32_t cid; memcpy(&cid,cb,4); DGFreeRead(cb,got2); DGDecodeAnyBlock(cid,cn,sizeof cn); }
+                    }
+                    fprintf(dbg,"OBJHIT @ 0x%llx name=%s class=%s vtab=0x%llx\\n",
+                        (unsigned long long)obj,nm,cn,(unsigned long long)v);
+                    hits++;
+                }
+            }
+            DGFreeRead(buf,got);
+            if(!got) break;
+            off+=got;
+        }
+    }
+    fprintf(dbg,"OBJSWEEP scanned=%d hits=%d\\n",scanned,hits);
+    fflush(dbg);
+    return hits;
+}
+
 static void DGUE4Scan(void){
     static NSTimeInterval lastTry=0;
     static BOOL found=NO;
