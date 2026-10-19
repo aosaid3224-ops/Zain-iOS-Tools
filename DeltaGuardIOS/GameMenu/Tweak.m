@@ -2237,7 +2237,8 @@ static void DGSemanticScan(FILE *dbg){
                     uint64_t addr=pg+(((w2>>10)&0xFFF)<<(12*((w2>>22)&1)));
                     if(addr<bssLo||addr>=bssHi) break;
                     checked++;
-                    if(DGSemaVerifyGUObj(addr,dbg,DGTextLo+off+q)){ if(maxe==DGMaxSeen) verified++; break; }
+                    uint64_t oldGUObj=DGGUObj;
+                    if(DGSemaVerifyGUObj(addr,dbg,DGTextLo+off+q)){ if(DGGUObj!=oldGUObj) verified++; break; }
                     if(!DGGNamePool&&DGSemaVerifyNamePool(addr,dbg,DGTextLo+off+q)){ verified++; break; }
                     break;
                 }
