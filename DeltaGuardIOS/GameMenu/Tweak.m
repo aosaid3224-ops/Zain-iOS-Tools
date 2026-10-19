@@ -86,6 +86,7 @@ static BOOL DGDebugLines=NO;
 static dispatch_block_t DGIdleBlock;
 static void DGHaptic(void);
 static BOOL DGVerifyPoolStruct(uint64_t A);
+static void DGPoolSemanticScan(FILE *dbg);
 
 /* قاعدة الكاميرا الحالية — تُحدّث كل فريم عند تفعيل خطوط التجربة */
 static float DGCamPos[3]={0,0,0}, DGCamFwd[3]={0,0,1}, DGCamRight[3]={1,0,0}, DGCamUp[3]={0,1,0};
