@@ -2583,7 +2583,7 @@ static void __attribute__((unused)) DGTrackPositions(FILE *dbg){
     else snprintf(DGTrackStat,sizeof(DGTrackStat),"T1#%d ✓ — سكون",DGTrackT1Count);
     fflush(dbg);
 }
-/* v0.30: متتبع المؤشرات الحي — يتبع مؤشرات الشخصية إلى مكوناتها (كبسولة/مش/كاميرا) ويكشف تحويلاتها */
+/* v0.31: LIVE3 — متتبع مُسمّى بقراءة مقطعية محصنة + نوافذ الجلسة القديمة (rc+0x180) + أسماء GNamePool */
 static void DGTrackLivePrint(FILE *dbg){
     for(int t=0;t<DGTrackN;t++){
         uint64_t obj=DGTrackObj[t];
@@ -2591,39 +2591,47 @@ static void DGTrackLivePrint(FILE *dbg){
             fprintf(dbg,"LIVE cls=%u self=%u obj=0x%llx STATIC\n",DGTrackCls[t],DGTrackSelf[t],(unsigned long long)obj);
             continue;
         }
-        fprintf(dbg,"LIVE2 self=%u obj=0x%llx\n",DGTrackSelf[t],(unsigned long long)obj);
-        for(int po=0x20;po<=0x600;po+=8){
-            uint64_t p=0; if(!DGReadQ(obj+po,&p)) continue;
-            if(p<0x100000000ULL||p>=0x400000000ULL||(p&7)) continue;
-            uint64_t tcls=0; if(!DGReadQ(p+0x8,&tcls)||!tcls) continue;
-            uint32_t tcidx=0; uint64_t g=0;
-            uint8_t *ib=DGSafeRead(tcls+0x24,4,&g);
-            if(!ib||g<4){ if(ib)DGFreeRead(ib,g); continue; }
-            memcpy(&tcidx,ib,4); DGFreeRead(ib,g);
-            if(tcidx>200000) continue;
-            uint8_t *b=DGSafeRead(p+0x140,2048,&g);
-            int found=0;
-            if(b){
-                int lim=(int)(g<2048?g:2048);
-                for(int off=0;off+0x34<=lim&&found<3;off+=4){
+        char me[80]=""; { uint64_t g=0; uint8_t *nb=DGSafeRead(obj+0x1c,4,&g);
+            if(nb&&g>=4){ uint32_t nid=0; memcpy(&nid,nb,4); DGFreeRead(nb,g); DGOfficialName(nid,me,sizeof me); } }
+        fprintf(dbg,"LIVE3 self=%u obj=0x%llx me=%s\n",DGTrackSelf[t],(unsigned long long)obj,me[0]?me:"?");
+        for(int po=0x120;po<=0x400;po+=8){
+            uint64_t rc=0; if(!DGReadQ(obj+po,&rc)||!rc||rc<0x100000000ULL||rc>=0x400000000ULL||(rc&7)) continue;
+            char cn[80]=""; uint32_t cid=0;
+            { uint64_t g=0; uint8_t *cb=DGSafeRead(rc+0x1c,4,&g);
+              if(cb&&g>=4){ memcpy(&cid,cb,4); DGFreeRead(cb,g); DGOfficialName(cid,cn,sizeof cn); } }
+            /* مسح مقطعي 0x100B — محصن ضد فشل القراءة الكلي عند حدود الصفحات */
+            char tbuf[256]; tbuf[0]=0; int tfound=0;
+            for(uint64_t bs=0x100;bs<0x500&&tfound<3;bs+=0x100){
+                uint64_t gg=0; uint8_t *b=DGSafeRead(rc+bs,0x100,&gg);
+                if(!b) continue;
+                int lim=(int)gg;
+                for(int off=0;off+0x34<=lim&&tfound<3;off+=4){
                     float q[4],tr[3],sc[3];
                     memcpy(q,b+off,16); memcpy(tr,b+off+16,12); memcpy(sc,b+off+28,12);
                     float n=q[0]*q[0]+q[1]*q[1]+q[2]*q[2]+q[3]*q[3];
                     BOOL identity=(q[0]==1.f&&q[1]==0.f&&q[2]==0.f&&q[3]==0.f&&tr[0]==0.f&&tr[1]==0.f&&tr[2]==0.f);
                     if(!identity && n>0.9f&&n<1.1f && tr[0]>-100000&&tr[0]<100000 && tr[1]>-100000&&tr[1]<100000 && tr[2]>-100000&&tr[2]<100000
                        && sc[0]>0.1f&&sc[0]<10&&sc[1]>0.1f&&sc[1]<10&&sc[2]>0.1f&&sc[2]<10){
-                        if(found==0) fprintf(dbg,"  +0x%x → cls=%u obj=0x%llx T=[",po,tcidx,(unsigned long long)p);
-                        fprintf(dbg,"@%x(p %.1f %.1f %.1f) ",off,tr[0],tr[1],tr[2]);
-                        found++;
+                        int used=(int)strlen(tbuf);
+                        if(used<200) snprintf(tbuf+used,256-used,"@%llx(p %.1f %.1f %.1f) ",(unsigned long long)(bs+off),tr[0],tr[1],tr[2]);
+                        tfound++;
                     }
                 }
-                DGFreeRead(b,g);
+                DGFreeRead(b,gg);
             }
-            if(found) fprintf(dbg,"]\n");
+            BOOL isComp=(cn[0]&&strstr(cn,"omponent")!=NULL);
+            if(isComp||tfound>0){
+                fprintf(dbg,"  +0x%x rc=0x%llx cid=%u name=%s",(unsigned)po,(unsigned long long)rc,cid,cn[0]?cn:"?");
+                if(tfound) fprintf(dbg," T=[%s]",tbuf);
+                /* نافذة الموقع المثبتة من الجلسة القديمة: rc+0x180 × 96B */
+                uint64_t g=0; uint8_t *pd=DGSafeRead(rc+0x180,96,&g);
+                if(pd){ fprintf(dbg," @180="); for(uint64_t x=0;x<g&&x<24;x++) fprintf(dbg,"%02x",pd[x]); DGFreeRead(pd,g); }
+                fprintf(dbg,"\n");
+            }
         }
     }
     fflush(dbg);
-    snprintf(DGTrackStat,sizeof(DGTrackStat),"LIVE2 ✓ n=%d — اتبع المؤشرات",DGTrackN);
+    snprintf(DGTrackStat,sizeof(DGTrackStat),"LIVE3 ✓ n=%d",DGTrackN);
 }
 
 static int DGTrackRescan(FILE *dbg);
