@@ -885,7 +885,9 @@ static void DGRegisterBlock(uint64_t entry, FILE *dbg){
     int ok=0;
     for(uint64_t i=0;i+8<g&&!ok;i+=2)
         for(int k=0;k<DGXorKeyCount;k++)
-            if(DGMatchNone(b+i+2,DGXorKeys[k])) ok=1;
+            if(DGMatchNone(b+i+2,DGXorKeys[k])){
+                DGDetectedXorKey=DGXorKeys[k]; DGDetectedXorKeyValid=YES; ok=1; break;
+            }
     DGFreeRead(b,g);
     if(!ok) return;
     for(int i=0;i<DGBlockCount;i++) if((DGBlocks[i]&~0xFFFFULL)==page) return;
@@ -990,29 +992,21 @@ static int DGFindNameBlocksHeap(FILE *dbg){
 }
 
 
-/* فك FName (تخطيط 4.23+: Id>>16=block, Id&0xFFFF=offset داخل البلوك) */
-static BOOL DGDecodeFName(uint32_t nameId, char *out, int outLen){
-    out[0]=0;
-    if(!DGNamePool) return NO;
-    /* DGNamePool = عنوان Blocks[0] مباشرة — المصفوفة عنده، لا تفك مرجعًا إضافيًا */
-    uint32_t blockIdx=nameId>>16, off=nameId&0xFFFF;
-    if(blockIdx>512||off>0xFF00) return NO;
-    uint64_t block=0;
-    if(!DGReadQ(DGNamePool+(uint64_t)blockIdx*8,&block)||!block) return NO;
-    if(!DGInRegions(block)) return NO;
-    uint64_t got=0;
-    uint8_t *h=DGSafeRead(block+off,2,&got);
+/* فك إدخال FName بالـ length المخزن في header؛ nextOff يسمح بمشي الإدخالات حتى لو تعذر فك الاسم. */
+static BOOL DGDecodeNameEntry(uint64_t block,uint32_t off,char *out,int outLen,uint32_t *nextOff){
+    if(out&&outLen>0) out[0]=0;
+    uint64_t got=0; uint8_t *h=DGSafeRead(block+off,2,&got);
     if(!h||got<2){ if(h)DGFreeRead(h,got); return NO; }
     uint16_t hdr; memcpy(&hdr,h,2); DGFreeRead(h,got);
-    if(hdr&1) return NO; /* wide name */
-    uint8_t *s=DGSafeRead(block+off+2,(uint64_t)outLen,&got);
-    if(!s) return NO;
-    int n=(int)(got<(uint64_t)outLen?got:(uint64_t)outLen);
-    uint8_t raw[80];
-    if(n>79) n=79;
-    memcpy(raw,s,n); raw[n]=0;
-    DGFreeRead(s,got);
-    /* ابدأ بالمفتاح الذي تحقق عبر None، ثم جرّب بقية الإعدادات */
+    uint32_t chars=(uint32_t)(hdr>>6);
+    BOOL wide=(hdr&1)!=0;
+    uint64_t charBytes=wide?2:1;
+    uint64_t entryEnd=(uint64_t)off+2+(uint64_t)chars*charBytes+charBytes;
+    uint64_t alignedEnd=(entryEnd+1)&~1ULL;
+    if(nextOff) *nextOff=alignedEnd<=0x10000?(uint32_t)alignedEnd:0x10000;
+    if(!chars||chars>0x400||alignedEnd>0x10000||wide||!out||outLen<=1||chars>=(uint32_t)outLen) return NO;
+    uint8_t *raw=DGSafeRead(block+off+2,chars,&got);
+    if(!raw||got<chars){ if(raw)DGFreeRead(raw,got); return NO; }
     uint8_t keys[9]; int keyCount=0;
     if(DGDetectedXorKeyValid) keys[keyCount++]=DGDetectedXorKey;
     for(int k=0;k<DGXorKeyCount;k++){
@@ -1020,16 +1014,30 @@ static BOOL DGDecodeFName(uint32_t nameId, char *out, int outLen){
         for(int j=0;j<keyCount;j++) if(keys[j]==kk) duplicate=YES;
         if(!duplicate&&keyCount<9) keys[keyCount++]=kk;
     }
-    for(int k=0;k<keyCount;k++){
-        uint8_t kk=keys[k];
-        for(int i=0;i<n;i++) out[i]=(char)(raw[i]^kk);
-        out[n]=0;
-        BOOL ok=out[0]!=0;
-        for(int i=0;out[i]&&ok;i++){ if(out[i]<32||out[i]>126) ok=NO; }
-        if(ok) return YES;
+    BOOL decoded=NO;
+    for(int k=0;k<keyCount&&!decoded;k++){
+        uint8_t kk=keys[k]; BOOL ok=YES;
+        for(uint32_t i=0;i<chars;i++){
+            uint8_t ch=raw[i]^kk;
+            if(ch<32||ch>126){ ok=NO; break; }
+            out[i]=(char)ch;
+        }
+        if(ok){ out[chars]=0; decoded=YES; }
     }
-    out[0]=0;
-    return NO;
+    if(!decoded) out[0]=0;
+    DGFreeRead(raw,got);
+    return decoded;
+}
+
+/* FNameEntryId: upper bits select block, low 16 bits are the byte offset within that block. */
+static BOOL DGDecodeFName(uint32_t nameId, char *out, int outLen){
+    if(out&&outLen>0) out[0]=0;
+    if(!DGNamePool||!out||outLen<=1) return NO;
+    uint32_t blockIdx=nameId>>16, off=nameId&0xFFFF;
+    if(blockIdx>512) return NO;
+    uint64_t block=0;
+    if(!DGReadQ(DGNamePool+(uint64_t)blockIdx*8,&block)||!block||!DGInRegions(block)) return NO;
+    return DGDecodeNameEntry(block,off,out,outLen,NULL);
 }
 static BOOL DGObjName(uint64_t obj, uint32_t nameOff, char *out, int outLen){
     out[0]=0;
@@ -1471,7 +1479,7 @@ static void DGUE4Scan(void){
     FILE *dbg=fopen([outp UTF8String],"w");
     if(!dbg) return;
     if(DGNamePool){ fprintf(dbg,"POOL already solved @ 0x%llx\n",(unsigned long long)DGNamePool); fflush(dbg); }
-    fprintf(dbg,"=== OBSERVATORY v0.11.0 attempt %d regions=%u ===\n",DGUE4ScanCount,DGRegionCount);
+    fprintf(dbg,"=== OBSERVATORY v0.11.1 attempt %d regions=%u ===\n",DGUE4ScanCount,DGRegionCount);
     fflush(dbg);
     DGRunProbes(dbg);
     if(found){ fprintf(dbg,"END pool=%s gobjects=FOUND (probe refresh)\n",DGNamePool?"YES":"NO"); fclose(dbg); return; }
@@ -1517,34 +1525,16 @@ static void DGUE4Scan(void){
         int good=0;
         uint64_t blk0w=0;
         if(DGReadQ(DGNamePool,&blk0w)&&blk0w){
-            uint64_t off=0;
-            for(int e=0;e<24 && off<0x4000 && good<16;e++){
-                uint64_t g=0; uint8_t *h=DGSafeRead(blk0w+off,2,&g);
-                if(!h||g<2){ if(h)DGFreeRead(h,g); break; }
-                uint16_t hdr; memcpy(&hdr,h,2); DGFreeRead(h,g);
-                if(hdr&1){ off+=2; continue; } /* wide — تخطَّ */
-                uint8_t raw[80]={0};
-                uint64_t g2=0; uint8_t *nb=DGSafeRead(blk0w+off+2,72,&g2);
-                if(!nb) break;
-                uint64_t nn=g2<72?g2:72; memcpy(raw,nb,nn); DGFreeRead(nb,g2);
-                /* جرب مفاتيح XOR */
-                char best[72]=""; int blen=0;
-                for(int k=0;k<DGXorKeyCount;k++){
-                    char t[72]; uint64_t L=strnlen((char*)raw,71);
-                    for(uint64_t i=0;i<=L;i++) t[i]=(char)(raw[i]^DGXorKeys[k]);
-                    t[L<71?L:71]=0;
-                    BOOL ok=t[0]&&L>=2;
-                    for(uint64_t i=0;t[i]&&ok;i++) if(t[i]<32||t[i]>126) ok=NO;
-                    if(ok){ strncpy(best,t,71); blen=(int)L; break; }
-                }
-                if(best[0]){
-                    fprintf(dbg,"POOLSAMPLE off=0x%llx name=%s\n",(unsigned long long)off,best);
+            uint32_t off=0;
+            for(int e=0;e<256 && off<0x4000 && good<16;e++){
+                char name[80]={0}; uint32_t next=off;
+                BOOL decoded=DGDecodeNameEntry(blk0w,off,name,sizeof(name),&next);
+                if(next<=off||next>0x4000) break;
+                if(decoded){
+                    fprintf(dbg,"POOLSAMPLE off=0x%x name=%s\n",off,name);
                     good++;
-                    off += 2 + (uint64_t)blen + 1;
-                } else {
-                    off += 2 + 1;
                 }
-                off = (off + 1) & ~1ULL; /* محاذاة 2 */
+                off=next;
             }
         }
         fprintf(dbg,"POOLSAMPLE total=%d (walked)\n",good);
@@ -2433,7 +2423,7 @@ static UIView *DGToggleRow(CGFloat y, NSString *text, SEL action, UISwitch * __s
 
 + (NSString *)statsText{
     NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
-    return [NSString stringWithFormat:@"الذاكرة: %@ | التشغيل: %02d:%02d\nDeltaGuard v0.11.0 — UE4",
+    return [NSString stringWithFormat:@"الذاكرة: %@ | التشغيل: %02d:%02d\nDeltaGuard v0.11.1 — UE4",
         DGMemoryString(),(int)(up/60),((int)up)%60];
 }
 
