@@ -1874,6 +1874,97 @@ static int DGWatchAll(FILE *dbg){
     return found;
 }
 
+/* ===== وحدة الصيد المستقلّة v15: بلوكات + ترجمة + كائنات — ذرّية، بلا اعتماديات ===== */
+#define DGH_BLK 12
+static uint8_t *DGHBlk[DGH_BLK];
+static uint32_t DGHBlkLen[DGH_BLK];
+static int DGHN=0;
+/* التقاط ذرّي أثناء المسح: أي بلوك فيه None^XOR يُحفظ فورًا */
+static BOOL DGHGrab(const uint8_t *buf, uint64_t got, uint64_t absAt){
+    if(DGHN>=DGH_BLK||got<0x400) return NO;
+    for(uint64_t i=0;i+8<got;i+=2){
+        for(int k=0;k<3;k++){
+            uint8_t kk=(k==0)?0:(k==1?0x0E:0xD2);
+            if(buf[i+2]==('N'^kk)&&buf[i+3]==('o'^kk)&&buf[i+4]==('n'^kk)&&buf[i+5]==('e'^kk)&&buf[i+6]==(0^kk)){
+                for(int b=0;b<DGHN;b++) if(DGHBlk[b]==buf) return NO;
+                DGHBlk[DGHN]=(uint8_t*)malloc(got);
+                memcpy(DGHBlk[DGHN],buf,got);
+                DGHBlkLen[DGHN]=(uint32_t)got;
+                DGHN++;
+                return YES;
+            }
+        }
+    }
+    return NO;
+}
+/* ترجمة id بالترميز الصحيح (>>18, ×2, len=hdr>>6, XOR×3) */
+static BOOL DGHName(uint32_t id, char *out, int outLen){
+    out[0]=0;
+    if(!DGHN) return NO;
+    uint32_t bi=id>>18, uoff=(id&0x3FFFF)*2;
+    for(int b=0;b<DGHN;b++){
+        if(uoff+74>DGHBlkLen[b]) continue;
+        const uint8_t *blk=DGHBlk[b];
+        uint16_t hdr; memcpy(&hdr,blk+uoff,2);
+        uint32_t len=hdr>>6;
+        if(len<2||len>=(uint32_t)outLen||len>72) continue;
+        for(int k=0;k<3;k++){
+            uint8_t kk=(k==0)?0:(k==1?0x0E:0xD2);
+            char t[80]; BOOL ok=YES;
+            for(uint32_t i=0;i<len;i++){ char c=(char)(blk[uoff+2+i]^kk); t[i]=c; if(c<32||c>126) ok=NO; }
+            t[len]=0;
+            if(ok&&t[0]){ strncpy(out,t,outLen-1); out[outLen-1]=0; return YES; }
+        }
+    }
+    return NO;
+}
+/* كاسح الكائنات المستقل: vtab في __TEXT + اسم من DGHName */
+static int DGHHunt(FILE *dbg){
+    if(!DGHN||!DGGameTextLo) return 0;
+    uint64_t tLo=DGGameTextLo, tHi=DGGameTextHi;
+    int hits=0;
+    for(uint32_t ri=0; ri<DGRegionCount && hits<15; ri++){
+        uint64_t lo=DGRegions[ri*2], hi=DGRegions[ri*2+1];
+        uint64_t sz=hi-lo;
+        if(sz<0x8000||sz>0x40000000ULL) continue;
+        if(lo>=tLo&&lo<tHi) continue;
+        uint64_t off=0;
+        while(off+8<sz && hits<15){
+            uint64_t want=sz-off; if(want>33554432) want=33554432;
+            uint64_t got=0;
+            uint8_t *buf=DGSafeRead(lo+off,want,&got);
+            if(!buf){ off+=want; continue; }
+            DGHGrab(buf,got,lo+off);
+            uint64_t lim=got-0x24;
+            for(uint64_t q=0;q<lim && hits<15;q+=8){
+                uint64_t obj; memcpy(&obj,buf+q,8);
+                if(obj<0x100000000ULL||(obj&7)||obj>=tLo) continue;
+                uint64_t v=0;
+                if(!DGReadQ(obj,&v)||v<tLo||v>=tHi) continue;
+                uint64_t g2=0; uint8_t *nb=DGSafeRead(obj+0x1c,4,&g2);
+                if(!nb||g2<4){ if(nb)DGFreeRead(nb,g2); continue; }
+                uint32_t nid; memcpy(&nid,nb,4); DGFreeRead(nb,g2);
+                char nm[64]="";
+                if(nid&&DGHName(nid,nm,sizeof nm)&&strlen(nm)>=3){
+                    uint64_t cls=0; char cn[64]="";
+                    if(DGReadQ(obj+0x8,&cls)&&cls){
+                        uint8_t *cb=DGSafeRead(cls+0x1c,4,&g2);
+                        if(cb&&g2>=4){ uint32_t cid; memcpy(&cid,cb,4); DGFreeRead(cb,g2); DGHName(cid,cn,sizeof cn); }
+                    }
+                    fprintf(dbg,"DGHIT @ 0x%llx name=%s class=%s\n",(unsigned long long)obj,nm,cn);
+                    hits++;
+                }
+            }
+            DGFreeRead(buf,got);
+            off+=got?got:want;
+            if(!got) off+=want;
+        }
+    }
+    fprintf(dbg,"DGHUNT blocks=%d hits=%d\n",DGHN,hits);
+    fflush(dbg);
+    return hits;
+}
+
 static void DGUE4Scan(void){
     static NSTimeInterval lastTry=0;
     static BOOL found=NO;
@@ -1897,6 +1988,8 @@ static void DGUE4Scan(void){
     if(DGSnapCount){ fprintf(dbg,"REGISTERED SNAPSHOTS ready=%d\n",DGSnapCount); fflush(dbg); }
     { static NSTimeInterval lastSweep=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
       if(DGSnapCount>=2 && up>120.0 && up-lastSweep>300.0){ lastSweep=up; fprintf(dbg,"--- OBJSWEEP (t+%ds) ---\n",(int)up); DGObjectSweep(dbg); } }
+    { static NSTimeInterval lastHunt=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
+      if(up>60.0 && up-lastHunt>120.0){ lastHunt=up; fprintf(dbg,"--- DGHUNT (t+%ds) ---\n",(int)up); DGHHunt(dbg); } }
     { static BOOL bssWatched=NO; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
       if(!bssWatched && up>100.0){ bssWatched=YES; fprintf(dbg,"--- BSS WATCH (t+%ds) ---\n",(int)up); DGWatchBss(dbg); fprintf(dbg,"--- WATCH ALL (heap-inclusive) ---\n"); DGWatchAll(dbg); }
       if(DGWatchBase){
@@ -1914,6 +2007,8 @@ static void DGUE4Scan(void){
       } }
     { static NSTimeInterval lastSweep=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
       if(DGSnapCount>=2 && up>120.0 && up-lastSweep>300.0){ lastSweep=up; fprintf(dbg,"--- OBJSWEEP (t+%ds) ---\n",(int)up); DGObjectSweep(dbg); } }
+    { static NSTimeInterval lastHunt=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
+      if(up>60.0 && up-lastHunt>120.0){ lastHunt=up; fprintf(dbg,"--- DGHUNT (t+%ds) ---\n",(int)up); DGHHunt(dbg); } }
     { static BOOL bssWatched=NO; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
       if(!bssWatched && up>100.0){ bssWatched=YES; fprintf(dbg,"--- BSS WATCH (t+%ds) ---\n",(int)up); DGWatchBss(dbg); fprintf(dbg,"--- WATCH ALL (heap-inclusive) ---\n"); DGWatchAll(dbg); }
       if(DGWatchBase){
@@ -1931,6 +2026,8 @@ static void DGUE4Scan(void){
       } }
     { static NSTimeInterval lastSweep=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
       if(DGSnapCount>=2 && up>120.0 && up-lastSweep>300.0){ lastSweep=up; fprintf(dbg,"--- OBJSWEEP (t+%ds) ---\n",(int)up); DGObjectSweep(dbg); } }
+    { static NSTimeInterval lastHunt=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
+      if(up>60.0 && up-lastHunt>120.0){ lastHunt=up; fprintf(dbg,"--- DGHUNT (t+%ds) ---\n",(int)up); DGHHunt(dbg); } }
     { static BOOL bssWatched=NO; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
       if(!bssWatched && up>100.0){ bssWatched=YES; fprintf(dbg,"--- BSS WATCH (t+%ds) ---\n",(int)up); DGWatchBss(dbg); fprintf(dbg,"--- WATCH ALL (heap-inclusive) ---\n"); DGWatchAll(dbg); }
       if(DGWatchBase){
