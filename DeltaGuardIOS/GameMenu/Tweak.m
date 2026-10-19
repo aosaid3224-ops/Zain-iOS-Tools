@@ -2474,19 +2474,23 @@ static void DGIndexSweep(FILE *dbg){
             const char *cname="?";
             for(int k=0;kPlayerClassIdx[k];k++) if(kPlayerClassIdx[k]==cidx){ cname=kPlayerClassNames[k]; break; }
             fprintf(dbg,"IDXPLAYER #%d clsIdx=%u(%s) obj=0x%llx\n",players,cidx,cname,(unsigned long long)obj);
-            /* RootComponent تلقائي + POSDATA */
-            for(uint64_t K=0x140;K<=0x230;K+=8){
+            /* تفريغ كامل للكائن + قبول فهارس المكونات الحقيقية */
+            uint8_t *od=DGSafeRead(obj,768,&g);
+            if(od){ fprintf(dbg,"OBJDUMP #%d obj=0x%llx : ",players,(unsigned long long)obj);
+                for(uint64_t x=0;x<g;x++) fprintf(dbg,"%02x",od[x]);
+                fprintf(dbg,"\n"); DGFreeRead(od,g); }
+            static const uint32_t kCompIdx[]={184,1696,2115,2116,2377,2130,0};
+            for(uint64_t K=0x100;K<=0x300;K+=8){
                 uint64_t rc=0;
                 if(!DGReadQ(obj+K,&rc)||!rc||rc<0x100000000ULL||(rc&7)) continue;
-                uint64_t rcls=0, rcidx=0xFFFFFFFF;
+                uint64_t rcls=0; uint32_t rcidx=0xFFFFFFFF;
                 if(DGReadQ(rc+0x8,&rcls)&&rcls){
                     uint8_t *rb=DGSafeRead(rcls+0x24,4,&g);
                     if(rb&&g>=4){ memcpy(&rcidx,rb,4); DGFreeRead(rb,g); }
                 }
-                /* SceneComponent ~ idx around 1700s (CharacterMovementComponent=1696 → SceneComponent قريب) */
-                if(rcidx>=1600&&rcidx<2600){
+                for(int ci=0;kCompIdx[ci];ci++) if(kCompIdx[ci]==rcidx){
                     fprintf(dbg,"IDXRC #%d K=+0x%llx rcClsIdx=%u\n",players,(unsigned long long)K,rcidx);
-                    uint8_t *pd=DGSafeRead(rc+0x1c0,128,&g);
+                    uint8_t *pd=DGSafeRead(rc,192,&g);
                     if(pd){ fprintf(dbg,"IDXPOS #%d : ",players);
                         for(uint64_t x=0;x<g;x++) fprintf(dbg,"%02x",pd[x]);
                         fprintf(dbg,"\n"); DGFreeRead(pd,g); }
