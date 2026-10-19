@@ -1965,6 +1965,143 @@ static int DGHHunt(FILE *dbg){
     return hits;
 }
 
+/* ===== v16 FINAL: pattern-scan + ADRL + فك DeltaForce الحقيقي + مشي كائنات ===== */
+static uint64_t DGTextLo=0, DGTextHi=0;
+static uint64_t DGGUObj=0, DGGNamePool=0;
+
+/* فك اسم DeltaForce الحقيقي (من iOS_UEDumper DeltaForce.hpp) */
+static void DGDecName(char *str, uint32_t len){
+    if(!str||!len) return;
+    uint32_t key=0;
+    switch(len%9){
+        case 0: key=((len&0x1F)+len); break;
+        case 1: key=((len^0xDF)+len); break;
+        case 2: key=((len|0xCF)+len); break;
+        case 3: key=(33*len); break;
+        case 4: key=(len+(len>>2)); break;
+        case 5: key=(3*len+5); break;
+        case 6: key=(((4*len)|5)+len); break;
+        case 7: key=(((len>>4)|7)+len); break;
+        case 8: key=((len^0xC)+len); break;
+        default: key=((len^0x40)+len); break;
+    }
+    for(uint32_t i=0;i<len;i++) str[i]=(char)((key&0x80)^~str[i]);
+}
+
+/* نمط بايتات مع ? wildcard → أول تطابق في __text */
+static uint64_t DGPatScan(const char *pat, int len){
+    if(!DGTextLo) return 0;
+    /* أول بايت ثابت للـ memchr */
+    uint8_t first=(uint8_t)pat[0];
+    uint64_t sz=DGTextHi-DGTextLo;
+    uint64_t off=0;
+    while(off<sz){
+        uint64_t want=sz-off; if(want>33554432) want=33554432;
+        uint64_t got=0;
+        uint8_t *buf=DGSafeRead(DGTextLo+off,want,&got);
+        if(!buf){ off+=want; continue; }
+        uint64_t lim=got>(uint64_t)len?got-len:0;
+        for(uint64_t q=0;q<lim;q++){
+            if(buf[q]!=first) continue;
+            BOOL ok=YES;
+            for(int k=1;k<len;k++){
+                if(pat[k]!='?'&&buf[q+k]!=(uint8_t)pat[k]){ ok=NO; break; }
+            }
+            if(ok){ uint64_t r=DGTextLo+off+q; DGFreeRead(buf,got); return r; }
+        }
+        DGFreeRead(buf,got);
+        off+=got?got:want;
+        if(!got) off+=want;
+    }
+    return 0;
+}
+
+/* فك ADRL (ADRP+ADD) عند العنوان */
+static uint64_t DGDecodeADRL(uint64_t ins){
+    uint32_t w1=0; uint64_t g=0;
+    uint8_t *b=DGSafeRead(ins,8,&g);
+    if(!b||g<8){ if(b)DGFreeRead(b,g); return 0; }
+    memcpy(&w1,b,4); uint32_t w2; memcpy(&w2,b+4,4); DGFreeRead(b,g);
+    if((w1&0x9F000000)!=0x90000000) return 0;      /* ADRP */
+    if((w2&0xFF000000)!=0x91000000) return 0;      /* ADD imm */
+    uint64_t imm=(((w1>>5)&0x7FFFF)<<14)|(((w1>>29)&3)<<12);
+    uint64_t pg=(ins&~0xFFFULL)+imm;
+    uint64_t add=((w2>>10)&0xFFF) << (12*((w2>>22)&1));
+    return pg+add;
+}
+
+/* الحل الكامل: GUObjectArray + GNamePool بالبصمات الرسمية */
+static void DGResolveOfficial(FILE *dbg){
+    if(!DGTextLo){ if(DGGameTextLo){ DGTextLo=DGGameTextLo; DGTextHi=DGGameTextHi; } else return; }
+    if(!DGGUObj){
+        const char *p1="\x94\xE0\x23\x00\x91????\x94\x08\x7D\x80\x52";
+        uint64_t ins=DGPatScan(p1,13);
+        if(ins){ DGGUObj=DGDecodeADRL(ins+0x11);
+            if(dbg) fprintf(dbg,"GUOBJ-PATTERN @ 0x%llx → 0x%llx\n",(unsigned long long)ins,(unsigned long long)DGGUObj); }
+    }
+    if(!DGGNamePool){
+        const char *p2="\x4F\xD3????\x7D\x92????????\x91";
+        uint64_t ins=DGPatScan(p2,14);
+        if(ins){ DGGNamePool=DGDecodeADRL(ins+6);
+            if(dbg) fprintf(dbg,"NAMEPOOL-PATTERN @ 0x%llx → 0x%llx\n",(unsigned long long)ins,(unsigned long long)DGGNamePool); }
+    }
+    fflush(dbg);
+}
+
+/* قراءة اسم عبر GNamePool الرسمي: block=id>>18, off=(id&0x3FFFF)*2, len=hdr>>6, فك حقيقي */
+static BOOL DGOfficialName(uint32_t id, char *out, int outLen){
+    out[0]=0;
+    if(!DGGNamePool||!id) return NO;
+    uint32_t bi=id>>18, uoff=(id&0x3FFFF)*2;
+    uint64_t blocks=0, block=0;
+    /* BlocksOff = struct-8 (الملف الرسمي: BlocksOff -= sizeof(void*)) */
+    if(!DGReadQ(DGGNamePool-8,&blocks)||!blocks) return NO;
+    if(!DGReadQ(blocks+(uint64_t)bi*8,&block)||!block) return NO;
+    uint64_t g=0; uint8_t *e=DGSafeRead(block+uoff,80,&g);
+    if(!e||g<4){ if(e)DGFreeRead(e,g); return NO; }
+    uint16_t hdr; memcpy(&hdr,e,2);
+    uint32_t len=hdr>>6;
+    if(len<2||len>=(uint32_t)outLen||len+2>g){ DGFreeRead(e,g); return NO; }
+    memcpy(out,e+2,len);
+    DGFreeRead(e,g);
+    DGDecName(out,len);
+    out[len]=0;
+    for(uint32_t i=0;out[i];i++) if(out[i]<32||out[i]>126){ out[0]=0; return NO; }
+    return YES;
+}
+
+/* مشي الكائنات: Objects@+0x10 → chunks → items(0x18) → obj → name@+0x1c */
+static int DGWalkObjects(FILE *dbg){
+    if(!DGGUObj) return 0;
+    uint64_t base=DGGUObj; /* FUObjectArray */
+    uint64_t objObjects=base+0x10; /* TUObjectArray (الملف الرسمي) */
+    uint64_t objectsPtr=0;
+    if(!DGReadQ(objObjects+0x10,&objectsPtr)||!objectsPtr){ /* Objects قد يكون بعد GC ptrs */
+        if(!DGReadQ(objObjects+0x8,&objectsPtr)||!objectsPtr) return 0;
+    }
+    int printed=0;
+    for(int c=0;c<4&&printed<40;c++){
+        uint64_t chunk=0;
+        if(!DGReadQ(objectsPtr+(uint64_t)c*8,&chunk)||!chunk) break;
+        for(int i=0;i<64&&printed<40;i++){
+            uint64_t item=chunk+(uint64_t)i*0x18;
+            uint64_t obj=0;
+            if(!DGReadQ(item,&obj)||!obj||obj<0x100000000ULL||(obj&7)) continue;
+            uint64_t got=0; uint8_t *nb=DGSafeRead(obj+0x1c,4,&got);
+            if(!nb||got<4){ if(nb)DGFreeRead(nb,got); continue; }
+            uint32_t nid; memcpy(&nid,nb,4); DGFreeRead(nb,got);
+            char nm[80]="";
+            if(nid&&DGOfficialName(nid,nm,sizeof nm)&&strlen(nm)>=3){
+                fprintf(dbg,"OBJWALK [%d/%d] %s @ 0x%llx\n",c,i,nm,(unsigned long long)obj);
+                printed++;
+            }
+        }
+    }
+    fprintf(dbg,"OBJWALK done printed=%d\n",printed);
+    fflush(dbg);
+    return printed;
+}
+
 static void DGUE4Scan(void){
     static NSTimeInterval lastTry=0;
     static BOOL found=NO;
@@ -1988,6 +2125,8 @@ static void DGUE4Scan(void){
     if(DGSnapCount){ fprintf(dbg,"REGISTERED SNAPSHOTS ready=%d\n",DGSnapCount); fflush(dbg); }
     { static NSTimeInterval lastSweep=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
       if(DGSnapCount>=2 && up>120.0 && up-lastSweep>300.0){ lastSweep=up; fprintf(dbg,"--- OBJSWEEP (t+%ds) ---\n",(int)up); DGObjectSweep(dbg); } }
+    DGResolveOfficial(dbg);
+    if(DGGUObj && DGGNamePool){ static BOOL walked=NO; if(!walked){ walked=YES; fprintf(dbg,"--- OFFICIAL WALK ---\n"); DGWalkObjects(dbg); } }
     { static NSTimeInterval lastHunt=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
       if(up>60.0 && up-lastHunt>120.0){ lastHunt=up; fprintf(dbg,"--- DGHUNT (t+%ds) ---\n",(int)up); DGHHunt(dbg); } }
     { static BOOL bssWatched=NO; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
@@ -2007,6 +2146,8 @@ static void DGUE4Scan(void){
       } }
     { static NSTimeInterval lastSweep=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
       if(DGSnapCount>=2 && up>120.0 && up-lastSweep>300.0){ lastSweep=up; fprintf(dbg,"--- OBJSWEEP (t+%ds) ---\n",(int)up); DGObjectSweep(dbg); } }
+    DGResolveOfficial(dbg);
+    if(DGGUObj && DGGNamePool){ static BOOL walked=NO; if(!walked){ walked=YES; fprintf(dbg,"--- OFFICIAL WALK ---\n"); DGWalkObjects(dbg); } }
     { static NSTimeInterval lastHunt=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
       if(up>60.0 && up-lastHunt>120.0){ lastHunt=up; fprintf(dbg,"--- DGHUNT (t+%ds) ---\n",(int)up); DGHHunt(dbg); } }
     { static BOOL bssWatched=NO; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
@@ -2026,6 +2167,8 @@ static void DGUE4Scan(void){
       } }
     { static NSTimeInterval lastSweep=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
       if(DGSnapCount>=2 && up>120.0 && up-lastSweep>300.0){ lastSweep=up; fprintf(dbg,"--- OBJSWEEP (t+%ds) ---\n",(int)up); DGObjectSweep(dbg); } }
+    DGResolveOfficial(dbg);
+    if(DGGUObj && DGGNamePool){ static BOOL walked=NO; if(!walked){ walked=YES; fprintf(dbg,"--- OFFICIAL WALK ---\n"); DGWalkObjects(dbg); } }
     { static NSTimeInterval lastHunt=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
       if(up>60.0 && up-lastHunt>120.0){ lastHunt=up; fprintf(dbg,"--- DGHUNT (t+%ds) ---\n",(int)up); DGHHunt(dbg); } }
     { static BOOL bssWatched=NO; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
