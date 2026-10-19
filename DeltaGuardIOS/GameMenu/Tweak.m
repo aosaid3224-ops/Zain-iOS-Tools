@@ -2217,13 +2217,13 @@ static void DGSemanticScan(FILE *dbg){
     uint64_t sz=DGTextHi-DGTextLo;
     uint64_t off=0;
     int verified=0, checked=0;
-    while(off+16<sz && verified<4 && checked<4000){
+    while(off+16<sz && verified<4 && checked<200000){
         uint64_t want=sz-off; if(want>33554432) want=33554432;
         uint64_t got=0;
         uint8_t *buf=DGSafeRead(DGTextLo+off,want,&got);
         if(!buf){ off+=want; continue; }
         uint64_t lim=got-16;
-        for(uint64_t q=0;q<lim && verified<4 && checked<4000;q+=4){
+        for(uint64_t q=0;q<lim && verified<4 && checked<200000;q+=4){
             uint32_t w; memcpy(&w,buf+q,4);
             if((w&0x9F000000)!=0x90000000) continue; /* ADRP فقط */
             uint32_t rd=w&31;
@@ -2275,7 +2275,7 @@ static void DGUE4Scan(void){
     if(DGSnapCount){ fprintf(dbg,"REGISTERED SNAPSHOTS ready=%d\n",DGSnapCount); fflush(dbg); }
     { static NSTimeInterval lastSweep=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
       if(DGSnapCount>=2 && up>120.0 && up-lastSweep>300.0){ lastSweep=up; fprintf(dbg,"--- OBJSWEEP (t+%ds) ---\n",(int)up); DGObjectSweep(dbg); } }
-    DGSemanticScan(dbg);
+    { static BOOL semaDone=NO; if(!semaDone){ semaDone=YES; fprintf(dbg,"--- SEMASCAN START ---\n"); DGSemanticScan(dbg); } }
     DGResolveOfficial(dbg);
     if(DGGUObj && DGGNamePool){ static BOOL walked=NO; if(!walked){ walked=YES; fprintf(dbg,"--- OFFICIAL WALK ---\n"); DGWalkObjects(dbg); } }
     { static NSTimeInterval lastHunt=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
@@ -2297,7 +2297,7 @@ static void DGUE4Scan(void){
       } }
     { static NSTimeInterval lastSweep=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
       if(DGSnapCount>=2 && up>120.0 && up-lastSweep>300.0){ lastSweep=up; fprintf(dbg,"--- OBJSWEEP (t+%ds) ---\n",(int)up); DGObjectSweep(dbg); } }
-    DGSemanticScan(dbg);
+    { static BOOL semaDone=NO; if(!semaDone){ semaDone=YES; fprintf(dbg,"--- SEMASCAN START ---\n"); DGSemanticScan(dbg); } }
     DGResolveOfficial(dbg);
     if(DGGUObj && DGGNamePool){ static BOOL walked=NO; if(!walked){ walked=YES; fprintf(dbg,"--- OFFICIAL WALK ---\n"); DGWalkObjects(dbg); } }
     { static NSTimeInterval lastHunt=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
@@ -2319,7 +2319,7 @@ static void DGUE4Scan(void){
       } }
     { static NSTimeInterval lastSweep=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
       if(DGSnapCount>=2 && up>120.0 && up-lastSweep>300.0){ lastSweep=up; fprintf(dbg,"--- OBJSWEEP (t+%ds) ---\n",(int)up); DGObjectSweep(dbg); } }
-    DGSemanticScan(dbg);
+    { static BOOL semaDone=NO; if(!semaDone){ semaDone=YES; fprintf(dbg,"--- SEMASCAN START ---\n"); DGSemanticScan(dbg); } }
     DGResolveOfficial(dbg);
     if(DGGUObj && DGGNamePool){ static BOOL walked=NO; if(!walked){ walked=YES; fprintf(dbg,"--- OFFICIAL WALK ---\n"); DGWalkObjects(dbg); } }
     { static NSTimeInterval lastHunt=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
