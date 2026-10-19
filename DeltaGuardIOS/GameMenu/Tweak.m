@@ -1051,7 +1051,7 @@ static BOOL DGObjName(uint64_t obj, uint32_t nameOff, char *out, int outLen){
     if(!b||got<4){ if(b)DGFreeRead(b,got); return NO; }
     uint32_t id; memcpy(&id,b,4); DGFreeRead(b,got);
     if(!id) return NO;
-    if(DGSnapCount) return DGDecodeFromSnap(id,out,outLen);
+    if(DGSnapCount) return DGDecodeAnyBlock(id,out,outLen);
     return DGDecodeFName(id,out,outLen);
 }
 
@@ -1376,7 +1376,23 @@ static BOOL DGBlockHasNoneP(uint64_t blocks){
 }
 /* انسخ البلوكات إلى ذاكرة مملوكة للتطبيق، ثم تحقق أن جدول المؤشرات لم يتغير أثناء النسخ. */
 static void DGSnapshotPool(FILE *dbg){
-    if(DGSnapCount||!DGNamePool) return;
+    if(DGSnapCount) return;
+    /* المسار الأساسي: لقطة من البلوكات المسجلة (مقروءة مؤكدة) — لا struct */
+    if(DGBlockCount>0){
+        int n=0;
+        for(int i=0;i<DGBlockCount && n<DG_SNAP_BLOCKS;i++){
+            uint64_t got=0; uint8_t *d=DGSafeRead(DGBlocks[i],DG_SNAP_SIZE,&got);
+            if(!d||got<0x200){ if(d)DGFreeRead(d,got); continue; }
+            DGBlockSnap[n]=(uint8_t*)malloc(got);
+            memcpy(DGBlockSnap[n],d,got);
+            DGFreeRead(d,got);
+            n++;
+        }
+        DGSnapCount=n;
+        if(dbg){ fprintf(dbg,"SNAPSHOT %d blocks captured (from registered)\n",DGSnapCount); fflush(dbg); }
+        return;
+    }
+    if(!DGNamePool) return;
     for(int attempt=0;attempt<3&&!DGSnapCount;attempt++){
         uint64_t ptrs[DG_SNAP_BLOCKS]={0};
         uint8_t *copies[DG_SNAP_BLOCKS]={0};
@@ -1437,6 +1453,32 @@ static BOOL DGDecodeFromSnap(uint32_t nameId, char *out, int outLen){
     uint32_t bi=nameId>>16, off=nameId&0xFFFF;
     if(bi>=(uint32_t)DGSnapCount) return NO;
     return DGDecodeNameEntry((uint64_t)DGBlockSnap[bi],off,out,outLen,NULL);
+}
+
+/* فك تجريبي: جرب كل بلوك مسجل — أول نتيجة صالحة تفوز (بلا struct) */
+static BOOL DGDecodeAnyBlock(uint32_t nameId, char *out, int outLen){
+    out[0]=0;
+    if(!DGSnapCount) return NO;
+    uint32_t off=nameId&0xFFFF;
+    if(off>0xFF00) return NO;
+    for(int b=0;b<DGSnapCount;b++){
+        const uint8_t *blk=DGBlockSnap[b];
+        uint16_t hdr; memcpy(&hdr,blk+off,2);
+        if(hdr&1) continue;
+        uint8_t raw[80]={0};
+        uint64_t nn=72; if(off+2+nn>0x10000) nn=0x10000-(off+2);
+        memcpy(raw,blk+off+2,nn);
+        for(int k=0;k<DGXorKeyCount;k++){
+            uint64_t L=strnlen((char*)raw,71);
+            char t[72];
+            for(uint64_t i=0;i<=L;i++) t[i]=(char)(raw[i]^DGXorKeys[k]);
+            t[L<71?L:71]=0;
+            BOOL ok=t[0]&&L>=2;
+            for(uint64_t i=0;t[i]&&ok;i++) if(t[i]<32||t[i]>126) ok=NO;
+            if(ok){ strncpy(out,t,outLen-1); out[outLen-1]=0; return YES; }
+        }
+    }
+    return NO;
 }
 
 static BOOL DGVerifyPoolStruct(uint64_t A){
