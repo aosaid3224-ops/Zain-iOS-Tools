@@ -1770,6 +1770,24 @@ static int DGObjectSweep(FILE *dbg){
     return hits;
 }
 
+/* مسار طوارئ: لقطة مباشرة من العناوين المسجلة — بلا validation، بلا رفض */
+static int DGEmergencySnapshot(FILE *dbg){
+    if(DGSnapCount) return DGSnapCount;
+    int n=0;
+    for(int i=0;i<DGBlockCount && n<DG_SNAP_BLOCKS;i++){
+        uint64_t got=0; uint8_t *d=DGSafeRead(DGBlocks[i],0x8000,&got);
+        if(!d||got<0x200){ if(d)DGFreeRead(d,got); continue; }
+        if(DGBlockSnap[n]) free(DGBlockSnap[n]);
+        DGBlockSnap[n]=(uint8_t*)malloc(got);
+        memcpy(DGBlockSnap[n],d,got);
+        DGFreeRead(d,got);
+        n++;
+    }
+    DGSnapCount=n;
+    if(dbg){ fprintf(dbg,"EMERGENCY-SNAP %d blocks (no-validation path)\n",n); fflush(dbg); }
+    return n;
+}
+
 static void DGUE4Scan(void){
     static NSTimeInterval lastTry=0;
     static BOOL found=NO;
@@ -1853,6 +1871,7 @@ static void DGUE4Scan(void){
     if(!DGGameTextLo){ fprintf(dbg,"FAIL ranges\n"); fclose(dbg); return; }
     DGProbeBss(dbg);
     if(DGCfgBool(@"heapBlockScan",YES)) DGFindNameBlocksHeap(dbg);
+    if(!DGSnapCount && DGBlockCount>0) DGEmergencySnapshot(dbg); /* طوارئ: التقط فورًا قبل أي validation آخر */
     BOOL preferRegistered=(DGBlockCount>0);
     if(preferRegistered){
         DGSnapshotPool(dbg);
