@@ -2275,7 +2275,36 @@ static void DGUE4Scan(void){
     if(DGSnapCount){ fprintf(dbg,"REGISTERED SNAPSHOTS ready=%d\n",DGSnapCount); fflush(dbg); }
     { static NSTimeInterval lastSweep=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
       if(DGSnapCount>=2 && up>120.0 && up-lastSweep>300.0){ lastSweep=up; fprintf(dbg,"--- OBJSWEEP (t+%ds) ---\n",(int)up); DGObjectSweep(dbg); } }
-    { static BOOL semaDone=NO; if(!semaDone){ semaDone=YES; fprintf(dbg,"--- SEMASCAN START ---\n"); DGSemanticScan(dbg); } }
+    /* العناوين الثابتة المستخرجة من ثنائي .37117 (تحليل ساكن كامل):
+       GUObjectArray=0x118881ab8 | GNamePool=0x118870040 — قراءة مباشرة بلا مسح */
+    if(!DGGUObj && DGGameTextLo){
+        uint64_t slide=DGGameTextLo-0x100000000ULL;
+        uint64_t guTry=0x118881ab8ULL+slide;
+        uint64_t g2=0; uint8_t *vb=DGSafeRead(guTry+0x14,4,&g2);
+        if(vb&&g2>=4){
+            uint32_t num=0; memcpy(&num,vb,4); DGFreeRead(vb,g2);
+            if(num>5000&&num<0x400000){ DGGUObj=guTry;
+                fprintf(dbg,"GUOBJ-DIRECT @ 0x%llx Num=%u ✓ (static .37117)\n",(unsigned long long)guTry,num); }
+        }
+        if(!DGGNamePool){
+            uint64_t npTry=0x118870040ULL+slide;
+            uint64_t blocks=0,block=0;
+            if(DGReadQ(npTry-8,&blocks)&&DGReadQ(blocks,&block)){
+                uint64_t g3=0; uint8_t *e=DGSafeRead(block,32,&g3);
+                if(e&&g3>=6){ uint16_t hdr=0; memcpy(&hdr,e,2); uint32_t len=hdr>>6;
+                    if(len==4){ char nm[8]={0}; memcpy(nm,e+2,4); DGDecName(nm,4);
+                        if(!memcmp(nm,"None",4)){ DGGNamePool=npTry;
+                            fprintf(dbg,"NAMEPOOL-DIRECT @ 0x%llx None ✓ (static .37117)\n",(unsigned long long)npTry); }
+                        else { memcpy(nm,e+2,4); nm[4]=0;
+                            if(!memcmp(nm,"None",4)){ DGGNamePool=npTry;
+                                fprintf(dbg,"NAMEPOOL-DIRECT @ 0x%llx None(plain) ✓\n",(unsigned long long)npTry); } }
+                    } }
+                if(e)DGFreeRead(e,g3);
+            }
+        }
+    }
+    { static BOOL semaDone=NO; if(!semaDone && !DGGUObj){ semaDone=YES; fprintf(dbg,"--- SEMASCAN START (fallback) ---\n"); DGSemanticScan(dbg); } }
+    if(DGGUObj && DGGNamePool){ static BOOL walked=NO; if(!walked){ walked=YES; fprintf(dbg,"--- OFFICIAL WALK ---\n"); DGWalkObjects(dbg); } }
     DGResolveOfficial(dbg);
     if(DGGUObj && DGGNamePool){ static BOOL walked=NO; if(!walked){ walked=YES; fprintf(dbg,"--- OFFICIAL WALK ---\n"); DGWalkObjects(dbg); } }
     { static NSTimeInterval lastHunt=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
@@ -2297,7 +2326,36 @@ static void DGUE4Scan(void){
       } }
     { static NSTimeInterval lastSweep=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
       if(DGSnapCount>=2 && up>120.0 && up-lastSweep>300.0){ lastSweep=up; fprintf(dbg,"--- OBJSWEEP (t+%ds) ---\n",(int)up); DGObjectSweep(dbg); } }
-    { static BOOL semaDone=NO; if(!semaDone){ semaDone=YES; fprintf(dbg,"--- SEMASCAN START ---\n"); DGSemanticScan(dbg); } }
+    /* العناوين الثابتة المستخرجة من ثنائي .37117 (تحليل ساكن كامل):
+       GUObjectArray=0x118881ab8 | GNamePool=0x118870040 — قراءة مباشرة بلا مسح */
+    if(!DGGUObj && DGGameTextLo){
+        uint64_t slide=DGGameTextLo-0x100000000ULL;
+        uint64_t guTry=0x118881ab8ULL+slide;
+        uint64_t g2=0; uint8_t *vb=DGSafeRead(guTry+0x14,4,&g2);
+        if(vb&&g2>=4){
+            uint32_t num=0; memcpy(&num,vb,4); DGFreeRead(vb,g2);
+            if(num>5000&&num<0x400000){ DGGUObj=guTry;
+                fprintf(dbg,"GUOBJ-DIRECT @ 0x%llx Num=%u ✓ (static .37117)\n",(unsigned long long)guTry,num); }
+        }
+        if(!DGGNamePool){
+            uint64_t npTry=0x118870040ULL+slide;
+            uint64_t blocks=0,block=0;
+            if(DGReadQ(npTry-8,&blocks)&&DGReadQ(blocks,&block)){
+                uint64_t g3=0; uint8_t *e=DGSafeRead(block,32,&g3);
+                if(e&&g3>=6){ uint16_t hdr=0; memcpy(&hdr,e,2); uint32_t len=hdr>>6;
+                    if(len==4){ char nm[8]={0}; memcpy(nm,e+2,4); DGDecName(nm,4);
+                        if(!memcmp(nm,"None",4)){ DGGNamePool=npTry;
+                            fprintf(dbg,"NAMEPOOL-DIRECT @ 0x%llx None ✓ (static .37117)\n",(unsigned long long)npTry); }
+                        else { memcpy(nm,e+2,4); nm[4]=0;
+                            if(!memcmp(nm,"None",4)){ DGGNamePool=npTry;
+                                fprintf(dbg,"NAMEPOOL-DIRECT @ 0x%llx None(plain) ✓\n",(unsigned long long)npTry); } }
+                    } }
+                if(e)DGFreeRead(e,g3);
+            }
+        }
+    }
+    { static BOOL semaDone=NO; if(!semaDone && !DGGUObj){ semaDone=YES; fprintf(dbg,"--- SEMASCAN START (fallback) ---\n"); DGSemanticScan(dbg); } }
+    if(DGGUObj && DGGNamePool){ static BOOL walked=NO; if(!walked){ walked=YES; fprintf(dbg,"--- OFFICIAL WALK ---\n"); DGWalkObjects(dbg); } }
     DGResolveOfficial(dbg);
     if(DGGUObj && DGGNamePool){ static BOOL walked=NO; if(!walked){ walked=YES; fprintf(dbg,"--- OFFICIAL WALK ---\n"); DGWalkObjects(dbg); } }
     { static NSTimeInterval lastHunt=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
@@ -2319,7 +2377,36 @@ static void DGUE4Scan(void){
       } }
     { static NSTimeInterval lastSweep=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
       if(DGSnapCount>=2 && up>120.0 && up-lastSweep>300.0){ lastSweep=up; fprintf(dbg,"--- OBJSWEEP (t+%ds) ---\n",(int)up); DGObjectSweep(dbg); } }
-    { static BOOL semaDone=NO; if(!semaDone){ semaDone=YES; fprintf(dbg,"--- SEMASCAN START ---\n"); DGSemanticScan(dbg); } }
+    /* العناوين الثابتة المستخرجة من ثنائي .37117 (تحليل ساكن كامل):
+       GUObjectArray=0x118881ab8 | GNamePool=0x118870040 — قراءة مباشرة بلا مسح */
+    if(!DGGUObj && DGGameTextLo){
+        uint64_t slide=DGGameTextLo-0x100000000ULL;
+        uint64_t guTry=0x118881ab8ULL+slide;
+        uint64_t g2=0; uint8_t *vb=DGSafeRead(guTry+0x14,4,&g2);
+        if(vb&&g2>=4){
+            uint32_t num=0; memcpy(&num,vb,4); DGFreeRead(vb,g2);
+            if(num>5000&&num<0x400000){ DGGUObj=guTry;
+                fprintf(dbg,"GUOBJ-DIRECT @ 0x%llx Num=%u ✓ (static .37117)\n",(unsigned long long)guTry,num); }
+        }
+        if(!DGGNamePool){
+            uint64_t npTry=0x118870040ULL+slide;
+            uint64_t blocks=0,block=0;
+            if(DGReadQ(npTry-8,&blocks)&&DGReadQ(blocks,&block)){
+                uint64_t g3=0; uint8_t *e=DGSafeRead(block,32,&g3);
+                if(e&&g3>=6){ uint16_t hdr=0; memcpy(&hdr,e,2); uint32_t len=hdr>>6;
+                    if(len==4){ char nm[8]={0}; memcpy(nm,e+2,4); DGDecName(nm,4);
+                        if(!memcmp(nm,"None",4)){ DGGNamePool=npTry;
+                            fprintf(dbg,"NAMEPOOL-DIRECT @ 0x%llx None ✓ (static .37117)\n",(unsigned long long)npTry); }
+                        else { memcpy(nm,e+2,4); nm[4]=0;
+                            if(!memcmp(nm,"None",4)){ DGGNamePool=npTry;
+                                fprintf(dbg,"NAMEPOOL-DIRECT @ 0x%llx None(plain) ✓\n",(unsigned long long)npTry); } }
+                    } }
+                if(e)DGFreeRead(e,g3);
+            }
+        }
+    }
+    { static BOOL semaDone=NO; if(!semaDone && !DGGUObj){ semaDone=YES; fprintf(dbg,"--- SEMASCAN START (fallback) ---\n"); DGSemanticScan(dbg); } }
+    if(DGGUObj && DGGNamePool){ static BOOL walked=NO; if(!walked){ walked=YES; fprintf(dbg,"--- OFFICIAL WALK ---\n"); DGWalkObjects(dbg); } }
     DGResolveOfficial(dbg);
     if(DGGUObj && DGGNamePool){ static BOOL walked=NO; if(!walked){ walked=YES; fprintf(dbg,"--- OFFICIAL WALK ---\n"); DGWalkObjects(dbg); } }
     { static NSTimeInterval lastHunt=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
