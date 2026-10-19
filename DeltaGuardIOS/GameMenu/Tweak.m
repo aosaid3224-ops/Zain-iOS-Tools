@@ -1337,7 +1337,7 @@ static int DGFindGObjects(FILE *dbg){
                 long long stride=(long long)(c1-c0);
                 if(stride<0x8000||stride>0x800000) continue;
                 cheap++;
-                if(cheap%1000==0){ fprintf(dbg,"PHASE2 progress: %d/%d (region %u)\n",cheap,cap,ri); fflush(dbg); }
+                if(cheap%100==0){ fprintf(dbg,"PHASE2 progress: %d/%d (region %u)\n",cheap,cap,ri); fflush(dbg); }
                 int n18=0,n20=0; char sample[64]=""; char sample2[64]="";
                 for(int i=0;i<6;i++){
                     uint64_t item=c0+(uint64_t)i*0x18;
