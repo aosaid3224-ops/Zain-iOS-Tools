@@ -2292,8 +2292,8 @@ static void DGFinalSweep(FILE *dbg){
     /* ① البول */
     if(!DGGNamePool){
         uint64_t slide=DGTextLo-0x100000000ULL;
-        static const uint64_t kC[]={0x118870040ULL,0x118871040ULL,0x118872040ULL,0x11886f040ULL};
-        for(int i=0;i<4&&!DGGNamePool;i++) DGTryPoolCandidate(kC[i]+slide,dbg,kC[i]);
+        static const uint64_t kC[]={0x118445040ULL,0x1186f4100ULL,0x117c6d238ULL,0x1187f79f8ULL,0x118870040ULL,0x118871040ULL,0x118872040ULL,0x11886f040ULL};
+        for(int i=0;i<8&&!DGGNamePool;i++) DGTryPoolCandidate(kC[i]+slide,dbg,kC[i]);
         if(!DGGNamePool){ fprintf(dbg,"--- POOLSEMA (fallback) ---\n"); DGPoolSemanticScan(dbg); }
     }
     /* ②+③+④ المشي الشامل */
