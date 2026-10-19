@@ -1968,6 +1968,7 @@ static int DGHHunt(FILE *dbg){
 /* ===== v16 FINAL: pattern-scan + ADRL + فك DeltaForce الحقيقي + مشي كائنات ===== */
 static uint64_t DGTextLo=0, DGTextHi=0;
 static uint64_t DGGUObj=0, DGGNamePool=0;
+static int64_t DGBlocksOff=-8; /* يُحدَّد عند التحقق */
 
 /* فك اسم DeltaForce الحقيقي (من iOS_UEDumper DeltaForce.hpp) */
 static void DGDecName(char *str, uint32_t len){
@@ -2114,8 +2115,8 @@ static BOOL DGOfficialName(uint32_t id, char *out, int outLen){
     if(!DGGNamePool||!id) return NO;
     uint32_t bi=id>>18, uoff=(id&0x3FFFF)*2;
     uint64_t blocks=0, block=0;
-    /* BlocksOff = struct-8 (الملف الرسمي: BlocksOff -= sizeof(void*)) */
-    if(!DGReadQ(DGGNamePool-8,&blocks)||!blocks) return NO;
+    uint64_t at=(DGBlocksOff<0)?(DGGNamePool-(uint64_t)(-DGBlocksOff)):(DGGNamePool+(uint64_t)DGBlocksOff);
+    if(!DGReadQ(at,&blocks)||!blocks) return NO;
     if(!DGReadQ(blocks+(uint64_t)bi*8,&block)||!block) return NO;
     uint64_t g=0; uint8_t *e=DGSafeRead(block+uoff,80,&g);
     if(!e||g<4){ if(e)DGFreeRead(e,g); return NO; }
@@ -2253,12 +2254,43 @@ static void DGSemanticScan(FILE *dbg){
 }
 
 /* ===== v19 FINAL SWEEP: أسماء + كلاسات لاعبين + اكتشاف مواقع — دفعة واحدة ===== */
+static int DGStatCount(uint64_t block);
 static int DGTryPoolCandidate(uint64_t npTry, FILE *dbg, uint64_t candFile){
+    static const int64_t kOffs2[4]={-8,0x28,0x30,0x38};
+    for(int oi=0;oi<4;oi++){
     uint64_t blocks=0,block=0;
-    if(!(DGReadQ(npTry-8,&blocks)&&DGReadQ(blocks,&block))){
-        fprintf(dbg,"POOLCAND 0x%llx: blocks@0x%llx=0x%llx FAIL-read\n",(unsigned long long)candFile,(unsigned long long)(npTry-8),(unsigned long long)blocks);
-        return 0;
+    int64_t oo=kOffs2[oi];
+    uint64_t at=(oo<0)?(npTry-(uint64_t)(-oo)):(npTry+(uint64_t)oo);
+    if(!(DGReadQ(at,&blocks)&&blocks&&DGReadQ(blocks,&block))){ continue; }
+    int valid=DGStatCount(block);
+    if(valid>=8){ DGGNamePool=npTry; DGBlocksOff=oo;
+        fprintf(dbg,"NAMEPOOL-DIRECT @ 0x%llx ✓ (cand 0x%llx Blocks%+lld valid=%d)\n",(unsigned long long)npTry,(unsigned long long)candFile,(long long)oo,valid);
+        return 1;
     }
+    }
+    fprintf(dbg,"POOLCAND 0x%llx: all offsets failed\n",(unsigned long long)candFile);
+    return 0;
+}
+static int DGStatCount(uint64_t block){
+    uint64_t g3=0; uint8_t *e=DGSafeRead(block,0x4000,&g3);
+    if(!e||g3<0x100) return 0;
+    int valid=0;
+    for(uint64_t off=0;off+80<g3&&valid<40;off+=2){
+        uint16_t hdr; memcpy(&hdr,e+off,2);
+        uint32_t len=hdr>>6;
+        if(len<2||len>60) continue;
+        if(off+2+len>g3) break;
+        char t[80]={0};
+        memcpy(t,e+off+2,len);
+        BOOL ok=1; for(uint32_t i=0;t[i]&&ok;i++) if(t[i]<32||t[i]>126) ok=0;
+        if(!ok){ memcpy(t,e+off+2,len); DGDecName(t,len); ok=1;
+            for(uint32_t i=0;t[i]&&ok;i++) if(t[i]<32||t[i]>126) ok=0; }
+        if(ok&&t[0]) valid++;
+        off+=len;
+    }
+    DGFreeRead(e,g3);
+    return valid;
+}
     fprintf(dbg,"POOLCAND 0x%llx: blocks=0x%llx block0=0x%llx\n",(unsigned long long)candFile,(unsigned long long)blocks,(unsigned long long)block);
     uint64_t g3=0; uint8_t *e=DGSafeRead(block,64,&g3);
     if(!e||g3<6){ if(e)DGFreeRead(e,g3); fprintf(dbg,"POOLCAND: block unreadable\n"); return 0; }
@@ -2401,7 +2433,7 @@ static void DGPoolSemanticScan(FILE *dbg){
                         if(!DGReadQ(at,&blocks)||!blocks) continue;
                         if(!DGReadQ(blocks,&block)||!block) continue;
                         int valid=DGStatValidateBlock(block,dbg);
-                        if(valid>=8){ DGGNamePool=addr;
+                        if(valid>=8){ DGGNamePool=addr; DGBlocksOff=oo;
                             fprintf(dbg,"NAMEPOOL-SEMA @ 0x%llx (Blocks at %+lld) valid=%d ✓✓✓\n",(unsigned long long)addr,(long long)oo,valid);
                         }
                     }
