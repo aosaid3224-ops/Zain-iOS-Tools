@@ -2287,9 +2287,67 @@ static void DGUE4Scan(void){
                 fprintf(dbg,"GUOBJ-DIRECT @ 0x%llx Num=%u ✓ (static .37117)\n",(unsigned long long)guTry,num); }
         }
         if(!DGGNamePool){
-            uint64_t npTry=0x118870040ULL+slide;
+            /* مرشحو GNamePool من التحليل الساكن — جربهم بالترتيب مع تحقق None */
+            static const uint64_t kPoolCands[]={0x118870040ULL,0x118871040ULL,0x118872040ULL,0x11886f040ULL};
+            for(int pi=0;pi<4&&!DGGNamePool;pi++){
+            uint64_t npTry=kPoolCands[pi]+slide;
             uint64_t blocks=0,block=0;
-            if(DGReadQ(npTry-8,&blocks)&&DGReadQ(blocks,&block)){
+            if(!(DGReadQ(npTry-8,&blocks)&&DGReadQ(blocks,&block))) continue;
+                uint64_t g3=0; uint8_t *e=DGSafeRead(block,32,&g3);
+                if(e&&g3>=6){ uint16_t hdr=0; memcpy(&hdr,e,2); uint32_t len=hdr>>6;
+                    if(len==4){ char nm[8]={0}; memcpy(nm,e+2,4); DGDecName(nm,4);
+                        if(!memcmp(nm,"None",4)){ DGGNamePool=npTry;
+                            fprintf(dbg,"NAMEPOOL-DIRECT @ 0x%llx None ✓ (static .37117)\n",(unsigned long long)npTry); }
+                        else { memcpy(nm,e+2,4); nm[4]=0;
+                            if(!memcmp(nm,"None",4)){ DGGNamePool=npTry;
+                                fprintf(dbg,"NAMEPOOL-DIRECT @ 0x%llx None(plain) ✓\n",(unsigned long long)npTry); } }
+                    } }
+                if(e)DGFreeRead(e,g3);
+            }
+            } /* for pi */
+        }
+    }
+    { static BOOL semaDone=NO; if(!semaDone && !DGGUObj){ semaDone=YES; fprintf(dbg,"--- SEMASCAN START (fallback) ---\n"); DGSemanticScan(dbg); } }
+    if(DGGUObj && DGGNamePool){ static BOOL walked=NO; if(!walked){ walked=YES; fprintf(dbg,"--- OFFICIAL WALK ---\n"); DGWalkObjects(dbg); } }
+    DGResolveOfficial(dbg);
+    if(DGGUObj && DGGNamePool){ static BOOL walked=NO; if(!walked){ walked=YES; fprintf(dbg,"--- OFFICIAL WALK ---\n"); DGWalkObjects(dbg); } }
+    { static NSTimeInterval lastHunt=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
+      if(up>60.0 && up-lastHunt>120.0){ lastHunt=up; fprintf(dbg,"--- DGHUNT (t+%ds) ---\n",(int)up); DGHHunt(dbg); } }
+    { static BOOL bssWatched=NO; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
+      if(!bssWatched && up>100.0){ bssWatched=YES; fprintf(dbg,"--- BSS WATCH (t+%ds) ---\n",(int)up); DGWatchBss(dbg); fprintf(dbg,"--- WATCH ALL (heap-inclusive) ---\n"); DGWatchAll(dbg); }
+      if(DGWatchBase){
+          uint64_t g=0; uint8_t *b=DGSafeRead(DGWatchBase,32,&g);
+          if(b&&g>=16){
+              if(!DGWatchInit){ memcpy(DGWatchLast,b,32); DGWatchInit=YES; }
+              else if(memcmp(DGWatchLast,b,g<32?g:32)!=0){
+                  fprintf(dbg,"WATCHDIFF t+%lds @ 0x%llx : ",(long)up,(unsigned long long)DGWatchBase);
+                  for(uint64_t k=0;k<g;k++) fprintf(dbg,"%02x",b[k]);
+                  fprintf(dbg,"\n");
+                  memcpy(DGWatchLast,b,g<32?g:32);
+              }
+              DGFreeRead(b,g);
+          }
+      } }
+    { static NSTimeInterval lastSweep=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
+      if(DGSnapCount>=2 && up>120.0 && up-lastSweep>300.0){ lastSweep=up; fprintf(dbg,"--- OBJSWEEP (t+%ds) ---\n",(int)up); DGObjectSweep(dbg); } }
+    /* العناوين الثابتة المستخرجة من ثنائي .37117 (تحليل ساكن كامل):
+       GUObjectArray=0x118881ab8 | GNamePool=0x118870040 — قراءة مباشرة بلا مسح */
+    if(!DGGUObj && DGGameTextLo){
+        uint64_t slide=DGGameTextLo-0x100000000ULL;
+        uint64_t guTry=0x118881ab8ULL+slide;
+        uint64_t g2=0; uint8_t *vb=DGSafeRead(guTry+0x14,4,&g2);
+        if(vb&&g2>=4){
+            uint32_t num=0; memcpy(&num,vb,4); DGFreeRead(vb,g2);
+            if(num>5000&&num<0x400000){ DGGUObj=guTry;
+                fprintf(dbg,"GUOBJ-DIRECT @ 0x%llx Num=%u ✓ (static .37117)\n",(unsigned long long)guTry,num); }
+        }
+        if(!DGGNamePool){
+            /* مرشحو GNamePool من التحليل الساكن — جربهم بالترتيب مع تحقق None */
+            static const uint64_t kPoolCands[]={0x118870040ULL,0x118871040ULL,0x118872040ULL,0x11886f040ULL};
+            for(int pi=0;pi<4&&!DGGNamePool;pi++){
+            uint64_t npTry=kPoolCands[pi]+slide;
+            uint64_t blocks=0,block=0;
+            if(!(DGReadQ(npTry-8,&blocks)&&DGReadQ(blocks,&block))) continue;
                 uint64_t g3=0; uint8_t *e=DGSafeRead(block,32,&g3);
                 if(e&&g3>=6){ uint16_t hdr=0; memcpy(&hdr,e,2); uint32_t len=hdr>>6;
                     if(len==4){ char nm[8]={0}; memcpy(nm,e+2,4); DGDecName(nm,4);
@@ -2338,60 +2396,12 @@ static void DGUE4Scan(void){
                 fprintf(dbg,"GUOBJ-DIRECT @ 0x%llx Num=%u ✓ (static .37117)\n",(unsigned long long)guTry,num); }
         }
         if(!DGGNamePool){
-            uint64_t npTry=0x118870040ULL+slide;
+            /* مرشحو GNamePool من التحليل الساكن — جربهم بالترتيب مع تحقق None */
+            static const uint64_t kPoolCands[]={0x118870040ULL,0x118871040ULL,0x118872040ULL,0x11886f040ULL};
+            for(int pi=0;pi<4&&!DGGNamePool;pi++){
+            uint64_t npTry=kPoolCands[pi]+slide;
             uint64_t blocks=0,block=0;
-            if(DGReadQ(npTry-8,&blocks)&&DGReadQ(blocks,&block)){
-                uint64_t g3=0; uint8_t *e=DGSafeRead(block,32,&g3);
-                if(e&&g3>=6){ uint16_t hdr=0; memcpy(&hdr,e,2); uint32_t len=hdr>>6;
-                    if(len==4){ char nm[8]={0}; memcpy(nm,e+2,4); DGDecName(nm,4);
-                        if(!memcmp(nm,"None",4)){ DGGNamePool=npTry;
-                            fprintf(dbg,"NAMEPOOL-DIRECT @ 0x%llx None ✓ (static .37117)\n",(unsigned long long)npTry); }
-                        else { memcpy(nm,e+2,4); nm[4]=0;
-                            if(!memcmp(nm,"None",4)){ DGGNamePool=npTry;
-                                fprintf(dbg,"NAMEPOOL-DIRECT @ 0x%llx None(plain) ✓\n",(unsigned long long)npTry); } }
-                    } }
-                if(e)DGFreeRead(e,g3);
-            }
-        }
-    }
-    { static BOOL semaDone=NO; if(!semaDone && !DGGUObj){ semaDone=YES; fprintf(dbg,"--- SEMASCAN START (fallback) ---\n"); DGSemanticScan(dbg); } }
-    if(DGGUObj && DGGNamePool){ static BOOL walked=NO; if(!walked){ walked=YES; fprintf(dbg,"--- OFFICIAL WALK ---\n"); DGWalkObjects(dbg); } }
-    DGResolveOfficial(dbg);
-    if(DGGUObj && DGGNamePool){ static BOOL walked=NO; if(!walked){ walked=YES; fprintf(dbg,"--- OFFICIAL WALK ---\n"); DGWalkObjects(dbg); } }
-    { static NSTimeInterval lastHunt=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
-      if(up>60.0 && up-lastHunt>120.0){ lastHunt=up; fprintf(dbg,"--- DGHUNT (t+%ds) ---\n",(int)up); DGHHunt(dbg); } }
-    { static BOOL bssWatched=NO; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
-      if(!bssWatched && up>100.0){ bssWatched=YES; fprintf(dbg,"--- BSS WATCH (t+%ds) ---\n",(int)up); DGWatchBss(dbg); fprintf(dbg,"--- WATCH ALL (heap-inclusive) ---\n"); DGWatchAll(dbg); }
-      if(DGWatchBase){
-          uint64_t g=0; uint8_t *b=DGSafeRead(DGWatchBase,32,&g);
-          if(b&&g>=16){
-              if(!DGWatchInit){ memcpy(DGWatchLast,b,32); DGWatchInit=YES; }
-              else if(memcmp(DGWatchLast,b,g<32?g:32)!=0){
-                  fprintf(dbg,"WATCHDIFF t+%lds @ 0x%llx : ",(long)up,(unsigned long long)DGWatchBase);
-                  for(uint64_t k=0;k<g;k++) fprintf(dbg,"%02x",b[k]);
-                  fprintf(dbg,"\n");
-                  memcpy(DGWatchLast,b,g<32?g:32);
-              }
-              DGFreeRead(b,g);
-          }
-      } }
-    { static NSTimeInterval lastSweep=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
-      if(DGSnapCount>=2 && up>120.0 && up-lastSweep>300.0){ lastSweep=up; fprintf(dbg,"--- OBJSWEEP (t+%ds) ---\n",(int)up); DGObjectSweep(dbg); } }
-    /* العناوين الثابتة المستخرجة من ثنائي .37117 (تحليل ساكن كامل):
-       GUObjectArray=0x118881ab8 | GNamePool=0x118870040 — قراءة مباشرة بلا مسح */
-    if(!DGGUObj && DGGameTextLo){
-        uint64_t slide=DGGameTextLo-0x100000000ULL;
-        uint64_t guTry=0x118881ab8ULL+slide;
-        uint64_t g2=0; uint8_t *vb=DGSafeRead(guTry+0x14,4,&g2);
-        if(vb&&g2>=4){
-            uint32_t num=0; memcpy(&num,vb,4); DGFreeRead(vb,g2);
-            if(num>5000&&num<0x400000){ DGGUObj=guTry;
-                fprintf(dbg,"GUOBJ-DIRECT @ 0x%llx Num=%u ✓ (static .37117)\n",(unsigned long long)guTry,num); }
-        }
-        if(!DGGNamePool){
-            uint64_t npTry=0x118870040ULL+slide;
-            uint64_t blocks=0,block=0;
-            if(DGReadQ(npTry-8,&blocks)&&DGReadQ(blocks,&block)){
+            if(!(DGReadQ(npTry-8,&blocks)&&DGReadQ(blocks,&block))) continue;
                 uint64_t g3=0; uint8_t *e=DGSafeRead(block,32,&g3);
                 if(e&&g3>=6){ uint16_t hdr=0; memcpy(&hdr,e,2); uint32_t len=hdr>>6;
                     if(len==4){ char nm[8]={0}; memcpy(nm,e+2,4); DGDecName(nm,4);
