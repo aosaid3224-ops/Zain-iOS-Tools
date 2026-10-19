@@ -1,1 +1,1 @@
-{"heapBlockScan": true, "densityScan": false, "xorKeys": [0, 14, 210], "minDensity": 45, "weakMin": 25, "probes": [], "buildMark": "DF-V172-B7X3", "note": "بصمة v0.17.2 — امسح الملف القديم أولاً"}
+{"heapBlockScan": true, "densityScan": false, "xorKeys": [0, 14, 210], "minDensity": 45, "weakMin": 25, "probes": [], "buildMark": "DF-V180-F1NL", "note": "FINAL: عناوين ثابتة مباشرة — بلا probes بلا ضجيج"}
