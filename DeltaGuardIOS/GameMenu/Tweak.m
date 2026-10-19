@@ -2583,7 +2583,8 @@ static void __attribute__((unused)) DGTrackPositions(FILE *dbg){
     else snprintf(DGTrackStat,sizeof(DGTrackStat),"T1#%d ✓ — سكون",DGTrackT1Count);
     fflush(dbg);
 }
-/* v0.31: LIVE3 — متتبع مُسمّى بقراءة مقطعية محصنة + نوافذ الجلسة القديمة (rc+0x180) + أسماء GNamePool */
+/* v0.32: LOC — الموقع بالعنقود الذكي: ترجمة كل مكوّن عند rc+0x210 المؤكد، والموضع الأكثر تكراراً = جسم الشخصية */
+static float DGAb(float x){ return x<0?-x:x; }
 static void DGTrackLivePrint(FILE *dbg){
     for(int t=0;t<DGTrackN;t++){
         uint64_t obj=DGTrackObj[t];
@@ -2591,47 +2592,24 @@ static void DGTrackLivePrint(FILE *dbg){
             fprintf(dbg,"LIVE cls=%u self=%u obj=0x%llx STATIC\n",DGTrackCls[t],DGTrackSelf[t],(unsigned long long)obj);
             continue;
         }
-        char me[80]=""; { uint64_t g=0; uint8_t *nb=DGSafeRead(obj+0x1c,4,&g);
-            if(nb&&g>=4){ uint32_t nid=0; memcpy(&nid,nb,4); DGFreeRead(nb,g); DGOfficialName(nid,me,sizeof me); } }
-        fprintf(dbg,"LIVE3 self=%u obj=0x%llx me=%s\n",DGTrackSelf[t],(unsigned long long)obj,me[0]?me:"?");
-        for(int po=0x120;po<=0x400;po+=8){
+        float px[64],py[64],pz[64]; int pn=0;
+        for(int po=0x120;po<=0x400&&pn<64;po+=8){
             uint64_t rc=0; if(!DGReadQ(obj+po,&rc)||!rc||rc<0x100000000ULL||rc>=0x400000000ULL||(rc&7)) continue;
-            char cn[80]=""; uint32_t cid=0;
-            { uint64_t g=0; uint8_t *cb=DGSafeRead(rc+0x1c,4,&g);
-              if(cb&&g>=4){ memcpy(&cid,cb,4); DGFreeRead(cb,g); DGOfficialName(cid,cn,sizeof cn); } }
-            /* مسح مقطعي 0x100B — محصن ضد فشل القراءة الكلي عند حدود الصفحات */
-            char tbuf[256]; tbuf[0]=0; int tfound=0;
-            for(uint64_t bs=0x100;bs<0x500&&tfound<3;bs+=0x100){
-                uint64_t gg=0; uint8_t *b=DGSafeRead(rc+bs,0x100,&gg);
-                if(!b) continue;
-                int lim=(int)gg;
-                for(int off=0;off+0x34<=lim&&tfound<3;off+=4){
-                    float q[4],tr[3],sc[3];
-                    memcpy(q,b+off,16); memcpy(tr,b+off+16,12); memcpy(sc,b+off+28,12);
-                    float n=q[0]*q[0]+q[1]*q[1]+q[2]*q[2]+q[3]*q[3];
-                    BOOL identity=(q[0]==1.f&&q[1]==0.f&&q[2]==0.f&&q[3]==0.f&&tr[0]==0.f&&tr[1]==0.f&&tr[2]==0.f);
-                    if(!identity && n>0.9f&&n<1.1f && tr[0]>-100000&&tr[0]<100000 && tr[1]>-100000&&tr[1]<100000 && tr[2]>-100000&&tr[2]<100000
-                       && sc[0]>0.1f&&sc[0]<10&&sc[1]>0.1f&&sc[1]<10&&sc[2]>0.1f&&sc[2]<10){
-                        int used=(int)strlen(tbuf);
-                        if(used<200) snprintf(tbuf+used,256-used,"@%llx(p %.1f %.1f %.1f) ",(unsigned long long)(bs+off),tr[0],tr[1],tr[2]);
-                        tfound++;
-                    }
-                }
-                DGFreeRead(b,gg);
-            }
-            BOOL isComp=(cn[0]&&strstr(cn,"omponent")!=NULL);
-            if(isComp||tfound>0){
-                fprintf(dbg,"  +0x%x rc=0x%llx cid=%u name=%s",(unsigned)po,(unsigned long long)rc,cid,cn[0]?cn:"?");
-                if(tfound) fprintf(dbg," T=[%s]",tbuf);
-                /* نافذة الموقع المثبتة من الجلسة القديمة: rc+0x180 × 96B */
-                uint64_t g=0; uint8_t *pd=DGSafeRead(rc+0x180,96,&g);
-                if(pd){ fprintf(dbg," @180="); for(uint64_t x=0;x<g&&x<24;x++) fprintf(dbg,"%02x",pd[x]); DGFreeRead(pd,g); }
-                fprintf(dbg,"\n");
+            uint64_t g=0; uint8_t *b=DGSafeRead(rc+0x210,12,&g);
+            if(!b||g<12){ if(b)DGFreeRead(b,g); continue; }
+            float v[3]; memcpy(v,b,12); DGFreeRead(b,g);
+            if(v[0]>-200000&&v[0]<200000&&v[1]>-200000&&v[1]<200000&&v[2]>-200000&&v[2]<200000
+               &&(v[0]!=0.f||v[1]!=0.f||v[2]!=0.f)){
+                px[pn]=v[0]; py[pn]=v[1]; pz[pn]=v[2]; pn++;
             }
         }
+        if(!pn){ fprintf(dbg,"LOC self=%u obj=0x%llx NONE\n",DGTrackSelf[t],(unsigned long long)obj); continue; }
+        int best=0,bestc=0;
+        for(int i=0;i<pn;i++){ int c=0; for(int j=0;j<pn;j++){ if(DGAb(px[i]-px[j])<2.f&&DGAb(py[i]-py[j])<2.f&&DGAb(pz[i]-pz[j])<2.f) c++; } if(c>bestc){ bestc=c; best=i; } }
+        fprintf(dbg,"LOC self=%u obj=0x%llx pos=(%.1f,%.1f,%.1f) cluster=%d/%d\n",DGTrackSelf[t],(unsigned long long)obj,px[best],py[best],pz[best],bestc,pn);
     }
     fflush(dbg);
-    snprintf(DGTrackStat,sizeof(DGTrackStat),"LIVE3 ✓ n=%d",DGTrackN);
+    snprintf(DGTrackStat,sizeof(DGTrackStat),"LOC ✓ n=%d",DGTrackN);
 }
 
 static int DGTrackRescan(FILE *dbg);
