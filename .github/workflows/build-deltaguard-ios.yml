@@ -28,12 +28,6 @@ jobs:
           printf "DeltaGuardIOS/\nscripts/generate-repo.py\n" > .git/info/sparse-checkout
           git fetch --depth=1 origin "${{ github.sha }}"
           git checkout --detach FETCH_HEAD
-      - name: Checkout repo-dev
-        uses: actions/checkout@v4
-        with:
-          repository: aosaid3224-ops/repo-dev
-          token: ${{ secrets.PAT }}
-          path: repo-dev
       - name: Install dependencies
         run: brew install dpkg ldid
       - name: Read package version
@@ -70,19 +64,3 @@ jobs:
           name: deltaguard-ios-${{ steps.package-version.outputs.version }}
           path: DeltaGuardIOS/packages/*.deb
           if-no-files-found: error
-      - name: Publish verified DEB to repo-dev
-        run: |
-          set -euo pipefail
-          DEB_FILE=$(ls -t DeltaGuardIOS/packages/*.deb | head -1)
-          mkdir -p repo-dev/pool/main/iphoneos-arm64 repo-dev/scripts
-          rm -f repo-dev/pool/main/iphoneos-arm64/com.aosaid.deltaguard_*.deb
-          cp "$DEB_FILE" repo-dev/pool/main/iphoneos-arm64/
-          cp scripts/generate-repo.py repo-dev/scripts/generate-repo.py
-          python3 repo-dev/scripts/generate-repo.py repo-dev --dev
-          dpkg-deb -f "$DEB_FILE" Package Version Architecture
-          cd repo-dev
-          git config user.name "GitHub Actions"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "Publish DeltaGuard iOS ${{ steps.package-version.outputs.version }}" || true
-          git push origin main
