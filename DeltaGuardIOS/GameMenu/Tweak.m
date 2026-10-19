@@ -1687,11 +1687,20 @@ static void DGUE4Scan(void){
     DGLoadScanCfg();
     DGLoadXorKeys();
     NSString *outp=[NSTemporaryDirectory() stringByAppendingPathComponent:@"deltaguard_ue4.txt"];
-    FILE *dbg=fopen([outp UTF8String],"w");
+    NSFileManager *fm=[NSFileManager defaultManager];
+    NSDictionary *attrs=[fm attributesOfItemAtPath:outp error:nil];
+    if(attrs && [attrs fileSize]>8388608){
+        [fm moveItemAtPath:outp toPath:[outp stringByAppendingString:@".1"] error:nil];
+    }
+    FILE *dbg=fopen([outp UTF8String],"a"); /* تراكمي */
     if(!dbg) return;
     if(DGNamePool){ fprintf(dbg,"POOL already solved @ 0x%llx\n",(unsigned long long)DGNamePool); fflush(dbg); }
     if(DGSnapCount){ fprintf(dbg,"REGISTERED SNAPSHOTS ready=%d\n",DGSnapCount); fflush(dbg); }
-    fprintf(dbg,"=== OBSERVATORY v0.11.4 attempt %d regions=%u ===\n",DGUE4ScanCount,DGRegionCount);
+    { static uint32_t sLastRegions=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
+      fprintf(dbg,"\n=== ATTEMPT %d | t+%lds | regions=%u\n",DGUE4ScanCount,(long)up,DGRegionCount);
+      if(sLastRegions && DGRegionCount>sLastRegions+8) fprintf(dbg,"STATE: +%u regions (تحول مشهد/تحميل)\n",DGRegionCount-sLastRegions);
+      if(sLastRegions && DGRegionCount<sLastRegions-8) fprintf(dbg,"STATE: -%u regions (تفريغ/انتقال)\n",sLastRegions-DGRegionCount);
+      sLastRegions=DGRegionCount; }
     fflush(dbg);
     DGRunProbes(dbg);
     if(found){ fprintf(dbg,"END pool=%s gobjects=FOUND (probe refresh)\n",(DGNamePool||DGSnapCount)?"YES":"NO"); fclose(dbg); return; }
