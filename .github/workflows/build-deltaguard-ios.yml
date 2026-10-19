@@ -24,14 +24,7 @@ jobs:
           filter: blob:none
           sparse-checkout: |
             DeltaGuardIOS
-            scripts
           sparse-checkout-cone-mode: true
-      - name: Checkout development repository
-        uses: actions/checkout@v4
-        with:
-          repository: aosaid3224-ops/repo-dev
-          token: ${{ secrets.PAT }}
-          path: repo-dev
       - name: Install dependencies
         run: brew install dpkg ldid
       - name: Read package version
@@ -62,33 +55,6 @@ jobs:
           test "$(dpkg-deb -f "$DEB_FILE" Package)" = "com.aosaid.deltaguard"
           test "$(dpkg-deb -f "$DEB_FILE" Version)" = "${{ steps.package-version.outputs.version }}"
           test "$(dpkg-deb -f "$DEB_FILE" Architecture)" = "iphoneos-arm64"
-      - name: Publish verified DEB to development repository
-        run: |
-          set -euo pipefail
-          DEB_FILE=$(ls -t DeltaGuardIOS/packages/*.deb | head -1)
-          mkdir -p repo-dev/pool/main/iphoneos-arm64 repo-dev/scripts
-          rm -f repo-dev/pool/main/iphoneos-arm64/com.aosaid.deltaguard_*.deb
-          cp "$DEB_FILE" repo-dev/pool/main/iphoneos-arm64/
-          cp scripts/generate-repo.py repo-dev/scripts/generate-repo.py
-          python3 repo-dev/scripts/generate-repo.py repo-dev --dev
-          cd repo-dev
-          git config user.email 'ci@github.com'
-          git config user.name 'GitHub CI'
-          git add -A
-          git commit -m "Publish DeltaGuard v${{ steps.package-version.outputs.version }} — dev build" || true
-          if ! git push origin main; then
-            echo 'repo-dev changed during build; rebasing latest main and regenerating indexes'
-            git fetch origin main
-            git reset --hard origin/main
-            mkdir -p pool/main/iphoneos-arm64 scripts
-            rm -f pool/main/iphoneos-arm64/com.aosaid.deltaguard_*.deb
-            cp "../$DEB_FILE" pool/main/iphoneos-arm64/
-            cp ../scripts/generate-repo.py scripts/generate-repo.py
-            python3 scripts/generate-repo.py . --dev
-            git add -A
-            git commit -m "Publish DeltaGuard v${{ steps.package-version.outputs.version }} — dev build" || true
-            git push origin main
-          fi
       - name: Upload verified DEB
         uses: actions/upload-artifact@v4
         with:
