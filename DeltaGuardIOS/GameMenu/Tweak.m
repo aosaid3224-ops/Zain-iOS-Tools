@@ -1887,6 +1887,8 @@ static void DGUE4Scan(void){
               DGFreeRead(b,g);
           }
       } }
+    { const char *bm=[DGScanCfg[@"buildMark"] UTF8String];
+      fprintf(dbg,"BUILDMARK: %s\n",bm?bm:"(none)"); }
     { static uint32_t sLastRegions=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
       fprintf(dbg,"\n=== ATTEMPT %d | t+%lds | regions=%u\n",DGUE4ScanCount,(long)up,DGRegionCount);
       if(sLastRegions && DGRegionCount>sLastRegions+8) fprintf(dbg,"STATE: +%u regions (تحول مشهد/تحميل)\n",DGRegionCount-sLastRegions);
