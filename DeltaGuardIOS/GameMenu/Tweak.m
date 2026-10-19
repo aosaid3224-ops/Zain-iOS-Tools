@@ -2437,8 +2437,8 @@ static void DGPoolSemanticScan(FILE *dbg){
 }
 
 /* ===== v21: كشف اللاعبين بالفهرس الحقيقي (dump ground-truth) — بلا بول ===== */
-static const uint32_t kPlayerClassIdx[]={2118,2117,1924,1923,209,1903,213,206,208,0};
-static const char *kPlayerClassNames[]={"GPCharacter","GPCharacterBase","CharacterBase","IntCharacter","LuaCharacter","BasePlayerController","LuaPlayerController","Pawn","Character",NULL};
+static const uint32_t kPlayerClassIdx[]={2118,2117,1924,1923,209,1903,213,206,208,4819,4825,4826,2131,2116,0};
+static const char *kPlayerClassNames[]={"GPCharacter","GPCharacterBase","CharacterBase","IntCharacter","LuaCharacter","BasePlayerController","LuaPlayerController","Pawn","Character","DFMAICharacter","DFMAICharMove","DFMAICharScoring","GPCharMovement","GPCapsuleComponent",NULL};
 static BOOL DGIsPlayerClassIdx(uint32_t idx){
     for(int i=0;kPlayerClassIdx[i];i++) if(kPlayerClassIdx[i]==idx) return YES;
     return NO;
@@ -2470,16 +2470,20 @@ static void DGIndexSweep(FILE *dbg){
             if(cidx==1&&validated<3){ validated++; }
             if(!DGIsPlayerClassIdx(cidx)) continue;
             /* 🎯 لاعب! */
-            players++;
+            /* فرّق CDO عن instance عبر self-index */
+            uint32_t selfIdx=0xFFFFFFFF;
+            { uint8_t *sb=DGSafeRead(obj+0x24,4,&g); if(sb&&g>=4){ memcpy(&selfIdx,sb,4); DGFreeRead(sb,g); } }
             const char *cname="?";
             for(int k=0;kPlayerClassIdx[k];k++) if(kPlayerClassIdx[k]==cidx){ cname=kPlayerClassNames[k]; break; }
-            fprintf(dbg,"IDXPLAYER #%d clsIdx=%u(%s) obj=0x%llx\n",players,cidx,cname,(unsigned long long)obj);
+            if(players<20) fprintf(dbg,"IDXPLAYER #%d clsIdx=%u(%s) self=%u %s obj=0x%llx\n",players,cidx,cname,selfIdx,selfIdx>5000?"INSTANCE":"CDO",(unsigned long long)obj);
+            players++;
+            if(selfIdx<=5000){ continue; } /* CDO — تخطَّ النسخ/مواقعه */
             /* تفريغ كامل للكائن + قبول فهارس المكونات الحقيقية */
             uint8_t *od=DGSafeRead(obj,768,&g);
             if(od){ fprintf(dbg,"OBJDUMP #%d obj=0x%llx : ",players,(unsigned long long)obj);
                 for(uint64_t x=0;x<g;x++) fprintf(dbg,"%02x",od[x]);
                 fprintf(dbg,"\n"); DGFreeRead(od,g); }
-            static const uint32_t kCompIdx[]={184,1696,2115,2116,2377,2130,0};
+            static const uint32_t kCompIdx[]={184,1696,2115,2116,2377,2130,4825,2131,0};
             for(uint64_t K=0x100;K<=0x300;K+=8){
                 uint64_t rc=0;
                 if(!DGReadQ(obj+K,&rc)||!rc||rc<0x100000000ULL||(rc&7)) continue;
