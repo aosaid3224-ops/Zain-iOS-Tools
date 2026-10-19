@@ -1,1 +1,1 @@
-{"heapBlockScan": true, "densityScan": false, "xorKeys": [0, 14], "minDensity": 45, "weakMin": 25, "probes": [], "note": "v0.12.4 clean"}
+{"heapBlockScan": true, "densityScan": false, "xorKeys": [0, 14, 210], "minDensity": 45, "weakMin": 25, "probes": [{"addr": "0x118d91e90", "n": 96}, {"addr": "0x300057a80", "n": 256}, {"addr": "0x300057c00", "n": 256}], "note": "فحص بنية BSSLIVE ومؤشراتها من جلسة 08:56"}
