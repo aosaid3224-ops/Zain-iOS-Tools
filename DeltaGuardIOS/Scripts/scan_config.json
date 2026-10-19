@@ -1,1 +1,1 @@
-{"heapBlockScan": true, "densityScan": false, "xorKeys": [0, 14], "minDensity": 45, "weakMin": 25, "note": "معايرة من dumps: البول الحقيقي ~8-50/2KB"}
+{"heapBlockScan": true, "densityScan": false, "xorKeys": [0, 14], "minDensity": 45, "weakMin": 25, "probes": [{"addr": "0x11e8e6958", "n": 96}], "note": "قراءة مباشرة لstruct البول المعلن — جلسة 0x11e8e6958"}
