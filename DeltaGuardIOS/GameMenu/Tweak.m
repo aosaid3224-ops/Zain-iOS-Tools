@@ -1456,11 +1456,14 @@ static void DGSnapshotPool(FILE *dbg){
             uint8_t *copy=DGBlockSnap[i];
             int reg=DGBlockRegIndex[i];
             if(!copy) continue;
+            if(reg<0||reg>=DGBlockCount||seen[reg]){ free(copy); continue; }
             uint32_t noneOff=0;
-            if(reg<0||reg>=DGBlockCount||seen[reg]||!DGValidateRegisteredSnapshot(copy,&noneOff)){
-                free(copy);
-                if(dbg) fprintf(dbg,"SNAPSHOT reject inline slot=%d reg#%d (validation failed)\n",i,reg);
-                continue;
+            BOOL vOK=DGValidateRegisteredSnapshot(copy,&noneOff);
+            if(!vOK){
+                /* لا رفض — التحقق من الالتقاط تم لحظيًا؛ الفك نفسه هو الحَكَم */
+                for(uint32_t off=0;off+8<0x8000&&!noneOff;off+=2)
+                    for(int k=0;k<DGXorKeyCount;k++) if(DGMatchNone(copy+off+2,DGXorKeys[k])){ noneOff=off; break; }
+                if(dbg) fprintf(dbg,"SNAPSHOT soft-keep slot=%d reg#%d noneOff=0x%x\n",i,reg,noneOff);
             }
             copies[n]=copy; noneOffsets[n]=noneOff; regIndices[n]=reg; seen[reg]=YES;
             n++; inlineCount++;
