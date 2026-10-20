@@ -2622,6 +2622,157 @@ static void DGEspUpdate(void){
     }
 }
 @end
+/* v0.43: SELFKEY — كسر XOR ذاتياً بمسح الذاكرة عن "GPCharacterBase" (نافذة XOR-ثابت) + اشتقاق FNamePool + تعداد بالأسماء + RAWF الباون الحقيقي
+   مُثبت بعينة UC: c6^e9=2f('/') — XOR ثابت لكل بايت */
+static uint64_t DGNPool=0;
+static int DGNameKey=-1;
+static int DGNBlocksOff=0x38;
+static int DGNShift=18;
+static BOOL DGCensusDone=NO;
+static BOOL DGSelfKeyDone=NO;
+
+static BOOL DGRawEntry(uint32_t id, uint8_t *out, int *outLen){
+    if(!DGNPool) return NO;
+    uint32_t chunk=(DGNShift==18)?(id>>18):(id>>12);
+    uint32_t off  =(DGNShift==18)?(id&0x3FFFF):(id&0xFFFF);
+    uint64_t blocks=0;
+    if(!DGReadQ(DGNPool+DGNBlocksOff,&blocks)||!blocks) return NO;
+    uint64_t blk=0;
+    if(!DGReadQ(blocks+(uint64_t)chunk*8,&blk)||!blk) return NO;
+    uint16_t hdr=0;
+    { uint64_t g=0; uint8_t*b2=DGSafeRead(blk+(uint64_t)off*2,2,&g);
+      if(!b2||g<2) return NO; memcpy(&hdr,b2,2); DGFreeRead(b2,g); }
+    int len=hdr>>6; if(len<1||len>100) return NO;
+    BOOL wide=(hdr&1)!=0;
+    uint64_t g=0; uint8_t*b2=DGSafeRead(blk+(uint64_t)off*2+2, wide?(uint64_t)len*2:(uint64_t)len, &g);
+    if(!b2) return NO;
+    int L=len>120?120:len;
+    if(!wide){ if(g<(uint64_t)len){ DGFreeRead(b2,g); return NO; } memcpy(out,b2,L); }
+    else { for(int i=0;i<L;i++) out[i]=(i*2<(int)g)?b2[i*2]:0; }
+    DGFreeRead(b2,g); out[L]=0; *outLen=L; return YES;
+}
+static BOOL DGNameOfCls(uint64_t clsPtr, char *out, int outLen){
+    uint32_t id=0; { uint64_t g=0; uint8_t*b=DGSafeRead(clsPtr+0x1c,4,&g);
+        if(!b||g<4){ if(b)DGFreeRead(b,g); return NO; } memcpy(&id,b,4); DGFreeRead(b,g); }
+    uint8_t raw[128]; int L=0;
+    if(!DGRawEntry(id,raw,&L)) return NO;
+    if(DGNameKey>=0) for(int i=0;i<L;i++) raw[i]=(uint8_t)(raw[i]^(uint8_t)DGNameKey);
+    if(L>=outLen) L=outLen-1;
+    memcpy(out,raw,L); out[L]=0; return YES;
+}
+/* مسح الذاكرة عن نمط XOR-ثابت لنص معروف — يعيد المفتاح وعنوان أول إصابة */
+static BOOL DGScanForPlain(const char *plain, uint64_t lo, uint64_t hi, int *outKey, uint64_t *outAddr){
+    int pl=(int)strlen(plain);
+    for(uint64_t a=lo;a<hi;a+=0x10000){
+        uint64_t g=0; uint8_t *b=DGSafeRead(a,0x10000,&g);
+        if(!b||g<(uint64_t)pl+2){ if(b)DGFreeRead(b,g); continue; }
+        int lim=(int)g-pl-2;
+        for(int i=2;i<lim;i++){
+            uint8_t K=(uint8_t)(b[i]^(uint8_t)plain[0]);
+            if((uint8_t)(b[i+1]^(uint8_t)plain[1])!=K) continue;
+            if((uint8_t)(b[i+2]^(uint8_t)plain[2])!=K) continue;
+            BOOL ok=YES;
+            for(int j=3;j<pl&&ok;j++) if((uint8_t)(b[i+j]^(uint8_t)plain[j])!=K) ok=NO;
+            if(!ok) continue;
+            uint16_t hdr; memcpy(&hdr,b+i-2,2);
+            if((hdr>>6)!=pl) continue;                 /* header الطول يطابق */
+            DGFreeRead(b,g);
+            *outKey=K; *outAddr=a+i; return YES;
+        }
+        DGFreeRead(b,g);
+    }
+    return NO;
+}
+static void DGSelfKey(FILE *dbg){
+    if(DGSelfKeyDone||DGTrackN<2) return;
+    /* عنوان UClass لـ 2117/2118 من القائمة المتتبعة */
+    uint64_t c17=0,c18=0; uint32_t id17=0,id18=0;
+    for(int t=0;t<DGTrackN;t++){
+        uint64_t cp=0; if(!DGReadQ(DGTrackObj[t]+0x8,&cp)||!cp) continue;
+        uint64_t g=0; uint32_t ci=0;
+        uint8_t *ib=DGSafeRead(cp+0x24,4,&g);
+        if(!ib||g<4){ if(ib)DGFreeRead(ib,g); continue; }
+        memcpy(&ci,ib,4); DGFreeRead(ib,g);
+        if(ci==2117&&!c17){ c17=cp; uint64_t g2=0; uint8_t*b=DGSafeRead(cp+0x1c,4,&g2);
+            if(b&&g2>=4){ memcpy(&id17,b,4); DGFreeRead(b,g2);} }
+        if(ci==2118&&!c18){ c18=cp; uint64_t g2=0; uint8_t*b=DGSafeRead(cp+0x1c,4,&g2);
+            if(b&&g2>=4){ memcpy(&id18,b,4); DGFreeRead(b,g2);} }
+    }
+    if(!c17||!id17){ fprintf(dbg,"SELFKEY NOCAND\n"); DGSelfKeyDone=YES; return; }
+    int K=-1; uint64_t hit=0;
+    /* منطقة الكتل حسب POOLCAND القديمة ~0x118xxxxxx — نمسح نطاقاً واسعاً مرة واحدة */
+    if(!DGScanForPlain("GPCharacterBase",0x114000000ULL,0x122000000ULL,&K,&hit)){
+        fprintf(dbg,"SELFKEY NOTFOUND\n"); DGSelfKeyDone=YES; return;
+    }
+    DGNameKey=K;
+    fprintf(dbg,"SELFKEY OK key=0x%02x hit=0x%llx id17=%u\n",K,(unsigned long long)hit,id17);
+    /* اشتقاق Pool: جرب (shift18/شيفت12) × (blocksOff 0x38/0x0) وتحقق بالاسم الثاني */
+    for(int sh=0;sh<2&&DGNPool==0;sh++){
+        DGNShift = sh? 12 : 18;
+        for(int bo=0;bo<3&&DGNPool==0;bo++){
+            int offs[3]={0x38,0x0,0x8};
+            DGNBlocksOff=offs[bo];
+            uint32_t chunk=(DGNShift==18)?(id17>>18):(id17>>12);
+            uint32_t off  =(DGNShift==18)?(id17&0x3FFFF):(id17&0xFFFF);
+            uint64_t blkBase = hit-2-(uint64_t)off*2;
+            /* ابحث عن مؤشر للكتلة ضمن نطاق بيانات اللعبة */
+            for(uint64_t a=0x110000000ULL;a<0x130000000ULL&&DGNPool==0;a+=0x10000){
+                uint64_t g=0; uint8_t *b=DGSafeRead(a,0x10000,&g);
+                if(!b){ continue; }
+                for(uint64_t i=0;i+8<=g;i+=8){
+                    uint64_t q; memcpy(&q,b+i,8);
+                    if(q==blkBase){
+                        /* هذا Blocks[chunk] → العنوان الحقيقي للـ Pool */
+                        uint64_t poolCand = (a+i) - (uint64_t)chunk*8 - (uint64_t)DGNBlocksOff;
+                        DGNPool=poolCand;
+                        break;
+                    }
+                }
+                DGFreeRead(b,g);
+            }
+            /* تحقق: هل يفك الاسم الثاني بشكل صحيح؟ */
+            if(DGNPool){
+                char t2[64]="";
+                if(DGNameOfCls(c18,t2,sizeof t2)&&strstr(t2,"GPCharacter")){
+                    fprintf(dbg,"POOL OK pool=0x%llx shift=%d off=0x%x verify=%s\n",
+                        (unsigned long long)DGNPool,DGNShift,DGNBlocksOff,t2);
+                } else {
+                    DGNPool=0;   /* فشل التحقق — جرب تركيبة أخرى */
+                }
+            }
+        }
+    }
+    DGSelfKeyDone=YES;
+    if(!DGNPool) fprintf(dbg,"POOL DERIVE FAIL (key=0x%02x لكن العنوان لم يُشتق — الأسماء تعمل عبر hit مباشر)\n",K);
+}
+static void DGCensus(FILE *dbg){
+    if(DGCensusDone||DGNameKey<0||!DGNPool||!DGGUObj) return;
+    DGCensusDone=YES;
+    fprintf(dbg,"===== CENSUS START =====\n");
+    uint64_t objObjects=DGGUObj+0x10, objectsPtr=0;
+    if(!DGReadQ(objObjects+0x10,&objectsPtr)||!objectsPtr)
+        if(!DGReadQ(objObjects+0x8,&objectsPtr)||!objectsPtr) return;
+    int printed=0;
+    const char *kw[9]={"Character","Pawn","Controller","Camera","World","PlayerState","Capsule","Movement","GameState"};
+    for(int c=0;c<8&&printed<250;c++){
+        uint64_t chunk=0; if(!DGReadQ(objectsPtr+(uint64_t)c*8,&chunk)||!chunk) continue;
+        for(uint32_t i=0;i<0x10000&&printed<250;i++){
+            uint64_t item=chunk+(uint64_t)i*0x18, obj=0;
+            if(!DGReadQ(item,&obj)||obj<0x100000000ULL||obj>=0x400000000ULL||(obj&7)) continue;
+            uint64_t cp=0; if(!DGReadQ(obj+0x8,&cp)||!cp) continue;
+            char cn[96]; if(!DGNameOfCls(cp,cn,sizeof cn)) continue;
+            BOOL hit=NO; for(int k=0;k<9;k++) if(strstr(cn,kw[k])) hit=YES;
+            if(!hit) continue;
+            uint32_t self=0; { uint64_t g=0; uint8_t*sb=DGSafeRead(obj+0x24,4,&g);
+                if(sb&&g>=4){ memcpy(&self,sb,4); DGFreeRead(sb,g); } }
+            fprintf(dbg,"CENSUS self=%u cls=%s obj=0x%llx\n",self,cn,(unsigned long long)obj);
+            printed++;
+        }
+    }
+    fprintf(dbg,"===== CENSUS END printed=%d =====\n",printed);
+    fflush(dbg);
+}
+
 static void DGTrackLivePrint(FILE *dbg){
     if(!DGSelfKeyDone) DGSelfKey(dbg);
     if(DGNameKey>=0&&DGNPool) DGCensus(dbg);
