@@ -3000,6 +3000,32 @@ static void DGCmdLoop(void){
                 else fprintf(lg,"CMD scankeybg none\n");
                 fclose(lg); free(hA); });
             fprintf(dbg,"CMD scankeybg dispatched\n");
+        } else if(!strcmp(cmd,"setpool") && sscanf(line,"%*s %llx %llu %llu",&a,&b,&b)==3){
+            unsigned long long bo=0,sh=0;
+            sscanf(line,"%*s %llx %llu %llu",&a,&bo,&sh);
+            DGNPool=a; DGNBlocksOff=(int)bo; DGNShift=(int)sh; DGNameKey=0xff;
+            fprintf(dbg,"CMD setpool pool=0x%llx boff=0x%llx shift=%llu key=0xff\n",(unsigned long long)a,bo,sh);
+        } else if(!strcmp(cmd,"findid") && sscanf(line,"%*s %llu",&b)==1){
+            if(!DGGUObj) fprintf(dbg,"CMD findid NOGUOBJ\n");
+            else{
+                uint64_t oo=DGGUObj+0x10, op=0;
+                if(!DGReadQ(oo+0x10,&op)||!op) DGReadQ(oo+0x8,&op);
+                int cnt=0;
+                for(int c2=0;c2<8&&cnt<10;c2++){
+                    uint64_t chunk=0; if(!DGReadQ(op+(uint64_t)c2*8,&chunk)||!chunk) continue;
+                    for(uint32_t i2=0;i2<0x10000&&cnt<10;i2++){
+                        uint64_t obj=0; if(!DGReadQ(chunk+(uint64_t)i2*0x18,&obj)) continue;
+                        if(obj<0x100000000ULL||obj>=0x400000000ULL||(obj&7)) continue;
+                        uint64_t g3=0; uint8_t*nb=DGSafeRead(obj+0x1c,4,&g3);
+                        if(!nb||g3<4){ if(nb)DGFreeRead(nb,g3); continue; }
+                        uint32_t nid; memcpy(&nid,nb,4); DGFreeRead(nb,g3);
+                        if(nid==(uint32_t)b){ uint32_t si=0; uint64_t g4=0; uint8_t*sb=DGSafeRead(obj+0x24,4,&g4);
+                            if(sb&&g4>=4){ memcpy(&si,sb,4); DGFreeRead(sb,g4); }
+                            fprintf(dbg,"CMD findid %llu → obj=0x%llx self=%u\n",(unsigned long long)b,(unsigned long long)obj,si); cnt++; }
+                    }
+                }
+                if(!cnt) fprintf(dbg,"CMD findid none\n");
+            }
         } else if(!strcmp(cmd,"gobj")){
             fprintf(dbg,"CMD gobj=0x%llx\n",(unsigned long long)DGGUObj);
         } else if(!strcmp(cmd,"key")){
@@ -3046,6 +3072,27 @@ static void DGAutoMode(void){
         if(b&&g>=4){ memcpy(&idi,b,4); DGFreeRead(b,g); cls=cp; }
     }
     if(!cls){ fprintf(dbg,"AUTO NOCLS\n"); fclose(dbg); DGAutoDone=YES; return; }
+    /* 3b) جرّب مرشح الـ Pool القديم مباشرة بتخطيط UC (chunk>>12, blocks@+0x10) */
+    if(DGGNamePool){
+        uint32_t chA=idi>>12, offA=idi&0xFFFF;
+        uint64_t bp=0;
+        if(DGReadQ(DGGNamePool+0x10+(uint64_t)chA*8,&bp)&&bp>=0x100000000ULL&&bp<0x400000000ULL){
+            uint64_t expect=bp+(uint64_t)offA*2+2;
+            fprintf(dbg,"AUTO TRYCAND pool=0x%llx ch=%u bp=0x%llx expect=0x%llx hit=0x%llx\n",
+                (unsigned long long)DGGNamePool,chA,(unsigned long long)bp,(unsigned long long)expect,(unsigned long long)hit);
+            if(expect==hit){
+                DGNPool=DGGNamePool; DGNShift=12; DGNBlocksOff=0x10;
+                char tv2[80]="";
+                if(DGClassName(cls,tv2,sizeof tv2)&&strstr(tv2,"GPCharacter")){
+                    fprintf(dbg,"AUTO POOL OK pool=0x%llx shift=12 boff=0x10 verify=%s\n",(unsigned long long)DGNPool,tv2);
+                    strncpy(DGCFTarget,"Character",60); DGCFDone=NO; DGCFPos=0;
+                    while(!DGCFDone){ DGClassFindChunk(dbg); }
+                    fprintf(dbg,"AUTO CENSUS DONE tracked=%d\n",DGTrackN);
+                    fclose(dbg); DGAutoDone=YES; return;
+                }
+            }
+        }
+    }
     fprintf(dbg,"AUTO cls=0x%llx id=%u\n",(unsigned long long)cls,idi);
     /* 3) فرضيتان للتخطيط — نتحقق بأسماء فكّت فعلاً */
     uint64_t E=hit-2; /* header addr */
