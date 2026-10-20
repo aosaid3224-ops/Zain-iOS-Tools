@@ -2090,22 +2090,27 @@ static void DGResolveOfficial(FILE *dbg){
                 uint64_t ins=DGTextLo+pos+q;
                 uint64_t cand=DGDecodeADRL(ins+6);
                 if(!cand) continue;
-                /* BlocksOff = cand-8 → Blocks[0] → block → None? */
-                uint64_t blocks=0,block=0;
-                if(!DGReadQ(cand-8,&blocks)||!blocks) continue;
-                if(!DGReadQ(blocks,&block)||!block) continue;
-                uint64_t g2=0; uint8_t *e=DGSafeRead(block,64,&g2);
-                if(!e) continue;
-                uint16_t hdr=0; if(g2>=2) memcpy(&hdr,e,2);
-                uint32_t len=hdr>>6;
-                if(len==4&&g2>=6){
-                    char nm[8]={0}; memcpy(nm,e+2,4);
-                    DGDecName(nm,4);
-                    if(memcmp(nm,"None",4)==0){ DGGNamePool=cand;
-                        fprintf(dbg,"NAMEPOOL-ANCHOR @ 0x%llx → 0x%llx VERIFIED None\n",(unsigned long long)ins,(unsigned long long)cand);
+                /* جرّب كل التخطيطات: cand-8 / cand+0x10 / cand+0x38 */
+                for(int btry=0;btry<3 && !DGGNamePool;btry++){
+                    uint64_t bsrc = btry==0 ? cand-8 : (btry==1 ? cand+0x10 : cand+0x38);
+                    uint64_t blocks=0,block=0;
+                    if(!DGReadQ(bsrc,&blocks)||!blocks) continue;
+                    if(!DGReadQ(blocks,&block)||!block) continue;
+                    uint64_t g2=0; uint8_t *e=DGSafeRead(block,64,&g2);
+                    if(!e) continue;
+                    uint16_t hdr=0; if(g2>=2) memcpy(&hdr,e,2);
+                    uint32_t len=hdr>>6;
+                    if(len==4&&g2>=6){
+                        char nm[8]={0}; memcpy(nm,e+2,4);
+                        DGDecName(nm,4);
+                        if(memcmp(nm,"None",4)==0){ DGGNamePool=cand;
+                            DGNShift=(btry==1)?12:18;
+                            DGNBlocksOff=(btry==0)?-8:(btry==1?0x10:0x38);
+                            fprintf(dbg,"NAMEPOOL-ANCHOR @ 0x%llx → 0x%llx VERIFIED None btry=%d shift=%d\n",(unsigned long long)ins,(unsigned long long)cand,btry,DGNShift);
+                        }
                     }
+                    DGFreeRead(e,g2);
                 }
-                DGFreeRead(e,g2);
             }
             DGFreeRead(buf,got);
             pos+=got?got:want;
@@ -3026,6 +3031,19 @@ static void DGCmdLoop(void){
                 }
                 if(!cnt) fprintf(dbg,"CMD findid none\n");
             }
+        } else if(!strcmp(cmd,"finddata") && sscanf(line,"%*s %llx %llx %159[^\n]",&a,&b,arg)==3){
+            while(arg[0]==' ') memmove(arg,arg+1,strlen(arg));
+            uint8_t pat[32]; int pl=0;
+            for(int i2=0;arg[i2]&&arg[i2+1]&&pl<32;i2+=2){ unsigned v; sscanf(arg+i2,"%2x",&v); pat[pl++]=(uint8_t)v; }
+            int cnt=0;
+            for(uint64_t s=a;s<b&&cnt<8;s+=0x8000){
+                uint64_t g=0; uint8_t*p=DGSafeRead(s,0x8000,&g);
+                if(!p) continue;
+                for(uint64_t i2=0;i2+pl<g&&cnt<8;i2++) if(!memcmp(p+i2,pat,pl)){
+                    fprintf(dbg,"CMD finddata @0x%llx\n",(unsigned long long)(s+i2)); cnt++; }
+                DGFreeRead(p,g);
+            }
+            if(!cnt) fprintf(dbg,"CMD finddata none\n");
         } else if(!strcmp(cmd,"gobj")){
             fprintf(dbg,"CMD gobj=0x%llx\n",(unsigned long long)DGGUObj);
         } else if(!strcmp(cmd,"key")){
@@ -3088,6 +3106,13 @@ static void DGAutoMode(void){
                     strncpy(DGCFTarget,"Character",60); DGCFDone=NO; DGCFPos=0;
                     while(!DGCFDone){ DGClassFindChunk(dbg); }
                     fprintf(dbg,"AUTO CENSUS DONE tracked=%d\n",DGTrackN);
+                    for(int t=0;t<DGTrackN;t++){
+                        uint32_t cc=DGTrackCls[t];
+                        if(cc!=2117&&cc!=2118) continue;
+                        uint64_t cp=0; if(!DGReadQ(DGTrackObj[t]+0x8,&cp)||!cp) continue;
+                        char cn[80]="?"; DGClassName(cp,cn,sizeof cn);
+                        DGSdkWalk(cp,cn,dbg);
+                    }
                     fclose(dbg); DGAutoDone=YES; return;
                 }
             }
@@ -3129,6 +3154,45 @@ static void DGAutoMode(void){
     fprintf(dbg,"AUTO POOLFAIL\n");
     fclose(dbg);
     DGAutoDone=YES;
+}
+
+/* فك اسم من الـ Pool مباشرة (بغض النظر عن كلاس) */
+static BOOL DGClassNameName(uint32_t nid, char *out, int outLen){
+    uint8_t raw[128]; int L=0;
+    if(!DGRawEntry(nid,raw,&L)) return NO;
+    if(L>=outLen) L=outLen-1;
+    memcpy(out,raw,L); out[L]=0; return L>0;
+}
+/* v0.57: SDKWALK — يسير على ChildProperties ويطبع العضو=الأوفست بالاسم (مثل Dumper-7) */
+static int DGSdkWalk(uint64_t cls, const char *cname, FILE *dbg){
+    if(!cls||!dbg) return 0;
+    for(uint64_t cpOff=0x38; cpOff<=0x48; cpOff+=8){
+        uint64_t cp=0; if(!DGReadQ(cls+cpOff,&cp)||cp<0x100000000ULL||cp>=0x400000000ULL||(cp&7)) continue;
+        int printed=0; uint64_t node=cp;
+        char first[64]=""; uint32_t firstOff=0;
+        for(int i=0;i<80&&node>=0x100000000ULL&&node<0x400000000ULL&&(node&7)==0;i++){
+            uint32_t nid=0xFFFFFFFF; { uint64_t g=0; uint8_t*b=DGSafeRead(node+0x20,4,&g);
+                if(!b||g<4){ if(b)DGFreeRead(b,g); break; } memcpy(&nid,b,4); DGFreeRead(b,g); }
+            char pn[72]=""; if(!DGClassNameName(nid,pn,sizeof pn)) break;   /* فك اسم الخاصية */
+            BOOL printable=pn[0]&&strlen(pn)<60; for(char*p=pn;printable&&*p;p++) if(*p<32||*p>126) printable=NO;
+            if(!printable) break;
+            uint32_t oA=0xFFFFFFFF,oB=0xFFFFFFFF;
+            { uint64_t g=0; uint8_t*b=DGSafeRead(node+0x3c,4,&g); if(b&&g>=4){memcpy(&oA,b,4);DGFreeRead(b,g);} }
+            { uint64_t g=0; uint8_t*b=DGSafeRead(node+0x44,4,&g); if(b&&g>=4){memcpy(&oB,b,4);DGFreeRead(b,g);} }
+            uint32_t off=(oA<0x20000)?oA:((oB<0x20000)?oB:0xFFFFFFFF);
+            if(off==0xFFFFFFFF) break;
+            if(!printed){ fprintf(dbg,"WALK %s (cp=+0x%llx):\n",cname,(unsigned long long)cpOff); strncpy(first,pn,60); firstOff=off; }
+            fprintf(dbg,"  %s = 0x%x\n",pn,off);
+            printed++;
+            uint64_t nx=0; if(!DGReadQ(node+0x18,&nx)||nx==node) break; node=nx;
+        }
+        if(printed>=6){ 
+            fprintf(dbg,"WALKDONE %s n=%d first=%s@0x%x\n",cname,printed,first,firstOff);
+            return printed;
+        }
+    }
+    fprintf(dbg,"WALKFAIL %s\n",cname);
+    return 0;
 }
 static int DGTrackRescan(FILE *dbg);
 static NSTimeInterval DGTrackLastTick=0;
