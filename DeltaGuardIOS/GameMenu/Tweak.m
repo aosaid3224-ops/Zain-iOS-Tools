@@ -2658,7 +2658,8 @@ static void DGTrackLivePrint(FILE *dbg){
         }
     }
     fflush(dbg);
-    snprintf(DGTrackStat,sizeof(DGTrackStat),"CORE ✓ n=%d",DGTrackN);
+    DGEspUpdate();
+    snprintf(DGTrackStat,sizeof(DGTrackStat),"CORE ✓ n=%d esp=%d",DGTrackN,DGEspCount);
 }
 
 static int DGTrackRescan(FILE *dbg);
