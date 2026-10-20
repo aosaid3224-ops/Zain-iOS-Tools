@@ -3059,6 +3059,12 @@ static void DGClassFindChunk(FILE *dbg){
         /* فك اسم الكلاس وطابق */
         char cn[96];
         if(!DGClassName(cp,cn,sizeof cn)) continue;
+        if(DGCFTarget[0]){ if(strstr(cn,DGCFTarget)&&strlen(cn)<48){
+                uint32_t self2=0; { uint64_t g=0; uint8_t*sb=DGSafeRead(obj+0x24,4,&g); if(sb&&g>=4){ memcpy(&self2,sb,4); DGFreeRead(sb,g);} }
+                fprintf(dbg,"CF FOUND name=%s self=%u cls=%u obj=0x%llx\n",cn,self2,ci,(unsigned long long)obj);
+                BOOL have=NO; for(int t=0;t<DGTrackN;t++) if(DGTrackObj[t]==obj) have=YES;
+                if(!have&&DGTrackN<DG_MAX_TRACK){ DGTrackObj[DGTrackN]=obj; DGTrackCls[DGTrackN]=ci; DGTrackSelf[DGTrackN]=self2; DGTrackN++; }
+            } continue; }
         for(int s=0;s<7;s++){
             if(strstr(cn,T[s])&&strlen(cn)<40){
                 uint32_t self2=0; { uint64_t g=0; uint8_t*sb=DGSafeRead(obj+0x24,4,&g); if(sb&&g>=4){ memcpy(&self2,sb,4); DGFreeRead(sb,g);} }
@@ -3072,6 +3078,79 @@ static void DGClassFindChunk(FILE *dbg){
             }
         }
     }
+}
+
+/* v0.55: وحدة التحكم الحية — ملف أوامر يقرأ كل ثانية من updateStats وينفذ فوراً */
+static char DGCFTarget[64]="";
+static void DGCmdLoop(void){
+    NSString *cp=[NSTemporaryDirectory() stringByAppendingPathComponent:@"deltaguard_cmd.txt"];
+    FILE *cf=fopen([cp UTF8String],"r");
+    if(!cf) return;
+    NSString *lp=[NSTemporaryDirectory() stringByAppendingPathComponent:@"deltaguard_ue4.txt"];
+    FILE *dbg=fopen([lp UTF8String],"a");
+    if(!dbg){ fclose(cf); return; }
+    char line[256]; int n=0;
+    while(fgets(line,sizeof line,cf) && n<40){
+        n++;
+        char cmd[32]="",arg[160]=""; unsigned long long a=0,b=0;
+        sscanf(line,"%31s",cmd);
+        if(!strcmp(cmd,"readq") && sscanf(line,"%*s %llx",&a)==1){
+            uint64_t v=0; BOOL ok=DGReadQ(a,&v);
+            fprintf(dbg,"CMD readq 0x%llx = 0x%016llx %s\n",(unsigned long long)a,(unsigned long long)v,ok?"":"FAIL");
+        } else if(!strcmp(cmd,"readh") && sscanf(line,"%*s %llx %llu",&a,&b)==2){
+            if(b>256)b=256; uint64_t g=0; uint8_t*p=DGSafeRead(a,b,&g);
+            if(p){ fprintf(dbg,"CMD readh 0x%llx:",(unsigned long long)a);
+                for(uint64_t i=0;i<g;i++) fprintf(dbg,"%02x",p[i]);
+                fprintf(dbg,"\n"); DGFreeRead(p,g); }
+            else fprintf(dbg,"CMD readh FAIL\n");
+        } else if(!strcmp(cmd,"readf") && sscanf(line,"%*s %llx %llu",&a,&b)==2){
+            if(b>48)b=48; uint64_t g=0; uint8_t*p=DGSafeRead(a,b*4,&g);
+            if(p){ fprintf(dbg,"CMD readf 0x%llx:",(unsigned long long)a);
+                for(uint64_t i=0;i+4<=g;i+=4){ float v; memcpy(&v,p+i,4); fprintf(dbg," %.3f",v); }
+                fprintf(dbg,"\n"); DGFreeRead(p,g); }
+            else fprintf(dbg,"CMD readf FAIL\n");
+        } else if(!strcmp(cmd,"find") && sscanf(line,"%*s %llx %llx %159[^\n]",&a,&b,arg)==3){
+            while(arg[0]==' ') memmove(arg,arg+1,strlen(arg));
+            int L=(int)strlen(arg),cnt=0;
+            for(uint64_t s=a;s<b&&cnt<8;s+=0x8000){
+                uint64_t g=0; uint8_t*p=DGSafeRead(s,0x8000,&g);
+                if(!p) continue;
+                for(uint64_t i=0;i+L<g&&cnt<8;i++) if(!memcmp(p+i,arg,L)){
+                    fprintf(dbg,"CMD find '%s' @0x%llx\n",arg,(unsigned long long)(s+i)); cnt++; }
+                DGFreeRead(p,g);
+            }
+            if(!cnt) fprintf(dbg,"CMD find none in range\n");
+        } else if(!strcmp(cmd,"cname") && sscanf(line,"%*s %llx",&a)==1){
+            uint64_t cp2=0; char cn[96]="?";
+            if(DGReadQ(a+0x8,&cp2)&&cp2) DGClassName(cp2,cn,sizeof cn);
+            fprintf(dbg,"CMD cname 0x%llx = %s\n",(unsigned long long)a,cn);
+        } else if(!strcmp(cmd,"census") && sscanf(line,"%*s %159[^\n]",arg)==1){
+            if(DGNameKey<0) fprintf(dbg,"CMD census NOKEY (wait SELFKEY)\n");
+            else { strncpy(DGCFTarget,arg,60); DGCFTarget[59]=0; DGCFDone=NO; DGCFPos=0;
+                   fprintf(dbg,"CMD census target='%s' — results as CF FOUND\n",DGCFTarget); }
+        } else if(!strcmp(cmd,"gobj")){
+            fprintf(dbg,"CMD gobj=0x%llx\n",(unsigned long long)DGGUObj);
+        } else if(!strcmp(cmd,"key")){
+            fprintf(dbg,"CMD key=0x%02x pool=0x%llx names=%s\n",DGNameKey,(unsigned long long)DGNPool,DGNameKey>=0?"ON":"OFF");
+        } else if(!strcmp(cmd,"scankey") && sscanf(line,"%*s %llx %llx %159[^\n]",&a,&b,arg)==3){
+            while(arg[0]==' ') memmove(arg,arg+1,strlen(arg));
+            int K=-1; uint64_t hit=0;
+            if(DGScanForPlain(arg,a,b,&K,&hit)){ DGNameKey=K; DGNPool=DGGNamePool;
+                fprintf(dbg,"CMD scankey OK key=0x%02x hit=0x%llx for '%s' — now census/cname ready\n",K,(unsigned long long)hit,arg); }
+            else fprintf(dbg,"CMD scankey none\n");
+        } else if(!strcmp(cmd,"pos") && sscanf(line,"%*s %llx",&a)==1){
+            /* قراءة مرشحة مواقع على الكائن */
+            uint64_t rc=0;
+            if(DGReadQ(a+0x180,&rc)&&rc>=0x100000000ULL&&rc<0x400000000ULL){
+                uint64_t g=0; uint8_t*p=DGSafeRead(rc+0x164,12,&g);
+                if(p&&g>=12){ float v[3]; memcpy(v,p,12); fprintf(dbg,"CMD pos root@0x164=(%.2f,%.2f,%.2f)\n",v[0],v[1],v[2]); DGFreeRead(p,g);} }
+            uint64_t g2=0; uint8_t*p2=DGSafeRead(a+0xB4,12,&g2);
+            if(p2&&g2>=12){ float v[3]; memcpy(v,p2,12); fprintf(dbg,"CMD pos rep@0xB4=(%.2f,%.2f,%.2f)\n",v[0],v[1],v[2]); DGFreeRead(p2,g2);} }
+        else fprintf(dbg,"CMD ? unknown: %.40s\n",line);
+        fflush(dbg);
+    }
+    fclose(cf); fclose(dbg);
+    remove([cp UTF8String]);
 }
 static int DGTrackRescan(FILE *dbg);
 static NSTimeInterval DGTrackLastTick=0;
@@ -4318,7 +4397,7 @@ static UIView *DGToggleRow(CGFloat y, NSString *text, SEL action, UISwitch * __s
         if(DGGetCameraBasis()) [DGEspView setNeedsDisplay];
     }
 }
-+ (void)updateStats{ DGFPS=DGFrameCount; DGFrameCount=0; [DGStatsLabel setText:[self statsText]]; }
++ (void)updateStats{ DGCmdLoop(); DGFPS=DGFrameCount; DGFrameCount=0; [DGStatsLabel setText:[self statsText]]; }
 
 + (NSString *)statsText{
     NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
