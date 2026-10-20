@@ -2836,7 +2836,7 @@ static void DGTrackLivePrint(FILE *dbg){
                 for(int x=0;x<0x10;x++) fprintf(dbg,"%02x",b[x]);
                 fprintf(dbg,"\n"); DGFreeRead(b,g);
             }
-        }        } else if(c==213||c==4500||c==208||c==1903){
+        } else if(c==213||c==4500||c==208||c==1903){
             for(uint64_t o=0x300;o<=0x500;o+=8){
                 uint64_t q=0; if(!DGReadQ(obj+o,&q)) continue;
                 if(q<0x100000000ULL||q>=0x400000000ULL||(q&7)) continue;
