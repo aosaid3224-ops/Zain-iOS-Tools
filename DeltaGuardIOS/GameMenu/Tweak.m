@@ -2584,7 +2584,7 @@ static void __attribute__((unused)) DGTrackPositions(FILE *dbg){
     fflush(dbg);
 }
 /* v0.39: WIDE-DIFF — diff لكل مكونات الشخصية (12) + تفسير ثلاثي float/int32/double — الكشف الحركي الشامل الأخير */
-#define DG_DIFF_MAX 96
+#define DG_DIFF_MAX 176
 static uint8_t DGDiffS0[DG_DIFF_MAX][2048];
 static uint64_t DGDiffObj[DG_DIFF_MAX];
 static uint32_t DGDiffSelf[DG_DIFF_MAX];
@@ -2599,7 +2599,7 @@ static int DGDiffSlot(uint64_t obj, uint32_t self, uint32_t cls){
     if(DGDiffN>=DG_DIFF_MAX) return -1;
     int i=DGDiffN++; DGDiffObj[i]=obj; DGDiffSelf[i]=self; DGDiffCls[i]=cls; DGDiffAge[i]=0; DGDiffMiss[i]=0; return i;
 }
-static void DGDiffScan(FILE *dbg, uint64_t obj, uint32_t self, uint32_t cls, const char *tag, int slot){
+static void DGDiffScan(FILE *dbg, uint64_t obj, uint32_t self, uint32_t cls, int compIdx, int slot){
     uint64_t g=0; uint8_t *b=DGSafeRead(obj+0x40,2048,&g);
     if(!b||g<256){ if(b)DGFreeRead(b,g); if(++DGDiffMiss[slot]>=2) DGDiffObj[slot]=0; return; }
     DGDiffMiss[slot]=0;
@@ -2618,7 +2618,7 @@ static void DGDiffScan(FILE *dbg, uint64_t obj, uint32_t self, uint32_t cls, con
             BOOL pI=(id>4 && ia>-1073741824&&ia<1073741824 && ib>-1073741824&&ib<1073741824);
             BOOL pD=(dd>0.02 && da>-1e8&&da<1e8 && db>-1e8&&db<1e8);
             if(pF||pI||pD){
-                fprintf(dbg,"CHG %s self=%u cls=%u +%x:",tag,self,cls,off+0x40);
+                fprintf(dbg,"CHG c%d self=%u cls=%u +%x:",compIdx,self,cls,off+0x40);
                 if(pF) fprintf(dbg," f=%.2f→%.2f",a,nb);
                 if(pI) fprintf(dbg," i=%d→%d",ia,ib);
                 if(pD) fprintf(dbg," d=%.3f→%.3f",da,db);
@@ -2637,8 +2637,7 @@ static void DGTrackLivePrint(FILE *dbg){
         uint64_t obj=DGTrackObj[t]; uint32_t c=DGTrackCls[t];
         if(c!=2117 && c!=2118) continue;
         int s=DGDiffSlot(obj,DGTrackSelf[t],c);
-        if(s>=0) DGDiffScan(dbg,obj,DGTrackSelf[t],c,"CH",s);
-        char tag[8]="C0";
+        if(s>=0) DGDiffScan(dbg,obj,DGTrackSelf[t],c,-1,s);
         for(int i=0;i<12&&DGDiffBudget<250;i++){
             uint64_t p=0,meta=0;
             if(!DGReadQ(obj+0x180+(uint64_t)i*0x10,&p)) continue;
@@ -2648,9 +2647,8 @@ static void DGTrackLivePrint(FILE *dbg){
             if(DGReadQ(p+0x8,&tcls)&&tcls){ uint64_t g0=0; uint8_t *ib=DGSafeRead(tcls+0x24,4,&g0);
                 if(ib&&g0>=4){ memcpy(&tc,ib,4); DGFreeRead(ib,g0); } }
             if(tc>60000) continue;
-            tag[1]='0'+i;
             int s2=DGDiffSlot(p,DGTrackSelf[t],tc);
-            if(s2>=0) DGDiffScan(dbg,p,DGTrackSelf[t],tc,tag,s2);
+            if(s2>=0) DGDiffScan(dbg,p,DGTrackSelf[t],tc,NULL,s2);
         }
     }
     fflush(dbg);
