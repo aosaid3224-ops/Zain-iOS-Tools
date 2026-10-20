@@ -2441,6 +2441,10 @@ static void DGPoolSemanticScan(FILE *dbg){
     fflush(dbg);
 }
 
+static BOOL DGIsCharClass(uint64_t cls);
+static uint32_t DGCIdx(uint64_t cls);
+static void DGCalibrateSuper(FILE *dbg);
+
 /* ===== v21: كشف اللاعبين بالفهرس الحقيقي (dump ground-truth) — بلا بول ===== */
 static const uint32_t kPlayerClassIdx[]={2118,2117,1924,1923,209,1903,213,206,208,4819,4825,4826,2131,2116,0};
 static const char *kPlayerClassNames[]={"GPCharacter","GPCharacterBase","CharacterBase","IntCharacter","LuaCharacter","BasePlayerController","LuaPlayerController","Pawn","Character","DFMAICharacter","DFMAICharMove","DFMAICharScoring","GPCharMovement","GPCapsuleComponent",NULL};
@@ -2580,8 +2584,6 @@ static DGEspEnt DGEspList[24]; static int DGEspCount=0;
 static float DGEspCamLoc[3]={0,0,0}, DGEspCamRot[3]={0,0,0}; static float DGEspCamFov=90.f; static BOOL DGEspCamValid=NO;
 static UIView *DGEspView=nil; static UIWindow *DGEspWin=nil;
 static uint64_t DGEspPlayerObj=0;
-static BOOL DGIsCharClass(uint64_t cls);
-static void DGCalibrateSuper(FILE *dbg);
 static void DGEspSetCam(const float *v){ memcpy(DGEspCamLoc,v,12); memcpy(DGEspCamRot,v+3,12); DGEspCamFov=v[6]; DGEspCamValid=YES; }
 static void DGEspEnsure(void){
     if(DGEspWin) return;
