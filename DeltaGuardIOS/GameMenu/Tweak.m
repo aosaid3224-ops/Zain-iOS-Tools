@@ -2655,7 +2655,9 @@ static BOOL DGSelfKeyDone=NO;
 static BOOL DGSelfKeyStarted=NO;
 static BOOL DGCFDone=NO;
 static char DGCFTarget[64]="";
+static BOOL DGAutoDone=NO, DGAutoStarted=NO;
 static void DGSelfKeyFn(void);
+static void DGAutoMode(void);
 static BOOL DGClassName(uint64_t clsPtr, char *out, int outLen);
 static void DGClassFindChunk(FILE *dbg);
 
@@ -3024,7 +3026,6 @@ static void DGCmdLoop(void){
 }
 
 /* v0.56: AUTO — أتمتة كاملة خلفية: مفتاح → Pool (بتحقق ذاتي) → census أسماء → تتبع تلقائي */
-static BOOL DGAutoDone=NO, DGAutoStarted=NO;
 static void DGAutoMode(void){
     if(DGAutoDone) return;
     FILE *dbg=fopen([[NSTemporaryDirectory() stringByAppendingPathComponent:@"deltaguard_ue4.txt"] UTF8String],"a");
