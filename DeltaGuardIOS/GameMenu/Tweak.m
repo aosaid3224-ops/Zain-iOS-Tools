@@ -2529,60 +2529,7 @@ static void DGIndexSweep(FILE *dbg){
     fflush(dbg);
 }
 /* متتبع المواقع: عينتان متباعدتان — المتغير بينهما = إحداثيات */
-static uint8_t DGTrackS0[DG_MAX_TRACK][2048]; /* v0.27: نافذة 2048B تكشف بنية الكاركتر الكاملة */
-static uint8_t DGTrackS1[DG_MAX_TRACK][2048];
-static int DGTrackPhase=0;
-static int DGTrackT1Count=0;
 static char DGTrackStat[128]=""; /* v0.28.1: حالة التتبع المعزولة للوحة */ /* v0.27: حتى 4 عينات T1 لالتقاط الحركة بكل تأكيد */
-static void __attribute__((unused)) DGTrackPositions(FILE *dbg){
-    if(!DGTrackN) return;
-    if(DGTrackPhase==0){
-        for(int t=0;t<DGTrackN;t++){
-            uint64_t g=0; uint8_t *b=DGSafeRead(DGTrackObj[t]+0x140,2048,&g);
-            if(b){ memcpy(DGTrackS0[t],b,g<2048?g:2048); DGFreeRead(b,g); }
-            /* v0.27: PTRDUMP للكاركتر الحقيقي — كل مؤشرات المكونات (RootComponent وغيره) */
-            if(DGTrackCls[t]==2117){
-                fprintf(dbg,"PTRDUMP cls=2117 self=%u obj=0x%llx ptrs=[",DGTrackSelf[t],(unsigned long long)DGTrackObj[t]);
-                for(int po=0x20;po<=0x400;po+=8){
-                    uint64_t q=0; if(!DGReadQ(DGTrackObj[t]+po,&q)) continue;
-                    if(q>=0x100000000ULL&&q<0x400000000ULL&&!(q&7)) fprintf(dbg,"+0x%x:0x%llx ",po,(unsigned long long)q);
-                }
-                fprintf(dbg,"]\n");
-            }
-        }
-        DGTrackPhase=1; DGTrackT1Count=0;
-        fprintf(dbg,"TRACK T0 captured n=%d win=2048B — تحرك الآن (4 عينات T1 كل 5 ثوانٍ)!\n",DGTrackN);
-        snprintf(DGTrackStat,sizeof(DGTrackStat),"T0 ✓ — يمين 3ث ثم وقف (%d متتبع)",DGTrackN);
-        fflush(dbg);
-        return;
-    }
-    if(DGTrackT1Count>=4){
-        fprintf(dbg,"TRACK DONE — القيم المتغيرة = الإحداثيات!\n");
-        snprintf(DGTrackStat,sizeof(DGTrackStat),"DONE ✓ — ابعث اللوغ الآن");
-        fflush(dbg);
-        DGTrackPhase=2;
-        return;
-    }
-    DGTrackT1Count++;
-    /* العينات T1#1..#4: كل واحدة فرصة لالتقاط حركتك بين 5-ثوانٍ ticks */
-    for(int t=0;t<DGTrackN;t++){
-        uint64_t g=0; uint8_t *b=DGSafeRead(DGTrackObj[t]+0x140,2048,&g);
-        if(!b) continue;
-        memcpy(DGTrackS1[t],b,g<2048?g:2048); DGFreeRead(b,g);
-        fprintf(dbg,"TRACKDIFF #%d cls=%u self=%u obj=0x%llx changed=[",DGTrackT1Count,DGTrackCls[t],DGTrackSelf[t],(unsigned long long)DGTrackObj[t]);
-        for(int off=0;off+4<=2048;off+=4){
-            if(memcmp(DGTrackS0[t]+off,DGTrackS1[t]+off,4)!=0){
-                float f0,f1; memcpy(&f0,DGTrackS0[t]+off,4); memcpy(&f1,DGTrackS1[t]+off,4);
-                fprintf(dbg,"%+d:%.2f→%.2f ",off,f0,f1);
-            }
-        }
-        fprintf(dbg,"]\n");
-    }
-    if(DGTrackT1Count==1) snprintf(DGTrackStat,sizeof(DGTrackStat),"T1#1 ✓ — يسار 3ث ثم وقف");
-    else if(DGTrackT1Count==2) snprintf(DGTrackStat,sizeof(DGTrackStat),"T1#2 ✓ — أمام 3ث ثم وقف");
-    else snprintf(DGTrackStat,sizeof(DGTrackStat),"T1#%d ✓ — سكون",DGTrackT1Count);
-    fflush(dbg);
-}
 /* v0.40: NODE — العودة لأوفست v0.31 المؤكد: كل عناصر مصفوفة المشهد (36, +0x180..+0x3B0) تقرأ تحويلها العالمي عند +0x200/+0x210 مباشرة */
 static void DGTrackLivePrint(FILE *dbg){
     for(int t=0;t<DGTrackN;t++){
