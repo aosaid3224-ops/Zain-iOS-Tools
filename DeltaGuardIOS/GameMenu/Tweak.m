@@ -2554,6 +2554,74 @@ static void DGDiffObj(FILE *dbg, uint64_t obj, uint32_t self){
     }
     memcpy(DGD_S0[s],b,lim); DGD_Age[s]++; DGFreeRead(b,g);
 }
+/* v0.45: ESP — إسقاط World→Screen (UE4 FRotator) + Overlay + مربعات */
+#include <math.h>
+typedef struct { float x,y,z; uint32_t cls; BOOL valid; } DGEspEnt;
+static DGEspEnt DGEspList[24]; static int DGEspCount=0;
+static float DGEspCamLoc[3]={0,0,0}, DGEspCamRot[3]={0,0,0}; static float DGEspCamFov=90.f; static BOOL DGEspCamValid=NO;
+static UIView *DGEspView=nil; static UIWindow *DGEspWin=nil;
+static void DGEspSetCam(const float *v){ memcpy(DGEspCamLoc,v,12); memcpy(DGEspCamRot,v+3,12); DGEspCamFov=v[6]; DGEspCamValid=YES; }
+static void DGEspEnsure(void){
+    if(DGEspWin) return;
+    DGEspWin=[[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
+    DGEspWin.windowLevel=UIWindowLevelAlert+1; DGEspWin.userInteractionEnabled=NO; DGEspWin.backgroundColor=[UIColor clearColor];
+    DGEspView=[[UIView alloc] initWithFrame:DGEspWin.bounds]; DGEspView.backgroundColor=[UIColor clearColor]; DGEspView.userInteractionEnabled=NO;
+    [DGEspWin addSubview:DGEspView]; [DGEspWin makeKeyAndVisible];
+    CADisplayLink *link=[CADisplayLink displayLinkWithTarget:DGEspView selector:@selector(setNeedsDisplay)];
+    [link addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSRunLoopCommonModes];
+}
+static void DGEspUpdate(void){
+    int n=0;
+    for(int t=0;t<DGTrackN && n<24;t++){
+        uint64_t obj=DGTrackObj[t]; uint32_t c=DGTrackCls[t];
+        if(c!=5358 && c!=5377 && c!=4819 && c!=2117 && c!=2118) continue;
+        float p[3]={0,0,0}; BOOL ok=NO; uint64_t rc=0;
+        if(DGReadQ(obj+0x180,&rc)&&rc>=0x100000000ULL&&rc<0x400000000ULL){
+            uint64_t g=0; uint8_t*b=DGSafeRead(rc+0x164,12,&g);
+            if(b&&g>=12){ memcpy(p,b,12); DGFreeRead(b,g); ok=(p[0]!=0.f||p[1]!=0.f||p[2]!=0.f); }
+        }
+        if(!ok){ uint64_t g=0; uint8_t*b=DGSafeRead(obj+0xB4,12,&g);
+            if(b&&g>=12){ memcpy(p,b,12); DGFreeRead(b,g); ok=(p[0]!=0.f||p[1]!=0.f||p[2]!=0.f); } }
+        if(!ok) continue;
+        DGEspList[n].x=p[0]; DGEspList[n].y=p[1]; DGEspList[n].z=p[2]; DGEspList[n].cls=c; DGEspList[n].valid=YES; n++;
+    }
+    for(int i=n;i<24;i++) DGEspList[i].valid=NO;
+    DGEspCount=n;
+    if(n>0 && DGEspCamValid) DGEspEnsure();
+}
+@interface DGEspOverlay : UIView @end
+@implementation DGEspOverlay
+- (void)drawRect:(CGRect)rect{
+    if(!DGEspCamValid) return;
+    CGContextRef ctx=UIGraphicsGetCurrentContext();
+    CGFloat W=self.bounds.size.width, H=self.bounds.size.height;
+    float pr=DGEspCamRot[0]*(float)M_PI/180.f, yr=DGEspCamRot[1]*(float)M_PI/180.f;
+    float CP=cosf(pr), SP=sinf(pr), CY=cosf(yr), SY=sinf(yr);
+    float fx=CP*CY, fy=CP*SY, fz=SP, rx=-SY, ry=CY, rz=0.f;
+    float ux=ry*fz-rz*fy, uy=rz*fx-rx*fz, uz=rx*fy-ry*fx;
+    float tanH=tanf(DGEspCamFov*0.5f*(float)M_PI/180.f);
+    CGContextSetLineWidth(ctx,1.5f);
+    for(int i=0;i<DGEspCount;i++){
+        DGEspEnt *e=&DGEspList[i]; if(!e->valid) continue;
+        float dx=e->x-DGEspCamLoc[0], dy=e->y-DGEspCamLoc[1], dz=e->z-DGEspCamLoc[2];
+        float zc=dx*fx+dy*fy+dz*fz; if(zc<40.f) continue;
+        float xc=dx*rx+dy*ry+dz*rz, yc=dx*ux+dy*uy+dz*uz;
+        float sx=W*0.5f+(xc/(zc*tanH))*(W*0.5f);
+        float sy=H*0.5f-(yc/(zc*tanH))*(W*0.5f);
+        float dist=sqrtf(dx*dx+dy*dy+dz*dz);
+        float boxH=(160.f/zc)*(W*0.5f)/tanH, boxW=boxH*0.45f;
+        CGRect box=CGRectMake(sx-boxW*0.5f, sy-boxH, boxW, boxH);
+        if(box.origin.x>W||box.origin.x+box.size.width<0) continue;
+        BOOL isPlayer=(e->cls==5358);
+        CGContextSetStrokeColorWithColor(ctx, isPlayer?[[UIColor redColor] CGColor]:[[UIColor greenColor] CGColor]);
+        CGContextStrokeRect(ctx, box);
+        NSString *txt=[NSString stringWithFormat:@"%@%u %0.fm", isPlayer?@"[YOU] ":@"", e->cls, dist];
+        [txt drawAtPoint:CGPointMake(box.origin.x, box.origin.y-14) withAttributes:@{NSFontAttributeName:[UIFont systemFontOfSize:10], NSForegroundColorAttributeName:isPlayer?[UIColor redColor]:[UIColor yellowColor]}];
+        CGContextMoveToPoint(ctx, W*0.5f, H*0.5f); CGContextAddLineToPoint(ctx, sx, sy-boxH*0.5f);
+        CGContextSetStrokeColorWithColor(ctx, [[UIColor whiteColor] CGColor]); CGContextStrokePath(ctx);
+    }
+}
+@end
 static void DGTrackLivePrint(FILE *dbg){
     if(!DGSelfKeyDone) DGSelfKey(dbg);
     if(DGNameKey>=0&&DGNPool) DGCensus(dbg);
@@ -2579,14 +2647,14 @@ static void DGTrackLivePrint(FILE *dbg){
                     if(b&&g>=0x1C){ float v[7]; memcpy(v,b,28);
                         fprintf(dbg,"CAM ctrl+0x%llx pcm=0x%llx loc=(%.1f,%.1f,%.1f) rot=(%.1f,%.1f,%.1f) fov=%.1f\n",
                             (unsigned long long)o,(unsigned long long)q,v[0],v[1],v[2],v[3],v[4],v[5],v[6]);
-                        DGFreeRead(b,g); } }
+                        DGEspSetCam(v); DGFreeRead(b,g); } }
                 if(qc==5358) fprintf(dbg,"PAWN ctrl+0x%llx ptr=0x%llx\n",(unsigned long long)o,(unsigned long long)q);
             }
         } else if(c==2332){
             uint64_t g=0; uint8_t*b=DGSafeRead(obj+0x2B60,0x1C,&g);
             if(b&&g>=0x1C){ float v[7]; memcpy(v,b,28);
                 fprintf(dbg,"CAMD loc=(%.1f,%.1f,%.1f) rot=(%.1f,%.1f,%.1f) fov=%.1f\n",v[0],v[1],v[2],v[3],v[4],v[5],v[6]);
-                DGFreeRead(b,g); }
+                DGEspSetCam(v); DGFreeRead(b,g); }
         }
     }
     fflush(dbg);
