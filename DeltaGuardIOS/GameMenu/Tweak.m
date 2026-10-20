@@ -2579,6 +2579,9 @@ typedef struct { float x,y,z; uint32_t cls; BOOL valid; uint64_t obj; BOOL isMe;
 static DGEspEnt DGEspList[24]; static int DGEspCount=0;
 static float DGEspCamLoc[3]={0,0,0}, DGEspCamRot[3]={0,0,0}; static float DGEspCamFov=90.f; static BOOL DGEspCamValid=NO;
 static UIView *DGEspView=nil; static UIWindow *DGEspWin=nil;
+static uint64_t DGEspPlayerObj=0;
+static BOOL DGIsCharClass(uint64_t cls);
+static void DGCalibrateSuper(FILE *dbg);
 static void DGEspSetCam(const float *v){ memcpy(DGEspCamLoc,v,12); memcpy(DGEspCamRot,v+3,12); DGEspCamFov=v[6]; DGEspCamValid=YES; }
 static void DGEspEnsure(void){
     if(DGEspWin) return;
@@ -2847,7 +2850,6 @@ static void DGTrackLivePrint(FILE *dbg){
 
 /* v0.46: هوية بالسلسلة الهرمية — أي كلاس يرث GPCharacterBase/GPCharacter(2117/2118) = شخصية حقيقية، بلا أرقام مجهولة */
 static int DGSupOff=0;
-static uint64_t DGEspPlayerObj=0;
 static uint32_t DGCIdx(uint64_t cls){ uint64_t g=0; uint8_t*b=DGSafeRead(cls+0x24,4,&g); if(!b||g<4){ if(b)DGFreeRead(b,g); return 0xFFFFFFFF; } uint32_t v; memcpy(&v,b,4); DGFreeRead(b,g); return v; }
 static void DGCalibrateSuper(FILE *dbg){
     if(DGSupOff) return;
