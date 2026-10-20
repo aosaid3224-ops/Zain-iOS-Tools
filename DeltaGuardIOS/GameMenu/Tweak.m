@@ -2566,7 +2566,7 @@ static void DGEspEnsure(void){
     DGEspWin=[[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
     DGEspWin.windowLevel=UIWindowLevelAlert+1; DGEspWin.userInteractionEnabled=NO; DGEspWin.backgroundColor=[UIColor clearColor];
     DGEspView=[[UIView alloc] initWithFrame:DGEspWin.bounds]; DGEspView.backgroundColor=[UIColor clearColor]; DGEspView.userInteractionEnabled=NO;
-    [DGEspWin addSubview:DGEspView]; [DGEspWin makeKeyAndVisible];
+    [DGEspWin addSubview:DGEspView]; DGEspWin.hidden=NO; /* لا makeKeyAndVisible — لا نسرق تركيز اللعبة */
     CADisplayLink *link=[CADisplayLink displayLinkWithTarget:DGEspView selector:@selector(setNeedsDisplay)];
     [link addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSRunLoopCommonModes];
 }
@@ -2774,8 +2774,7 @@ static void DGCensus(FILE *dbg){
 }
 
 static void DGTrackLivePrint(FILE *dbg){
-    if(!DGSelfKeyDone) DGSelfKey(dbg);
-    if(DGNameKey>=0&&DGNPool) DGCensus(dbg);
+    /* v0.45.2: تعطيل آلة الأسمام — كانت تحظر الخيط الرئيسي ثوانٍ فتقتل اللعبة عند الدخول */
     for(int t=0;t<DGTrackN;t++){
         uint64_t obj=DGTrackObj[t]; uint32_t c=DGTrackCls[t];
         fprintf(dbg,"NAME self=%u cls=%u obj=0x%llx\n",DGTrackSelf[t],c,(unsigned long long)obj);
