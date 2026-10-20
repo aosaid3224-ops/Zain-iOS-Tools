@@ -2675,6 +2675,7 @@ static char DGCFTarget[64]="";
 static BOOL DGAutoDone=NO, DGAutoStarted=NO;
 static void DGSelfKeyFn(void);
 static void DGAutoMode(void);
+static void DGLocateGlobals(void);
 static BOOL DGClassName(uint64_t clsPtr, char *out, int outLen);
 static void DGClassFindChunk(FILE *dbg);
 
@@ -3227,7 +3228,7 @@ static void DGStoreOff(const char *pn, uint32_t off){
 static BOOL DGLocated=NO, DGLocating=NO;
 static void DGLocateGlobals(void){
     if(DGLocated||DGLocating) return; DGLocating=YES;
-    FILE *dbg=fopen([[NSTemporaryDirectory() stringByAppendingPathComponent:@"deltaguard_ue4.txt"] UTFString],"a");
+    FILE *dbg=fopen([[NSTemporaryDirectory() stringByAppendingPathComponent:@"deltaguard_ue4.txt"] UTF8String],"a");
     if(!dbg){ DGLocated=YES; return; }
     const struct mach_header_64 *mh=(const struct mach_header_64*)_dyld_get_image_header(0);
     if(!mh){ fprintf(dbg,"LOCATE NOHDR\n"); fclose(dbg); DGLocated=YES; return; }
