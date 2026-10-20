@@ -2683,7 +2683,8 @@ static void DGTrackLivePrint(FILE *dbg){
     if(!DGSelfKeyStarted){ DGSelfKeyStarted=YES;
         /* v0.56: الأتمتة الكاملة خلفياً */
         if(!DGAutoStarted){ DGAutoStarted=YES;
-            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND,0),^{ DGAutoMode(); }); }
+            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND,0),^{ DGAutoMode(); });
+            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND,0),^{ DGLocateGlobals(); }); }
     }
     /* v0.45.2: تعطيل آلة الأسمام */
     for(int t=0;t<DGTrackN;t++){
@@ -3218,6 +3219,82 @@ static void DGStoreOff(const char *pn, uint32_t off){
     if(strstr(pn,"RootComponent")&&!DGW_Root) DGW_Root=off;
     if(strstr(pn,"ReplicatedMovement")&&!DGW_RepMov) DGW_RepMov=off;
     if(strstr(pn,"CameraCache")&&!DGW_CamCache) DGW_CamCache=off;
+}
+
+/* v0.58: LOCATE — المستخرج الذاتي: الثنائي يجد GUObjectArray+GNamePool بنفسه من داخل ذاكرته
+   أنماط حية فريدة (لا شيء في __data يشبهها) + تحقق "None" — يقين 100% بلا مرشحين */
+#include <mach-o/dyld.h>
+static BOOL DGLocated=NO, DGLocating=NO;
+static void DGLocateGlobals(void){
+    if(DGLocated||DGLocating) return; DGLocating=YES;
+    FILE *dbg=fopen([[NSTemporaryDirectory() stringByAppendingPathComponent:@"deltaguard_ue4.txt"] UTFString],"a");
+    if(!dbg){ DGLocated=YES; return; }
+    const struct mach_header_64 *mh=(const struct mach_header_64*)_dyld_get_image_header(0);
+    if(!mh){ fprintf(dbg,"LOCATE NOHDR\n"); fclose(dbg); DGLocated=YES; return; }
+    /* base = عنوان التحميل الفعلي للثنائي (من mach_header مباشرة) */
+    uint64_t base=(uint64_t)mh;
+    /* __data: vm 0x11735f7a0 حجمه ~0x90cb90 (مستخرج من IPA) — نمشي عليه كاملاً */
+    uint64_t lo=base+0x11735f7a0ULL, hi=base+0x117c6a000ULL;
+    uint64_t guobj=0;
+    for(uint64_t a=lo;a<hi && !guobj;a+=0x8000){
+        uint64_t g=0; uint8_t *b=DGSafeRead(a,0x8000,&g);
+        if(!b) continue;
+        for(uint64_t i=0;i+16<=g;i+=8){
+            uint64_t objPtr; int32_t numEl, perChunk;
+            memcpy(&objPtr,b+i,8); memcpy(&numEl,b+i+8,4); memcpy(&perChunk,b+i+12,4);
+            /* التوقيع الحي الفريد لـ FUObjectArray::ObjObjects */
+            if(perChunk==0x10000 && numEl>50000 && numEl<2000000
+               && objPtr>=0x100000000ULL && objPtr<0x400000000ULL && !(objPtr&7)){
+                /* تحقق إضافي: objPtr يشير لجدول chunks صالح */
+                uint64_t c0=0; if(DGReadQ(objPtr,&c0)&&c0>=0x100000000ULL&&c0<0x400000000ULL){
+                    guobj=a+i-0x10;   /* بداية FUObjectArray (ObjObjects عند +0x10) */
+                    break;
+                }
+            }
+        }
+        DGFreeRead(b,g);
+    }
+    if(!guobj){ fprintf(dbg,"LOCATE GUOBJ FAIL\n"); fclose(dbg); DGLocated=YES; return; }
+    fprintf(dbg,"LOCATE GUOBJ=0x%llx numEl-chunks ✓\n",(unsigned long long)guobj);
+    if(DGGUObj==0) DGGUObj=guobj;
+    /* GNamePool = GUObj + 0x2BE0 (علاقة 37102) — نتحقق بـ None عبر كل التخطيطات */
+    uint64_t names=guobj+0x2BE0;
+    for(int bt=0;bt<3;bt++){
+        uint64_t bsrc= bt==0? names+0x10 : (bt==1? names+0x38 : names-8);
+        uint64_t blocks=0,blk=0;
+        if(!DGReadQ(bsrc,&blocks)) continue;
+        if(!DGReadQ(blocks,&blk)) continue;
+        uint64_t g2=0; uint8_t *e=DGSafeRead(blk,16,&g2);
+        if(!e||g2<6) continue;
+        uint16_t hdr; memcpy(&hdr,e,2);
+        if((hdr>>6)==4){
+            char nm[5]={0}; memcpy(nm,e+2,4);
+            for(int k=0;k<4;k++) nm[k]=(char)(nm[k]^(char)0xff);
+            if(!memcmp(nm,"None",4)){
+                DGNPool=names; DGNBlocksOff=(int)(bsrc-names); DGNShift=18; DGNameKey=0xff;
+                fprintf(dbg,"LOCATE POOL=0x%llx boff=0x%x verify=None ✓✓✓\n",(unsigned long long)names,DGNBlocksOff);
+                DGFreeRead(e,g2);
+                /* أكمل السلسلة: census → SDKWALK → ESP (الآليات موجودة كلها) */
+                strncpy(DGCFTarget,"Character",60); DGCFDone=NO; DGCFPos=0;
+                while(!DGCFDone){ DGClassFindChunk(dbg); }
+                fprintf(dbg,"LOCATE CENSUS DONE tracked=%d\n",DGTrackN);
+                for(int t=0;t<DGTrackN;t++){
+                    uint32_t cc=DGTrackCls[t];
+                    if(cc!=2117&&cc!=2118) continue;
+                    uint64_t cp=0; if(!DGReadQ(DGTrackObj[t]+0x8,&cp)||!cp) continue;
+                    char cn[80]="?"; DGClassName(cp,cn,sizeof cn);
+                    DGSdkWalk(cp,cn,dbg);
+                    if(DGW_Root){ uint64_t rc2=0;
+                        if(DGReadQ(DGTrackObj[t]+DGW_Root,&rc2)&&rc2>=0x100000000ULL&&rc2<0x400000000ULL){
+                            uint64_t cc2=0; if(DGReadQ(rc2+0x8,&cc2)&&cc2){ char cn2[80]="RC"; DGSdkWalk(cc2,cn2,dbg); } } }
+                }
+                fclose(dbg); DGLocated=YES; return;
+            }
+        }
+        DGFreeRead(e,g2);
+    }
+    fprintf(dbg,"LOCATE POOL FAIL (GUOBJ صحيح لكن None لم يتحقق)\n");
+    fclose(dbg); DGLocated=YES;
 }
 static int DGTrackRescan(FILE *dbg);
 static NSTimeInterval DGTrackLastTick=0;
