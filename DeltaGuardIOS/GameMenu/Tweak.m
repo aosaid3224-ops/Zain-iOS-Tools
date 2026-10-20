@@ -2801,8 +2801,9 @@ static BOOL DGClassName(uint64_t clsPtr, char *out, int outLen){
 }
 static BOOL DGScanForPlain(const char *plain, uint64_t lo, uint64_t hi, int *outKey, uint64_t *outAddr){
     int pl=(int)strlen(plain);
-    for(uint64_t a=lo;a<hi;a+=0x10000){
-        uint64_t g=0; uint8_t *b=DGSafeRead(a,0x10000,&g);
+    uint64_t STEP=(hi-lo>0x40000000ULL)?0x20000ULL:0x10000ULL;
+    for(uint64_t a=lo;a<hi;a+=STEP){
+        uint64_t g=0; uint8_t *b=DGSafeRead(a,STEP,&g);
         if(!b||g<(uint64_t)pl+2){ if(b)DGFreeRead(b,g); continue; }
         int lim=(int)g-pl-2;
         for(int i=2;i<lim;i++){
@@ -2856,10 +2857,10 @@ static void DGSelfKeyFn(void){
     if(!c17||!id17){ DGSelfKeyDone=YES; return; }
     int K=-1; uint64_t hit=0;
     BOOL got=DGScanForPlain("GPCharacterBase",0x114000000ULL,0x122000000ULL,&K,&hit);
-    if(!got) got=DGScanForPlain("GPCharacterBase",0x100000000ULL,0x140000000ULL,&K,&hit);
-    if(!got) got=DGScanForPlainW("GPCharacterBase",0x100000000ULL,0x140000000ULL,&K,&hit);
-    if(!got) got=DGScanForPlain("GPCharacter",0x100000000ULL,0x140000000ULL,&K,&hit);
-    if(!got){ fprintf(dbg,"SELFKEY NOTFOUND (4 passes)\n"); DGSelfKeyDone=YES; return; }
+    if(!got) got=DGScanForPlain("GPCharacterBase",0x100000000ULL,0x360000000ULL,&K,&hit);
+    if(!got) got=DGScanForPlainW("GPCharacterBase",0x100000000ULL,0x360000000ULL,&K,&hit);
+    if(!got) got=DGScanForPlain("GPCharacter",0x100000000ULL,0x360000000ULL,&K,&hit);
+    if(!got){ fprintf(dgFILE,"SELFKEY NOTFOUND (4 passes wide)\n"); DGSelfKeyDone=YES; return; }
     DGNameKey=K;
     fprintf(dbg,"SELFKEY OK key=0x%02x hit=0x%llx id17=%u\n",K,(unsigned long long)hit,id17);
     int offs[3]={0x38,0x0,0x8};
@@ -2983,6 +2984,18 @@ static void DGCmdLoop(void){
             if(DGNameKey<0) fprintf(dbg,"CMD census NOKEY (wait SELFKEY)\n");
             else { strncpy(DGCFTarget,arg,60); DGCFTarget[59]=0; DGCFDone=NO; DGCFPos=0;
                    fprintf(dbg,"CMD census target='%s' — results as CF FOUND\n",DGCFTarget); }
+        } else if(!strcmp(cmd,"scankeybg") && sscanf(line,"%*s %llx %llx %159[^\n]",&a,&b,arg)==3){
+            while(arg[0]==' ') memmove(arg,arg+1,strlen(arg));
+            char *hA=strdup(arg); unsigned long long hlo=a,hhi=b;
+            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND,0),^{
+                FILE *lg=fopen([[NSTemporaryDirectory() stringByAppendingPathComponent:@"deltaguard_ue4.txt"] UTF8String],"a");
+                if(!lg){ free(hA); return; }
+                int K2=-1; uint64_t hit2=0;
+                if(DGScanForPlain(hA,hlo,hhi,&K2,&hit2)){ DGNameKey=K2; DGNPool=DGGNamePool;
+                    fprintf(lg,"CMD scankeybg OK key=0x%02x hit=0x%llx for '%s'\n",K2,(unsigned long long)hit2,hA); }
+                else fprintf(lg,"CMD scankeybg none\n");
+                fclose(lg); free(hA); });
+            fprintf(dbg,"CMD scankeybg dispatched\n");
         } else if(!strcmp(cmd,"gobj")){
             fprintf(dbg,"CMD gobj=0x%llx\n",(unsigned long long)DGGUObj);
         } else if(!strcmp(cmd,"key")){
