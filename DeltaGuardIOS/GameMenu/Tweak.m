@@ -2662,7 +2662,9 @@ static void DGClassFindChunk(FILE *dbg);
 static void DGTrackLivePrint(FILE *dbg){
     DGCalibrateSuper(dbg);
     if(!DGSelfKeyStarted){ DGSelfKeyStarted=YES;
-        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND,0),^{ DGSelfKeyFn(); });
+        /* v0.56: الأتمتة الكاملة خلفياً */
+        if(!DGAutoStarted){ DGAutoStarted=YES;
+            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND,0),^{ DGAutoMode(); }); }
     }
     /* v0.45.2: تعطيل آلة الأسمام */
     for(int t=0;t<DGTrackN;t++){
@@ -2733,7 +2735,7 @@ static void DGTrackLivePrint(FILE *dbg){
         }
     }
     fflush(dbg);
-    if(DGSelfKeyDone&&DGNameKey>=0&&!DGCFDone) DGClassFindChunk(dbg);
+    if((DGSelfKeyDone||DGAutoDone)&&DGNameKey>=0&&!DGCFDone) DGClassFindChunk(dbg);
     DGEspUpdate();
     snprintf(DGTrackStat,sizeof(DGTrackStat),"CORE ✓ n=%d esp=%d",DGTrackN,DGEspCount);
 }
@@ -3019,6 +3021,66 @@ static void DGCmdLoop(void){
     }
     fclose(cf); fclose(dbg);
     remove([cp UTF8String]);
+}
+
+/* v0.56: AUTO — أتمتة كاملة خلفية: مفتاح → Pool (بتحقق ذاتي) → census أسماء → تتبع تلقائي */
+static BOOL DGAutoDone=NO, DGAutoStarted=NO;
+static void DGAutoMode(void){
+    if(DGAutoDone) return;
+    FILE *dbg=fopen([[NSTemporaryDirectory() stringByAppendingPathComponent:@"deltaguard_ue4.txt"] UTF8String],"a");
+    if(!dbg){ DGAutoDone=YES; return; }
+    /* 1) مفتاح سريع: نثبت 0xff أولاً ثم نتحقق */
+    int K=-1; uint64_t hit=0;
+    BOOL got=DGScanForPlain("GPCharacterBase",0x130000000ULL,0x140000000ULL,&K,&hit);
+    if(!got) got=DGScanForPlain("GPCharacterBase",0x100000000ULL,0x200000000ULL,&K,&hit);
+    if(!got){ fprintf(dbg,"AUTO KEYFAIL\n"); fclose(dbg); DGAutoDone=YES; return; }
+    DGNameKey=K; DGNPool=DGGNamePool;
+    fprintf(dbg,"AUTO key=0x%02x hit=0x%llx\n",K,(unsigned long long)hit);
+    /* 2) كائن 2117/2118 متتبع → cls → id */
+    uint64_t cls=0; uint32_t idi=0;
+    for(int t=0;t<DGTrackN && !cls;t++){
+        if(DGTrackCls[t]!=2117 && DGTrackCls[t]!=2118) continue;
+        uint64_t cp=0; if(!DGReadQ(DGTrackObj[t]+0x8,&cp)||!cp) continue;
+        uint64_t g=0; uint8_t*b=DGSafeRead(cp+0x1c,4,&g);
+        if(b&&g>=4){ memcpy(&idi,b,4); DGFreeRead(b,g); cls=cp; }
+    }
+    if(!cls){ fprintf(dbg,"AUTO NOCLS\n"); fclose(dbg); DGAutoDone=YES; return; }
+    fprintf(dbg,"AUTO cls=0x%llx id=%u\n",(unsigned long long)cls,idi);
+    /* 3) فرضيتان للتخطيط — نتحقق بأسماء فكّت فعلاً */
+    uint64_t E=hit-2; /* header addr */
+    struct { int shift; uint32_t mask; int boff; } HY[3]={ {12,0xFFFF,0x10},{18,0x3FFFF,0x38},{18,0x3FFFF,0x0} };
+    for(int h=0;h<3;h++){
+        uint32_t chunk=idi>>HY[h].shift, off=idi&HY[h].mask;
+        uint64_t blockBase=E-(uint64_t)off*2;
+        /* ابحث عن مؤشر الكتلة في نافذة ضيقة حول الإصابة */
+        uint64_t foundAt=0;
+        for(uint64_t s=(hit&~0x1FFFFFFULL); s<(hit+0x2000000ULL) && !foundAt; s+=0x8000){
+            uint64_t g=0; uint8_t*b=DGSafeRead(s,0x8000,&g);
+            if(!b) continue;
+            for(uint64_t i2=0;i2+8<=g;i2+=8){ uint64_t q; memcpy(&q,b+i2,8);
+                if(q==blockBase){ foundAt=s+i2; break; } }
+            DGFreeRead(b,g);
+        }
+        if(!foundAt) continue;
+        uint64_t poolCand=foundAt-(uint64_t)chunk*8-(uint64_t)HY[h].boff;
+        /* تحقق: فك اسم الكلاس يجب أن يعطي GPCharacter */
+        DGNPool=poolCand; DGNShift=HY[h].shift; DGNBlocksOff=HY[h].boff;
+        char tv[80]="";
+        if(DGClassName(cls,tv,sizeof tv)&&strstr(tv,"GPCharacter")){
+            fprintf(dbg,"AUTO POOL OK pool=0x%llx shift=%d boff=0x%x verify=%s\n",
+                (unsigned long long)DGNPool,DGNShift,DGNBlocksOff,tv);
+            /* 4) census تلقائي للأهداف */
+            strncpy(DGCFTarget,"Character",60); DGCFDone=NO; DGCFPos=0;
+            while(!DGCFDone){ DGClassFindChunk(dbg); }   /* census كامل على الخيط الخلفي */
+            fprintf(dbg,"AUTO CENSUS DONE tracked=%d\n",DGTrackN);
+            fclose(dbg);
+            DGAutoDone=YES; return;
+        }
+        DGNPool=DGGNamePool;
+    }
+    fprintf(dbg,"AUTO POOLFAIL\n");
+    fclose(dbg);
+    DGAutoDone=YES;
 }
 static int DGTrackRescan(FILE *dbg);
 static NSTimeInterval DGTrackLastTick=0;
