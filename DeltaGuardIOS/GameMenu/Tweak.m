@@ -2583,55 +2583,78 @@ static void __attribute__((unused)) DGTrackPositions(FILE *dbg){
     else snprintf(DGTrackStat,sizeof(DGTrackStat),"T1#%d ✓ — سكون",DGTrackT1Count);
     fflush(dbg);
 }
-/* v0.38: DIFF — الحركة ترسم الخريطة: لقطة كاملة للكائن ومكوّنه كل 5ث، طباعة الحقول المتغيرة فقط — بلا افتراضات */
-#define DG_DIFF_MAX 20
+/* v0.39: WIDE-DIFF — diff لكل مكونات الشخصية (12) + تفسير ثلاثي float/int32/double — الكشف الحركي الشامل الأخير */
+#define DG_DIFF_MAX 96
 static uint8_t DGDiffS0[DG_DIFF_MAX][2048];
-static uint8_t DGDiffS1[2048];
 static uint64_t DGDiffObj[DG_DIFF_MAX];
 static uint32_t DGDiffSelf[DG_DIFF_MAX];
+static uint32_t DGDiffCls[DG_DIFF_MAX];
 static int DGDiffAge[DG_DIFF_MAX];
+static int DGDiffMiss[DG_DIFF_MAX];
 static int DGDiffN=0;
-static int DGDiffSlot(uint64_t obj, uint32_t self){
+static int DGDiffBudget=0;
+static int DGDiffSlot(uint64_t obj, uint32_t self, uint32_t cls){
     for(int i=0;i<DGDiffN;i++) if(DGDiffObj[i]==obj) return i;
+    for(int i=0;i<DGDiffN;i++) if(DGDiffObj[i]==0){ DGDiffObj[i]=obj; DGDiffSelf[i]=self; DGDiffCls[i]=cls; DGDiffAge[i]=0; DGDiffMiss[i]=0; return i; }
     if(DGDiffN>=DG_DIFF_MAX) return -1;
-    int i=DGDiffN++; DGDiffObj[i]=obj; DGDiffSelf[i]=self; DGDiffAge[i]=0; return i;
+    int i=DGDiffN++; DGDiffObj[i]=obj; DGDiffSelf[i]=self; DGDiffCls[i]=cls; DGDiffAge[i]=0; DGDiffMiss[i]=0; return i;
 }
-static void DGDiffScan(FILE *dbg, uint64_t obj, uint32_t self, const char *tag, int slot){
+static void DGDiffScan(FILE *dbg, uint64_t obj, uint32_t self, uint32_t cls, const char *tag, int slot){
     uint64_t g=0; uint8_t *b=DGSafeRead(obj+0x40,2048,&g);
-    if(!b||g<256){ if(b)DGFreeRead(b,g); return; }
+    if(!b||g<256){ if(b)DGFreeRead(b,g); if(++DGDiffMiss[slot]>=2) DGDiffObj[slot]=0; return; }
+    DGDiffMiss[slot]=0;
     int lim=(int)(g<2048?g:2048);
     if(DGDiffAge[slot]>0){
         int printed=0;
-        for(int off=0;off+4<=lim&&printed<60;off+=4){
-            float a,nb; memcpy(&a,DGDiffS0[slot]+off,4); memcpy(&nb,b+off,4);
-            float d=nb-a; if(d<0)d=-d;
-            if(d>0.01f && a>-1e7f&&a<1e7f && nb>-1e7f&&nb<1e7f){
-                fprintf(dbg,"CHG %s self=%u +%x: %.2f→%.2f\n",tag,self,off+0x40,a,nb);
-                printed++;
+        for(int off=0;off+8<=lim&&printed<15&&DGDiffBudget<250;off+=4){
+            float a,nb; int32_t ia,ib; double da=0,db=0;
+            memcpy(&a,DGDiffS0[slot]+off,4); memcpy(&nb,b+off,4);
+            memcpy(&ia,DGDiffS0[slot]+off,4); memcpy(&ib,b+off,4);
+            memcpy(&da,DGDiffS0[slot]+off,8); memcpy(&db,b+off,8);
+            float fd=nb-a; if(fd<0)fd=-fd;
+            int64_t id=(int64_t)ib-ia; if(id<0)id=-id;
+            double dd=db-da; if(dd<0)dd=-dd;
+            BOOL pF=(fd>0.05f && a>-1e7f&&a<1e7f && nb>-1e7f&&nb<1e7f);
+            BOOL pI=(id>4 && ia>-1073741824&&ia<1073741824 && ib>-1073741824&&ib<1073741824);
+            BOOL pD=(dd>0.02 && da>-1e8&&da<1e8 && db>-1e8&&db<1e8);
+            if(pF||pI||pD){
+                fprintf(dbg,"CHG %s self=%u cls=%u +%x:",tag,self,cls,off+0x40);
+                if(pF) fprintf(dbg," f=%.2f→%.2f",a,nb);
+                if(pI) fprintf(dbg," i=%d→%d",ia,ib);
+                if(pD) fprintf(dbg," d=%.3f→%.3f",da,db);
+                fprintf(dbg,"\n");
+                printed++; DGDiffBudget++;
             }
         }
-        if(printed) fflush(dbg);
     }
-    memcpy(DGDiffS0[slot],b,lim);
-    memset(DGDiffS0[slot]+lim,0,2048-lim);
+    memcpy(DGDiffS0[slot],b,lim); if(lim<2048) memset(DGDiffS0[slot]+lim,0,2048-lim);
     DGDiffAge[slot]++;
     DGFreeRead(b,g);
 }
 static void DGTrackLivePrint(FILE *dbg){
+    DGDiffBudget=0;
     for(int t=0;t<DGTrackN;t++){
         uint64_t obj=DGTrackObj[t]; uint32_t c=DGTrackCls[t];
         if(c!=2117 && c!=2118) continue;
-        int s1=DGDiffSlot(obj,DGTrackSelf[t]);
-        if(s1>=0) DGDiffScan(dbg,obj,DGTrackSelf[t],"CH",s1);
-        /* نفس المعاملة لمكوّن CMP[0] المرشح */
-        uint64_t p=0,meta=0;
-        if(DGReadQ(obj+0x180,&p)&&DGReadQ(obj+0x188,&meta)&&p>=0x100000000ULL&&p<0x400000000ULL&&!(p&7)){
-            int s2=DGDiffSlot(p,DGTrackSelf[t]);
-            if(s2>=0) DGDiffScan(dbg,p,DGTrackSelf[t],"C0",s2);
+        int s=DGDiffSlot(obj,DGTrackSelf[t],c);
+        if(s>=0) DGDiffScan(dbg,obj,DGTrackSelf[t],c,"CH",s);
+        char tag[8]="C0";
+        for(int i=0;i<12&&DGDiffBudget<250;i++){
+            uint64_t p=0,meta=0;
+            if(!DGReadQ(obj+0x180+(uint64_t)i*0x10,&p)) continue;
+            if(!DGReadQ(obj+0x188+(uint64_t)i*0x10,&meta)) continue;
+            if(p<0x100000000ULL||p>=0x400000000ULL||(p&7)) continue;
+            uint64_t tcls=0; uint32_t tc=0;
+            if(DGReadQ(p+0x8,&tcls)&&tcls){ uint64_t g0=0; uint8_t *ib=DGSafeRead(tcls+0x24,4,&g0);
+                if(ib&&g0>=4){ memcpy(&tc,ib,4); DGFreeRead(ib,g0); } }
+            if(tc>60000) continue;
+            tag[1]='0'+i;
+            int s2=DGDiffSlot(p,DGTrackSelf[t],tc);
+            if(s2>=0) DGDiffScan(dbg,p,DGTrackSelf[t],tc,tag,s2);
         }
     }
     fflush(dbg);
-    snprintf(DGTrackStat,sizeof(DGTrackStat),"DIFF ✓ n=%d",DGDiffN);
+    snprintf(DGTrackStat,sizeof(DGTrackStat),"WIDE ✓ n=%d",DGDiffN);
 }
 
 static int DGTrackRescan(FILE *dbg);
