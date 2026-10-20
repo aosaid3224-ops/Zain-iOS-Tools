@@ -3026,7 +3026,7 @@ static void DGFindIndices(void){
             if(!strncmp(sg->segname,"__TEXT",6)){ text_fs=sg->fileoff; break; } }
         q+=lc->cmdsize; }
     uint64_t base=(uint64_t)mh - text_fs;
-    uint64_t lo=base+0x10c00000ULL, hi=base+0x11000000ULL;
+    uint64_t lo=base+0x10c00000ULL, hi=base+0x12400000ULL; /* يغطي كتلة DFM عند 0x11500000 */
     const char *A[4]={"GPCharacterBase","GPCharacter","DFMAICharacter","LuaPlayerController"};
     uint32_t AI[4]={2117,2118,4819,213};
     uint64_t AO[4]={0,0,0,0};
