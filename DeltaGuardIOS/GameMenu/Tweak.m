@@ -2820,7 +2820,6 @@ static void DGTrackLivePrint(FILE *dbg){
                     DGTrackSelf[t],ni,nc,tr[0],tr[1],tr[2],q[0],q[1],q[2],q[3],sc[0],sc[1],sc[2]);
                 DGFreeRead(b,g);
             }
-        }
         } else if(c==213||c==4500||c==208||c==1903){
             for(uint64_t o=0x300;o<=0x500;o+=8){
                 uint64_t q=0; if(!DGReadQ(obj+o,&q)) continue;
