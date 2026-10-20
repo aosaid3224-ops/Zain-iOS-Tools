@@ -3235,7 +3235,7 @@ static void DGLocateGlobals(void){
     /* base = عنوان التحميل الفعلي للثنائي (من mach_header مباشرة) */
     uint64_t base=(uint64_t)mh;
     /* __data: vm 0x11735f7a0 حجمه ~0x90cb90 (مستخرج من IPA) — نمشي عليه كاملاً */
-    uint64_t lo=base+0x11735f7a0ULL, hi=base+0x117c6a000ULL;
+    uint64_t lo=base+0x1735f7a0ULL, hi=base+0x17c6a000ULL; /* إزاحة من بداية الثنائي (fileoff) — الإصلاح */
     uint64_t guobj=0;
     for(uint64_t a=lo;a<hi && !guobj;a+=0x8000){
         uint64_t g=0; uint8_t *b=DGSafeRead(a,0x8000,&g);
