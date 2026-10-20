@@ -2803,22 +2803,29 @@ static void DGTrackLivePrint(FILE *dbg){
     for(int t=0;t<DGTrackN;t++){
         uint64_t obj=DGTrackObj[t]; uint32_t c=DGTrackCls[t];
         fprintf(dbg,"NAME self=%u cls=%u obj=0x%llx\n",DGTrackSelf[t],c,(unsigned long long)obj);
+        BOOL selfHasBlock=YES;
         uint64_t cpX=0; BOOL isChar=(c==5358||c==5377||c==2117||c==2118||c==4819||c==2116||c==2115);
         if(!isChar && DGReadQ(obj+0x8,&cpX) && cpX) isChar=DGIsCharClass(cpX);
         if(isChar){
-            /* v0.48: تفريغ عقد المشهد — الدليل المثبت من v0.31: مواقع عند +0x210 */
-            for(int ni=0;ni<36;ni++){
-                uint64_t p=0;
+            /* v0.49: HEX خام بلا فلاتر — عنصر 11310 (مكوّن الجسم) + كتل البيانات */
+            int rawPrinted=0;
+            for(int ni=0;ni<36 && rawPrinted<10;ni++){
+                uint64_t p=0,meta=0;
                 if(!DGReadQ(obj+0x180+(uint64_t)ni*0x10,&p)) continue;
+                if(!DGReadQ(obj+0x188+(uint64_t)ni*0x10,&meta)) meta=0;
                 if(p<0x100000000ULL||p>=0x400000000ULL||(p&7)) continue;
                 uint64_t ncp=0; uint32_t nc=0xFFFFFFFF;
                 if(DGReadQ(p+0x8,&ncp)&&ncp) nc=DGCIdx(ncp);
-                uint64_t g=0; uint8_t*b=DGSafeRead(p+0x200,44,&g);
-                if(!b||g<44){ if(b)DGFreeRead(b,g); continue; }
-                float q[4],tr[3],sc[3]; memcpy(q,b,16); memcpy(tr,b+16,12); memcpy(sc,b+28,12);
-                fprintf(dbg,"NODE self=%u [%02d] cls=%u pos=(%.1f,%.1f,%.1f) q=(%.2f,%.2f,%.2f,%.2f) s=(%.1f,%.1f,%.1f)\n",
-                    DGTrackSelf[t],ni,nc,tr[0],tr[1],tr[2],q[0],q[1],q[2],q[3],sc[0],sc[1],sc[2]);
-                DGFreeRead(b,g);
+                if(nc!=11310 && !(selfHasBlock && ni>=24)) continue;
+                rawPrinted++;
+                fprintf(dbg,"EL self=%u [%02d] cls=%u meta=%llx\n",DGTrackSelf[t],ni,nc,(unsigned long long)meta);
+                for(uint64_t bs=0x40;bs<0x280;bs+=0x40){
+                    uint64_t g=0; uint8_t*b=DGSafeRead(p+bs,0x40,&g);
+                    if(!b) continue;
+                    fprintf(dbg,"  +%llx |",(unsigned long long)bs);
+                    for(int x=0;x<(int)g;x++) fprintf(dbg,"%02x",b[x]);
+                    fprintf(dbg,"\n"); DGFreeRead(b,g);
+                }
             }
         } else if(c==213||c==4500||c==208||c==1903){
             for(uint64_t o=0x300;o<=0x500;o+=8){
