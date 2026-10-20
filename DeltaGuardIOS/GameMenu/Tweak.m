@@ -2799,11 +2799,18 @@ static void DGCensus(FILE *dbg){
 
 static void DGTrackLivePrint(FILE *dbg){
     DGCalibrateSuper(dbg);
+    if(!DGSelfKeyStarted){ DGSelfKeyStarted=YES;
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND,0),^{ DGSelfKeyFn(); }); }
     /* v0.45.2: تعطيل آلة الأسمام */
     for(int t=0;t<DGTrackN;t++){
         uint64_t obj=DGTrackObj[t]; uint32_t c=DGTrackCls[t];
         fprintf(dbg,"NAME self=%u cls=%u obj=0x%llx\n",DGTrackSelf[t],c,(unsigned long long)obj);
         BOOL selfHasBlock=YES;
+        if(DGNameKey>=0){
+            uint64_t cpN=0; char cn[96]="?";
+            if(DGReadQ(obj+0x8,&cpN)&&cpN) DGClassName(cpN,cn,sizeof cn);
+            fprintf(dbg,"CNAME self=%u cls=%u name=%s\n",DGTrackSelf[t],c,cn);
+        }
         uint64_t cpX=0; BOOL isChar=(c==5358||c==5377||c==2117||c==2118||c==4819||c==2116||c==2115);
         if(!isChar && DGReadQ(obj+0x8,&cpX) && cpX) isChar=DGIsCharClass(cpX);
         if(isChar){
@@ -2820,6 +2827,8 @@ static void DGTrackLivePrint(FILE *dbg){
                 if(DGReadQ(p+0x8,&ncp)&&ncp) nc=DGCIdx(ncp);
                 uint64_t g=0; uint8_t*b=DGSafeRead(p+0x200,44,&g);
                 if(b&&g>=44){ float q[4],tr[3]; memcpy(q,b,16); memcpy(tr,b+16,12);
+                    if(DGNameKey>=0){ char ccn[96]=""; if(ncp&&DGClassName(ncp,ccn,sizeof ccn))
+                        fprintf(dbg,"CMPN self=%u id=%x name=%s\n",DGTrackSelf[t],id,ccn); }
                     BOOL nz=(tr[0]!=0.f||tr[1]!=0.f||tr[2]!=0.f);
                     if(nz) fprintf(dbg,"CMP self=%u id=%x cls=%u pos=(%.1f,%.1f,%.1f) q=(%.2f,%.2f,%.2f,%.2f)\n",
                         DGTrackSelf[t],id,nc,tr[0],tr[1],tr[2],q[0],q[1],q[2],q[3]);
@@ -2894,6 +2903,112 @@ static BOOL DGIsCharClass(uint64_t cls){
         cur=sup;
     }
     return NO;
+}
+
+/* v0.52: كاسر الأسمام المضغوط — خيط خلفي بلا تجميد، يسمي الكلاسات الحقيقية */
+static uint64_t DGNPool=0;
+static int DGNameKey=-1;
+static int DGNBlocksOff=0x38;
+static int DGNShift=18;
+static BOOL DGSelfKeyDone=NO;
+static BOOL DGSelfKeyStarted=NO;
+
+static BOOL DGRawEntry(uint32_t id, uint8_t *out, int *outLen){
+    if(!DGNPool) return NO;
+    uint32_t chunk=(DGNShift==18)?(id>>18):(id>>12);
+    uint32_t off  =(DGNShift==18)?(id&0x3FFFF):(id&0xFFFF);
+    uint64_t blocks=0;
+    if(!DGReadQ(DGNPool+DGNBlocksOff,&blocks)||!blocks) return NO;
+    uint64_t blk=0;
+    if(!DGReadQ(blocks+(uint64_t)chunk*8,&blk)||!blk) return NO;
+    uint16_t hdr=0;
+    { uint64_t g=0; uint8_t*b2=DGSafeRead(blk+(uint64_t)off*2,2,&g);
+      if(!b2||g<2) return NO; memcpy(&hdr,b2,2); DGFreeRead(b2,g); }
+    int len=hdr>>6; if(len<1||len>100) return NO;
+    BOOL wide=(hdr&1)!=0;
+    uint64_t g=0; uint8_t*b2=DGSafeRead(blk+(uint64_t)off*2+2, wide?(uint64_t)len*2:(uint64_t)len, &g);
+    if(!b2) return NO;
+    int L=len>120?120:len;
+    if(!wide){ if(g<(uint64_t)len){ DGFreeRead(b2,g); return NO; } memcpy(out,b2,L); }
+    else { for(int i2=0;i2<L;i2++) out[i2]=(i2*2<(int)g)?b2[i2*2]:0; }
+    DGFreeRead(b2,g); out[L]=0; *outLen=L; return YES;
+}
+static BOOL DGClassName(uint64_t clsPtr, char *out, int outLen){
+    uint32_t id=0; { uint64_t g=0; uint8_t*b=DGSafeRead(clsPtr+0x1c,4,&g);
+        if(!b||g<4){ if(b)DGFreeRead(b,g); return NO; } memcpy(&id,b,4); DGFreeRead(b,g); }
+    uint8_t raw[128]; int L=0;
+    if(!DGRawEntry(id,raw,&L)) return NO;
+    if(DGNameKey>=0) for(int i=0;i<L;i++) raw[i]=(uint8_t)(raw[i]^(uint8_t))DGNameKey);
+    if(L>=outLen) L=outLen-1;
+    memcpy(out,raw,L); out[L]=0; return YES;
+}
+static BOOL DGScanForPlain(const char *plain, uint64_t lo, uint64_t hi, int *outKey, uint64_t *outAddr){
+    int pl=(int)strlen(plain);
+    for(uint64_t a=lo;a<hi;a+=0x10000){
+        uint64_t g=0; uint8_t *b=DGSafeRead(a,0x10000,&g);
+        if(!b||g<(uint64_t)pl+2){ if(b)DGFreeRead(b,g); continue; }
+        int lim=(int)g-pl-2;
+        for(int i=2;i<lim;i++){
+            uint8_t K=(uint8_t)(b[i]^(uint8_t)plain[0]);
+            if((uint8_t)(b[i+1]^(uint8_t)plain[1])!=K) continue;
+            if((uint8_t)(b[i+2]^(uint8_t)plain[2])!=K) continue;
+            BOOL ok=YES;
+            for(int j2=3;j2<pl&&ok;j2++) if((uint8_t)(b[i+j2]^(uint8_t)plain[j2])!=K) ok=NO;
+            if(!ok) continue;
+            uint16_t hdr; memcpy(&hdr,b+i-2,2);
+            if((hdr>>6)!=pl) continue;
+            DGFreeRead(b,g); *outKey=K; *outAddr=a+i; return YES;
+        }
+        DGFreeRead(b,g);
+    }
+    return NO;
+}
+static void DGSelfKeyFn(void){
+    FILE *dbg=dgFILE;
+    if(DGNameKey>=0||!DGGNamePool||DGTrackN<2){ DGSelfKeyDone=YES; return; }
+    DGNPool=DGGNamePool;
+    uint64_t c17=0,c18=0; uint32_t id17=0,id18=0;
+    for(int t=0;t<DGTrackN;t++){
+        uint64_t cp=0; if(!DGReadQ(DGTrackObj[t]+0x8,&cp)||!cp) continue;
+        uint32_t ci=DGCIdx(cp);
+        if(ci==2117&&!c17){ c17=cp; uint64_t g=0; uint8_t*b=DGSafeRead(cp+0x1c,4,&g); if(b&&g>=4){memcpy(&id17,b,4);DGFreeRead(b,g);} }
+        if(ci==2118&&!c18){ c18=cp; uint64_t g=0; uint8_t*b=DGSafeRead(cp+0x1c,4,&g); if(b&&g>=4){memcpy(&id18,b,4);DGFreeRead(b,g);} }
+    }
+    if(!c17||!id17){ DGSelfKeyDone=YES; return; }
+    int K=-1; uint64_t hit=0;
+    if(!DGScanForPlain("GPCharacterBase",0x114000000ULL,0x122000000ULL,&K,&hit)){ fprintf(dbg,"SELFKEY NOTFOUND\n"); DGSelfKeyDone=YES; return; }
+    DGNameKey=K;
+    fprintf(dbg,"SELFKEY OK key=0x%02x hit=0x%llx id17=%u\n",K,(unsigned long long)hit,id17);
+    int offs[3]={0x38,0x0,0x8};
+    for(int oi=0;oi<3&&DGNPool==DGGNamePool;oi++){
+        DGNBlocksOff=offs[oi];
+        for(int sh=0;sh<2;sh++){
+            DGNShift= sh? 12 : 18;
+            uint32_t chunk=(DGNShift==18)?(id17>>18):(id17>>12);
+            uint32_t off  =(DGNShift==18)?(id17&0x3FFFF):(id17&0xFFFF);
+            uint64_t blkBase = hit-2-(uint64_t)off*2;
+            for(uint64_t a=0x110000000ULL;a<0x130000000ULL;a+=0x10000){
+                uint64_t g=0; uint8_t *b=DGSafeRead(a,0x10000,&g);
+                if(!b) continue;
+                for(uint64_t i2=0;i2+8<=g;i2+=8){
+                    uint64_t q; memcpy(&q,b+i2,8);
+                    if(q==blkBase){ DGNPool=(a+i2)-(uint64_t)chunk*8-(uint64_t)DGNBlocksOff; break; }
+                }
+                DGFreeRead(b,g);
+                if(DGNPool!=DGGNamePool) break;
+            }
+            if(DGNPool!=DGGNamePool){
+                char t2[64]="";
+                if(DGClassName(c18,t2,sizeof t2)&&strstr(t2,"GPCharacter")){
+                    fprintf(dbg,"POOL OK pool=0x%llx shift=%d off=0x%x verify=%s\n",(unsigned long long)DGNPool,DGNShift,DGNBlocksOff,t2);
+                    goto done;
+                } else DGNPool=DGGNamePool;
+            }
+        }
+    }
+done:
+    DGSelfKeyDone=YES;
+    fprintf(dbg,"NAMES %s key=0x%02x\n",DGNameKey>=0?"READY":"FAIL",DGNameKey);
 }
 static int DGTrackRescan(FILE *dbg);
 static NSTimeInterval DGTrackLastTick=0;
