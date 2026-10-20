@@ -2490,7 +2490,9 @@ static void DGIndexSweep(FILE *dbg){
             BOOL isCDO=(outer&&mycls&&outer==mycls);
             if(isCDO){ if(players<20) fprintf(dbg,"IDXSKIP CDO cls=%u self=%u\n",cidx,selfIdx); continue; }
             if(players<25) fprintf(dbg,"IDXREAL cls=%u self=%u obj=0x%llx outer=0x%llx\n",cidx,selfIdx,(unsigned long long)obj,(unsigned long long)outer);
-            if(DGTrackN<DG_MAX_TRACK && (cidx==2118||cidx==4819||cidx==2116||cidx==2115||cidx==4825||cidx==2131||cidx==2117||cidx==213||cidx==208||cidx==5358||cidx==5377||cidx==4500||cidx==2332||cidx==5367)){
+            uint32_t sIdx0=0; { uint64_t g=0; uint8_t*sb=DGSafeRead(obj+0x24,4,&g); if(sb&&g>=4){ memcpy(&sIdx0,sb,4); DGFreeRead(sb,g); } }
+            BOOL chainOK = (sIdx0>=100000) && cls && DGIsCharClass(cls);
+            if(DGTrackN<DG_MAX_TRACK && (cidx==2118||cidx==4819||cidx==2116||cidx==2115||cidx==4825||cidx==2131||cidx==2117||cidx==213||cidx==208||cidx==1903||cidx==5358||cidx==5377||cidx==4500||cidx==2332||cidx==5367||chainOK)){
                 DGTrackObj[DGTrackN]=obj; DGTrackCls[DGTrackN]=cidx; DGTrackSelf[DGTrackN]=selfIdx; DGTrackN++;
             }
             /* المكونات (كبسولة/حركة): dump نافذة المواقع مباشرة — فيها الإحداثيات */
@@ -2573,7 +2575,7 @@ static void DGDiffObj(FILE *dbg, uint64_t obj, uint32_t self){
 }
 /* v0.45: ESP — إسقاط World→Screen (UE4 FRotator) + Overlay + مربعات */
 #include <math.h>
-typedef struct { float x,y,z; uint32_t cls; BOOL valid; } DGEspEnt;
+typedef struct { float x,y,z; uint32_t cls; BOOL valid; uint64_t obj; BOOL isMe; } DGEspEnt;
 static DGEspEnt DGEspList[24]; static int DGEspCount=0;
 static float DGEspCamLoc[3]={0,0,0}, DGEspCamRot[3]={0,0,0}; static float DGEspCamFov=90.f; static BOOL DGEspCamValid=NO;
 static UIView *DGEspView=nil; static UIWindow *DGEspWin=nil;
@@ -2591,7 +2593,7 @@ static void DGEspUpdate(void){
     int n=0;
     for(int t=0;t<DGTrackN && n<24;t++){
         uint64_t obj=DGTrackObj[t]; uint32_t c=DGTrackCls[t];
-        if(c!=5358 && c!=5377 && c!=4819 && c!=2117 && c!=2118) continue;
+        if(c!=5358 && c!=5377 && c!=4819 && c!=2117 && c!=2118 && c!=2116 && c!=2115){ uint64_t cp=0; if(!DGReadQ(obj+0x8,&cp)||!cp||!DGIsCharClass(cp)) continue; }
         float p[3]={0,0,0}; BOOL ok=NO; uint64_t rc=0;
         if(DGReadQ(obj+0x180,&rc)&&rc>=0x100000000ULL&&rc<0x400000000ULL){
             uint64_t g=0; uint8_t*b=DGSafeRead(rc+0x164,12,&g);
@@ -2600,7 +2602,7 @@ static void DGEspUpdate(void){
         if(!ok){ uint64_t g=0; uint8_t*b=DGSafeRead(obj+0xB4,12,&g);
             if(b&&g>=12){ memcpy(p,b,12); DGFreeRead(b,g); ok=(p[0]!=0.f||p[1]!=0.f||p[2]!=0.f); } }
         if(!ok) continue;
-        DGEspList[n].x=p[0]; DGEspList[n].y=p[1]; DGEspList[n].z=p[2]; DGEspList[n].cls=c; DGEspList[n].valid=YES; n++;
+        DGEspList[n].x=p[0]; DGEspList[n].y=p[1]; DGEspList[n].z=p[2]; DGEspList[n].cls=c; DGEspList[n].valid=YES; DGEspList[n].obj=obj; DGEspList[n].isMe=(obj==DGEspPlayerObj); n++;
     }
     for(int i=n;i<24;i++) DGEspList[i].valid=NO;
     DGEspCount=n;
@@ -2629,7 +2631,7 @@ static void DGEspUpdate(void){
         float boxH=(160.f/zc)*(W*0.5f)/tanH, boxW=boxH*0.45f;
         CGRect box=CGRectMake(sx-boxW*0.5f, sy-boxH, boxW, boxH);
         if(box.origin.x>W||box.origin.x+box.size.width<0) continue;
-        BOOL isPlayer=(e->cls==5358);
+        BOOL isPlayer=e->isMe;
         CGContextSetStrokeColorWithColor(ctx, isPlayer?[[UIColor redColor] CGColor]:[[UIColor greenColor] CGColor]);
         CGContextStrokeRect(ctx, box);
         NSString *txt=[NSString stringWithFormat:@"%@%u %0.fm", isPlayer?@"[YOU] ":@"", e->cls, dist];
@@ -2791,7 +2793,8 @@ static void DGCensus(FILE *dbg){
 }
 
 static void DGTrackLivePrint(FILE *dbg){
-    /* v0.45.2: تعطيل آلة الأسمام — كانت تحظر الخيط الرئيسي ثوانٍ فتقتل اللعبة عند الدخول */
+    DGCalibrateSuper(dbg);
+    /* v0.45.2: تعطيل آلة الأسمام */
     for(int t=0;t<DGTrackN;t++){
         uint64_t obj=DGTrackObj[t]; uint32_t c=DGTrackCls[t];
         fprintf(dbg,"NAME self=%u cls=%u obj=0x%llx\n",DGTrackSelf[t],c,(unsigned long long)obj);
@@ -2803,19 +2806,31 @@ static void DGTrackLivePrint(FILE *dbg){
                 DGDumpV3(dbg,rc+0x164,DGTrackSelf[t],"POSCAP");
             } else fprintf(dbg,"ROOT self=%u BAD\n",DGTrackSelf[t]);
             DGDiffObj(dbg,obj,DGTrackSelf[t]);
-        } else if(c==4500){
+        } else if(c==213||c==4500||c==208||c==1903){
             for(uint64_t o=0x300;o<=0x500;o+=8){
                 uint64_t q=0; if(!DGReadQ(obj+o,&q)) continue;
                 if(q<0x100000000ULL||q>=0x400000000ULL||(q&7)) continue;
                 uint64_t cp=0; uint32_t qc=0;
-                if(DGReadQ(q+0x8,&cp)&&cp){ uint64_t g=0; uint8_t*ib=DGSafeRead(cp+0x24,4,&g);
-                    if(ib&&g>=4){ memcpy(&qc,ib,4); DGFreeRead(ib,g); } }
-                if(qc==2332){ uint64_t g=0; uint8_t*b=DGSafeRead(q+0x2B60,0x1C,&g);
-                    if(b&&g>=0x1C){ float v[7]; memcpy(v,b,28);
-                        fprintf(dbg,"CAM ctrl+0x%llx pcm=0x%llx loc=(%.1f,%.1f,%.1f) rot=(%.1f,%.1f,%.1f) fov=%.1f\n",
-                            (unsigned long long)o,(unsigned long long)q,v[0],v[1],v[2],v[3],v[4],v[5],v[6]);
-                        DGEspSetCam(v); DGFreeRead(b,g); } }
-                if(qc==5358) fprintf(dbg,"PAWN ctrl+0x%llx ptr=0x%llx\n",(unsigned long long)o,(unsigned long long)q);
+                if(DGReadQ(q+0x8,&cp)&&cp) qc=DGCIdx(cp);
+                uint64_t g=0; uint8_t*b=DGSafeRead(q+0x2B60,0x1C,&g);
+                if(b&&g>=0x1C){ float v[7]; memcpy(v,b,28);
+                    if(v[0]>-1e6f&&v[0]<1e6f && v[1]>-1e5f&&v[1]<1e5f && v[2]>-1e6f&&v[2]<1e6f
+                       && v[3]>-360.f&&v[3]<360.f && v[4]>-360.f&&v[4]<360.f && v[5]>-360.f&&v[5]<360.f
+                       && v[6]>=20.f&&v[6]<=150.f){
+                        fprintf(dbg,"CAM ctrl+0x%llx pcm=0x%llx loc=(%.1f,%.1f,%.1f) rot=(%.1f,%.1f,%.1f) fov=%.1f cls=%u\n",
+                            (unsigned long long)o,(unsigned long long)q,v[0],v[1],v[2],v[3],v[4],v[5],v[6],qc);
+                        DGEspSetCam(v);
+                    }
+                    DGFreeRead(b,g);
+                }
+                if(DGIsCharClass(cp)){
+                    uint64_t rc=0; if(DGReadQ(q+0x180,&rc)&&rc>=0x100000000ULL&&rc<0x400000000ULL){
+                        uint64_t g2=0; uint8_t*pb=DGSafeRead(rc+0x164,12,&g2);
+                        if(pb&&g2>=12){ float p[3]; memcpy(p,pb,12); DGFreeRead(pb,g2);
+                            if(p[0]!=0.f||p[1]!=0.f||p[2]!=0.f){ DGEspPlayerObj=q;
+                                fprintf(dbg,"PAWN ctrl+0x%llx ptr=0x%llx cls=%u pos=(%.1f,%.1f,%.1f)\n",(unsigned long long)o,(unsigned long long)q,qc,p[0],p[1],p[2]); } }
+                    }
+                }
             }
         } else if(c==2332){
             uint64_t g=0; uint8_t*b=DGSafeRead(obj+0x2B60,0x1C,&g);
@@ -2829,6 +2844,37 @@ static void DGTrackLivePrint(FILE *dbg){
     snprintf(DGTrackStat,sizeof(DGTrackStat),"CORE ✓ n=%d esp=%d",DGTrackN,DGEspCount);
 }
 
+
+/* v0.46: هوية بالسلسلة الهرمية — أي كلاس يرث GPCharacterBase/GPCharacter(2117/2118) = شخصية حقيقية، بلا أرقام مجهولة */
+static int DGSupOff=0;
+static uint64_t DGEspPlayerObj=0;
+static uint32_t DGCIdx(uint64_t cls){ uint64_t g=0; uint8_t*b=DGSafeRead(cls+0x24,4,&g); if(!b||g<4){ if(b)DGFreeRead(b,g); return 0xFFFFFFFF; } uint32_t v; memcpy(&v,b,4); DGFreeRead(b,g); return v; }
+static void DGCalibrateSuper(FILE *dbg){
+    if(DGSupOff) return;
+    for(int t=0;t<DGTrackN;t++){
+        if(DGTrackCls[t]!=2118) continue;
+        uint64_t cls=0; if(!DGReadQ(DGTrackObj[t]+0x8,&cls)||!cls) continue;
+        for(uint64_t off=0x28;off<=0x58;off+=8){
+            uint64_t sup=0; if(!DGReadQ(cls+off,&sup)||sup<0x100000000ULL||sup>=0x400000000ULL) continue;
+            if(DGCIdx(sup)==2117){ DGSupOff=(int)off; fprintf(dbg,"CALIB superOff=0x%llx\n",(unsigned long long)off); return; }
+        }
+    }
+}
+static BOOL DGIsCharClass(uint64_t cls){
+    if(!cls) return NO;
+    uint32_t ci=DGCIdx(cls);
+    if(ci==2117||ci==2118) return YES;
+    if(!DGSupOff) return NO;
+    uint64_t cur=cls;
+    for(int k=0;k<6;k++){
+        uint64_t sup=0; if(!DGReadQ(cur+DGSupOff,&sup)||sup==cur) return NO;
+        if(sup<0x100000000ULL||sup>=0x400000000ULL) return NO;
+        uint32_t si=DGCIdx(sup);
+        if(si==2117||si==2118) return YES;
+        cur=sup;
+    }
+    return NO;
+}
 static int DGTrackRescan(FILE *dbg);
 static NSTimeInterval DGTrackLastTick=0;
 static void DGTrackTick(FILE *dbg){
@@ -2866,7 +2912,11 @@ static int DGTrackRescan(FILE *dbg){
             if(!ib||g<4){ if(ib)DGFreeRead(ib,g); continue; }
             uint32_t cidx=0; memcpy(&cidx,ib,4); DGFreeRead(ib,g);
             if(cidx>200000) continue;
-            if(!(cidx==2117||cidx==2118||cidx==2116||cidx==2115||cidx==4819||cidx==4825||cidx==2131||cidx==213||cidx==208||cidx==5358||cidx==5377||cidx==4500||cidx==2332||cidx==5367)) continue;
+            if(!(cidx==2117||cidx==2118||cidx==2116||cidx==2115||cidx==4819||cidx==4825||cidx==2131||cidx==213||cidx==208||cidx==1903||cidx==5358||cidx==5377||cidx==4500||cidx==2332||cidx==5367)){
+                uint32_t sIdx=0; { uint64_t g=0; uint8_t*sb=DGSafeRead(obj+0x24,4,&g); if(sb&&g>=4){ memcpy(&sIdx,sb,4); DGFreeRead(sb,g); } }
+                if(sIdx<100000) continue;
+                uint64_t clsP=0; if(!DGReadQ(obj+0x8,&clsP)||!clsP||!DGIsCharClass(clsP)) continue;
+            }
             uint64_t outer=0,mycls=0; DGReadQ(obj+0x10,&outer); DGReadQ(obj+0x8,&mycls);
             if(outer&&mycls&&outer==mycls) continue;
             uint32_t selfIdx=0xFFFFFFFF;
