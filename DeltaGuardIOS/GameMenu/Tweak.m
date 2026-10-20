@@ -2965,6 +2965,26 @@ static BOOL DGScanForPlain(const char *plain, uint64_t lo, uint64_t hi, int *out
     }
     return NO;
 }
+static BOOL DGScanForPlainW(const char *plain, uint64_t lo, uint64_t hi, int *outKey, uint64_t *outAddr){
+    int pl=(int)strlen(plain);
+    for(uint64_t a=lo;a<hi;a+=0x10000){
+        uint64_t g=0; uint8_t *b=DGSafeRead(a,0x10000,&g);
+        if(!b||g<(uint64_t)pl*2+4){ if(b)DGFreeRead(b,g); continue; }
+        int lim=(int)g-pl*2-4;
+        for(int i2=4;i2<lim;i2+=2){
+            uint8_t K=(uint8_t)(b[i2]^(uint8_t)plain[0]);
+            if((uint8_t)(b[i2+2]^(uint8_t)plain[1])!=K) continue;
+            BOOL ok=YES;
+            for(int j2=2;j2<pl&&ok;j2++) if((uint8_t)(b[i2+j2*2]^(uint8_t)plain[j2])!=K) ok=NO;
+            if(!ok) continue;
+            uint16_t hdr; memcpy(&hdr,b+i2-4,2);
+            if((hdr>>6)!=pl) continue;
+            DGFreeRead(b,g); *outKey=K; *outAddr=a+i2; return YES;
+        }
+        DGFreeRead(b,g);
+    }
+    return NO;
+}
 static void DGSelfKeyFn(void){
     FILE *dbg=dgFILE;
     if(DGNameKey>=0||!DGGNamePool||DGTrackN<2){ DGSelfKeyDone=YES; return; }
@@ -2978,7 +2998,11 @@ static void DGSelfKeyFn(void){
     }
     if(!c17||!id17){ DGSelfKeyDone=YES; return; }
     int K=-1; uint64_t hit=0;
-    if(!DGScanForPlain("GPCharacterBase",0x114000000ULL,0x122000000ULL,&K,&hit)){ fprintf(dbg,"SELFKEY NOTFOUND\n"); DGSelfKeyDone=YES; return; }
+    BOOL got=DGScanForPlain("GPCharacterBase",0x114000000ULL,0x122000000ULL,&K,&hit);
+    if(!got) got=DGScanForPlain("GPCharacterBase",0x100000000ULL,0x140000000ULL,&K,&hit);
+    if(!got) got=DGScanForPlainW("GPCharacterBase",0x100000000ULL,0x140000000ULL,&K,&hit);
+    if(!got) got=DGScanForPlain("GPCharacter",0x100000000ULL,0x140000000ULL,&K,&hit);
+    if(!got){ fprintf(dbg,"SELFKEY NOTFOUND (4 passes)\n"); DGSelfKeyDone=YES; return; }
     DGNameKey=K;
     fprintf(dbg,"SELFKEY OK key=0x%02x hit=0x%llx id17=%u\n",K,(unsigned long long)hit,id17);
     int offs[3]={0x38,0x0,0x8};
