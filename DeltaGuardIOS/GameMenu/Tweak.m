@@ -15,6 +15,13 @@
 #define LC_DYLD_EXPORTS_TRIE 0x80000033 /* شجرة تصدير dyld3 الحديثة — Xcode 13+ */
 #endif
 
+/* v0.57 SDKWALK state/prototypes are declared before the earlier scanners use them. */
+static int DGNBlocksOff=0x38;
+static int DGNShift=18;
+static uint32_t DGW_RelLoc=0, DGW_Root=0, DGW_RepMov=0, DGW_CamCache=0;
+static int DGSdkWalk(uint64_t cls, const char *cname, FILE *dbg);
+static void DGStoreOff(const char *pn, uint32_t off);
+
 /* نفس تخطيط CAFrameRateRange (iOS 15+) */
 typedef struct { float minimum; float maximum; float preferred; } DGFrameRateRange;
 
@@ -2661,8 +2668,6 @@ static void DGEspUpdate(void){
 /* SELFKEY state and forward declarations shared by the live tracker and v0.52 implementation. */
 static uint64_t DGNPool=0;
 static int DGNameKey=-1;
-static int DGNBlocksOff=0x38;
-static int DGNShift=18;
 static BOOL DGSelfKeyDone=NO;
 static BOOL DGSelfKeyStarted=NO;
 static BOOL DGCFDone=NO;
@@ -3208,7 +3213,6 @@ static int DGSdkWalk(uint64_t cls, const char *cname, FILE *dbg){
 }
 
 /* v0.57.1: أوفستات مكتشفة بالاسم ← تغذي ESP تلقائياً */
-static uint32_t DGW_RelLoc=0, DGW_Root=0, DGW_RepMov=0, DGW_CamCache=0;
 static void DGStoreOff(const char *pn, uint32_t off){
     if(strstr(pn,"RelativeLocation")&&!DGW_RelLoc) DGW_RelLoc=off;
     if(strstr(pn,"RootComponent")&&!DGW_Root) DGW_Root=off;
