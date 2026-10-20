@@ -2590,6 +2590,10 @@ static void DGDiffObj(FILE *dbg, uint64_t obj, uint32_t self){
     memcpy(DGD_S0[s],b,lim); DGD_Age[s]++; DGFreeRead(b,g);
 }
 /* v0.45: ESP — إسقاط World→Screen (UE4 FRotator) + Overlay + مربعات */
+/* v0.58.2: تصريحات مسبقة — جسر كاميرا IL2CPP وتفعيل طبقة الصناديق */
+static BOOL DGGetCameraBasis(void);
+@class DGEspOverlay;
+
 #include <math.h>
 typedef struct { float x,y,z; uint32_t cls; BOOL valid; uint64_t obj; BOOL isMe; } DGEspEnt;
 static DGEspEnt DGEspList[24]; static int DGEspCount=0;
@@ -2601,7 +2605,7 @@ static void DGEspEnsure(void){
     if(DGEspWin) return;
     DGEspWin=[[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
     DGEspWin.windowLevel=UIWindowLevelAlert+1; DGEspWin.userInteractionEnabled=NO; DGEspWin.backgroundColor=[UIColor clearColor];
-    DGEspView=[[UIView alloc] initWithFrame:DGEspWin.bounds]; DGEspView.backgroundColor=[UIColor clearColor]; DGEspView.userInteractionEnabled=NO;
+    DGEspView=(UIView *)[[DGEspOverlay alloc] initWithFrame:DGEspWin.bounds]; DGEspView.backgroundColor=[UIColor clearColor]; DGEspView.userInteractionEnabled=NO;
     [DGEspWin addSubview:DGEspView]; DGEspWin.hidden=NO; /* لا makeKeyAndVisible — لا نسرق تركيز اللعبة */
     CADisplayLink *link=[CADisplayLink displayLinkWithTarget:DGEspView selector:@selector(setNeedsDisplay)];
     [link addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSRunLoopCommonModes];
@@ -2754,6 +2758,14 @@ static void DGTrackLivePrint(FILE *dbg){
                 fprintf(dbg,"CAMD loc=(%.1f,%.1f,%.1f) rot=(%.1f,%.1f,%.1f) fov=%.1f\n",v[0],v[1],v[2],v[3],v[4],v[5],v[6]);
                 DGEspSetCam(v); DGFreeRead(b,g); }
         }
+    }
+    /* v0.58.2: جسر كاميرا IL2CPP — كاميرا بلا أوفست (تصديرات اللعبة) تغذي ESP حتى لو تغيرت البنى */
+    if(!DGEspCamValid && DGGetCameraBasis()){
+        float pit=asinf(DGCamFwd[2])*180.f/(float)M_PI;
+        float yaw=atan2f(DGCamFwd[1],DGCamFwd[0])*180.f/(float)M_PI;
+        float v7[7]={DGCamPos[0],DGCamPos[1],DGCamPos[2],pit,yaw,0.f,DGCamFov};
+        DGEspSetCam(v7);
+        fprintf(dbg,"CAM IL2CPP loc=(%.1f,%.1f,%.1f) fov=%.1f\n",DGCamPos[0],DGCamPos[1],DGCamPos[2],DGCamFov);
     }
     fflush(dbg);
     if((DGSelfKeyDone||DGAutoDone)&&DGNameKey>=0&&!DGCFDone) DGClassFindChunk(dbg);
