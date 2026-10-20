@@ -2860,7 +2860,7 @@ static void DGSelfKeyFn(void){
     if(!got) got=DGScanForPlain("GPCharacterBase",0x100000000ULL,0x360000000ULL,&K,&hit);
     if(!got) got=DGScanForPlainW("GPCharacterBase",0x100000000ULL,0x360000000ULL,&K,&hit);
     if(!got) got=DGScanForPlain("GPCharacter",0x100000000ULL,0x360000000ULL,&K,&hit);
-    if(!got){ fprintf(dgFILE,"SELFKEY NOTFOUND (4 passes wide)\n"); DGSelfKeyDone=YES; return; }
+    if(!got){ fprintf(dbg,"SELFKEY NOTFOUND (4 passes wide)\n"); DGSelfKeyDone=YES; return; }
     DGNameKey=K;
     fprintf(dbg,"SELFKEY OK key=0x%02x hit=0x%llx id17=%u\n",K,(unsigned long long)hit,id17);
     int offs[3]={0x38,0x0,0x8};
