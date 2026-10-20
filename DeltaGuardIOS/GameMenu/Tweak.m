@@ -2605,10 +2605,17 @@ static void DGEspUpdate(void){
         uint64_t obj=DGTrackObj[t]; uint32_t c=DGTrackCls[t];
         if(c!=5358 && c!=5377 && c!=4819 && c!=2117 && c!=2118 && c!=2116 && c!=2115){ uint64_t cp=0; if(!DGReadQ(obj+0x8,&cp)||!cp||!DGIsCharClass(cp)) continue; }
         float p[3]={0,0,0}; BOOL ok=NO; uint64_t rc=0;
-        if(DGReadQ(obj+0x180,&rc)&&rc>=0x100000000ULL&&rc<0x400000000ULL){
-            uint64_t g=0; uint8_t*b=DGSafeRead(rc+0x164,12,&g);
+        /* الأوفستات المكتشفة بالاسم أولاً — بلا تخمين */
+        if(DGW_Root&&DGReadQ(obj+DGW_Root,&rc)&&rc>=0x100000000ULL&&rc<0x400000000ULL&&DGW_RelLoc){
+            uint64_t g=0; uint8_t*b=DGSafeRead(rc+DGW_RelLoc,12,&g);
             if(b&&g>=12){ memcpy(p,b,12); DGFreeRead(b,g); ok=(p[0]!=0.f||p[1]!=0.f||p[2]!=0.f); }
         }
+        if(!ok&&DGW_RepMov){ uint64_t g=0; uint8_t*b=DGSafeRead(obj+DGW_RepMov+0x18,12,&g);
+            if(b&&g>=12){ memcpy(p,b,12); DGFreeRead(b,g); ok=(p[0]!=0.f||p[1]!=0.f||p[2]!=0.f); } }
+        if(!ok){ uint64_t rc2=0;
+            if(DGReadQ(obj+0x180,&rc2)&&rc2>=0x100000000ULL&&rc2<0x400000000ULL){
+                uint64_t g=0; uint8_t*b=DGSafeRead(rc2+0x164,12,&g);
+                if(b&&g>=12){ memcpy(p,b,12); DGFreeRead(b,g); ok=(p[0]!=0.f||p[1]!=0.f||p[2]!=0.f); } } }
         if(!ok){ uint64_t g=0; uint8_t*b=DGSafeRead(obj+0xB4,12,&g);
             if(b&&g>=12){ memcpy(p,b,12); DGFreeRead(b,g); ok=(p[0]!=0.f||p[1]!=0.f||p[2]!=0.f); } }
         if(!ok) continue;
@@ -3112,6 +3119,10 @@ static void DGAutoMode(void){
                         uint64_t cp=0; if(!DGReadQ(DGTrackObj[t]+0x8,&cp)||!cp) continue;
                         char cn[80]="?"; DGClassName(cp,cn,sizeof cn);
                         DGSdkWalk(cp,cn,dbg);
+                        /* امشِ كلاس RootComponent (للحصول على RelativeLocation بالاسم) */
+                        if(DGW_Root){ uint64_t rc2=0;
+                            if(DGReadQ(DGTrackObj[t]+DGW_Root,&rc2)&&rc2>=0x100000000ULL&&rc2<0x400000000ULL){
+                                uint64_t cc2=0; if(DGReadQ(rc2+0x8,&cc2)&&cc2){ char cn2[80]="RC"; DGSdkWalk(cc2,cn2,dbg); } } }
                     }
                     fclose(dbg); DGAutoDone=YES; return;
                 }
@@ -3183,6 +3194,7 @@ static int DGSdkWalk(uint64_t cls, const char *cname, FILE *dbg){
             if(off==0xFFFFFFFF) break;
             if(!printed){ fprintf(dbg,"WALK %s (cp=+0x%llx):\n",cname,(unsigned long long)cpOff); strncpy(first,pn,60); firstOff=off; }
             fprintf(dbg,"  %s = 0x%x\n",pn,off);
+            DGStoreOff(pn,off);
             printed++;
             uint64_t nx=0; if(!DGReadQ(node+0x18,&nx)||nx==node) break; node=nx;
         }
@@ -3193,6 +3205,15 @@ static int DGSdkWalk(uint64_t cls, const char *cname, FILE *dbg){
     }
     fprintf(dbg,"WALKFAIL %s\n",cname);
     return 0;
+}
+
+/* v0.57.1: أوفستات مكتشفة بالاسم ← تغذي ESP تلقائياً */
+static uint32_t DGW_RelLoc=0, DGW_Root=0, DGW_RepMov=0, DGW_CamCache=0;
+static void DGStoreOff(const char *pn, uint32_t off){
+    if(strstr(pn,"RelativeLocation")&&!DGW_RelLoc) DGW_RelLoc=off;
+    if(strstr(pn,"RootComponent")&&!DGW_Root) DGW_Root=off;
+    if(strstr(pn,"ReplicatedMovement")&&!DGW_RepMov) DGW_RepMov=off;
+    if(strstr(pn,"CameraCache")&&!DGW_CamCache) DGW_CamCache=off;
 }
 static int DGTrackRescan(FILE *dbg);
 static NSTimeInterval DGTrackLastTick=0;
