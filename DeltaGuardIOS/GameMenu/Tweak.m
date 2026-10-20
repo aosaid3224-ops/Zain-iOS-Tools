@@ -2803,7 +2803,9 @@ static void DGTrackLivePrint(FILE *dbg){
     for(int t=0;t<DGTrackN;t++){
         uint64_t obj=DGTrackObj[t]; uint32_t c=DGTrackCls[t];
         fprintf(dbg,"NAME self=%u cls=%u obj=0x%llx\n",DGTrackSelf[t],c,(unsigned long long)obj);
-        if(c==5358||c==5377){
+        uint64_t cpX=0; BOOL isChar=(c==5358||c==5377||c==2117||c==2118||c==4819||c==2116||c==2115);
+        if(!isChar && DGReadQ(obj+0x8,&cpX) && cpX) isChar=DGIsCharClass(cpX);
+        if(isChar){
             DGDumpV3(dbg,obj+0xB4,DGTrackSelf[t],"POSREP");
             uint64_t rc=0;
             if(DGReadQ(obj+0x180,&rc)&&rc>=0x100000000ULL&&rc<0x400000000ULL){
@@ -2817,6 +2819,7 @@ static void DGTrackLivePrint(FILE *dbg){
                 if(q<0x100000000ULL||q>=0x400000000ULL||(q&7)) continue;
                 uint64_t cp=0; uint32_t qc=0;
                 if(DGReadQ(q+0x8,&cp)&&cp) qc=DGCIdx(cp);
+                fprintf(dbg,"PTRMAP self=%u +0x%llx → cls=%u\n",DGTrackSelf[t],(unsigned long long)o,qc);
                 uint64_t g=0; uint8_t*b=DGSafeRead(q+0x2B60,0x1C,&g);
                 if(b&&g>=0x1C){ float v[7]; memcpy(v,b,28);
                     if(v[0]>-1e6f&&v[0]<1e6f && v[1]>-1e5f&&v[1]<1e5f && v[2]>-1e6f&&v[2]<1e6f
