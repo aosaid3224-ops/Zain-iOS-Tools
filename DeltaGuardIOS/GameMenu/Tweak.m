@@ -2654,6 +2654,7 @@ static int DGNShift=18;
 static BOOL DGSelfKeyDone=NO;
 static BOOL DGSelfKeyStarted=NO;
 static BOOL DGCFDone=NO;
+static char DGCFTarget[64]="";
 static void DGSelfKeyFn(void);
 static BOOL DGClassName(uint64_t clsPtr, char *out, int outLen);
 static void DGClassFindChunk(FILE *dbg);
@@ -2936,7 +2937,6 @@ static void DGClassFindChunk(FILE *dbg){
 }
 
 /* v0.55: وحدة التحكم الحية — ملف أوامر يقرأ كل ثانية من updateStats وينفذ فوراً */
-static char DGCFTarget[64]="";
 static void DGCmdLoop(void){
     NSString *cp=[NSTemporaryDirectory() stringByAppendingPathComponent:@"deltaguard_cmd.txt"];
     FILE *cf=fopen([cp UTF8String],"r");
