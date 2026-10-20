@@ -2871,6 +2871,7 @@ static void DGTrackLivePrint(FILE *dbg){
         }
     }
     fflush(dbg);
+    if(DGSelfKeyDone&&DGNameKey>=0&&!DGCFDone) DGClassFindChunk(dbg);
     DGEspUpdate();
     snprintf(DGTrackStat,sizeof(DGTrackStat),"CORE ✓ n=%d esp=%d",DGTrackN,DGEspCount);
 }
@@ -3012,47 +3013,41 @@ done:
     fprintf(dbg,"NAMES %s key=0x%02x\n",DGNameKey>=0?"READY":"FAIL",DGNameKey);
 }
 
-/* v0.53: معايرة فهارس 37117 من __TEXT داخل الجهاز — المراسي معلومة، الأهداف تُستنتج خطياً */
-#include <mach-o/dyld.h>
-static BOOL DGIdxDone=NO;
-static void DGFindIndices(void){
-    FILE *dbg=dgFILE;
-    if(DGIdxDone) return; DGIdxDone=YES;
-    const struct mach_header_64 *mh=(const struct mach_header_64*)_dyld_get_image_header(0);
-    if(!mh){ fprintf(dbg,"IDXF NOHDR\n"); return; }
-    uint64_t text_fs=0; uint8_t *q=(uint8_t*)mh+sizeof(*mh);
-    for(uint32_t k=0;k<mh->ncmds;k++){ struct load_command *lc=(struct load_command*)q;
-        if(lc->cmd==0x19){ struct segment_command_64 *sg=(struct segment_command_64*)q;
-            if(!strncmp(sg->segname,"__TEXT",6)){ text_fs=sg->fileoff; break; } }
-        q+=lc->cmdsize; }
-    uint64_t base=(uint64_t)mh - text_fs;
-    uint64_t lo=base+0x10c00000ULL, hi=base+0x12400000ULL; /* يغطي كتلة DFM عند 0x11500000 */
-    const char *A[4]={"GPCharacterBase","GPCharacter","DFMAICharacter","LuaPlayerController"};
-    uint32_t AI[4]={2117,2118,4819,213};
-    uint64_t AO[4]={0,0,0,0};
-    const char *T[5]={"DFMPlayerCharacter","DFMRangeTargetCharacter","GPPlayerCameraManager","DFMPlayerController","DFMPlayerState"};
-    uint64_t TO[5]={0,0,0,0,0};
-    for(uint64_t a=lo;a<hi;a+=0x8000){
-        if(AO[0]&&AO[1]&&AO[2]&&AO[3]&&TO[0]&&TO[1]&&TO[2]&&TO[3]&&TO[4]) break;
-        uint64_t g=0; uint8_t*b=DGSafeRead(a,0x8000,&g);
-        if(!b||g<8){ if(b)DGFreeRead(b,g); continue; }
-        for(int s=0;s<4;s++){ if(AO[s]) continue; int L=(int)strlen(A[s]);
-            for(uint64_t i2=0;i2+L<g;i2++){ if(!memcmp(b+i2,A[s],L)){ AO[s]=a+i2; break; } } }
-        for(int s=0;s<5;s++){ if(TO[s]) continue; int L=(int)strlen(T[s]);
-            for(uint64_t i2=0;i2+L<g;i2++){ if(!memcmp(b+i2,T[s],L)){ TO[s]=a+i2; break; } } }
-        DGFreeRead(b,g);
+/* v0.54: مكتشف الكلاسات بالاسم — يمشي على GUObjectArray ويطابق الأسماء المفكوكة (post-SELFKEY) — بلا شبكة بلا تخمين */
+static BOOL DGCFDone=NO;
+static uint32_t DGCFPos=0;
+static void DGClassFindChunk(FILE *dbg){
+    if(DGCFDone||DGNameKey<0||!DGGUObj) return;
+    const char *T[7]={"DFMPlayerCharacter","DFMRangeTargetCharacter","GPPlayerCameraManager","DFMPlayerController","DFMPlayerState","GPCharacterBase","DFMAICharacter"};
+    uint64_t objObjects=DGGUObj+0x10, objectsPtr=0;
+    if(!DGReadQ(objObjects+0x10,&objectsPtr)||!objectsPtr)
+        if(!DGReadQ(objObjects+0x8,&objectsPtr)||!objectsPtr) return;
+    uint32_t budget=6000;
+    while(budget>0){
+        uint32_t c=DGCFPos/0x10000, ii=DGCFPos%0x10000; DGCFPos++; budget--;
+        if(c>=8){ DGCFDone=YES; fprintf(dbg,"CF DONE\n"); return; }
+        uint64_t chunk=0; if(!DGReadQ(objectsPtr+(uint64_t)c*8,&chunk)||!chunk) continue;
+        uint64_t obj=0; if(!DGReadQ(chunk+(uint64_t)ii*0x18,&obj)) continue;
+        if(obj<0x100000000ULL||obj>=0x400000000ULL||(obj&7)) continue;
+        uint64_t cp=0; if(!DGReadQ(obj+0x8,&cp)||!cp) continue;
+        uint32_t ci=DGCIdx(cp);
+        if(ci>200000) continue;
+        /* فك اسم الكلاس وطابق */
+        char cn[96];
+        if(!DGClassName(cp,cn,sizeof cn)) continue;
+        for(int s=0;s<7;s++){
+            if(strstr(cn,T[s])&&strlen(cn)<40){
+                uint32_t self2=0; { uint64_t g=0; uint8_t*sb=DGSafeRead(obj+0x24,4,&g); if(sb&&g>=4){ memcpy(&self2,sb,4); DGFreeRead(sb,g);} }
+                fprintf(dbg,"CF FOUND name=%s self=%u cls=%u obj=0x%llx\n",cn,self2,ci,(unsigned long long)obj);
+                /* أضف للتتبع فوراً إن لم يكن */
+                BOOL have=NO; for(int t=0;t<DGTrackN;t++) if(DGTrackObj[t]==obj) have=YES;
+                if(!have&&DGTrackN<DG_MAX_TRACK&&strcmp(T[s],"GPCharacterBase")&&strcmp(T[s],"DFMAICharacter")){
+                    DGTrackObj[DGTrackN]=obj; DGTrackCls[DGTrackN]=ci; DGTrackSelf[DGTrackN]=self2; DGTrackN++;
+                }
+                break;
+            }
+        }
     }
-    fprintf(dbg,"IDXF A: %llu/%llu %llu/%llu %llu/%llu %llu/%llu\n",
-        AO[0],(unsigned long long)2117,AO[1],(unsigned long long)2118,AO[2],(unsigned long long)4819,AO[3],(unsigned long long)213);
-    int nA=0; double sx=0,sy=0,sxx=0,sxy=0;
-    for(int s=0;s<4;s++) if(AO[s]){ double x=(double)(AO[s]-AO[0]); double y=(double)((int)AI[s]-(int)AI[0]); sx+=x; sy+=y; sxx+=x*x; sxy+=x*y; nA++; }
-    if(nA>=2){ double bcoef=(sxy)/(sxx? sxx:1), acoef=0;
-        fprintf(dbg,"IDXF T:");
-        for(int s=0;s<5;s++){ if(!TO[s]){ fprintf(dbg," %s=?",T[s]); continue; }
-            long est=(long)(bcoef*(double)(TO[s]-AO[0]))+2117;
-            fprintf(dbg," %s≈%ld",T[s],est); }
-        fprintf(dbg,"\n");
-    } else fprintf(dbg,"IDXF NOFIT anchors=%d\n",nA);
 }
 static int DGTrackRescan(FILE *dbg);
 static NSTimeInterval DGTrackLastTick=0;
