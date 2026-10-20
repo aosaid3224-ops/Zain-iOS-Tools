@@ -2806,13 +2806,21 @@ static void DGTrackLivePrint(FILE *dbg){
         uint64_t cpX=0; BOOL isChar=(c==5358||c==5377||c==2117||c==2118||c==4819||c==2116||c==2115);
         if(!isChar && DGReadQ(obj+0x8,&cpX) && cpX) isChar=DGIsCharClass(cpX);
         if(isChar){
-            DGDumpV3(dbg,obj+0xB4,DGTrackSelf[t],"POSREP");
-            uint64_t rc=0;
-            if(DGReadQ(obj+0x180,&rc)&&rc>=0x100000000ULL&&rc<0x400000000ULL){
-                fprintf(dbg,"ROOT self=%u rc=0x%llx\n",DGTrackSelf[t],(unsigned long long)rc);
-                DGDumpV3(dbg,rc+0x164,DGTrackSelf[t],"POSCAP");
-            } else fprintf(dbg,"ROOT self=%u BAD\n",DGTrackSelf[t]);
-            DGDiffObj(dbg,obj,DGTrackSelf[t]);
+            /* v0.48: تفريغ عقد المشهد — الدليل المثبت من v0.31: مواقع عند +0x210 */
+            for(int ni=0;ni<36;ni++){
+                uint64_t p=0;
+                if(!DGReadQ(obj+0x180+(uint64_t)ni*0x10,&p)) continue;
+                if(p<0x100000000ULL||p>=0x400000000ULL||(p&7)) continue;
+                uint64_t ncp=0; uint32_t nc=0xFFFFFFFF;
+                if(DGReadQ(p+0x8,&ncp)&&ncp) nc=DGCIdx(ncp);
+                uint64_t g=0; uint8_t*b=DGSafeRead(p+0x200,44,&g);
+                if(!b||g<44){ if(b)DGFreeRead(b,g); continue; }
+                float q[4],tr[3],sc[3]; memcpy(q,b,16); memcpy(tr,b+16,12); memcpy(sc,b+28,12);
+                fprintf(dbg,"NODE self=%u [%02d] cls=%u pos=(%.1f,%.1f,%.1f) q=(%.2f,%.2f,%.2f,%.2f) s=(%.1f,%.1f,%.1f)\n",
+                    DGTrackSelf[t],ni,nc,tr[0],tr[1],tr[2],q[0],q[1],q[2],q[3],sc[0],sc[1],sc[2]);
+                DGFreeRead(b,g);
+            }
+        }
         } else if(c==213||c==4500||c==208||c==1903){
             for(uint64_t o=0x300;o<=0x500;o+=8){
                 uint64_t q=0; if(!DGReadQ(obj+o,&q)) continue;
