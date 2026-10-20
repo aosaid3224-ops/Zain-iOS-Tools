@@ -2528,6 +2528,23 @@ static void DGIndexSweep(FILE *dbg){
     fprintf(dbg,"IDXSWEEP END items=%d players=%d\n",items,players);
     fflush(dbg);
 }
+/* لا تمرر FILE* الخاص بدورة المسح إلى مهمة مؤجلة؛ ينتهي عمره عند fclose(dbg). */
+static void DGScheduleIndexSweep(void){
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(75.0*NSEC_PER_SEC)),dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND,0),^{
+            @autoreleasepool {
+                NSString *path=[NSTemporaryDirectory() stringByAppendingPathComponent:@"deltaguard_ue4.txt"];
+                FILE *sweepLog=fopen([path fileSystemRepresentation],"a");
+                if(!sweepLog) return;
+                fprintf(sweepLog,"\n--- DEFERRED INDEX SWEEP (background) ---\n");
+                DGIndexSweep(sweepLog);
+                fflush(sweepLog);
+                fclose(sweepLog);
+            }
+        });
+    });
+}
 /* متتبع المواقع: عينتان متباعدتان — المتغير بينهما = إحداثيات */
 static char DGTrackStat[128]=""; /* v0.28.1: حالة التتبع المعزولة للوحة */ /* v0.27: حتى 4 عينات T1 لالتقاط الحركة بكل تأكيد */
 /* v0.44: ESPCORE — الكلاسات الحقيقية من dump اللعبة: 5358=DFMPlayerCharacter(اللاعب) | 5377=DFMRangeTargetCharacter(الدمى)
@@ -2920,12 +2937,10 @@ static void DGUE4Scan(void){
         }
     }
     { static BOOL semaDone=NO; if(!semaDone && !DGGUObj){ semaDone=YES; fprintf(dbg,"--- SEMASCAN START (fallback) ---\n"); DGSemanticScan(dbg); } }
-    if(DGGUObj){ static BOOL swept=NO; if(!swept){ swept=YES;
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(75.0*NSEC_PER_SEC)),dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND,0),^{ DGIndexSweep(dbg); }); } }
+    if(DGGUObj) DGScheduleIndexSweep();
     DGTrackTick(dbg); /* v0.29: موحّد — يمنع تعدد الاستدعاءات */
     DGResolveOfficial(dbg);
-    if(DGGUObj){ static BOOL swept=NO; if(!swept){ swept=YES;
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(75.0*NSEC_PER_SEC)),dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND,0),^{ DGIndexSweep(dbg); }); } }
+    if(DGGUObj) DGScheduleIndexSweep();
     DGTrackTick(dbg); /* v0.29: موحّد — يمنع تعدد الاستدعاءات */
     { static NSTimeInterval lastHunt=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
       if(up>60.0 && up-lastHunt>120.0){ lastHunt=up; fprintf(dbg,"--- DGHUNT (t+%ds) ---\n",(int)up); DGHHunt(dbg); } }
@@ -2977,12 +2992,10 @@ static void DGUE4Scan(void){
             }
         }
     { static BOOL semaDone=NO; if(!semaDone && !DGGUObj){ semaDone=YES; fprintf(dbg,"--- SEMASCAN START (fallback) ---\n"); DGSemanticScan(dbg); } }
-    if(DGGUObj){ static BOOL swept=NO; if(!swept){ swept=YES;
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(75.0*NSEC_PER_SEC)),dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND,0),^{ DGIndexSweep(dbg); }); } }
+    if(DGGUObj) DGScheduleIndexSweep();
     DGTrackTick(dbg); /* v0.29: موحّد — يمنع تعدد الاستدعاءات */
     DGResolveOfficial(dbg);
-    if(DGGUObj){ static BOOL swept=NO; if(!swept){ swept=YES;
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(75.0*NSEC_PER_SEC)),dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND,0),^{ DGIndexSweep(dbg); }); } }
+    if(DGGUObj) DGScheduleIndexSweep();
     DGTrackTick(dbg); /* v0.29: موحّد — يمنع تعدد الاستدعاءات */
     { static NSTimeInterval lastHunt=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
       if(up>60.0 && up-lastHunt>120.0){ lastHunt=up; fprintf(dbg,"--- DGHUNT (t+%ds) ---\n",(int)up); DGHHunt(dbg); } }
@@ -3035,12 +3048,10 @@ static void DGUE4Scan(void){
         }
     }
     { static BOOL semaDone=NO; if(!semaDone && !DGGUObj){ semaDone=YES; fprintf(dbg,"--- SEMASCAN START (fallback) ---\n"); DGSemanticScan(dbg); } }
-    if(DGGUObj){ static BOOL swept=NO; if(!swept){ swept=YES;
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(75.0*NSEC_PER_SEC)),dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND,0),^{ DGIndexSweep(dbg); }); } }
+    if(DGGUObj) DGScheduleIndexSweep();
     DGTrackTick(dbg); /* v0.29: موحّد — يمنع تعدد الاستدعاءات */
     DGResolveOfficial(dbg);
-    if(DGGUObj){ static BOOL swept=NO; if(!swept){ swept=YES;
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(75.0*NSEC_PER_SEC)),dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND,0),^{ DGIndexSweep(dbg); }); } }
+    if(DGGUObj) DGScheduleIndexSweep();
     DGTrackTick(dbg); /* v0.29: موحّد — يمنع تعدد الاستدعاءات */
     { static NSTimeInterval lastHunt=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
       if(up>60.0 && up-lastHunt>120.0){ lastHunt=up; fprintf(dbg,"--- DGHUNT (t+%ds) ---\n",(int)up); DGHHunt(dbg); } }
