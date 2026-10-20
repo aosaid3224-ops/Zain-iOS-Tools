@@ -2807,36 +2807,26 @@ static void DGTrackLivePrint(FILE *dbg){
         uint64_t cpX=0; BOOL isChar=(c==5358||c==5377||c==2117||c==2118||c==4819||c==2116||c==2115);
         if(!isChar && DGReadQ(obj+0x8,&cpX) && cpX) isChar=DGIsCharClass(cpX);
         if(isChar){
-            /* v0.50: قراءات 16B صغيرة تخترق حدود الصفحات — hex كامل للعنصر 11310 والشخصية */
-            int rawPrinted=0;
-            for(int ni=0;ni<36 && rawPrinted<3;ni++){
+            /* v0.51: متتبع المكونات — يتبع قائمة +0x300 ويقرأ داخل المكوّن (الدليل المثبت: مكوّن+0x210) */
+            int ncmp=0;
+            for(uint64_t ai=0x300;ai<0x3F0&&ncmp<12;ai+=0x10){
                 uint64_t p=0,meta=0;
-                if(!DGReadQ(obj+0x180+(uint64_t)ni*0x10,&p)) continue;
-                if(!DGReadQ(obj+0x188+(uint64_t)ni*0x10,&meta)) meta=0;
+                if(!DGReadQ(obj+ai,&p)) continue;
+                if(!DGReadQ(obj+ai+8,&meta)) meta=0;
                 if(p<0x100000000ULL||p>=0x400000000ULL||(p&7)) continue;
+                uint32_t id=(uint32_t)(meta>>32);
+                ncmp++;
                 uint64_t ncp=0; uint32_t nc=0xFFFFFFFF;
                 if(DGReadQ(p+0x8,&ncp)&&ncp) nc=DGCIdx(ncp);
-                if(nc!=11310) continue;
-                rawPrinted++;
-                fprintf(dbg,"EL self=%u [%02d] 11310 ptr=0x%llx meta=%llx\n",DGTrackSelf[t],ni,(unsigned long long)p,(unsigned long long)meta);
-                for(uint64_t bs=0x10;bs<0x300;bs+=0x10){
-                    uint64_t g=0; uint8_t*b=DGSafeRead(p+bs,0x10,&g);
-                    if(!b||g<0x10){ if(b)DGFreeRead(b,g); continue; }
-                    fprintf(dbg,"E+%llx|",(unsigned long long)bs);
-                    for(int x=0;x<0x10;x++) fprintf(dbg,"%02x",b[x]);
-                    fprintf(dbg,"\n"); DGFreeRead(b,g);
+                uint64_t g=0; uint8_t*b=DGSafeRead(p+0x200,44,&g);
+                if(b&&g>=44){ float q[4],tr[3]; memcpy(q,b,16); memcpy(tr,b+16,12);
+                    BOOL nz=(tr[0]!=0.f||tr[1]!=0.f||tr[2]!=0.f);
+                    if(nz) fprintf(dbg,"CMP self=%u id=%x cls=%u pos=(%.1f,%.1f,%.1f) q=(%.2f,%.2f,%.2f,%.2f)\n",
+                        DGTrackSelf[t],id,nc,tr[0],tr[1],tr[2],q[0],q[1],q[2],q[3]);
+                    DGFreeRead(b,g);
                 }
             }
-            /* hex كائن الشخصية نفسه — الموقع قد يكون فيه مباشرة */
-            fprintf(dbg,"CH self=%u obj=0x%llx\n",DGTrackSelf[t],(unsigned long long)obj);
-            for(uint64_t bs=0x100;bs<0x400;bs+=0x10){
-                uint64_t g=0; uint8_t*b=DGSafeRead(obj+bs,0x10,&g);
-                if(!b||g<0x10){ if(b)DGFreeRead(b,g); continue; }
-                fprintf(dbg,"C+%llx|",(unsigned long long)bs);
-                for(int x=0;x<0x10;x++) fprintf(dbg,"%02x",b[x]);
-                fprintf(dbg,"\n"); DGFreeRead(b,g);
-            }
-        } else if(c==213||c==4500||c==208||c==1903){
+        }        } else if(c==213||c==4500||c==208||c==1903){
             for(uint64_t o=0x300;o<=0x500;o+=8){
                 uint64_t q=0; if(!DGReadQ(obj+o,&q)) continue;
                 if(q<0x100000000ULL||q>=0x400000000ULL||(q&7)) continue;
