@@ -2831,10 +2831,15 @@ static int DGTrackRescan(FILE *dbg){
         if(!DGReadQ(objObjects+0x8,&objectsPtr)||!objectsPtr) return 0;
     uint32_t perChunk=0x10000;
     int added=0;
-    for(int c=0;c<8&&DGTrackN<DG_MAX_TRACK;c++){
+    /* v0.45.3: مسح تزايدي — 9000 عنصر/دورة (تغطية كاملة كل ~60ث) بلا استنزاف CPU */
+    static uint32_t DGRS_c=0, DGRS_i=0;
+    uint32_t budget=9000;
+    while(budget>0 && DGRS_c<8 && DGTrackN<DG_MAX_TRACK){
         uint64_t chunk=0;
-        if(!DGReadQ(objectsPtr+(uint64_t)c*8,&chunk)||!chunk) continue;
-        for(uint32_t i=0;i<perChunk&&DGTrackN<DG_MAX_TRACK;i++){
+        if(!DGReadQ(objectsPtr+(uint64_t)DGRS_c*8,&chunk)||!chunk){ DGRS_c++; DGRS_i=0; continue; }
+        if(DGRS_i>=perChunk){ DGRS_c++; DGRS_i=0; continue; }
+        uint32_t i=DGRS_i++;
+        budget--;
             uint64_t item=chunk+(uint64_t)i*0x18;
             uint64_t obj=0;
             if(!DGReadQ(item,&obj)||!obj||obj<0x100000000ULL||(obj&7)) continue;
@@ -2855,7 +2860,6 @@ static int DGTrackRescan(FILE *dbg){
             DGTrackObj[DGTrackN]=obj; DGTrackCls[DGTrackN]=cidx; DGTrackSelf[DGTrackN]=selfIdx; DGTrackN++;
             added++;
             fprintf(dbg,"TRACKNEW cls=%u self=%u obj=0x%llx outer=0x%llx\n",cidx,selfIdx,(unsigned long long)obj,(unsigned long long)outer);
-        }
     }
     if(added){ fflush(dbg); snprintf(DGTrackStat,sizeof(DGTrackStat),"TRACKNEW +%d ✓ سكون — T0 خلال 5ث",added); }
     return added;
@@ -2916,10 +2920,12 @@ static void DGUE4Scan(void){
         }
     }
     { static BOOL semaDone=NO; if(!semaDone && !DGGUObj){ semaDone=YES; fprintf(dbg,"--- SEMASCAN START (fallback) ---\n"); DGSemanticScan(dbg); } }
-    if(DGGUObj){ static BOOL swept=NO; if(!swept){ swept=YES; DGIndexSweep(dbg); DGFinalSweep(dbg); } }
+    if(DGGUObj){ static BOOL swept=NO; if(!swept){ swept=YES;
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(75.0*NSEC_PER_SEC)),dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND,0),^{ DGIndexSweep(dbg); }); } }
     DGTrackTick(dbg); /* v0.29: موحّد — يمنع تعدد الاستدعاءات */
     DGResolveOfficial(dbg);
-    if(DGGUObj){ static BOOL swept=NO; if(!swept){ swept=YES; DGIndexSweep(dbg); DGFinalSweep(dbg); } }
+    if(DGGUObj){ static BOOL swept=NO; if(!swept){ swept=YES;
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(75.0*NSEC_PER_SEC)),dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND,0),^{ DGIndexSweep(dbg); }); } }
     DGTrackTick(dbg); /* v0.29: موحّد — يمنع تعدد الاستدعاءات */
     { static NSTimeInterval lastHunt=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
       if(up>60.0 && up-lastHunt>120.0){ lastHunt=up; fprintf(dbg,"--- DGHUNT (t+%ds) ---\n",(int)up); DGHHunt(dbg); } }
@@ -2971,10 +2977,12 @@ static void DGUE4Scan(void){
             }
         }
     { static BOOL semaDone=NO; if(!semaDone && !DGGUObj){ semaDone=YES; fprintf(dbg,"--- SEMASCAN START (fallback) ---\n"); DGSemanticScan(dbg); } }
-    if(DGGUObj){ static BOOL swept=NO; if(!swept){ swept=YES; DGIndexSweep(dbg); DGFinalSweep(dbg); } }
+    if(DGGUObj){ static BOOL swept=NO; if(!swept){ swept=YES;
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(75.0*NSEC_PER_SEC)),dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND,0),^{ DGIndexSweep(dbg); }); } }
     DGTrackTick(dbg); /* v0.29: موحّد — يمنع تعدد الاستدعاءات */
     DGResolveOfficial(dbg);
-    if(DGGUObj){ static BOOL swept=NO; if(!swept){ swept=YES; DGIndexSweep(dbg); DGFinalSweep(dbg); } }
+    if(DGGUObj){ static BOOL swept=NO; if(!swept){ swept=YES;
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(75.0*NSEC_PER_SEC)),dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND,0),^{ DGIndexSweep(dbg); }); } }
     DGTrackTick(dbg); /* v0.29: موحّد — يمنع تعدد الاستدعاءات */
     { static NSTimeInterval lastHunt=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
       if(up>60.0 && up-lastHunt>120.0){ lastHunt=up; fprintf(dbg,"--- DGHUNT (t+%ds) ---\n",(int)up); DGHHunt(dbg); } }
@@ -3027,10 +3035,12 @@ static void DGUE4Scan(void){
         }
     }
     { static BOOL semaDone=NO; if(!semaDone && !DGGUObj){ semaDone=YES; fprintf(dbg,"--- SEMASCAN START (fallback) ---\n"); DGSemanticScan(dbg); } }
-    if(DGGUObj){ static BOOL swept=NO; if(!swept){ swept=YES; DGIndexSweep(dbg); DGFinalSweep(dbg); } }
+    if(DGGUObj){ static BOOL swept=NO; if(!swept){ swept=YES;
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(75.0*NSEC_PER_SEC)),dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND,0),^{ DGIndexSweep(dbg); }); } }
     DGTrackTick(dbg); /* v0.29: موحّد — يمنع تعدد الاستدعاءات */
     DGResolveOfficial(dbg);
-    if(DGGUObj){ static BOOL swept=NO; if(!swept){ swept=YES; DGIndexSweep(dbg); DGFinalSweep(dbg); } }
+    if(DGGUObj){ static BOOL swept=NO; if(!swept){ swept=YES;
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(75.0*NSEC_PER_SEC)),dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND,0),^{ DGIndexSweep(dbg); }); } }
     DGTrackTick(dbg); /* v0.29: موحّد — يمنع تعدد الاستدعاءات */
     { static NSTimeInterval lastHunt=0; NSTimeInterval up=-[DGSessionStart timeIntervalSinceNow];
       if(up>60.0 && up-lastHunt>120.0){ lastHunt=up; fprintf(dbg,"--- DGHUNT (t+%ds) ---\n",(int)up); DGHHunt(dbg); } }
