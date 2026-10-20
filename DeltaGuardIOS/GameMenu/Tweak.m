@@ -2648,7 +2648,7 @@ static void DGTrackLivePrint(FILE *dbg){
                 if(ib&&g0>=4){ memcpy(&tc,ib,4); DGFreeRead(ib,g0); } }
             if(tc>60000) continue;
             int s2=DGDiffSlot(p,DGTrackSelf[t],tc);
-            if(s2>=0) DGDiffScan(dbg,p,DGTrackSelf[t],tc,NULL,s2);
+            if(s2>=0) DGDiffScan(dbg,p,DGTrackSelf[t],tc,0,s2);
         }
     }
     fflush(dbg);
