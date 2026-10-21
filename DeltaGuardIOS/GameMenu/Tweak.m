@@ -2592,8 +2592,7 @@ static void DGDiffObj(FILE *dbg, uint64_t obj, uint32_t self){
 /* v0.45: ESP — إسقاط World→Screen (UE4 FRotator) + Overlay + مربعات */
 /* v0.58.2: تصريحات مسبقة — جسر كاميرا IL2CPP وتفعيل طبقة الصناديق */
 static BOOL DGGetCameraBasis(void);
-@class DGEspOverlay;
-
+@interface DGEspOverlay : UIView @end
 #include <math.h>
 typedef struct { float x,y,z; uint32_t cls; BOOL valid; uint64_t obj; BOOL isMe; } DGEspEnt;
 static DGEspEnt DGEspList[24]; static int DGEspCount=0;
@@ -2636,7 +2635,6 @@ static void DGEspUpdate(void){
     DGEspCount=n;
     if(n>0 && DGEspCamValid) DGEspEnsure();
 }
-@interface DGEspOverlay : UIView @end
 @implementation DGEspOverlay
 - (void)drawRect:(CGRect)rect{
     if(!DGEspCamValid) return;
