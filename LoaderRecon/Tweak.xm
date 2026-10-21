@@ -1,4 +1,4 @@
-// NetWatch v1.4 — اعتراف اللودر: خطف JSON parser + DICT-GET لتكشف حقول التحقق بالضبط
+// NetWatch v1.5 — جراحة الوقت: DATE-FMT/time() hooks + nw_disarm لالتقاط ردود السيرفر الحقيقية
 #import <UIKit/UIKit.h>
 #import <Security/Security.h>
 #import <os/log.h>
@@ -110,6 +110,9 @@ static void DGScanChallenge(const char *body) {
         v[n] = 0; snprintf(g_cded, sizeof(g_cded), "%s", v); RLogC("SCAN-CH deadline=%s", v); }
 }
 
+/* v1.5: نزع السلاح — وجود الملف يوقف كل التزوير لجولة التقاط حقيقية */
+static bool nw_disarmed(void) { return access("/var/mobile/Documents/nw_disarm", F_OK) == 0; }
+
 static NSData *ForgedSuccess(const char *url) {
     char ts[32], nonce[64], keyv[64];
     /* v1.1: إن لم يُلتقط تحدٍّ حقيقي، ولّد قيمة متسقة وحقنها في Defaults
@@ -176,7 +179,7 @@ static NSData *ForgedSuccess(const char *url) {
         log_dict("KC-FIND", query);
     }
     /* v1.3 KC-FORGE: الترخيص المزروع — نجيب "موجود" على savedKey */
-    if (s == -25300 && query && result) {
+    if (s == -25300 && query && result && !nw_disarmed()) {
         char sb[128], ab[128]; sb[0]=ab[0]=0;
         cfstr(CFDictionaryGetValue(query, CFSTR("svce")), sb, sizeof(sb));
         cfstr(CFDictionaryGetValue(query, CFSTR("acct")), ab, sizeof(ab));
@@ -254,7 +257,7 @@ static NSData *ForgedSuccess(const char *url) {
     void (^wrapped)(NSData *, NSURLResponse *, NSError *) = ^(NSData *d, NSURLResponse *r, NSError *e) {
         RLogC("RESP %s | status=%ld", req.URL.absoluteString.UTF8String ?: "-", (long)[(NSHTTPURLResponse *)r statusCode]);
         /* v1.3: فورج انتقائي — فقط محاولات التفعيل التي تحمل key= */
-        if (cb && [req.URL.absoluteString containsString:@"Cheack.php"]
+        if (cb && !nw_disarmed() && [req.URL.absoluteString containsString:@"Cheack.php"]
             && [req.URL.absoluteString containsString:@"key="]) {
             RLogC("FORGE >>> keyed fake success");
             cb(ForgedSuccess(req.URL.absoluteString.UTF8String), r, nil);
@@ -263,7 +266,7 @@ static NSData *ForgedSuccess(const char *url) {
         /* v1.3: فحص كل ردود haxvip الحقيقية — التحدي يُلتقط هنا */
         if (cb && d && [req.URL.absoluteString containsString:@"haxvip.pro"]) {
             const char *b = (const char *)[d bytes];
-            RLogC("RESP-BODY %.*s", (int)MIN((NSUInteger)600, d.length), b ? b : "");
+            RLogC("RESP-BODY %.*s", (int)MIN((NSUInteger)1200, d.length), b ? b : "");
             DGScanChallenge(b);
         }
         if (cb) cb(d, r, e);
@@ -281,7 +284,7 @@ static NSData *ForgedSuccess(const char *url) {
     if (data && [data length] > 10 && [data length] < 8192) {
         NSString *s = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
         if (s && [s containsString:@"\"status\""]) {
-            RLogC("PARSED-IN %.*s", (int)MIN((NSUInteger)900, [s length]), [s UTF8String]);
+            RLogC("PARSED-IN %.*s", (int)MIN((NSUInteger)1400, [s length]), [s UTF8String]);
             if ([obj isKindOfClass:[NSDictionary class]]) {
                 for (NSString *k in (NSDictionary *)obj) {
                     RLogC("PARSED-KEY %s=%s", [k UTF8String] ?: "?", [[[(NSDictionary*)obj objectForKey:k] description] UTF8String] ?: "?");
@@ -325,6 +328,44 @@ static NSData *ForgedSuccess(const char *url) {
     return v;
 }
 %end
+
+%hook NSDateFormatter
+- (NSDate *)dateFromString:(NSString *)s {
+    NSDate *d = %orig(s);
+    RLogC("DATE-FMT in=%s out=%s", [s UTF8String] ?: "?", d ? "OK" : "NIL");
+    return d;
+}
+%end
+
+%hook NSISO8601DateFormatter
+- (NSDate *)dateFromString:(NSString *)s {
+    NSDate *d = %orig(s);
+    RLogC("ISO-FMT in=%s out=%s", [s UTF8String] ?: "?", d ? "OK" : "NIL");
+    return d;
+}
+%end
+
+%hook NSDictionary
+- (id)valueForKey:(NSString *)k {
+    id v = %orig(k);
+    if ([k isKindOfClass:[NSString class]]) {
+        NSString *ks = (NSString *)k;
+        if ([ks containsString:@"time"] || [ks containsString:@"deadline"] || [ks containsString:@"expir"]
+            || [ks containsString:@"key"] || [ks containsString:@"udid"] || [ks containsString:@"chal"]) {
+            NSString *d = v ? [[v description] substringToIndex:MIN((NSUInteger)120, [[v description] length])] : @"(nil)";
+            RLogC("DICT-VFK(%s)=%s", [ks UTF8String] ?: "?", [d UTF8String]);
+        }
+    }
+    return v;
+}
+%end
+
+%hookf(time_t, time, time_t *t) {
+    time_t r = %orig(t);
+    static int tc = 0;
+    if (tc < 60) { tc++; RLogC("TIME() = %ld", (long)r); }
+    return r;
+}
 
 %hook NSURLConnection
 + (NSData *)sendSynchronousRequest:(NSURLRequest *)request returningResponse:(NSURLResponse **)response error:(NSError **)error {
