@@ -1,8 +1,8 @@
-// NetWatch v0.6 — صدى timestamp الحرفي من الطلب
+// NetWatch v0.7 — كشف schema عبر قراءات الـJSON + إخفاء التويك
 #import <UIKit/UIKit.h>
 #import <Security/Security.h>
-#import <os/log.h>
 #import <CommonCrypto/CommonHMAC.h>
+#import <mach-o/dyld.h>
 #import <fcntl.h>
 #include <unistd.h>
 #include <stdarg.h>
@@ -23,7 +23,6 @@ static void RLogC(const char *fmt, ...) {
     if (fd >= 0) { ssize_t w = write(fd, buf, strlen(buf)); (void)w; close(fd); }
 }
 
-// استخرج قيمة معامل من رابط
 static void param_value(const char *url, const char *key, char *out, size_t outsz) {
     out[0] = 0;
     char pat[64]; snprintf(pat, sizeof(pat), "%s=", key);
@@ -53,15 +52,39 @@ static NSData *ForgedSuccess(const char *url) {
     return [NSData dataWithBytesNoCopy:json length:strlen(json) freeWhenDone:NO];
 }
 
+// كشف schema: أي مفتاح يقرأه التطبيق من أي قاموس
+%hook NSDictionary
+- (id)objectForKey:(id)aKey {
+    id v = %orig(aKey);
+    if (aKey) RLogC("DICT-READ key=%s -> %s", [aKey description].UTF8String ?: "?", v ? [[v description] UTF8String] : "(nil)");
+    return v;
+}
+- (id)objectForKeyedSubscript:(id)key {
+    id v = %orig(key);
+    if (key) RLogC("DICT-SUB key=%s -> %s", [key description].UTF8String ?: "?", v ? [[v description] UTF8String] : "(nil)");
+    return v;
+}
+%end
+
+%hook NSUserDefaults
+- (void)setObject:(id)v forKey:(NSString *)k {
+    RLogC("DEFAULTS-SET %s = %.*s", k.UTF8String ?: "?", (int)MIN((NSUInteger)300, [[v description] length]), [[v description] UTF8String] ?: "");
+    %orig(v, k);
+}
+- (id)objectForKey:(NSString *)k {
+    id v = %orig(k);
+    RLogC("DEFAULTS-GET %s -> %s", k.UTF8String ?: "?", v ? "YES" : "(nil)");
+    return v;
+}
+%end
+
 %hook NSURLSession
 - (NSURLSessionDataTask *)dataTaskWithRequest:(NSURLRequest *)req completionHandler:(void (^)(NSData *, NSURLResponse *, NSError *))cb {
     RLogC("REQ %s %s", req.HTTPMethod.UTF8String ?: "-", req.URL.absoluteString.UTF8String ?: "-");
     void (^wrapped)(NSData *, NSURLResponse *, NSError *) = ^(NSData *d, NSURLResponse *r, NSError *e) {
-        RLogC("RESP %s | status=%ld | body=%.*s", req.URL.absoluteString.UTF8String ?: "-",
-              (long)[(NSHTTPURLResponse *)r statusCode],
-              (int)MIN((NSUInteger)2000, d.length), d ? (const char *)d.bytes : "(nil)");
+        RLogC("RESP %s | status=%ld", req.URL.absoluteString.UTF8String ?: "-", (long)[(NSHTTPURLResponse *)r statusCode]);
         if (cb && [req.URL.absoluteString containsString:@"Cheack.php"]) {
-            RLogC("FORGE >>> echo-timestamp fake success");
+            RLogC("FORGE >>> echo fake success");
             cb(ForgedSuccess(req.URL.absoluteString.UTF8String), r, nil);
             return;
         }
@@ -85,12 +108,21 @@ static NSData *ForgedSuccess(const char *url) {
 }
 %end
 
-%hook NSDictionary
+%hook NSDictionary(writeToFile)
 - (BOOL)writeToFile:(NSString *)path atomically:(BOOL)u {
     RLogC("WRITE-Dict %s", path.UTF8String ?: "?");
     return %orig(path, u);
 }
 %end
+
+// إخفاء التويك من فحوصات الصور المحقونة
+%hookf(const char *, _dyld_get_image_name, uint32_t idx) {
+    const char *n = %orig(idx);
+    if (n && (strstr(n, "LoaderRecon") || strstr(n, "MobileSubstrate") || strstr(n, "TweakInject") || strstr(n, "ellekit"))) {
+        return "/usr/lib/libobjc.A.dylib";
+    }
+    return n;
+}
 
 static int interesting(const char *f) {
     if (!f) return 0;
@@ -101,9 +133,8 @@ static int interesting(const char *f) {
             strstr(f,"Time")||strstr(f,"sync")||strstr(f,"Sync")) ? 1 : 0;
 }
 
-%hookf(void, _os_log_impl, void *dso, os_log_t log, os_log_type_t type, const char *fmt, uint8_t *buffer, uint32_t size) {
-    if (interesting(fmt)) RLogC("APP-OSLOG type=%u size=%u fmt=%s", (unsigned)type, (unsigned)size, fmt);
-    %orig(dso, log, type, fmt, buffer, size);
+%hookf(void, os_log, os_log_t log, const char *fmt, ...) {
+    if (interesting(fmt)) RLogC("APP-OSLOG %s", fmt);
 }
 
 %hookf(void, NSLog, NSString *format, ...) {
@@ -111,9 +142,7 @@ static int interesting(const char *f) {
 }
 
 %hookf(void, CCHmac, CCHmacAlgorithm algorithm, const void *key, size_t keyLength, const void *data, size_t dataLength, void *macOut) {
-    RLogC("CCHMAC alg=%lu keyLen=%lu | dataLen=%lu data=%.*s",
-          (unsigned long)algorithm, (unsigned long)keyLength,
-          (unsigned long)dataLength, (int)MIN(dataLength,(size_t)4000), data?(const char*)data:"");
+    RLogC("CCHMAC alg=%lu keyLen=%lu | dataLen=%lu", (unsigned long)algorithm, (unsigned long)keyLength, (unsigned long)dataLength);
     %orig(algorithm, key, keyLength, data, dataLength, macOut);
 }
 
