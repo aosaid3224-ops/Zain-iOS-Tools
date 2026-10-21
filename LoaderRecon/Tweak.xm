@@ -1,4 +1,4 @@
-// NetWatch v3.5 — المسح يشمل Defaults (pendingUDID*) + إيقاف FORGE-INJECT في وضع bootstrap — الـجثة كانت تخنق الإحياء
+// NetWatch v3.6 — مسح savedKey/savedKeyUDID من Defaults أيضًا — بوابة الـbootstrap الأخيرة (اللودر يخزنه من الرد المزور)
 #import <UIKit/UIKit.h>
 #import <Security/Security.h>
 #import <os/log.h>
@@ -577,7 +577,7 @@ static void nw_wipe_ctor(void) {
             NSLog(@"[NetWatch] NW-WIPE %@ status=%d", acct, (int)st);
         }
         NSUserDefaults *d = [NSUserDefaults standardUserDefaults];
-        for (NSString *k in @[@"pendingUDIDChallenge", @"pendingUDIDKey", @"pendingUDIDRequest", @"pendingUDIDDeadline"]) {
+        for (NSString *k in @[@"pendingUDIDChallenge", @"pendingUDIDKey", @"pendingUDIDRequest", @"pendingUDIDDeadline", @"savedKey", @"savedKeyUDID"]) {
             [d removeObjectForKey:k];
         }
         [d synchronize];
