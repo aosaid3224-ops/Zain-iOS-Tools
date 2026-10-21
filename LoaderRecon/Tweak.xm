@@ -146,16 +146,16 @@ static NSData *ForgedSuccess(const char *url) {
         "\"ngay_het_han\":\"31/12/2099 23:59\","
         "\"han_su_dung\":\"2099-12-31 23:59\","
         "\"thoigianhethan\":\"31-12-2099\","
-        "\"hansudung\":\"2099/12/31\",
-        \"expiredDate\":\"31-12-2099 23:59:59\","
-        \"expireDate\":\"31/12/2099 23:59:59\","
-        \"expirationDate\":\"2099/12/31 23:59:59\","
-        \"expiration\":\"12/31/2099 23:59:59\","
-        \"expiryDate\":\"2099.12.31 23:59:59\","
-        \"validUntil\":\"2099-12-31T23:59:59\","
-        \"endTime\":\"Mon, 31 Dec 2099 23:59:59 +0000\","
-        \"expiredTime\":\"31 Dec 2099\","
-        \"timeExpire\":\"31-12-2099\","
+        "\"hansudung\":\"2099/12/31\","
+        "\"expiredDate\":\"31-12-2099 23:59:59\","
+        "\"expireDate\":\"31/12/2099 23:59:59\","
+        "\"expirationDate\":\"2099/12/31 23:59:59\","
+        "\"expiration\":\"12/31/2099 23:59:59\","
+        "\"expiryDate\":\"2099.12.31 23:59:59\","
+        "\"validUntil\":\"2099-12-31T23:59:59\","
+        "\"endTime\":\"Mon, 31 Dec 2099 23:59:59 +0000\","
+        "\"expiredTime\":\"31 Dec 2099\","
+        "\"timeExpire\":\"31-12-2099\","
         \"expireAt\":\"31/12/2099\","
         "\"data\":{\"status\":\"active\",\"expire\":\"2099-12-31\",\"expired_time\":\"2099-12-31 23:59:59\"}}",
         keyv[0] ? keyv : "TEST123",
@@ -247,6 +247,10 @@ static NSData *ForgedSuccess(const char *url) {
     if (ks && strncmp(ks, "NS", 2) != 0 && strncmp(ks, "AK", 2) != 0 && strncmp(ks, "UI", 2) != 0 && strncmp(ks, "Log", 3) != 0 && strncmp(ks, "_", 1) != 0 && strncmp(ks, "Metal", 5) != 0)
         RLogC("DEFAULTS-GET %s -> %.*s", ks, (int)MIN((NSUInteger)200, v?[[v description]length]:6), v ? [[v description] UTF8String] : "(nil)");
     if (v && ks) cache_put(ks, [[v description] UTF8String]);
+    if (ks && [k isEqualToString:@"pendingUDIDDeadline"] && (!v || [[v description] length] == 0)) {
+        RLogC("UD-FORGE pendingUDIDDeadline=2099");
+        return @"2099-12-31 23:59:59";
+    }
     return v;
 }
 %end
@@ -381,21 +385,6 @@ static NSData *ForgedSuccess(const char *url) {
 - (instancetype)initWithSuiteName:(NSString *)sn {
     RLogC("UD-SUITE %s", [sn UTF8String] ?: "?");
     return %orig(sn);
-}
-- (id)objectForKey:(NSString *)k {
-    id v = %orig(k);
-    NSString *ks = [k description];
-    if ([ks containsString:@"UDID"] || [ks containsString:@"eadline"] || [ks containsString:@"xpir"]
-        || [ks containsString:@"ngay"] || [ks containsString:@"han"] || [ks containsString:@"chal"]) {
-        NSString *d = v ? [[v description] substringToIndex:MIN((NSUInteger)90, [[v description] length])] : @"(nil)";
-        RLogC("UD-GET %s=%s", [ks UTF8String] ?: "?", [d UTF8String]);
-    }
-    /* UD-FORGE: أي قراءة لـ pendingUDIDDeadline فارغة → نعيد 2099 بصيغة المحلل المكتشفة */
-    if ([ks isEqualToString:@"pendingUDIDDeadline"] && (!v || [[v description] length] == 0)) {
-        RLogC("UD-FORGE pendingUDIDDeadline=2099");
-        return @"2099-12-31 23:59:59";
-    }
-    return v;
 }
 - (NSString *)stringForKey:(NSString *)k {
     NSString *v = %orig(k);
