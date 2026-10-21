@@ -109,7 +109,7 @@ static NSData *ForgedSuccess(const char *url) {
 }
 %end
 
-%hook NSDictionary(writeToFile)
+%hook NSDictionary
 - (BOOL)writeToFile:(NSString *)path atomically:(BOOL)u {
     RLogC("WRITE-Dict %s", path.UTF8String ?: "?");
     return %orig(path, u);
