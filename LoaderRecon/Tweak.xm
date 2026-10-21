@@ -1,4 +1,4 @@
-// NetWatch v3.4 — nw_no_kcforge يمسح savedKey/savedKeyUDID الحقيقيين من Keychain داخل عملية اللودر — إحياء كامل للـbootstrap
+// NetWatch v3.5 — المسح يشمل Defaults (pendingUDID*) + إيقاف FORGE-INJECT في وضع bootstrap — الـجثة كانت تخنق الإحياء
 #import <UIKit/UIKit.h>
 #import <Security/Security.h>
 #import <os/log.h>
@@ -195,11 +195,15 @@ static NSData *ForgedSuccess(const char *url) {
     RLogC("FORGE-BAT %s", buf);
     /* v1.8: حقنة المفاتيح المنتظرة — اللودر يفرغها قبل الطلب ويتوقع ملءها من bootstrap.
        نملؤها لحظة الفورج: اللودر يقرأها بعد الرد → deadline يُحلل بنجاح (yyyy-MM-dd HH:mm:ss) */
+    if (access("/var/mobile/Documents/nw_no_kcforge", F_OK) == 0) {
+        RLogC("FORGE-INJECT skipped (bootstrap mode)");
+    } else {
     NSUserDefaults *dd = [NSUserDefaults standardUserDefaults];
     [dd setObject:@"2099-12-31 23:59:59" forKey:@"pendingUDIDDeadline"];
     [dd setObject:[NSString stringWithUTF8String:udid[0] ? udid : "00008020-00091DCE0EF1002E"] forKey:@"pendingUDIDChallenge"];
     [dd setObject:[NSString stringWithUTF8String:keyv[0] ? keyv : "TEST123"] forKey:@"pendingUDIDKey"];
     RLogC("FORGE-INJECT deadline=2099 chal+key filled");
+    }
     return [NSData dataWithBytes:buf length:strlen(buf)];
 }
 
@@ -572,5 +576,11 @@ static void nw_wipe_ctor(void) {
             OSStatus st = SecItemDelete((__bridge CFDictionaryRef)q);
             NSLog(@"[NetWatch] NW-WIPE %@ status=%d", acct, (int)st);
         }
+        NSUserDefaults *d = [NSUserDefaults standardUserDefaults];
+        for (NSString *k in @[@"pendingUDIDChallenge", @"pendingUDIDKey", @"pendingUDIDRequest", @"pendingUDIDDeadline"]) {
+            [d removeObjectForKey:k];
+        }
+        [d synchronize];
+        NSLog(@"[NetWatch] NW-WIPE defaults cleared");
     }
 }
