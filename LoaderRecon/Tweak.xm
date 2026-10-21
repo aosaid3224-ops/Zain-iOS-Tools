@@ -1,4 +1,4 @@
-// NetWatch v3.6 — مسح savedKey/savedKeyUDID من Defaults أيضًا — بوابة الـbootstrap الأخيرة (اللودر يخزنه من الرد المزور)
+// NetWatch v3.7 — paid_challenge=nonce: الربط الحقيقي للرد بالطلب (bootstrap حقيقي أثبت أن التحدي يولده السيرفر في الرد)
 #import <UIKit/UIKit.h>
 #import <Security/Security.h>
 #import <os/log.h>
@@ -127,9 +127,9 @@ static NSData *ForgedSuccess(const char *url) {
     RLogC("FORGE-DTS %s", dts);
     /* v3.0: توقيع الرد — اللودر يحسب HMAC على النص القانوني ويقارنه بحقل sig في الرد.
        نحسبه بأنفسنا: السر معروف والنص القانوني من قيم نتحكم بها */
-    /* v3.3: التحدي الديناميكي — نقرأ pendingUDIDChallenge المخزن من bootstrap الحقيقي */
-    NSString *chalS = [[NSUserDefaults standardUserDefaults] objectForKey:@"pendingUDIDChallenge"];
-    const char *pc = chalS ? [chalS UTF8String] : "";
+    /* v3.7: paid_challenge = nonce الطلب — الربط الحقيقي بين الرد والطلب */
+    char nonv[64]; param_value(url, "nonce", nonv, sizeof(nonv));
+    const char *pc = nonv[0] ? nonv : "nw-challenge";
     const char *secret = "https://haxvip.p_sk_hmac_secret_v1"; /* v3.1: سر التحقق من الرد أقصر بـ3 بايت (خطأ مطبعي للمطور) — مؤكد حسابيًا بالتطابق مع CCHMAC-OUT الثاني */
     char canon[512];
     snprintf(canon, sizeof(canon),
