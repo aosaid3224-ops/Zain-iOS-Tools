@@ -1,4 +1,4 @@
-// NetWatch v5.0 — server_sig: اسم الحقل الحقيقي من الثنائي بجانب النص القانوني — server_signature_invalid كان يسبب auth_failed
+// NetWatch v5.1 — إصلاح slide بالـAPI الرسمي (كان سبب الكراش) — الـdump الآن آمن
 #import <UIKit/UIKit.h>
 #import <Security/Security.h>
 #import <os/log.h>
@@ -160,7 +160,8 @@ static NSData *ForgedSuccess(const char *url) {
                             fwrite(&sg->vmsize, 8, 1, df);
                             fwrite(&sg->fileoff, 8, 1, df);
                             fwrite(&sg->filesize, 8, 1, df);
-                            const uint8_t *sp = (const uint8_t *)(uintptr_t)(sg->vmaddr + ((uintptr_t)mh2 - 0x100000000));
+                            intptr_t slide2 = _dyld_get_image_vmaddr_slide(0);
+                            const uint8_t *sp = (const uint8_t *)(uintptr_t)(sg->vmaddr + (uint64_t)slide2);
                             fwrite(sp, 1, (size_t)sg->vmsize, df);
                         }
                     }
