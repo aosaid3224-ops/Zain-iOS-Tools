@@ -1,4 +1,4 @@
-// NetWatch v2.3 — ضربة المنطقة الزمنية: server_time بـ UTC (gmtime) + كشف timezone المحلل
+// NetWatch v2.4 — بوابة auth_failed: اكتمال مخطط successPayload (remaining_text/new_token/notification/updates) + تعقيم آخر خطأ
 #import <UIKit/UIKit.h>
 #import <Security/Security.h>
 #import <os/log.h>
@@ -165,7 +165,7 @@ static NSData *ForgedSuccess(const char *url) {
         "\"expiredTime\":\"31 Dec 2099\","
         "\"timeExpire\":\"31-12-2099\","
         "\"expireAt\":\"31/12/2099\","
-        "\"remaining_seconds\":999999999,\"data\":{\"status\":\"active\",\"expire\":\"2099-12-31\",\"expired_time\":\"2099-12-31 23:59:59\"}}",
+        "\"remaining_seconds\":999999999,\"remaining_text\":\"999999 days\",\"new_token\":\"TEST123\",\"notification\":\"\",\"update_available\":false,\"force_update\":false,\"data\":{\"status\":\"active\",\"expire\":\"2099-12-31\",\"expired_time\":\"2099-12-31 23:59:59\"}}",
         keyv[0] ? keyv : "TEST123",
         udid[0] ? udid : "00008020-00091DCE0EF1002E",
         ts[0] ? ts : "0",
@@ -397,6 +397,18 @@ static NSData *ForgedSuccess(const char *url) {
 %end
 
 %hook NSUserDefaults
+- (NSString *)stringForKey:(NSString *)k {
+    NSString *v = %orig(k);
+    if (v && ([k containsString:@"lastError"] || [k isEqualToString:@"last_error_code"])) {
+        RLogC("UD-FORGE-CLEAN %s", [k UTF8String] ?: "?");
+        return @"";
+    }
+    if (v && [k containsString:@"retry_count"]) {
+        RLogC("UD-FORGE-CLEAN retry_count");
+        return @"0";
+    }
+    return v;
+}
 - (instancetype)initWithSuiteName:(NSString *)sn {
     RLogC("UD-SUITE %s", [sn UTF8String] ?: "?");
     return %orig(sn);
