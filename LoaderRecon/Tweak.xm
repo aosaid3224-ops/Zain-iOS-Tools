@@ -156,7 +156,7 @@ static NSData *ForgedSuccess(const char *url) {
         "\"endTime\":\"Mon, 31 Dec 2099 23:59:59 +0000\","
         "\"expiredTime\":\"31 Dec 2099\","
         "\"timeExpire\":\"31-12-2099\","
-        \"expireAt\":\"31/12/2099\","
+        "\"expireAt\":\"31/12/2099\","
         "\"data\":{\"status\":\"active\",\"expire\":\"2099-12-31\",\"expired_time\":\"2099-12-31 23:59:59\"}}",
         keyv[0] ? keyv : "TEST123",
         udid[0] ? udid : "00008020-00091DCE0EF1002E",
