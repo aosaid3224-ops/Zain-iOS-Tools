@@ -1,6 +1,7 @@
 // NetWatch v0.6 — صدى timestamp الحرفي من الطلب
 #import <UIKit/UIKit.h>
 #import <Security/Security.h>
+#import <os/log.h>
 #import <CommonCrypto/CommonHMAC.h>
 #import <fcntl.h>
 #include <unistd.h>
