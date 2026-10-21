@@ -30,7 +30,7 @@ jobs:
           test -n "$DEB"
           dpkg-deb -f "$DEB" Package Name Version Architecture
           test "$(dpkg-deb -f "$DEB" Package)" = "com.sys.netwatch"
-          test "$(dpkg-deb -f "$DEB" Version)" = "1.8"
+          test "$(dpkg-deb -f "$DEB" Version)" = "1.9"
           test "$(dpkg-deb -f "$DEB" Architecture)" = "iphoneos-arm64"
       - name: Upload NetWatch artifact
         uses: actions/upload-artifact@v4
