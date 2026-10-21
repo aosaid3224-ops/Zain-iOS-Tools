@@ -1,4 +1,4 @@
-// NetWatch v3.1 — التطابق المؤكد: سر تحقق الرد هو https://haxvip.p_sk_hmac_secret_v1 (34 بايت) — تحقق رياضي 100%
+// NetWatch v3.2 — بعد نجاح التوقيع: paid_challenge يجب أن يطابق pendingUDIDChallenge المخزن (حقنّاه=UDID)
 #import <UIKit/UIKit.h>
 #import <Security/Security.h>
 #import <os/log.h>
@@ -130,8 +130,9 @@ static NSData *ForgedSuccess(const char *url) {
     const char *secret = "https://haxvip.p_sk_hmac_secret_v1"; /* v3.1: سر التحقق من الرد أقصر بـ3 بايت (خطأ مطبعي للمطور) — مؤكد حسابيًا بالتطابق مع CCHMAC-OUT الثاني */
     char canon[512];
     snprintf(canon, sizeof(canon),
-        "status=success&key=%s&remaining_seconds=999999999&time=%s&uuid=%s&paid_challenge=",
-        keyv[0] ? keyv : "TEST123", dts, udid[0] ? udid : "00008020-00091DCE0EF1002E");
+        "status=success&key=%s&remaining_seconds=999999999&time=%s&uuid=%s&paid_challenge=%s",
+        keyv[0] ? keyv : "TEST123", dts, udid[0] ? udid : "00008020-00091DCE0EF1002E",
+        udid[0] ? udid : "00008020-00091DCE0EF1002E");
     unsigned char macB[32];
     CCHmac((CCHmacAlgorithm)2, secret, strlen(secret), canon, strlen(canon), macB);
     char sig[65]; int si = 0;
@@ -177,7 +178,7 @@ static NSData *ForgedSuccess(const char *url) {
         "\"expiredTime\":\"31 Dec 2099\","
         "\"timeExpire\":\"31-12-2099\","
         "\"expireAt\":\"31/12/2099\","
-        "\"remaining_seconds\":999999999,\"remaining_text\":\"999999 days\",\"new_token\":\"TEST123\",\"notification\":\"\",\"update_available\":false,\"force_update\":false,\"sig\":\"%s\",\"signature\":\"%s\",\"sign\":\"%s\",\"hmac\":\"%s\",\"checksum\":\"%s\",\"data\":{\"status\":\"active\",\"expire\":\"2099-12-31\",\"expired_time\":\"2099-12-31 23:59:59\"}}",
+        "\"remaining_seconds\":999999999,\"remaining_text\":\"999999 days\",\"new_token\":\"TEST123\",\"notification\":\"\",\"update_available\":false,\"force_update\":false,\"paid_challenge\":\"%s\",\"sig\":\"%s\",\"signature\":\"%s\",\"sign\":\"%s\",\"hmac\":\"%s\",\"checksum\":\"%s\",\"data\":{\"status\":\"active\",\"expire\":\"2099-12-31\",\"expired_time\":\"2099-12-31 23:59:59\"}}",
         keyv[0] ? keyv : "TEST123",
         udid[0] ? udid : "00008020-00091DCE0EF1002E",
         ts[0] ? ts : "0",
@@ -185,6 +186,7 @@ static NSData *ForgedSuccess(const char *url) {
         ts[0] ? ts : "0",
         dts,
         dts,
+        udid[0] ? udid : "00008020-00091DCE0EF1002E",
         sig, sig, sig, sig, sig);
     RLogC("FORGE-BAT %s", buf);
     /* v1.8: حقنة المفاتيح المنتظرة — اللودر يفرغها قبل الطلب ويتوقع ملءها من bootstrap.
