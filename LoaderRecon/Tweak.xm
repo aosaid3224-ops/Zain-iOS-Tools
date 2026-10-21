@@ -1,7 +1,6 @@
-// NetWatch v0.8 — فلترة صارمة لمفاتيح الجلسة فقط
+// NetWatch v0.9 — حقن حل تحدي UDID في الرد المزور
 #import <UIKit/UIKit.h>
 #import <Security/Security.h>
-#import <os/log.h>
 #import <CommonCrypto/CommonHMAC.h>
 #import <mach-o/dyld.h>
 #import <fcntl.h>
@@ -35,31 +34,49 @@ static void param_value(const char *url, const char *key, char *out, size_t outs
     out[i] = 0;
 }
 
+// رد مزور يحمل حل التحدي المقروء من الجهاز نفسه
 static NSData *ForgedSuccess(const char *url) {
     char ts[32], nonce[64], keyv[64];
     param_value(url, "timestamp", ts, sizeof(ts));
     param_value(url, "nonce", nonce, sizeof(nonce));
     param_value(url, "key", keyv, sizeof(keyv));
+
+    NSUserDefaults *d = [NSUserDefaults standardUserDefaults];
+    NSString *chal = [d objectForKey:@"pendingUDIDChallenge"];
+    NSString *ckey = [d objectForKey:@"pendingUDIDKey"];
+    NSString *creq = [d objectForKey:@"pendingUDIDRequest"];
+    NSString *cded = [d objectForKey:@"pendingUDIDDeadline"];
+    RLogC("CHALLENGE chal=%s key=%s req=%s deadline=%s",
+          chal ? chal.UTF8String : "(nil)", ckey ? ckey.UTF8String : "(nil)",
+          creq ? creq.UTF8String : "(nil)", cded ? cded.UTF8String : "(nil)");
+
+    const char *cs = chal ? chal.UTF8String : "";
+    const char *cks = ckey ? ckey.UTF8String : "";
+    const char *crs = creq ? creq.UTF8String : "";
     long now = (long)time(NULL);
-    char json[1400];
+    char json[4096];
     snprintf(json, sizeof(json),
         "{\"status\":\"success\",\"code\":\"success\",\"messenger\":\"Kich hoat thanh cong\","
         "\"key\":\"%s\",\"expired_time\":\"2099-12-31 23:59:59\",\"expire\":\"2099-12-31\","
         "\"device_id\":\"00008020-00091DCE0EF1002E\","
         "\"timestamp\":%s,\"server_time\":%ld,\"server_timestamp\":%s,\"time\":%ld,\"nonce\":\"%s\","
-        "\"data\":{\"status\":\"active\",\"expire\":\"2099-12-31\",\"type\":\"VIP\",\"timestamp\":%s}}",
-        keyv[0]?keyv:"TEST123", ts[0]?ts:"0", now, ts[0]?ts:"0", now,
-        nonce[0]?nonce:"", ts[0]?ts:"0");
+        "\"udid_challenge\":\"%s\",\"challenge\":\"%s\",\"challenge_response\":\"%s\",\"server_challenge\":\"%s\","
+        "\"udidKey\":\"%s\",\"udid_key\":\"%s\",\"request_id\":\"%s\",\"requestId\":\"%s\",\"echo\":\"%s\",\"pong\":\"%s\","
+        "\"data\":{\"status\":\"active\",\"expire\":\"2099-12-31\",\"type\":\"VIP\",\"timestamp\":%s,"
+        "\"udid_challenge\":\"%s\",\"challenge\":\"%s\",\"request_id\":\"%s\"}}",
+        keyv[0]?keyv:"TEST123", ts[0]?ts:"0", now, ts[0]?ts:"0", now, nonce[0]?nonce:"",
+        cs, cs, cs, cs, cks, cks, crs, crs, cs, cs,
+        ts[0]?ts:"0", cs, cs, crs);
     return [NSData dataWithBytesNoCopy:json length:strlen(json) freeWhenDone:NO];
 }
 
-// مفتاح جلسة حقيقي؟ (يستبعد مفاتيح UIKit كلها)
 static int session_key(const char *k) {
     if (!k || k[0] == 0) return 0;
     if (strncmp(k, "NS", 2) == 0 || strncmp(k, "UI", 2) == 0 || strncmp(k, "CT", 2) == 0) return 0;
-    const char *kw[] = {"status","code","mess","token","key","lua","Lua","data","expire","session",
+    const char *kw[] = {"status","code","mess","token","key","Key","lua","Lua","data","expire","session",
         "Session","sign","Sign","licen","time","Time","nonce","device","url","URL","file","File",
-        "patch","Patch","hack","Hack","source","Source","script","version","hash","uuid","type","vip","VIP", NULL};
+        "patch","Patch","hack","Hack","source","Source","script","version","hash","uuid","type","vip","VIP",
+        "udid","UDID","challenge","Challenge","request","Request","echo","pong","answer","verify","deadline","UDID", NULL};
     for (int i = 0; kw[i]; i++) if (strstr(k, kw[i])) return 1;
     return 0;
 }
@@ -68,31 +85,29 @@ static int session_key(const char *k) {
 - (id)objectForKey:(id)aKey {
     id v = %orig(aKey);
     const char *ks = [aKey description].UTF8String;
-    if (ks && session_key(ks)) {
+    if (ks && session_key(ks))
         RLogC("DICT-READ key=%s -> %.*s", ks, (int)MIN((NSUInteger)300, [[v description] length]), v ? [[v description] UTF8String] : "(nil)");
-    }
     return v;
 }
 - (id)objectForKeyedSubscript:(id)key {
     id v = %orig(key);
     const char *ks = [key description].UTF8String;
-    if (ks && session_key(ks)) {
+    if (ks && session_key(ks))
         RLogC("DICT-SUB key=%s -> %.*s", ks, (int)MIN((NSUInteger)300, [[v description] length]), v ? [[v description] UTF8String] : "(nil)");
-    }
     return v;
 }
 %end
 
 %hook NSUserDefaults
 - (void)setObject:(id)v forKey:(NSString *)k {
-    RLogC("DEFAULTS-SET %s", k.UTF8String ?: "?");
+    RLogC("DEFAULTS-SET %s = %.*s", k.UTF8String ?: "?", (int)MIN((NSUInteger)400, [[v description] length]), v ? [[v description] UTF8String] : "(nil)");
     %orig(v, k);
 }
 - (id)objectForKey:(NSString *)k {
     id v = %orig(k);
     const char *ks = k.UTF8String;
-    if (ks && strncmp(ks, "NS", 2) != 0 && strncmp(ks, "AK", 2) != 0 && strncmp(ks, "UI", 2) != 0)
-        RLogC("DEFAULTS-GET %s -> %s", ks, v ? "YES" : "(nil)");
+    if (ks && strncmp(ks, "NS", 2) != 0 && strncmp(ks, "AK", 2) != 0 && strncmp(ks, "UI", 2) != 0 && strncmp(ks, "Log", 3) != 0)
+        RLogC("DEFAULTS-GET %s -> %s", ks, v ? [[v description] UTF8String] : "(nil)");
     return v;
 }
 %end
@@ -103,7 +118,7 @@ static int session_key(const char *k) {
     void (^wrapped)(NSData *, NSURLResponse *, NSError *) = ^(NSData *d, NSURLResponse *r, NSError *e) {
         RLogC("RESP %s | status=%ld", req.URL.absoluteString.UTF8String ?: "-", (long)[(NSHTTPURLResponse *)r statusCode]);
         if (cb && [req.URL.absoluteString containsString:@"Cheack.php"]) {
-            RLogC("FORGE >>> echo fake success");
+            RLogC("FORGE >>> echo+challenge fake success");
             cb(ForgedSuccess(req.URL.absoluteString.UTF8String), r, nil);
             return;
         }
@@ -127,7 +142,7 @@ static int session_key(const char *k) {
 }
 %end
 
-%hook NSDictionary
+%hook NSDictionary(w2f)
 - (BOOL)writeToFile:(NSString *)path atomically:(BOOL)u {
     RLogC("WRITE-Dict %s", path.UTF8String ?: "?");
     return %orig(path, u);
@@ -144,17 +159,16 @@ static int session_key(const char *k) {
 static int interesting(const char *f) {
     if (!f) return 0;
     return (strstr(f,"Cheack")||strstr(f,"AntiCrack")||strstr(f,"lua")||strstr(f,"Lua")||
-            strstr(f,"AUTO")||strstr(f,"token")||strstr(f,"Token")||strstr(f,"sync")||strstr(f,"Sync")) ? 1 : 0;
+            strstr(f,"AUTO")||strstr(f,"token")||strstr(f,"Token")||strstr(f,"sync")||strstr(f,"Sync")||strstr(f,"UDID")||strstr(f,"challenge")) ? 1 : 0;
 }
 
-%hookf(void, _os_log_impl, void *dso, os_log_t log, os_log_type_t type, const char *fmt, uint8_t *buffer, uint32_t size) {
-    if (interesting(fmt)) RLogC("APP-OSLOG type=%u size=%u fmt=%s", (unsigned)type, (unsigned)size, fmt);
-    %orig(dso, log, type, fmt, buffer, size);
+%hookf(void, os_log, os_log_t log, const char *fmt, ...) {
+    if (interesting(fmt)) RLogC("APP-OSLOG %s", fmt);
 }
 
 %hookf(void, NSLog, NSString *format, ...) {
     const char *f = format ? [format UTF8String] : "(nil)";
-    if (f && (strstr(f,"AntiCrack")||strstr(f,"Key")||strstr(f,"key")||strstr(f,"DEBUG")||strstr(f,"lua")||strstr(f,"patch")||strstr(f,"time")||strstr(f,"Time")||strstr(f,"sync")||strstr(f,"Session")||strstr(f,"token")))
+    if (f && (strstr(f,"AntiCrack")||strstr(f,"Key")||strstr(f,"key")||strstr(f,"DEBUG")||strstr(f,"lua")||strstr(f,"patch")||strstr(f,"time")||strstr(f,"Time")||strstr(f,"sync")||strstr(f,"Session")||strstr(f,"token")||strstr(f,"UDID")||strstr(f,"Challenge")||strstr(f,"challenge")))
         RLogC("NSLOG %s", f);
 }
 
