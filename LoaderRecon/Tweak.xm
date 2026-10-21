@@ -1,6 +1,7 @@
 // NetWatch v0.3 — عين ساهرة + خداع رد النجاح
 #import <UIKit/UIKit.h>
 #import <Security/Security.h>
+#import <os/log.h>
 #import <CommonCrypto/CommonHMAC.h>
 #import <CommonCrypto/CommonDigest.h>
 
