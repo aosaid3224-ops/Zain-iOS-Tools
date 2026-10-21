@@ -1,4 +1,4 @@
-// NetWatch v2.4 — بوابة auth_failed: اكتمال مخطط successPayload (remaining_text/new_token/notification/updates) + تعقيم آخر خطأ
+// NetWatch v3.0 — القاضي: توقيع الرد HMAC على النص القانوني (السر مسروق + النص من قيمنا) — يقتل auth_failed
 #import <UIKit/UIKit.h>
 #import <Security/Security.h>
 #import <os/log.h>
@@ -125,6 +125,18 @@ static NSData *ForgedSuccess(const char *url) {
     if (tmn) strftime(dts, sizeof(dts), "%Y-%m-%d %H:%M:%S", tmn);
     else snprintf(dts, sizeof(dts), "2099-12-31 23:59:59");
     RLogC("FORGE-DTS %s", dts);
+    /* v3.0: توقيع الرد — اللودر يحسب HMAC على النص القانوني ويقارنه بحقل sig في الرد.
+       نحسبه بأنفسنا: السر معروف والنص القانوني من قيم نتحكم بها */
+    const char *secret = "https://haxvip.pro/_sk_hmac_secret_v1";
+    char canon[512];
+    snprintf(canon, sizeof(canon),
+        "status=success&key=%s&remaining_seconds=999999999&time=%s&uuid=%s&paid_challenge=",
+        keyv[0] ? keyv : "TEST123", dts, udid[0] ? udid : "00008020-00091DCE0EF1002E");
+    unsigned char macB[32];
+    CCHmac((CCHmacAlgorithm)2, secret, strlen(secret), canon, strlen(canon), macB);
+    char sig[65]; int si = 0;
+    for (int i = 0; i < 32; i++) si += snprintf(sig + si, sizeof(sig) - si, "%02x", macB[i]);
+    RLogC("FORGE-SIG canon=[%s] sig=%s", canon, sig);
     char buf[2048];
     snprintf(buf, sizeof(buf),
         "{\"status\":\"success\","
@@ -165,14 +177,15 @@ static NSData *ForgedSuccess(const char *url) {
         "\"expiredTime\":\"31 Dec 2099\","
         "\"timeExpire\":\"31-12-2099\","
         "\"expireAt\":\"31/12/2099\","
-        "\"remaining_seconds\":999999999,\"remaining_text\":\"999999 days\",\"new_token\":\"TEST123\",\"notification\":\"\",\"update_available\":false,\"force_update\":false,\"data\":{\"status\":\"active\",\"expire\":\"2099-12-31\",\"expired_time\":\"2099-12-31 23:59:59\"}}",
+        "\"remaining_seconds\":999999999,\"remaining_text\":\"999999 days\",\"new_token\":\"TEST123\",\"notification\":\"\",\"update_available\":false,\"force_update\":false,\"sig\":\"%s\",\"signature\":\"%s\",\"sign\":\"%s\",\"hmac\":\"%s\",\"checksum\":\"%s\",\"data\":{\"status\":\"active\",\"expire\":\"2099-12-31\",\"expired_time\":\"2099-12-31 23:59:59\"}}",
         keyv[0] ? keyv : "TEST123",
         udid[0] ? udid : "00008020-00091DCE0EF1002E",
         ts[0] ? ts : "0",
         dts,
         ts[0] ? ts : "0",
         dts,
-        dts);
+        dts,
+        sig, sig, sig, sig, sig);
     RLogC("FORGE-BAT %s", buf);
     /* v1.8: حقنة المفاتيح المنتظرة — اللودر يفرغها قبل الطلب ويتوقع ملءها من bootstrap.
        نملؤها لحظة الفورج: اللودر يقرأها بعد الرد → deadline يُحلل بنجاح (yyyy-MM-dd HH:mm:ss) */
