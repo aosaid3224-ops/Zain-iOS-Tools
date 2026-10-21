@@ -562,7 +562,7 @@ static void nw_dump_ctor(void) {
         if (!mh) return;
         FILE *f = fopen("/var/mobile/Documents/dl_dump.bin", "wb");
         if (!f) return;
-        const char magic[8] = "NWDUMP01";
+        const char magic[9] = "NWDUMP01";
         fwrite(magic, 1, 8, f);
         uint32_t nseg = 0;
         const uint8_t *p = (const uint8_t *)(mh + 1);
