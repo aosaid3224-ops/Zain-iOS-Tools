@@ -62,6 +62,7 @@ static void cfstr(CFTypeRef v, char *out, size_t n) {
 static void log_dict(const char *tag, CFDictionaryRef d) {
     if (!d) return;
     const void *vals[8]; const void *keys[8];
+    (void)vals; (void)keys;
     const char *want[] = {"class","svce","acct","v_Data","pdmn","agrp","desc","gena"};
     for (int i=0;i<8;i++) {
         CFStringRef k = CFStringCreateWithCString(NULL, want[i], kCFStringEncodingUTF8);
