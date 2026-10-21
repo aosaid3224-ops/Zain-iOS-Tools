@@ -1,4 +1,4 @@
-// NetWatch v4.1 — الماسح داخل الفورج: يعمل تلقائيًا أثناء الجولة — لا يمكن نسيانه
+// NetWatch v5.0 — server_sig: اسم الحقل الحقيقي من الثنائي بجانب النص القانوني — server_signature_invalid كان يسبب auth_failed
 #import <UIKit/UIKit.h>
 #import <Security/Security.h>
 #import <os/log.h>
@@ -197,7 +197,7 @@ static NSData *ForgedSuccess(const char *url) {
         "\"remaining_seconds\":31536000,\"remaining_text\":\"365 days\","
         "\"expiry_date\":\"%s\",\"expire\":\"%s\","
         "\"paid_challenge\":\"%s\","
-        "\"sig\":\"%s\",\"signature\":\"%s\",\"sign\":\"%s\",\"hmac\":\"%s\",\"checksum\":\"%s\","
+        "\"server_sig\":\"%s\",\"sig\":\"%s\",\"signature\":\"%s\",\"sign\":\"%s\",\"hmac\":\"%s\",\"checksum\":\"%s\","
         "\"data\":{\"status\":\"active\",\"expire\":\"%s\",\"expired_time\":\"%s\"}}",
         keyv[0] ? keyv : "TEST123",
         udid[0] ? udid : "00008020-00091DCE0EF1002E",
@@ -207,7 +207,7 @@ static NSData *ForgedSuccess(const char *url) {
         dte,
         dted,
         pc,
-        sig, sig, sig, sig, sig,
+        sig, sig, sig, sig, sig, sig,
         dted,
         dte);
     RLogC("FORGE-BAT %s", buf);
