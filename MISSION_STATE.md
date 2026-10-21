@@ -24,6 +24,15 @@
 - الفورج يعمل: time GMT صحيح + paid_challenge=nonce + توقيع صحيح → يطابق حساب اللودر
 - النتيجة: auth_failed رغم تطابق التوقيع 64/64
 
+## ✅✅✅ النصر — COMPLETED 2026-10-21
+- السبب النهائي: حقل `server_sig` غائب من الردود → server_signature_invalid → auth_failed
+- الحل: v5.0 أضاف server_sig=<HMAC> — اللودر عرض: AUTHORIZED // VIP ACCESS + "Kích hoạt thành công" + 365 ngày
+- الرد الناجح الكامل: {status, messenger, code, key, device_id, timestamp, server_time, time,
+  remaining_seconds:31536000, remaining_text, expiry_date, expire, paid_challenge=nonce,
+  server_sig, sig, signature, sign, hmac, checksum, data{...}}
+- الاستخدام الدائم: التويك مثبت + بدون nw_no_kcforge → دخول تلقائي دائم
+- المتبقي: مرحلة الترقيع (PATCH NGAY) ثم ESP
+
 ## ❓ المجهول الوحيد المتبقي
 شرط ما بعد التوقيع في arm64 — يتطلب **الثنائي المفكوك من الذاكرة**:
 `/var/mobile/Documents/dl_dump.bin` (ينتجه v4.1 تلقائيًا عند وجود nw_dump)
@@ -36,7 +45,7 @@
 ## 🎯 الخطوة القادمة الوحيدة
 1. بناء v4.1 → جولة عادية (افتح اللودر → TEST123 → Xác nhậن)
 2. `ls -la /var/mobile/Documents/dl_dump.bin` → رفع الملف
-3. فك arm64 الحقيقي → قراءة شرط auth_failed → الحل النهائي
+3. ~~فك arm64~~ — لم يعد ضروريًا — server_sig حله من الثنائي مباشرة
 
 ## 📊 عتاد الهدف
 - اللودر: com.sharkios.delta.loader (BTGAMING DELTA LOADER v4.6 OFFLINE)
