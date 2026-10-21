@@ -58,3 +58,32 @@ static void RLog(NSString *fmt, ...) {
     if (res) *res = kSecTrustResultProceed;
     return errSecSuccess;
 }
+
+#import <CommonCrypto/CommonHMAC.h>
+#import <CommonCrypto/CommonDigest.h>
+
+// v0.2: كشف خوارزمية التوقيع عند المصدر
+%hookf(void, CCHmac, CCHmacAlgorithm algorithm, const void *key, size_t keyLength, const void *data, size_t dataLength, void *macOut) {
+    NSString *keyS = key ? [[NSString alloc] initWithBytes:key length:MIN(keyLength,200) encoding:NSUTF8StringEncoding] : @"(nil)";
+    NSString *dataS = data ? [[NSString alloc] initWithBytes:data length:MIN(dataLength,4000) encoding:NSUTF8StringEncoding] : @"(nil)";
+    RLog(@"CCHMAC alg=%lu keyLen=%lu key=[%@] | dataLen=%lu data=[%@]",
+         (unsigned long)algorithm, (unsigned long)keyLength, keyS,
+         (unsigned long)dataLength, dataS);
+    %orig(algorithm, key, keyLength, data, dataLength, macOut);
+    if (macOut) {
+        NSData *mac = [NSData dataWithBytes:macOut length:32];
+        RLog(@"CCHMAC-RESULT %@", mac);
+    }
+}
+
+%hookf(int, CCHmacInit, CCHmacContext *ctx, CCHmacAlgorithm algorithm, const void *key, size_t keyLength) {
+    NSString *keyS = key ? [[NSString alloc] initWithBytes:key length:MIN(keyLength,200) encoding:NSUTF8StringEncoding] : @"(nil)";
+    RLog(@"CCHMAC-INIT alg=%lu keyLen=%lu key=[%@]", (unsigned long)algorithm, (unsigned long)keyLength, keyS);
+    return %orig(ctx, algorithm, key, keyLength);
+}
+
+%hookf(unsigned char *, CC_SHA256, const void *data, CC_LONG len, unsigned char *md) {
+    NSString *dataS = data ? [[NSString alloc] initWithBytes:data length:MIN((int)len,4000) encoding:NSUTF8StringEncoding] : @"(nil)";
+    RLog(@"CCSHA256 len=%d data=[%@]", (int)len, dataS);
+    return %orig(data, len, md);
+}
