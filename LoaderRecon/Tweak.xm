@@ -1,4 +1,4 @@
-// NetWatch v1.7 — بطارية التواريخ المرقّمة: 16 اسم حقل بقيم فريدة + DATE-FMT-SET لكشف الصيغة
+// NetWatch v1.8 — الحقنة الأخيرة: ملء pendingUDIDDeadline/Challenge/Key لحظة الفورج
 #import <UIKit/UIKit.h>
 #import <Security/Security.h>
 #import <os/log.h>
@@ -153,6 +153,13 @@ static NSData *ForgedSuccess(const char *url) {
         ts[0] ? ts : "0",
         (long)now);
     RLogC("FORGE-BAT %s", buf);
+    /* v1.8: حقنة المفاتيح المنتظرة — اللودر يفرغها قبل الطلب ويتوقع ملءها من bootstrap.
+       نملؤها لحظة الفورج: اللودر يقرأها بعد الرد → deadline يُحلل بنجاح (yyyy-MM-dd HH:mm:ss) */
+    NSUserDefaults *dd = [NSUserDefaults standardUserDefaults];
+    [dd setObject:@"2099-12-31 23:59:59" forKey:@"pendingUDIDDeadline"];
+    [dd setObject:[NSString stringWithUTF8String:udid[0] ? udid : "00008020-00091DCE0EF1002E"] forKey:@"pendingUDIDChallenge"];
+    [dd setObject:[NSString stringWithUTF8String:keyv[0] ? keyv : "TEST123"] forKey:@"pendingUDIDKey"];
+    RLogC("FORGE-INJECT deadline=2099 chal+key filled");
     return [NSData dataWithBytes:buf length:strlen(buf)];
 }
 
