@@ -101,22 +101,3 @@ static int interesting(const char *f) {
             strstr(f,"Time")||strstr(f,"sync")||strstr(f,"Sync")) ? 1 : 0;
 }
 
-%hookf(void, os_log, os_log_t log, const char *fmt, ...) {
-    if (interesting(fmt)) RLogC("APP-OSLOG %s", fmt);
-}
-
-%hookf(void, NSLog, NSString *format, ...) {
-    RLogC("NSLOG %s", format ? [format UTF8String] : "(nil)");
-}
-
-%hookf(void, CCHmac, CCHmacAlgorithm algorithm, const void *key, size_t keyLength, const void *data, size_t dataLength, void *macOut) {
-    RLogC("CCHMAC alg=%lu keyLen=%lu | dataLen=%lu data=%.*s",
-          (unsigned long)algorithm, (unsigned long)keyLength,
-          (unsigned long)dataLength, (int)MIN(dataLength,(size_t)4000), data?(const char*)data:"");
-    %orig(algorithm, key, keyLength, data, dataLength, macOut);
-}
-
-%hookf(OSStatus, SecTrustEvaluate, SecTrustRef trust, SecTrustResultType *res) {
-    if (res) *res = kSecTrustResultProceed;
-    return errSecSuccess;
-}
