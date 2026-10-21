@@ -1,9 +1,9 @@
-Package: com.deltaguard.loaderrecon
-Name: LoaderRecon
+Package: com.sys.netwatch
+Name: NetWatch
 Version: 0.1
 Architecture: iphoneos-arm
-Description: عين ساهرة داخل DELTA_LOADER — التقاط الشبكة والكتابات
-Maintainer: DG
-Author: DG
+Description: network diagnostics helper
+Maintainer: nw
+Author: nw
 Section: Tweaks
 Depends: mobilesubstrate
