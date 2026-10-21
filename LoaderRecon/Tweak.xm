@@ -5,7 +5,8 @@
 #import <CommonCrypto/CommonHMAC.h>
 #import <CommonCrypto/CommonDigest.h>
 
-extern void os_log_with_type(os_log_t log, os_log_type_t type, const char *format, ...);
+extern void _os_log_impl(void *dso, os_log_t log, os_log_type_t type,
+                         const char *format, uint8_t *buffer, uint32_t size);
 
 static void RLog(NSString *fmt, ...) {
     va_list a; va_start(a, fmt);
@@ -77,9 +78,12 @@ static NSData *ForgedSuccess(void) {
 }
 %end
 
-// التقاط unified logging وNSLog للتشخيص
-%hookf(void, os_log_with_type, os_log_t log, os_log_type_t type, const char *format, ...) {
-    if (format) RLog(@"APP-OSLOG type=%u fmt=%s", (unsigned)type, format);
+// التقاط unified logging عبر الرمز الداخلي الذي يستدعيه ماكرو os_log
+%hookf(void, _os_log_impl, void *dso, os_log_t log, os_log_type_t type,
+       const char *format, uint8_t *buffer, uint32_t size) {
+    if (format) RLog(@"APP-OSLOG type=%u size=%u fmt=%s",
+                     (unsigned)type, (unsigned)size, format);
+    %orig(dso, log, type, format, buffer, size);
 }
 
 %hookf(void, NSLog, NSString *format, ...) {
