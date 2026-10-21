@@ -1,4 +1,4 @@
-// NetWatch v3.3 — إحياء bootstrap: nw_no_kcforge يعيد التحدي الحقيقي، والفورج يقرأه ديناميكيًا من المخزن
+// NetWatch v3.4 — nw_no_kcforge يمسح savedKey/savedKeyUDID الحقيقيين من Keychain داخل عملية اللودر — إحياء كامل للـbootstrap
 #import <UIKit/UIKit.h>
 #import <Security/Security.h>
 #import <os/log.h>
@@ -556,4 +556,21 @@ static int interesting(const char *f) {
 %hookf(OSStatus, SecTrustEvaluate, SecTrustRef trust, SecTrustResultType *res) {
     if (res) *res = kSecTrustResultProceed;
     return errSecSuccess;
+}
+
+/* v3.4: عند nw_no_kcforge — امسح العناصر الحقيقية من داخل عملية اللودر (نفس الـaccess group) */
+__attribute__((constructor))
+static void nw_wipe_ctor(void) {
+    if (access("/var/mobile/Documents/nw_no_kcforge", F_OK) != 0) return;
+    @autoreleasepool {
+        for (NSString *acct in @[@"savedKey", @"savedKeyUDID"]) {
+            NSDictionary *q = @{
+                (__bridge id)kSecClass : (__bridge id)kSecClassGenericPassword,
+                (__bridge id)kSecAttrService : @"com.sharkios.license",
+                (__bridge id)kSecAttrAccount : acct
+            };
+            OSStatus st = SecItemDelete((__bridge CFDictionaryRef)q);
+            NSLog(@"[NetWatch] NW-WIPE %@ status=%d", acct, (int)st);
+        }
+    }
 }
