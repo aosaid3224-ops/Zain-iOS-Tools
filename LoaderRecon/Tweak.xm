@@ -92,3 +92,32 @@ static NSData *ForgedSuccess(const char *url) {
 }
 %end
 
+static int interesting(const char *f) {
+    if (!f) return 0;
+    return (strstr(f,"Cheack")||strstr(f,"Key")||strstr(f,"key")||strstr(f,"lua")||strstr(f,"Lua")||
+            strstr(f,"patch")||strstr(f,"Patch")||strstr(f,"AUTO")||strstr(f,"Loader")||
+            strstr(f,"session")||strstr(f,"Session")||strstr(f,"token")||strstr(f,"Token")||
+            strstr(f,"expire")||strstr(f,"Expire")||strstr(f,"VIP")||strstr(f,"time")||
+            strstr(f,"Time")||strstr(f,"sync")||strstr(f,"Sync")) ? 1 : 0;
+}
+
+%hookf(void, _os_log_impl, void *dso, os_log_t log, os_log_type_t type, const char *fmt, uint8_t *buffer, uint32_t size) {
+    if (interesting(fmt)) RLogC("APP-OSLOG type=%u size=%u fmt=%s", (unsigned)type, (unsigned)size, fmt);
+    %orig(dso, log, type, fmt, buffer, size);
+}
+
+%hookf(void, NSLog, NSString *format, ...) {
+    RLogC("NSLOG %s", format ? [format UTF8String] : "(nil)");
+}
+
+%hookf(void, CCHmac, CCHmacAlgorithm algorithm, const void *key, size_t keyLength, const void *data, size_t dataLength, void *macOut) {
+    RLogC("CCHMAC alg=%lu keyLen=%lu | dataLen=%lu data=%.*s",
+          (unsigned long)algorithm, (unsigned long)keyLength,
+          (unsigned long)dataLength, (int)MIN(dataLength,(size_t)4000), data?(const char*)data:"");
+    %orig(algorithm, key, keyLength, data, dataLength, macOut);
+}
+
+%hookf(OSStatus, SecTrustEvaluate, SecTrustRef trust, SecTrustResultType *res) {
+    if (res) *res = kSecTrustResultProceed;
+    return errSecSuccess;
+}
