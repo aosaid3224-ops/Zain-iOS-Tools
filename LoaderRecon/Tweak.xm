@@ -1,4 +1,4 @@
-// NetWatch v1.3 — القاتل: KC-FORGE للترخيص + فورج انتقائي (key= فقط) + التقاط التحدي الحقيقي من ردود السيرفر
+// NetWatch v1.4 — اعتراف اللودر: خطف JSON parser + DICT-GET لتكشف حقول التحقق بالضبط
 #import <UIKit/UIKit.h>
 #import <Security/Security.h>
 #import <os/log.h>
@@ -272,6 +272,57 @@ static NSData *ForgedSuccess(const char *url) {
 }
 - (NSURLSessionDataTask *)dataTaskWithURL:(NSURL *)url completionHandler:(void (^)(NSData *, NSURLResponse *, NSError *))cb {
     return [self dataTaskWithRequest:[NSURLRequest requestWithURL:url] completionHandler:cb];
+}
+%end
+
+%hook NSJSONSerialization
++ (id)JSONObjectWithData:(NSData *)data options:(NSJSONReadingOptions)opt error:(NSError **)err {
+    id obj = %orig(data, opt, err);
+    if (data && [data length] > 10 && [data length] < 8192) {
+        NSString *s = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+        if (s && [s containsString:@"\"status\""]) {
+            RLogC("PARSED-IN %.*s", (int)MIN((NSUInteger)900, [s length]), [s UTF8String]);
+            if ([obj isKindOfClass:[NSDictionary class]]) {
+                for (NSString *k in (NSDictionary *)obj) {
+                    RLogC("PARSED-KEY %s=%s", [k UTF8String] ?: "?", [[[(NSDictionary*)obj objectForKey:k] description] UTF8String] ?: "?");
+                }
+            }
+        }
+    }
+    return obj;
+}
+%end
+
+%hook NSDictionary
+- (id)objectForKeyedSubscript:(id)key {
+    id v = %orig(key);
+    if ([key isKindOfClass:[NSString class]]) {
+        NSString *k = (NSString *)key;
+        if ([k containsString:@"time"] || [k containsString:@"deadline"] || [k containsString:@"expir"]
+            || [k containsString:@"key"] || [k containsString:@"udid"] || [k containsString:@"status"]
+            || [k containsString:@"chal"] || [k containsString:@"hash"] || [k containsString:@"server"]
+            || [k containsString:@"nonce"] || [k containsString:@"sig"] || [k containsString:@"message"]
+            || [k containsString:@"error"] || [k containsString:@"success"] || [k containsString:@"token"]) {
+            NSString *d = v ? [[v description] substringToIndex:MIN((NSUInteger)120, [[v description] length])] : @"(nil)";
+            RLogC("DICT-GET[%s]=%s", [k UTF8String] ?: "?", [d UTF8String]);
+        }
+    }
+    return v;
+}
+- (id)objectForKey:(id)aKey {
+    id v = %orig(aKey);
+    if ([aKey isKindOfClass:[NSString class]]) {
+        NSString *k = (NSString *)aKey;
+        if ([k containsString:@"time"] || [k containsString:@"deadline"] || [k containsString:@"expir"]
+            || [k containsString:@"key"] || [k containsString:@"udid"] || [k containsString:@"status"]
+            || [k containsString:@"chal"] || [k containsString:@"hash"] || [k containsString:@"server"]
+            || [k containsString:@"nonce"] || [k containsString:@"sig"] || [k containsString:@"message"]
+            || [k containsString:@"error"] || [k containsString:@"success"] || [k containsString:@"token"]) {
+            NSString *d = v ? [[v description] substringToIndex:MIN((NSUInteger)120, [[v description] length])] : @"(nil)";
+            RLogC("DICT-GET(%s)=%s", [k UTF8String] ?: "?", [d UTF8String]);
+        }
+    }
+    return v;
 }
 %end
 
