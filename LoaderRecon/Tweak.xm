@@ -5,6 +5,8 @@
 #import <CommonCrypto/CommonHMAC.h>
 #import <CommonCrypto/CommonDigest.h>
 
+extern void os_log_with_type(os_log_t log, os_log_type_t type, const char *format, ...);
+
 static void RLog(NSString *fmt, ...) {
     va_list a; va_start(a, fmt);
     NSString *s = [[NSString alloc] initWithFormat:fmt arguments:a];
