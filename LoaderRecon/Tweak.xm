@@ -407,6 +407,10 @@ static NSData *ForgedSuccess(const char *url) {
         RLogC("UD-FORGE-CLEAN retry_count");
         return @"0";
     }
+    if ([k isEqualToString:@"pendingUDIDDeadline"] && (!v || [v length] == 0)) {
+        RLogC("UD-FORGE-S pendingUDIDDeadline=2099");
+        return @"2099-12-31 23:59:59";
+    }
     return v;
 }
 - (instancetype)initWithSuiteName:(NSString *)sn {
@@ -418,14 +422,6 @@ static NSData *ForgedSuccess(const char *url) {
     id dl = [d objectForKey:@"pendingUDIDDeadline"];
     if (dl) RLogC("UD-DICT deadline=%s", [[dl description] UTF8String]);
     return d;
-}
-- (NSString *)stringForKey:(NSString *)k {
-    NSString *v = %orig(k);
-    if ([k isEqualToString:@"pendingUDIDDeadline"] && (!v || [v length] == 0)) {
-        RLogC("UD-FORGE-S pendingUDIDDeadline=2099");
-        return @"2099-12-31 23:59:59";
-    }
-    return v;
 }
 %end
 
