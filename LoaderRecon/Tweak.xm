@@ -1,4 +1,4 @@
-// NetWatch v1.1 — تفريغ CCHmac + NSURLConnection + أجسام الردود + تحدي متسق
+// NetWatch v1.2 — كسر البوابة: deadline بعيد + تخزين المفتاح + التقاط كل الطلبات (init level)
 #import <UIKit/UIKit.h>
 #import <Security/Security.h>
 #import <os/log.h>
@@ -94,11 +94,19 @@ static NSData *ForgedSuccess(const char *url) {
         [dd setObject:[NSString stringWithUTF8String:g_chal] forKey:@"pendingUDIDChallenge"];
         [dd setObject:[NSString stringWithUTF8String:g_chal] forKey:@"pendingUDIDKey"];
         [dd setObject:[NSString stringWithUTF8String:g_chal] forKey:@"pendingUDIDRequest"];
-        RLogC("FORGE-GEN challenge=%s (injected to Defaults)", g_chal);
+        /* v1.2: deadline بعيد المدى بصيغتين — التحقق المحلي now<deadline يمر */
+        [dd setObject:@"2099-12-31 23:59:59" forKey:@"pendingUDIDDeadline"];
+        [dd setObject:@"4102358399" forKey:@"pendingUDIDDeadlineEpoch"];
+        RLogC("FORGE-GEN challenge=%s deadline=2099 (injected)", g_chal);
     }
     param_value(url, "timestamp", ts, sizeof(ts));
     param_value(url, "nonce", nonce, sizeof(nonce));
     param_value(url, "key", keyv, sizeof(keyv));
+    /* v1.2: خزّن المفتاح المُدخل — اللودر يقرأ savedKey لاحقًا */
+    if (keyv[0]) {
+        [[NSUserDefaults standardUserDefaults] setObject:[NSString stringWithUTF8String:keyv] forKey:@"savedKey"];
+        RLogC("FORGE-KEY savedKey=%s stored", keyv);
+    }
     // اقرأ من الكاش (كل المخازن) مع مباشر
     NSUserDefaults *d = [NSUserDefaults standardUserDefaults];
     const char *cs = g_chal[0] ? g_chal : ([d objectForKey:@"pendingUDIDChallenge"] ? [[d objectForKey:@"pendingUDIDChallenge"] UTF8String] : "");
@@ -151,6 +159,10 @@ static NSData *ForgedSuccess(const char *url) {
         }
     }
     return s;
+}
+%hookf(OSStatus, SecItemDelete, CFDictionaryRef query) {
+    if (query) { RLogC("KC-DEL:"); log_dict("KC-DEL", query); }
+    return %orig(query);
 }
 %hookf(OSStatus, SecItemUpdate, CFDictionaryRef query, CFDictionaryRef attrs) {
     if (query) { RLogC("KC-UPDATE-Q:"); log_dict("KC-UPDQ", query); }
@@ -228,6 +240,28 @@ static NSData *ForgedSuccess(const char *url) {
 - (instancetype)initWithRequest:(NSURLRequest *)request delegate:(id)delegate {
     RLogC("REQ-CONN %s %s", request.HTTPMethod.UTF8String ?: "-", request.URL.absoluteString.UTF8String ?: "-");
     return %orig(request, delegate);
+}
+%end
+
+%hook NSURLRequest
+- (instancetype)initWithURL:(NSURL *)url {
+    if (url) RLogC("REQ-INIT %s", url.absoluteString.UTF8String ?: "-");
+    return %orig(url);
+}
++ (instancetype)requestWithURL:(NSURL *)url {
+    if (url) RLogC("REQ-WITH %s", url.absoluteString.UTF8String ?: "-");
+    return %orig(url);
+}
+%end
+
+%hook NSMutableURLRequest
+- (instancetype)initWithURL:(NSURL *)url {
+    if (url) RLogC("REQ-MINIT %s", url.absoluteString.UTF8String ?: "-");
+    return %orig(url);
+}
++ (instancetype)requestWithURL:(NSURL *)url {
+    if (url) RLogC("REQ-MWITH %s", url.absoluteString.UTF8String ?: "-");
+    return %orig(url);
 }
 %end
 
