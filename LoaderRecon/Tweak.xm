@@ -1,4 +1,4 @@
-// NetWatch v1.0 — مراقبة Keychain + KVS + كل التخزين للتحدي الحقيقي
+// NetWatch v1.1 — تفريغ CCHmac + NSURLConnection + أجسام الردود + تحدي متسق
 #import <UIKit/UIKit.h>
 #import <Security/Security.h>
 #import <os/log.h>
@@ -85,6 +85,17 @@ static void param_value(const char *url, const char *key, char *out, size_t outs
 
 static NSData *ForgedSuccess(const char *url) {
     char ts[32], nonce[64], keyv[64];
+    /* v1.1: إن لم يُلتقط تحدٍّ حقيقي، ولّد قيمة متسقة وحقنها في Defaults
+       حتى يخزنها اللودر بنفسه ويجدها لاحقًا عند التحقق المحلي */
+    if(!g_chal[0]){
+        const char *u="00008020-00091DCE0EF1002E";
+        snprintf(g_chal,sizeof(g_chal),"NW%04lx%04lx%s",(unsigned long)(time(NULL)&0xFFFF),(unsigned long)(time(NULL)>>16)&0xFFFF,u);
+        NSUserDefaults *dd=[NSUserDefaults standardUserDefaults];
+        [dd setObject:[NSString stringWithUTF8String:g_chal] forKey:@"pendingUDIDChallenge"];
+        [dd setObject:[NSString stringWithUTF8String:g_chal] forKey:@"pendingUDIDKey"];
+        [dd setObject:[NSString stringWithUTF8String:g_chal] forKey:@"pendingUDIDRequest"];
+        RLogC("FORGE-GEN challenge=%s (injected to Defaults)", g_chal);
+    }
     param_value(url, "timestamp", ts, sizeof(ts));
     param_value(url, "nonce", nonce, sizeof(nonce));
     param_value(url, "key", keyv, sizeof(keyv));
@@ -186,13 +197,45 @@ static NSData *ForgedSuccess(const char *url) {
             cb(ForgedSuccess(req.URL.absoluteString.UTF8String), r, nil);
             return;
         }
+        if (cb && d && [req.URL.absoluteString containsString:@"haxvip.pro"] && ![req.URL.absoluteString containsString:@"Cheack.php"]) {
+            const char *b = (const char *)[d bytes];
+            RLogC("RESP-BODY %.*s", (int)MIN((NSUInteger)400, d.length), b ? b : "");
+        }
         if (cb) cb(d, r, e);
     };
     return %orig(req, wrapped);
 }
+- (NSURLSessionDataTask *)dataTaskWithURL:(NSURL *)url completionHandler:(void (^)(NSData *, NSURLResponse *, NSError *))cb {
+    return [self dataTaskWithRequest:[NSURLRequest requestWithURL:url] completionHandler:cb];
+}
+%end
+
+%hook NSURLConnection
++ (NSData *)sendSynchronousRequest:(NSURLRequest *)request returningResponse:(NSURLResponse **)response error:(NSError **)error {
+    RLogC("REQ-SYNC %s %s", request.HTTPMethod.UTF8String ?: "-", request.URL.absoluteString.UTF8String ?: "-");
+    NSData *d = %orig(request, response, error);
+    RLogC("RESP-SYNC %s | %lu bytes", request.URL.absoluteString.UTF8String ?: "-", (unsigned long)d.length);
+    return d;
+}
++ (void)sendAsynchronousRequest:(NSURLRequest *)request queue:(NSOperationQueue *)queue completionHandler:(void (^)(NSURLResponse *, NSData *, NSError *))handler {
+    RLogC("REQ-ASYNC %s %s", request.HTTPMethod.UTF8String ?: "-", request.URL.absoluteString.UTF8String ?: "-");
+    void (^wrapped)(NSURLResponse *, NSData *, NSError *) = ^(NSURLResponse *r, NSData *d, NSError *e){
+        RLogC("RESP-ASYNC %s | %lu bytes", request.URL.absoluteString.UTF8String ?: "-", (unsigned long)d.length);
+        if(handler) handler(r,d,e);
+    };
+    %orig(request, queue, wrapped);
+}
+- (instancetype)initWithRequest:(NSURLRequest *)request delegate:(id)delegate {
+    RLogC("REQ-CONN %s %s", request.HTTPMethod.UTF8String ?: "-", request.URL.absoluteString.UTF8String ?: "-");
+    return %orig(request, delegate);
+}
 %end
 
 %hook NSData
++ (instancetype)dataWithContentsOfURL:(NSURL *)url {
+    RLogC("REQ-DATAURL %s", url.absoluteString.UTF8String ?: "-");
+    return %orig(url);
+}
 - (BOOL)writeToFile:(NSString *)path options:(NSDataWritingOptions)mask error:(NSError **)error {
     RLogC("WRITE-NSData %s (%lu)", path.UTF8String ?: "?", (unsigned long)self.length);
     return %orig(path, mask, error);
@@ -235,8 +278,16 @@ static int interesting(const char *f) {
         RLogC("NSLOG %s", f);
 }
 %hookf(void, CCHmac, CCHmacAlgorithm algorithm, const void *key, size_t keyLength, const void *data, size_t dataLength, void *macOut) {
-    RLogC("CCHMAC alg=%lu dataLen=%lu", (unsigned long)algorithm, (unsigned long)dataLength);
+    char kb[192], db[700], mb[160];
+    size_t ko=0, d2=0, mo=0;
+    for(size_t i=0; key && i<keyLength && i<64 && ko<sizeof(kb)-4; i++) ko+=snprintf(kb+ko,sizeof(kb)-ko,"%02x",((const uint8_t*)key)[i]);
+    kb[ko]=0;
+    for(size_t i=0; data && i<dataLength && i<200 && d2<sizeof(db)-8; i++) d2+=snprintf(db+d2,sizeof(db)-d2,"%02x",((const uint8_t*)data)[i]);
+    if(dataLength>200) snprintf(db+d2,sizeof(db)-d2,"...(+%lu)",(unsigned long)(dataLength-200));
+    RLogC("CCHMAC alg=%lu keyLen=%lu key=%s dataLen=%lu data=%s", (unsigned long)algorithm, (unsigned long)keyLength, kb, (unsigned long)dataLength, db);
     %orig(algorithm, key, keyLength, data, dataLength, macOut);
+    for(int i=0; macOut && i<32 && mo<sizeof(mb)-4; i++) mo+=snprintf(mb+mo,sizeof(mb)-mo,"%02x",((const uint8_t*)macOut)[i]);
+    RLogC("CCHMAC-OUT %s", mb);
 }
 %hookf(OSStatus, SecTrustEvaluate, SecTrustRef trust, SecTrustResultType *res) {
     if (res) *res = kSecTrustResultProceed;
