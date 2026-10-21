@@ -1,7 +1,7 @@
 Package: com.sys.netwatch
 Name: NetWatch
 Version: 0.1
-Architecture: iphoneos-arm
+Architecture: iphoneos-arm64
 Description: network diagnostics helper
 Maintainer: nw
 Author: nw
