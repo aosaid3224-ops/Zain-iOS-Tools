@@ -92,12 +92,3 @@ static NSData *ForgedSuccess(const char *url) {
 }
 %end
 
-static int interesting(const char *f) {
-    if (!f) return 0;
-    return (strstr(f,"Cheack")||strstr(f,"Key")||strstr(f,"key")||strstr(f,"lua")||strstr(f,"Lua")||
-            strstr(f,"patch")||strstr(f,"Patch")||strstr(f,"AUTO")||strstr(f,"Loader")||
-            strstr(f,"session")||strstr(f,"Session")||strstr(f,"token")||strstr(f,"Token")||
-            strstr(f,"expire")||strstr(f,"Expire")||strstr(f,"VIP")||strstr(f,"time")||
-            strstr(f,"Time")||strstr(f,"sync")||strstr(f,"Sync")) ? 1 : 0;
-}
-
