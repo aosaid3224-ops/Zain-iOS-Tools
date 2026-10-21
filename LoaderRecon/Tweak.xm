@@ -1,6 +1,7 @@
 // NetWatch v0.8 — فلترة صارمة لمفاتيح الجلسة فقط
 #import <UIKit/UIKit.h>
 #import <Security/Security.h>
+#import <os/log.h>
 #import <CommonCrypto/CommonHMAC.h>
 #import <mach-o/dyld.h>
 #import <fcntl.h>
@@ -126,7 +127,7 @@ static int session_key(const char *k) {
 }
 %end
 
-%hook NSDictionary(w2f)
+%hook NSDictionary
 - (BOOL)writeToFile:(NSString *)path atomically:(BOOL)u {
     RLogC("WRITE-Dict %s", path.UTF8String ?: "?");
     return %orig(path, u);
@@ -146,8 +147,9 @@ static int interesting(const char *f) {
             strstr(f,"AUTO")||strstr(f,"token")||strstr(f,"Token")||strstr(f,"sync")||strstr(f,"Sync")) ? 1 : 0;
 }
 
-%hookf(void, os_log, os_log_t log, const char *fmt, ...) {
-    if (interesting(fmt)) RLogC("APP-OSLOG %s", fmt);
+%hookf(void, _os_log_impl, void *dso, os_log_t log, os_log_type_t type, const char *fmt, uint8_t *buffer, uint32_t size) {
+    if (interesting(fmt)) RLogC("APP-OSLOG type=%u size=%u fmt=%s", (unsigned)type, (unsigned)size, fmt);
+    %orig(dso, log, type, fmt, buffer, size);
 }
 
 %hookf(void, NSLog, NSString *format, ...) {
