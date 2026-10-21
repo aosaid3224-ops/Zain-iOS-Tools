@@ -1,4 +1,4 @@
-// NetWatch v2.0 — القاتل: كل الحقول الزمنية كنصوص (Swift as? String) + camelCase وقتية
+// NetWatch v2.1 — التنظيف الأخير: server_time كتاريخ منسق yyyy-MM-dd HH:mm:ss (المحلل الحقيقي)
 #import <UIKit/UIKit.h>
 #import <Security/Security.h>
 #import <os/log.h>
@@ -120,6 +120,11 @@ static NSData *ForgedSuccess(const char *url) {
     param_value(url, "key", keyv, sizeof(keyv));
     param_value(url, "uuid", udid, sizeof(udid));
     time_t now = time(NULL);
+    char dts[40];
+    struct tm *tmn = localtime(&now);
+    if (tmn) strftime(dts, sizeof(dts), "%Y-%m-%d %H:%M:%S", tmn);
+    else snprintf(dts, sizeof(dts), "2099-12-31 23:59:59");
+    RLogC("FORGE-DTS %s", dts);
     char buf[2048];
     snprintf(buf, sizeof(buf),
         "{\"status\":\"success\","
@@ -164,10 +169,10 @@ static NSData *ForgedSuccess(const char *url) {
         keyv[0] ? keyv : "TEST123",
         udid[0] ? udid : "00008020-00091DCE0EF1002E",
         ts[0] ? ts : "0",
-        (long)now,
+        dts,
         ts[0] ? ts : "0",
-        (long)now,
-        (long)now);
+        dts,
+        dts);
     RLogC("FORGE-BAT %s", buf);
     /* v1.8: حقنة المفاتيح المنتظرة — اللودر يفرغها قبل الطلب ويتوقع ملءها من bootstrap.
        نملؤها لحظة الفورج: اللودر يقرأها بعد الرد → deadline يُحلل بنجاح (yyyy-MM-dd HH:mm:ss) */
