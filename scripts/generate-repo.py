@@ -19,7 +19,7 @@ args = parser.parse_args()
 
 REPO_DIR = os.path.abspath(args.repo_dir)
 POOL_ROOT = os.path.join(REPO_DIR, "pool", "main")
-POOL_ARCHES = ("iphoneos-arm64", "iphoneos-arm64e")
+POOL_ARCHES = ("iphoneos-arm", "iphoneos-arm64", "iphoneos-arm64e")
 
 
 def file_hash(data, algorithm):
@@ -57,7 +57,7 @@ def release_text(payloads, paths, origin, label, suite, codename, description, d
         "Version: 1.0",
         f"Codename: {codename}",
         f"Date: {date_value}",
-        "Architectures: iphoneos-arm64 iphoneos-arm64e",
+        "Architectures: iphoneos-arm iphoneos-arm64 iphoneos-arm64e",
         "Components: main",
         f"Description: {description}",
         "",
