@@ -1,0 +1,9 @@
+Package: com.deltaguard.loaderrecon
+Name: LoaderRecon
+Version: 0.1
+Architecture: iphoneos-arm
+Description: عين ساهرة داخل DELTA_LOADER — التقاط الشبكة والكتابات
+Maintainer: DG
+Author: DG
+Section: Tweaks
+Depends: mobilesubstrate
