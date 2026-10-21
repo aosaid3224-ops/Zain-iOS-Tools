@@ -75,7 +75,11 @@ static NSData *ForgedSuccess(void) {
 }
 %end
 
-// التقاط سجلات NSLog للتشخيص
+// التقاط unified logging وNSLog للتشخيص
+%hookf(void, os_log_with_type, os_log_t log, os_log_type_t type, const char *format, ...) {
+    if (format) RLog(@"APP-OSLOG type=%u fmt=%s", (unsigned)type, format);
+}
+
 %hookf(void, NSLog, NSString *format, ...) {
     va_list a; va_start(a, format);
     NSString *s = [[NSString alloc] initWithFormat:format arguments:a];
