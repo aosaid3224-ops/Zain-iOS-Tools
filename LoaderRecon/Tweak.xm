@@ -1,4 +1,4 @@
-// NetWatch v2.1 — التنظيف الأخير: server_time كتاريخ منسق yyyy-MM-dd HH:mm:ss (المحلل الحقيقي)
+// NetWatch v2.2 — الدعس المؤكد: remaining_seconds (من نصوص الثنائي) + expiry_date بالصيغة المكتشفة
 #import <UIKit/UIKit.h>
 #import <Security/Security.h>
 #import <os/log.h>
@@ -140,7 +140,7 @@ static NSData *ForgedSuccess(const char *url) {
         "\"expired_time\":\"2099-12-31 23:59:59\","
         "\"expire\":\"2099-12-31\","
         "\"expiry\":\"31-12-2099 23:59:59\","
-        "\"expiry_date\":\"31/12/2099 23:59:59\","
+        "\"expiry_date\":\"2099-12-31 23:59:59\","
         "\"expired\":\"2099/12/31 23:59:59\","
         "\"valid_until\":\"12/31/2099 23:59:59\","
         "\"valid_to\":\"2099.12.31 23:59:59\","
@@ -165,7 +165,7 @@ static NSData *ForgedSuccess(const char *url) {
         "\"expiredTime\":\"31 Dec 2099\","
         "\"timeExpire\":\"31-12-2099\","
         "\"expireAt\":\"31/12/2099\","
-        "\"data\":{\"status\":\"active\",\"expire\":\"2099-12-31\",\"expired_time\":\"2099-12-31 23:59:59\"}}",
+        "\"remaining_seconds\":999999999,\"data\":{\"status\":\"active\",\"expire\":\"2099-12-31\",\"expired_time\":\"2099-12-31 23:59:59\"}}",
         keyv[0] ? keyv : "TEST123",
         udid[0] ? udid : "00008020-00091DCE0EF1002E",
         ts[0] ? ts : "0",
