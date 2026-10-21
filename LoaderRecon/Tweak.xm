@@ -1,4 +1,4 @@
-// NetWatch v3.9 — إعادة حقل time (اللودر يقرأه حرفيًا — DATE-FMT in= فارغ أكده)
+// NetWatch v4.0 — ماسح FairPlay: dl_dump.bin يحمل __text المفكوك من الذاكرة الحية — الفك الحقيقي يبدأ هنا
 #import <UIKit/UIKit.h>
 #import <Security/Security.h>
 #import <os/log.h>
@@ -549,5 +549,48 @@ static void nw_wipe_ctor(void) {
         }
         [d synchronize];
         NSLog(@"[NetWatch] NW-WIPE defaults cleared");
+    }
+}
+
+/* v4.0: ماسح فك التشفير — يقرأ __text المفكوك من ذاكرة العملية الحية ويكتبه لملف */
+#include <mach-o/dyld.h>
+__attribute__((constructor))
+static void nw_dump_ctor(void) {
+    if (access("/var/mobile/Documents/nw_dump", F_OK) != 0) return;
+    @autoreleasepool {
+        const struct mach_header_64 *mh = (const struct mach_header_64 *)_dyld_get_image_header(0);
+        if (!mh) return;
+        FILE *f = fopen("/var/mobile/Documents/dl_dump.bin", "wb");
+        if (!f) return;
+        const char magic[8] = "NWDUMP01";
+        fwrite(magic, 1, 8, f);
+        uint32_t nseg = 0;
+        const uint8_t *p = (const uint8_t *)(mh + 1);
+        for (uint32_t i = 0; i < mh->ncmds; i++) {
+            const struct load_command *lc = (const struct load_command *)p;
+            if (lc->cmd == LC_SEGMENT_64) nseg++;
+            p += lc->cmdsize;
+        }
+        fwrite(&nseg, 4, 1, f);
+        p = (const uint8_t *)(mh + 1);
+        for (uint32_t i = 0; i < mh->ncmds; i++) {
+            const struct load_command *lc = (const struct load_command *)p;
+            if (lc->cmd == LC_SEGMENT_64) {
+                const struct segment_command_64 *sg = (const struct segment_command_64 *)lc;
+                if (sg->vmsize > 0 && sg->vmsize < 0x40000000 && sg->filesize > 0) {
+                    char nm[16]; memset(nm, 0, 16); strncpy(nm, sg->segname, 15);
+                    fwrite(nm, 1, 16, f);
+                    fwrite(&sg->vmaddr, 8, 1, f);
+                    fwrite(&sg->vmsize, 8, 1, f);
+                    fwrite(&sg->fileoff, 8, 1, f);
+                    fwrite(&sg->filesize, 8, 1, f);
+                    const uint8_t *src = (const uint8_t *)(uintptr_t)(sg->vmaddr + ((uintptr_t)mh - 0x100000000));
+                    fwrite(src, 1, (size_t)sg->vmsize, f);
+                }
+            }
+            p += lc->cmdsize;
+        }
+        fclose(f);
+        NSLog(@"[NetWatch] NW-DUMP written to dl_dump.bin");
     }
 }
