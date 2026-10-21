@@ -75,10 +75,7 @@ static NSData *ForgedSuccess(void) {
 }
 %end
 
-// التقاط سجلات التطبيق الذاتية
-%hookf(void, os_log, os_log_t log, const char *fmt, ...) {
-    if (fmt) RLog(@"APP-OSLOG %s", fmt);
-}
+// التقاط سجلات NSLog للتشخيص
 %hookf(void, NSLog, NSString *format, ...) {
     va_list a; va_start(a, format);
     NSString *s = [[NSString alloc] initWithFormat:format arguments:a];
