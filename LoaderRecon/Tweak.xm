@@ -1,4 +1,4 @@
-// NetWatch v1.2 — كسر البوابة: deadline بعيد + تخزين المفتاح + التقاط كل الطلبات (init level)
+// NetWatch v1.3 — القاتل: KC-FORGE للترخيص + فورج انتقائي (key= فقط) + التقاط التحدي الحقيقي من ردود السيرفر
 #import <UIKit/UIKit.h>
 #import <Security/Security.h>
 #import <os/log.h>
@@ -83,6 +83,33 @@ static void param_value(const char *url, const char *key, char *out, size_t outs
     out[i] = 0;
 }
 
+/* v1.3: فك حقول التحدي من ردود السيرفر الحقيقية */
+static void DGScanChallenge(const char *body) {
+    if (!body) return;
+    struct { const char *key; int which; } fields[] = {
+        {"\"udid_challenge\"\":\"\"", 1}, {"\"challenge\"\":\"\"", 1},
+        {"\"server_challenge\"\":\"\"", 1}, {"\"request_id\"\":\"\"", 2},
+        {"\"requestId\"\":\"\"", 2}, {"\"udidKey\"\":\"\"", 3}, {"\"udid_key\"\":\"\"", 3},
+    };
+    for (int i = 0; i < 7; i++) {
+        const char *p = strstr(body, fields[i].key);
+        if (!p) continue;
+        p += strlen(fields[i].key);
+        char v[256]; int n = 0;
+        while (p[n] && p[n] != '"' && n < 255) { v[n] = p[n]; n++; }
+        v[n] = 0;
+        if (!v[0]) continue;
+        if (fields[i].which == 1) snprintf(g_chal, sizeof(g_chal), "%s", v);
+        else if (fields[i].which == 2) snprintf(g_creq, sizeof(g_creq), "%s", v);
+        else snprintf(g_ckey, sizeof(g_ckey), "%s", v);
+        RLogC("SCAN-CH %s", v);
+    }
+    const char *dl = strstr(body, "\"expired_time\"\":\"\"");
+    if (dl) { dl += 16; char v[64]; int n = 0;
+        while (dl[n] && dl[n] != '"' && n < 63) { v[n] = dl[n]; n++; }
+        v[n] = 0; snprintf(g_cded, sizeof(g_cded), "%s", v); RLogC("SCAN-CH deadline=%s", v); }
+}
+
 static NSData *ForgedSuccess(const char *url) {
     char ts[32], nonce[64], keyv[64];
     /* v1.1: إن لم يُلتقط تحدٍّ حقيقي، ولّد قيمة متسقة وحقنها في Defaults
@@ -148,7 +175,29 @@ static NSData *ForgedSuccess(const char *url) {
         RLogC("KC-FIND status=%d:", (int)s);
         log_dict("KC-FIND", query);
     }
-    if (result && *result) {
+    /* v1.3 KC-FORGE: الترخيص المزروع — نجيب "موجود" على savedKey */
+    if (s == -25300 && query && result) {
+        char sb[128], ab[128]; sb[0]=ab[0]=0;
+        cfstr(CFDictionaryGetValue(query, CFSTR("svce")), sb, sizeof(sb));
+        cfstr(CFDictionaryGetValue(query, CFSTR("acct")), ab, sizeof(ab));
+        if (strstr(sb, "sharkios") && strcmp(ab, "savedKey") == 0) {
+            CFDataRef fake = CFDataCreate(NULL, (const UInt8 *)"TEST123", 7);
+            if (CFDictionaryGetValue(query, CFSTR("r_Att"))) {
+                CFMutableDictionaryRef md = CFDictionaryCreateMutable(NULL, 0,
+                    &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+                CFDictionarySetValue(md, CFSTR("class"), kSecClassGenericPassword);
+                CFDictionarySetValue(md, CFSTR("svce"), CFSTR("com.sharkios.license"));
+                CFDictionarySetValue(md, CFSTR("acct"), CFSTR("savedKey"));
+                CFDictionarySetValue(md, CFSTR("v_Data"), fake);
+                *result = md;
+            } else { *result = fake; }
+            RLogC("KC-FORGE savedKey=TEST123 returned");
+            s = 0;
+        } else if (strstr(sb, "sharkios")) {
+            RLogC("KC-MISS acct=%s", ab);
+        }
+    }
+    if ((result && *result) || s == 0) {
         if (CFGetTypeID(*result)==CFDataGetTypeID()) {
             char b[1400]; cfstr(*result,b,sizeof(b)); RLogC("KC-RESULT data=%s", b); cache_put("challenge", b);
         } else if (CFGetTypeID(*result)==CFDictionaryGetTypeID()) {
@@ -204,14 +253,18 @@ static NSData *ForgedSuccess(const char *url) {
     RLogC("REQ %s %s", req.HTTPMethod.UTF8String ?: "-", req.URL.absoluteString.UTF8String ?: "-");
     void (^wrapped)(NSData *, NSURLResponse *, NSError *) = ^(NSData *d, NSURLResponse *r, NSError *e) {
         RLogC("RESP %s | status=%ld", req.URL.absoluteString.UTF8String ?: "-", (long)[(NSHTTPURLResponse *)r statusCode]);
-        if (cb && [req.URL.absoluteString containsString:@"Cheack.php"]) {
-            RLogC("FORGE >>> echo+challenge fake success");
+        /* v1.3: فورج انتقائي — فقط محاولات التفعيل التي تحمل key= */
+        if (cb && [req.URL.absoluteString containsString:@"Cheack.php"]
+            && [req.URL.absoluteString containsString:@"key="]) {
+            RLogC("FORGE >>> keyed fake success");
             cb(ForgedSuccess(req.URL.absoluteString.UTF8String), r, nil);
             return;
         }
-        if (cb && d && [req.URL.absoluteString containsString:@"haxvip.pro"] && ![req.URL.absoluteString containsString:@"Cheack.php"]) {
+        /* v1.3: فحص كل ردود haxvip الحقيقية — التحدي يُلتقط هنا */
+        if (cb && d && [req.URL.absoluteString containsString:@"haxvip.pro"]) {
             const char *b = (const char *)[d bytes];
-            RLogC("RESP-BODY %.*s", (int)MIN((NSUInteger)400, d.length), b ? b : "");
+            RLogC("RESP-BODY %.*s", (int)MIN((NSUInteger)600, d.length), b ? b : "");
+            DGScanChallenge(b);
         }
         if (cb) cb(d, r, e);
     };
