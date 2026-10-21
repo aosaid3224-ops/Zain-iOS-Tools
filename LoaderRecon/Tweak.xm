@@ -1,4 +1,4 @@
-// NetWatch v4.0 — ماسح FairPlay: dl_dump.bin يحمل __text المفكوك من الذاكرة الحية — الفك الحقيقي يبدأ هنا
+// NetWatch v4.1 — الماسح داخل الفورج: يعمل تلقائيًا أثناء الجولة — لا يمكن نسيانه
 #import <UIKit/UIKit.h>
 #import <Security/Security.h>
 #import <os/log.h>
@@ -131,6 +131,46 @@ static NSData *ForgedSuccess(const char *url) {
     if (tme) { strftime(dte, sizeof(dte), "%Y-%m-%d %H:%M:%S", tme); strftime(dted, sizeof(dted), "%Y-%m-%d", tme); }
     else { snprintf(dte, sizeof(dte), "2027-10-21 12:00:00"); snprintf(dted, sizeof(dted), "2027-10-21"); }
     RLogC("FORGE-DTS %s exp=%s", dts, dte);
+    /* v4.1: الماسح داخل الفورج — يشتغل تلقائيًا أثناء الجولة */
+    if (access("/var/mobile/Documents/nw_dump", F_OK) == 0
+        && access("/var/mobile/Documents/dl_dump.bin", F_OK) != 0) {
+        const struct mach_header_64 *mh2 = (const struct mach_header_64 *)_dyld_get_image_header(0);
+        if (mh2) {
+            FILE *df = fopen("/var/mobile/Documents/dl_dump.bin", "wb");
+            if (df) {
+                const char magic[8] = "NWDUMP01";
+                fwrite(magic, 1, 8, df);
+                uint32_t ns2 = 0;
+                const uint8_t *q = (const uint8_t *)(mh2 + 1);
+                for (uint32_t i = 0; i < mh2->ncmds; i++) {
+                    const struct load_command *lc = (const struct load_command *)q;
+                    if (lc->cmd == LC_SEGMENT_64) ns2++;
+                    q += lc->cmdsize;
+                }
+                fwrite(&ns2, 4, 1, df);
+                q = (const uint8_t *)(mh2 + 1);
+                for (uint32_t i = 0; i < mh2->ncmds; i++) {
+                    const struct load_command *lc = (const struct load_command *)q;
+                    if (lc->cmd == LC_SEGMENT_64) {
+                        const struct segment_command_64 *sg = (const struct segment_command_64 *)lc;
+                        if (sg->vmsize > 0 && sg->vmsize < 0x40000000 && sg->filesize > 0) {
+                            char nm[16]; memset(nm, 0, 16); strncpy(nm, sg->segname, 15);
+                            fwrite(nm, 1, 16, df);
+                            fwrite(&sg->vmaddr, 8, 1, df);
+                            fwrite(&sg->vmsize, 8, 1, df);
+                            fwrite(&sg->fileoff, 8, 1, df);
+                            fwrite(&sg->filesize, 8, 1, df);
+                            const uint8_t *sp = (const uint8_t *)(uintptr_t)(sg->vmaddr + ((uintptr_t)mh2 - 0x100000000));
+                            fwrite(sp, 1, (size_t)sg->vmsize, df);
+                        }
+                    }
+                    q += lc->cmdsize;
+                }
+                fclose(df);
+                RLogC("NW-DUMP written");
+            }
+        }
+    }
     const char *secret = "https://haxvip.p_sk_hmac_secret_v1";
     char canon[512];
     snprintf(canon, sizeof(canon),
