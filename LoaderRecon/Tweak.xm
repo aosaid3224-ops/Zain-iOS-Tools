@@ -1,7 +1,6 @@
-// NetWatch v0.5 — خداع الرد + وقت السيرفر الحي + فلترة الضجيج
+// NetWatch v0.6 — صدى timestamp الحرفي من الطلب
 #import <UIKit/UIKit.h>
 #import <Security/Security.h>
-#import <os/log.h>
 #import <CommonCrypto/CommonHMAC.h>
 #import <fcntl.h>
 #include <unistd.h>
@@ -23,16 +22,33 @@ static void RLogC(const char *fmt, ...) {
     if (fd >= 0) { ssize_t w = write(fd, buf, strlen(buf)); (void)w; close(fd); }
 }
 
-static NSData *ForgedSuccess(void) {
-    char json[1024];
+// استخرج قيمة معامل من رابط
+static void param_value(const char *url, const char *key, char *out, size_t outsz) {
+    out[0] = 0;
+    char pat[64]; snprintf(pat, sizeof(pat), "%s=", key);
+    const char *p = strstr(url, pat);
+    if (!p) return;
+    p += strlen(pat);
+    size_t i = 0;
+    while (p[i] && p[i] != '&' && i < outsz-1) { out[i] = p[i]; i++; }
+    out[i] = 0;
+}
+
+static NSData *ForgedSuccess(const char *url) {
+    char ts[32], nonce[64], keyv[64];
+    param_value(url, "timestamp", ts, sizeof(ts));
+    param_value(url, "nonce", nonce, sizeof(nonce));
+    param_value(url, "key", keyv, sizeof(keyv));
     long now = (long)time(NULL);
+    char json[1400];
     snprintf(json, sizeof(json),
         "{\"status\":\"success\",\"code\":\"success\",\"messenger\":\"Kich hoat thanh cong\","
-        "\"key\":\"TEST123\",\"expired_time\":\"2099-12-31 23:59:59\",\"expire\":\"2099-12-31\","
+        "\"key\":\"%s\",\"expired_time\":\"2099-12-31 23:59:59\",\"expire\":\"2099-12-31\","
         "\"device_id\":\"00008020-00091DCE0EF1002E\","
-        "\"timestamp\":%ld,\"server_time\":%ld,\"server_timestamp\":%ld,\"time\":%ld,"
-        "\"data\":{\"status\":\"active\",\"expire\":\"2099-12-31\",\"type\":\"VIP\",\"timestamp\":%ld}}",
-        now, now, now, now, now);
+        "\"timestamp\":%s,\"server_time\":%ld,\"server_timestamp\":%s,\"time\":%ld,\"nonce\":\"%s\","
+        "\"data\":{\"status\":\"active\",\"expire\":\"2099-12-31\",\"type\":\"VIP\",\"timestamp\":%s}}",
+        keyv[0]?keyv:"TEST123", ts[0]?ts:"0", now, ts[0]?ts:"0", now,
+        nonce[0]?nonce:"", ts[0]?ts:"0");
     return [NSData dataWithBytesNoCopy:json length:strlen(json) freeWhenDone:NO];
 }
 
@@ -44,8 +60,8 @@ static NSData *ForgedSuccess(void) {
               (long)[(NSHTTPURLResponse *)r statusCode],
               (int)MIN((NSUInteger)2000, d.length), d ? (const char *)d.bytes : "(nil)");
         if (cb && [req.URL.absoluteString containsString:@"Cheack.php"]) {
-            RLogC("FORGE >>> replaced with fake success (live server_time)");
-            cb(ForgedSuccess(), r, nil);
+            RLogC("FORGE >>> echo-timestamp fake success");
+            cb(ForgedSuccess(req.URL.absoluteString.UTF8String), r, nil);
             return;
         }
         if (cb) cb(d, r, e);
@@ -75,7 +91,6 @@ static NSData *ForgedSuccess(void) {
 }
 %end
 
-// فلترة: فقط سجلات الـLoader الحقيقية
 static int interesting(const char *f) {
     if (!f) return 0;
     return (strstr(f,"Cheack")||strstr(f,"Key")||strstr(f,"key")||strstr(f,"lua")||strstr(f,"Lua")||
@@ -85,9 +100,8 @@ static int interesting(const char *f) {
             strstr(f,"Time")||strstr(f,"sync")||strstr(f,"Sync")) ? 1 : 0;
 }
 
-%hookf(void, _os_log_impl, void *dso, os_log_t log, os_log_type_t type, const char *fmt, uint8_t *buffer, uint32_t size) {
-    if (interesting(fmt)) RLogC("APP-OSLOG type=%u size=%u fmt=%s", (unsigned)type, (unsigned)size, fmt);
-    %orig(dso, log, type, fmt, buffer, size);
+%hookf(void, os_log, os_log_t log, const char *fmt, ...) {
+    if (interesting(fmt)) RLogC("APP-OSLOG %s", fmt);
 }
 
 %hookf(void, NSLog, NSString *format, ...) {
