@@ -1,4 +1,4 @@
-// NetWatch v3.2 — بعد نجاح التوقيع: paid_challenge يجب أن يطابق pendingUDIDChallenge المخزن (حقنّاه=UDID)
+// NetWatch v3.3 — إحياء bootstrap: nw_no_kcforge يعيد التحدي الحقيقي، والفورج يقرأه ديناميكيًا من المخزن
 #import <UIKit/UIKit.h>
 #import <Security/Security.h>
 #import <os/log.h>
@@ -127,12 +127,16 @@ static NSData *ForgedSuccess(const char *url) {
     RLogC("FORGE-DTS %s", dts);
     /* v3.0: توقيع الرد — اللودر يحسب HMAC على النص القانوني ويقارنه بحقل sig في الرد.
        نحسبه بأنفسنا: السر معروف والنص القانوني من قيم نتحكم بها */
+    /* v3.3: التحدي الديناميكي — نقرأ pendingUDIDChallenge المخزن من bootstrap الحقيقي */
+    NSString *chalS = [[NSUserDefaults standardUserDefaults] objectForKey:@"pendingUDIDChallenge"];
+    const char *pc = chalS ? [chalS UTF8String] : "";
     const char *secret = "https://haxvip.p_sk_hmac_secret_v1"; /* v3.1: سر التحقق من الرد أقصر بـ3 بايت (خطأ مطبعي للمطور) — مؤكد حسابيًا بالتطابق مع CCHMAC-OUT الثاني */
     char canon[512];
     snprintf(canon, sizeof(canon),
         "status=success&key=%s&remaining_seconds=999999999&time=%s&uuid=%s&paid_challenge=%s",
         keyv[0] ? keyv : "TEST123", dts, udid[0] ? udid : "00008020-00091DCE0EF1002E",
-        udid[0] ? udid : "00008020-00091DCE0EF1002E");
+        pc);
+    RLogC("FORGE-PC challenge=[%s]", pc);
     unsigned char macB[32];
     CCHmac((CCHmacAlgorithm)2, secret, strlen(secret), canon, strlen(canon), macB);
     char sig[65]; int si = 0;
@@ -186,7 +190,7 @@ static NSData *ForgedSuccess(const char *url) {
         ts[0] ? ts : "0",
         dts,
         dts,
-        udid[0] ? udid : "00008020-00091DCE0EF1002E",
+        pc,
         sig, sig, sig, sig, sig);
     RLogC("FORGE-BAT %s", buf);
     /* v1.8: حقنة المفاتيح المنتظرة — اللودر يفرغها قبل الطلب ويتوقع ملءها من bootstrap.
@@ -222,7 +226,8 @@ static NSData *ForgedSuccess(const char *url) {
         char sb[128], ab[128]; sb[0]=ab[0]=0;
         cfstr(CFDictionaryGetValue(query, CFSTR("svce")), sb, sizeof(sb));
         cfstr(CFDictionaryGetValue(query, CFSTR("acct")), ab, sizeof(ab));
-        if (strstr(sb, "sharkios") && strcmp(ab, "savedKey") == 0) {
+        if (strstr(sb, "sharkios") && strcmp(ab, "savedKey") == 0
+            && access("/var/mobile/Documents/nw_no_kcforge", F_OK) != 0) {
             CFDataRef fake = CFDataCreate(NULL, (const UInt8 *)"TEST123", 7);
             if (CFDictionaryGetValue(query, CFSTR("r_Att"))) {
                 CFMutableDictionaryRef md = CFDictionaryCreateMutable(NULL, 0,
