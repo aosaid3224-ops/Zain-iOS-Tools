@@ -1,4 +1,4 @@
-// NetWatch v1.5 — جراحة الوقت: DATE-FMT/time() hooks + nw_disarm لالتقاط ردود السيرفر الحقيقية
+// NetWatch v1.6 — الزور المثالي: نسخ طبق الأصل لمخطط السيرفر الحقيقي {status, messenger, code}
 #import <UIKit/UIKit.h>
 #import <Security/Security.h>
 #import <os/log.h>
@@ -114,50 +114,31 @@ static void DGScanChallenge(const char *body) {
 static bool nw_disarmed(void) { return access("/var/mobile/Documents/nw_disarm", F_OK) == 0; }
 
 static NSData *ForgedSuccess(const char *url) {
-    char ts[32], nonce[64], keyv[64];
-    /* v1.1: إن لم يُلتقط تحدٍّ حقيقي، ولّد قيمة متسقة وحقنها في Defaults
-       حتى يخزنها اللودر بنفسه ويجدها لاحقًا عند التحقق المحلي */
-    if(!g_chal[0]){
-        const char *u="00008020-00091DCE0EF1002E";
-        snprintf(g_chal,sizeof(g_chal),"NW%04lx%04lx%s",(unsigned long)(time(NULL)&0xFFFF),(unsigned long)(time(NULL)>>16)&0xFFFF,u);
-        NSUserDefaults *dd=[NSUserDefaults standardUserDefaults];
-        [dd setObject:[NSString stringWithUTF8String:g_chal] forKey:@"pendingUDIDChallenge"];
-        [dd setObject:[NSString stringWithUTF8String:g_chal] forKey:@"pendingUDIDKey"];
-        [dd setObject:[NSString stringWithUTF8String:g_chal] forKey:@"pendingUDIDRequest"];
-        /* v1.2: deadline بعيد المدى بصيغتين — التحقق المحلي now<deadline يمر */
-        [dd setObject:@"2099-12-31 23:59:59" forKey:@"pendingUDIDDeadline"];
-        [dd setObject:@"4102358399" forKey:@"pendingUDIDDeadlineEpoch"];
-        RLogC("FORGE-GEN challenge=%s deadline=2099 (injected)", g_chal);
-    }
+    /* v1.6: نسخة طبق الأصل من مخطط السيرفر الحقيقي {status, messenger, code}
+       + حقول النجاح المحتملة فقط — لا حقول وهمية إضافية */
+    char ts[32], nonce[64], keyv[64], udid[64];
     param_value(url, "timestamp", ts, sizeof(ts));
     param_value(url, "nonce", nonce, sizeof(nonce));
     param_value(url, "key", keyv, sizeof(keyv));
-    /* v1.2: خزّن المفتاح المُدخل — اللودر يقرأ savedKey لاحقًا */
-    if (keyv[0]) {
-        [[NSUserDefaults standardUserDefaults] setObject:[NSString stringWithUTF8String:keyv] forKey:@"savedKey"];
-        RLogC("FORGE-KEY savedKey=%s stored", keyv);
-    }
-    // اقرأ من الكاش (كل المخازن) مع مباشر
-    NSUserDefaults *d = [NSUserDefaults standardUserDefaults];
-    const char *cs = g_chal[0] ? g_chal : ([d objectForKey:@"pendingUDIDChallenge"] ? [[d objectForKey:@"pendingUDIDChallenge"] UTF8String] : "");
-    const char *cks = g_ckey[0] ? g_ckey : "";
-    const char *crs = g_creq[0] ? g_creq : "";
-    RLogC("CHALLENGE chal=[%s] key=[%s] req=[%s] ded=[%s]", cs, cks, crs, g_cded);
-    long now = (long)time(NULL);
-    char json[4096];
-    snprintf(json, sizeof(json),
-        "{\"status\":\"success\",\"code\":\"success\",\"messenger\":\"Kich hoat thanh cong\","
-        "\"key\":\"%s\",\"expired_time\":\"2099-12-31 23:59:59\",\"expire\":\"2099-12-31\","
-        "\"device_id\":\"00008020-00091DCE0EF1002E\","
-        "\"timestamp\":%s,\"server_time\":%ld,\"server_timestamp\":%s,\"time\":%ld,\"nonce\":\"%s\","
-        "\"udid_challenge\":\"%s\",\"challenge\":\"%s\",\"challenge_response\":\"%s\",\"server_challenge\":\"%s\","
-        "\"udidKey\":\"%s\",\"udid_key\":\"%s\",\"request_id\":\"%s\",\"requestId\":\"%s\",\"echo\":\"%s\",\"pong\":\"%s\",\"answer\":\"%s\","
-        "\"data\":{\"status\":\"active\",\"expire\":\"2099-12-31\",\"type\":\"VIP\",\"timestamp\":%s,"
-        "\"udid_challenge\":\"%s\",\"challenge\":\"%s\",\"request_id\":\"%s\",\"udidKey\":\"%s\"}}",
-        keyv[0]?keyv:"TEST123", ts[0]?ts:"0", now, ts[0]?ts:"0", now, nonce[0]?nonce:"",
-        cs, cs, cs, cs, cks, cks, crs, crs, cs, cs, cs,
-        ts[0]?ts:"0", cs, cs, crs, cks);
-    return [NSData dataWithBytesNoCopy:json length:strlen(json) freeWhenDone:NO];
+    param_value(url, "uuid", udid, sizeof(udid));
+    time_t now = time(NULL);
+    char buf[1024];
+    snprintf(buf, sizeof(buf),
+        "{\"status\":\"success\","
+        "\"messenger\":\"Kích hoạt thành công\","
+        "\"code\":\"success\","
+        "\"key\":\"%s\","
+        "\"expired_time\":\"2099-12-31 23:59:59\","
+        "\"expire\":\"2099-12-31\","
+        "\"device_id\":\"%s\","
+        "\"timestamp\":%s,"
+        "\"server_time\":%ld}",
+        keyv[0] ? keyv : "TEST123",
+        udid[0] ? udid : "00008020-00091DCE0EF1002E",
+        ts[0] ? ts : "0",
+        (long)now);
+    RLogC("FORGE-MIN %s", buf);
+    return [NSData dataWithBytes:buf length:strlen(buf)];
 }
 
 // Keychain hooks
