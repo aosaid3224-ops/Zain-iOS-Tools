@@ -1,7 +1,6 @@
-// NetWatch v0.7 — كشف schema عبر قراءات الـJSON + إخفاء التويك
+// NetWatch v0.8 — فلترة صارمة لمفاتيح الجلسة فقط
 #import <UIKit/UIKit.h>
 #import <Security/Security.h>
-#import <os/log.h>
 #import <CommonCrypto/CommonHMAC.h>
 #import <mach-o/dyld.h>
 #import <fcntl.h>
@@ -53,28 +52,46 @@ static NSData *ForgedSuccess(const char *url) {
     return [NSData dataWithBytesNoCopy:json length:strlen(json) freeWhenDone:NO];
 }
 
-// كشف schema: أي مفتاح يقرأه التطبيق من أي قاموس
+// مفتاح جلسة حقيقي؟ (يستبعد مفاتيح UIKit كلها)
+static int session_key(const char *k) {
+    if (!k || k[0] == 0) return 0;
+    if (strncmp(k, "NS", 2) == 0 || strncmp(k, "UI", 2) == 0 || strncmp(k, "CT", 2) == 0) return 0;
+    const char *kw[] = {"status","code","mess","token","key","lua","Lua","data","expire","session",
+        "Session","sign","Sign","licen","time","Time","nonce","device","url","URL","file","File",
+        "patch","Patch","hack","Hack","source","Source","script","version","hash","uuid","type","vip","VIP", NULL};
+    for (int i = 0; kw[i]; i++) if (strstr(k, kw[i])) return 1;
+    return 0;
+}
+
 %hook NSDictionary
 - (id)objectForKey:(id)aKey {
     id v = %orig(aKey);
-    if (aKey) RLogC("DICT-READ key=%s -> %s", [aKey description].UTF8String ?: "?", v ? [[v description] UTF8String] : "(nil)");
+    const char *ks = [aKey description].UTF8String;
+    if (ks && session_key(ks)) {
+        RLogC("DICT-READ key=%s -> %.*s", ks, (int)MIN((NSUInteger)300, [[v description] length]), v ? [[v description] UTF8String] : "(nil)");
+    }
     return v;
 }
 - (id)objectForKeyedSubscript:(id)key {
     id v = %orig(key);
-    if (key) RLogC("DICT-SUB key=%s -> %s", [key description].UTF8String ?: "?", v ? [[v description] UTF8String] : "(nil)");
+    const char *ks = [key description].UTF8String;
+    if (ks && session_key(ks)) {
+        RLogC("DICT-SUB key=%s -> %.*s", ks, (int)MIN((NSUInteger)300, [[v description] length]), v ? [[v description] UTF8String] : "(nil)");
+    }
     return v;
 }
 %end
 
 %hook NSUserDefaults
 - (void)setObject:(id)v forKey:(NSString *)k {
-    RLogC("DEFAULTS-SET %s = %.*s", k.UTF8String ?: "?", (int)MIN((NSUInteger)300, [[v description] length]), [[v description] UTF8String] ?: "");
+    RLogC("DEFAULTS-SET %s", k.UTF8String ?: "?");
     %orig(v, k);
 }
 - (id)objectForKey:(NSString *)k {
     id v = %orig(k);
-    RLogC("DEFAULTS-GET %s -> %s", k.UTF8String ?: "?", v ? "YES" : "(nil)");
+    const char *ks = k.UTF8String;
+    if (ks && strncmp(ks, "NS", 2) != 0 && strncmp(ks, "AK", 2) != 0 && strncmp(ks, "UI", 2) != 0)
+        RLogC("DEFAULTS-GET %s -> %s", ks, v ? "YES" : "(nil)");
     return v;
 }
 %end
@@ -97,7 +114,7 @@ static NSData *ForgedSuccess(const char *url) {
 
 %hook NSData
 - (BOOL)writeToFile:(NSString *)path options:(NSDataWritingOptions)mask error:(NSError **)error {
-    RLogC("WRITE-NSData %s (%lu bytes)", path.UTF8String ?: "?", (unsigned long)self.length);
+    RLogC("WRITE-NSData %s (%lu)", path.UTF8String ?: "?", (unsigned long)self.length);
     return %orig(path, mask, error);
 }
 %end
@@ -109,42 +126,38 @@ static NSData *ForgedSuccess(const char *url) {
 }
 %end
 
-%hook NSDictionary
+%hook NSDictionary(w2f)
 - (BOOL)writeToFile:(NSString *)path atomically:(BOOL)u {
     RLogC("WRITE-Dict %s", path.UTF8String ?: "?");
     return %orig(path, u);
 }
 %end
 
-// إخفاء التويك من فحوصات الصور المحقونة
 %hookf(const char *, _dyld_get_image_name, uint32_t idx) {
     const char *n = %orig(idx);
-    if (n && (strstr(n, "LoaderRecon") || strstr(n, "MobileSubstrate") || strstr(n, "TweakInject") || strstr(n, "ellekit"))) {
+    if (n && (strstr(n, "LoaderRecon") || strstr(n, "MobileSubstrate") || strstr(n, "TweakInject") || strstr(n, "ellekit")))
         return "/usr/lib/libobjc.A.dylib";
-    }
     return n;
 }
 
 static int interesting(const char *f) {
     if (!f) return 0;
-    return (strstr(f,"Cheack")||strstr(f,"Key")||strstr(f,"key")||strstr(f,"lua")||strstr(f,"Lua")||
-            strstr(f,"patch")||strstr(f,"Patch")||strstr(f,"AUTO")||strstr(f,"Loader")||
-            strstr(f,"session")||strstr(f,"Session")||strstr(f,"token")||strstr(f,"Token")||
-            strstr(f,"expire")||strstr(f,"Expire")||strstr(f,"VIP")||strstr(f,"time")||
-            strstr(f,"Time")||strstr(f,"sync")||strstr(f,"Sync")) ? 1 : 0;
+    return (strstr(f,"Cheack")||strstr(f,"AntiCrack")||strstr(f,"lua")||strstr(f,"Lua")||
+            strstr(f,"AUTO")||strstr(f,"token")||strstr(f,"Token")||strstr(f,"sync")||strstr(f,"Sync")) ? 1 : 0;
 }
 
-%hookf(void, _os_log_impl, void *dso, os_log_t log, os_log_type_t type, const char *fmt, uint8_t *buffer, uint32_t size) {
-    if (interesting(fmt)) RLogC("APP-OSLOG type=%u size=%u fmt=%s", (unsigned)type, (unsigned)size, fmt);
-    %orig(dso, log, type, fmt, buffer, size);
+%hookf(void, os_log, os_log_t log, const char *fmt, ...) {
+    if (interesting(fmt)) RLogC("APP-OSLOG %s", fmt);
 }
 
 %hookf(void, NSLog, NSString *format, ...) {
-    RLogC("NSLOG %s", format ? [format UTF8String] : "(nil)");
+    const char *f = format ? [format UTF8String] : "(nil)";
+    if (f && (strstr(f,"AntiCrack")||strstr(f,"Key")||strstr(f,"key")||strstr(f,"DEBUG")||strstr(f,"lua")||strstr(f,"patch")||strstr(f,"time")||strstr(f,"Time")||strstr(f,"sync")||strstr(f,"Session")||strstr(f,"token")))
+        RLogC("NSLOG %s", f);
 }
 
 %hookf(void, CCHmac, CCHmacAlgorithm algorithm, const void *key, size_t keyLength, const void *data, size_t dataLength, void *macOut) {
-    RLogC("CCHMAC alg=%lu keyLen=%lu | dataLen=%lu", (unsigned long)algorithm, (unsigned long)keyLength, (unsigned long)dataLength);
+    RLogC("CCHMAC alg=%lu dataLen=%lu", (unsigned long)algorithm, (unsigned long)dataLength);
     %orig(algorithm, key, keyLength, data, dataLength, macOut);
 }
 
