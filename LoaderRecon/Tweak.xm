@@ -1,4 +1,4 @@
-// NetWatch v2.2 — الدعس المؤكد: remaining_seconds (من نصوص الثنائي) + expiry_date بالصيغة المكتشفة
+// NetWatch v2.3 — ضربة المنطقة الزمنية: server_time بـ UTC (gmtime) + كشف timezone المحلل
 #import <UIKit/UIKit.h>
 #import <Security/Security.h>
 #import <os/log.h>
@@ -121,7 +121,7 @@ static NSData *ForgedSuccess(const char *url) {
     param_value(url, "uuid", udid, sizeof(udid));
     time_t now = time(NULL);
     char dts[40];
-    struct tm *tmn = localtime(&now);
+    struct tm *tmn = gmtime(&now);   /* v2.3: UTC — المحلل يفسرها بتوقيت ثابت GMT؛ المحلي كان يخلق فرق 3 ساعات */
     if (tmn) strftime(dts, sizeof(dts), "%Y-%m-%d %H:%M:%S", tmn);
     else snprintf(dts, sizeof(dts), "2099-12-31 23:59:59");
     RLogC("FORGE-DTS %s", dts);
@@ -358,6 +358,10 @@ static NSData *ForgedSuccess(const char *url) {
 %end
 
 %hook NSDateFormatter
+- (void)setTimeZone:(NSTimeZone *)tz {
+    RLogC("DATE-TZ-SET %s", [[tz name] UTF8String] ?: "?");
+    %orig(tz);
+}
 - (void)setDateFormat:(NSString *)f {
     RLogC("DATE-FMT-SET %s", [f UTF8String] ?: "?");
     %orig(f);
