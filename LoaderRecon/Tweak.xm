@@ -1,4 +1,4 @@
-// NetWatch v1.8 — الحقنة الأخيرة: ملء pendingUDIDDeadline/Challenge/Key لحظة الفورج
+// NetWatch v1.9 — ضربة مزدوجة: UD-FORGE على كل المساحات + بطارية camelCase
 #import <UIKit/UIKit.h>
 #import <Security/Security.h>
 #import <os/log.h>
@@ -146,7 +146,17 @@ static NSData *ForgedSuccess(const char *url) {
         "\"ngay_het_han\":\"31/12/2099 23:59\","
         "\"han_su_dung\":\"2099-12-31 23:59\","
         "\"thoigianhethan\":\"31-12-2099\","
-        "\"hansudung\":\"2099/12/31\","
+        "\"hansudung\":\"2099/12/31\",
+        \"expiredDate\":\"31-12-2099 23:59:59\","
+        \"expireDate\":\"31/12/2099 23:59:59\","
+        \"expirationDate\":\"2099/12/31 23:59:59\","
+        \"expiration\":\"12/31/2099 23:59:59\","
+        \"expiryDate\":\"2099.12.31 23:59:59\","
+        \"validUntil\":\"2099-12-31T23:59:59\","
+        \"endTime\":\"Mon, 31 Dec 2099 23:59:59 +0000\","
+        \"expiredTime\":\"31 Dec 2099\","
+        \"timeExpire\":\"31-12-2099\","
+        \"expireAt\":\"31/12/2099\","
         "\"data\":{\"status\":\"active\",\"expire\":\"2099-12-31\",\"expired_time\":\"2099-12-31 23:59:59\"}}",
         keyv[0] ? keyv : "TEST123",
         udid[0] ? udid : "00008020-00091DCE0EF1002E",
@@ -362,6 +372,36 @@ static NSData *ForgedSuccess(const char *url) {
             NSString *d = v ? [[v description] substringToIndex:MIN((NSUInteger)120, [[v description] length])] : @"(nil)";
             RLogC("DICT-VFK(%s)=%s", [ks UTF8String] ?: "?", [d UTF8String]);
         }
+    }
+    return v;
+}
+%end
+
+%hook NSUserDefaults
+- (instancetype)initWithSuiteName:(NSString *)sn {
+    RLogC("UD-SUITE %s", [sn UTF8String] ?: "?");
+    return %orig(sn);
+}
+- (id)objectForKey:(NSString *)k {
+    id v = %orig(k);
+    NSString *ks = [k description];
+    if ([ks containsString:@"UDID"] || [ks containsString:@"eadline"] || [ks containsString:@"xpir"]
+        || [ks containsString:@"ngay"] || [ks containsString:@"han"] || [ks containsString:@"chal"]) {
+        NSString *d = v ? [[v description] substringToIndex:MIN((NSUInteger)90, [[v description] length])] : @"(nil)";
+        RLogC("UD-GET %s=%s", [ks UTF8String] ?: "?", [d UTF8String]);
+    }
+    /* UD-FORGE: أي قراءة لـ pendingUDIDDeadline فارغة → نعيد 2099 بصيغة المحلل المكتشفة */
+    if ([ks isEqualToString:@"pendingUDIDDeadline"] && (!v || [[v description] length] == 0)) {
+        RLogC("UD-FORGE pendingUDIDDeadline=2099");
+        return @"2099-12-31 23:59:59";
+    }
+    return v;
+}
+- (NSString *)stringForKey:(NSString *)k {
+    NSString *v = %orig(k);
+    if ([k isEqualToString:@"pendingUDIDDeadline"] && (!v || [v length] == 0)) {
+        RLogC("UD-FORGE-S pendingUDIDDeadline=2099");
+        return @"2099-12-31 23:59:59";
     }
     return v;
 }
