@@ -1,4 +1,4 @@
-// NetWatch v3.7 — paid_challenge=nonce: الربط الحقيقي للرد بالطلب (bootstrap حقيقي أثبت أن التحدي يولده السيرفر في الرد)
+// NetWatch v3.8 — فورج نظيف بقيم واقعية متسقة (سنة/365 يوم) — 31 سنة ربما تفشل فحص المعقولية
 #import <UIKit/UIKit.h>
 #import <Security/Security.h>
 #import <os/log.h>
@@ -114,96 +114,62 @@ static void DGScanChallenge(const char *body) {
 static bool nw_disarmed(void) { return access("/var/mobile/Documents/nw_disarm", F_OK) == 0; }
 
 static NSData *ForgedSuccess(const char *url) {
-    /* v1.7: بطارية حقول تاريخ مرقّمة — كل حقل بقيمة فريدة تكشف اسمه من DATE-FMT */
-    char ts[32], keyv[64], udid[64];
+    /* v3.8: فورج نظيف — قيم واقعية متسقة (سنة واحدة بدل 31) + nonce ربط + توقيع صحيح */
+    char ts[32], keyv[64], udid[64], nonv[64];
     param_value(url, "timestamp", ts, sizeof(ts));
     param_value(url, "key", keyv, sizeof(keyv));
     param_value(url, "uuid", udid, sizeof(udid));
-    time_t now = time(NULL);
-    char dts[40];
-    struct tm *tmn = gmtime(&now);   /* v2.3: UTC — المحلل يفسرها بتوقيت ثابت GMT؛ المحلي كان يخلق فرق 3 ساعات */
-    if (tmn) strftime(dts, sizeof(dts), "%Y-%m-%d %H:%M:%S", tmn);
-    else snprintf(dts, sizeof(dts), "2099-12-31 23:59:59");
-    RLogC("FORGE-DTS %s", dts);
-    /* v3.0: توقيع الرد — اللودر يحسب HMAC على النص القانوني ويقارنه بحقل sig في الرد.
-       نحسبه بأنفسنا: السر معروف والنص القانوني من قيم نتحكم بها */
-    /* v3.7: paid_challenge = nonce الطلب — الربط الحقيقي بين الرد والطلب */
-    char nonv[64]; param_value(url, "nonce", nonv, sizeof(nonv));
+    param_value(url, "nonce", nonv, sizeof(nonv));
     const char *pc = nonv[0] ? nonv : "nw-challenge";
-    const char *secret = "https://haxvip.p_sk_hmac_secret_v1"; /* v3.1: سر التحقق من الرد أقصر بـ3 بايت (خطأ مطبعي للمطور) — مؤكد حسابيًا بالتطابق مع CCHMAC-OUT الثاني */
+    time_t now = time(NULL);
+    char dts[40], dte[40], dted[40];
+    struct tm *tmn = gmtime(&now);
+    if (tmn) strftime(dts, sizeof(dts), "%Y-%m-%d %H:%M:%S", tmn);
+    else snprintf(dts, sizeof(dts), "2026-10-21 12:00:00");
+    time_t expT = now + 31536000;
+    struct tm *tme = gmtime(&expT);
+    if (tme) { strftime(dte, sizeof(dte), "%Y-%m-%d %H:%M:%S", tme); strftime(dted, sizeof(dted), "%Y-%m-%d", tme); }
+    else { snprintf(dte, sizeof(dte), "2027-10-21 12:00:00"); snprintf(dted, sizeof(dted), "2027-10-21"); }
+    RLogC("FORGE-DTS %s exp=%s", dts, dte);
+    const char *secret = "https://haxvip.p_sk_hmac_secret_v1";
     char canon[512];
     snprintf(canon, sizeof(canon),
-        "status=success&key=%s&remaining_seconds=999999999&time=%s&uuid=%s&paid_challenge=%s",
-        keyv[0] ? keyv : "TEST123", dts, udid[0] ? udid : "00008020-00091DCE0EF1002E",
-        pc);
-    RLogC("FORGE-PC challenge=[%s]", pc);
+        "status=success&key=%s&remaining_seconds=31536000&time=%s&uuid=%s&paid_challenge=%s",
+        keyv[0] ? keyv : "TEST123", dts, udid[0] ? udid : "00008020-00091DCE0EF1002E", pc);
     unsigned char macB[32];
     CCHmac((CCHmacAlgorithm)2, secret, strlen(secret), canon, strlen(canon), macB);
     char sig[65]; int si = 0;
     for (int i = 0; i < 32; i++) si += snprintf(sig + si, sizeof(sig) - si, "%02x", macB[i]);
     RLogC("FORGE-SIG canon=[%s] sig=%s", canon, sig);
-    char buf[2048];
+    if (access("/var/mobile/Documents/nw_no_kcforge", F_OK) == 0) {
+        RLogC("FORGE-INJECT skipped (bootstrap mode)");
+    } else {
+        NSUserDefaults *dd = [NSUserDefaults standardUserDefaults];
+        [dd setObject:@"2099-12-31 23:59:59" forKey:@"pendingUDIDDeadline"];
+        [dd setObject:[NSString stringWithUTF8String:udid[0] ? udid : "00008020-00091DCE0EF1002E"] forKey:@"pendingUDIDChallenge"];
+        [dd setObject:[NSString stringWithUTF8String:keyv[0] ? keyv : "TEST123"] forKey:@"pendingUDIDKey"];
+        RLogC("FORGE-INJECT deadline=2099 chal+key filled");
+    }
+    char buf[1600];
     snprintf(buf, sizeof(buf),
-        "{\"status\":\"success\","
-        "\"messenger\":\"Kích hoạt thành công\","
-        "\"code\":\"success\","
-        "\"key\":\"%s\","
-        "\"device_id\":\"%s\","
-        "\"timestamp\":\"%s\","
-        "\"server_time\":\"%s\","
-        "\"server_timestamp\":\"%s\","
-        "\"serverTime\":\"%s\","
-        "\"time\":\"%s\","
-        "\"expired_time\":\"2099-12-31 23:59:59\","
-        "\"expire\":\"2099-12-31\","
-        "\"expiry\":\"31-12-2099 23:59:59\","
-        "\"expiry_date\":\"2099-12-31 23:59:59\","
-        "\"expired\":\"2099/12/31 23:59:59\","
-        "\"valid_until\":\"12/31/2099 23:59:59\","
-        "\"valid_to\":\"2099.12.31 23:59:59\","
-        "\"end_time\":\"2099-12-31T23:59:59\","
-        "\"time_end\":\"Mon, 31 Dec 2099 23:59:59 +0000\","
-        "\"date_end\":\"31 Dec 2099\","
-        "\"deadline\":\"31-12-2099\","
-        "\"server_date\":\"31/12/2099\","
-        "\"date\":\"2099-12-31\","
-        "\"ngayhethan\":\"31-12-2099 23:59\","
-        "\"ngay_het_han\":\"31/12/2099 23:59\","
-        "\"han_su_dung\":\"2099-12-31 23:59\","
-        "\"thoigianhethan\":\"31-12-2099\","
-        "\"hansudung\":\"2099/12/31\","
-        "\"expiredDate\":\"31-12-2099 23:59:59\","
-        "\"expireDate\":\"31/12/2099 23:59:59\","
-        "\"expirationDate\":\"2099/12/31 23:59:59\","
-        "\"expiration\":\"12/31/2099 23:59:59\","
-        "\"expiryDate\":\"2099.12.31 23:59:59\","
-        "\"validUntil\":\"2099-12-31T23:59:59\","
-        "\"endTime\":\"Mon, 31 Dec 2099 23:59:59 +0000\","
-        "\"expiredTime\":\"31 Dec 2099\","
-        "\"timeExpire\":\"31-12-2099\","
-        "\"expireAt\":\"31/12/2099\","
-        "\"remaining_seconds\":999999999,\"remaining_text\":\"999999 days\",\"new_token\":\"TEST123\",\"notification\":\"\",\"update_available\":false,\"force_update\":false,\"paid_challenge\":\"%s\",\"sig\":\"%s\",\"signature\":\"%s\",\"sign\":\"%s\",\"hmac\":\"%s\",\"checksum\":\"%s\",\"data\":{\"status\":\"active\",\"expire\":\"2099-12-31\",\"expired_time\":\"2099-12-31 23:59:59\"}}",
+        "{\"status\":\"success\",\"messenger\":\"Kích hoạt thành công\",\"code\":\"success\","
+        "\"key\":\"%s\",\"device_id\":\"%s\",\"timestamp\":\"%s\",\"server_time\":\"%s\","
+        "\"remaining_seconds\":31536000,\"remaining_text\":\"365 days\","
+        "\"expiry_date\":\"%s\",\"expire\":\"%s\","
+        "\"paid_challenge\":\"%s\","
+        "\"sig\":\"%s\",\"signature\":\"%s\",\"sign\":\"%s\",\"hmac\":\"%s\",\"checksum\":\"%s\","
+        "\"data\":{\"status\":\"active\",\"expire\":\"%s\",\"expired_time\":\"%s\"}}",
         keyv[0] ? keyv : "TEST123",
         udid[0] ? udid : "00008020-00091DCE0EF1002E",
         ts[0] ? ts : "0",
         dts,
-        ts[0] ? ts : "0",
-        dts,
-        dts,
+        dte,
+        dted,
         pc,
-        sig, sig, sig, sig, sig);
+        sig, sig, sig, sig, sig,
+        dted,
+        dte);
     RLogC("FORGE-BAT %s", buf);
-    /* v1.8: حقنة المفاتيح المنتظرة — اللودر يفرغها قبل الطلب ويتوقع ملءها من bootstrap.
-       نملؤها لحظة الفورج: اللودر يقرأها بعد الرد → deadline يُحلل بنجاح (yyyy-MM-dd HH:mm:ss) */
-    if (access("/var/mobile/Documents/nw_no_kcforge", F_OK) == 0) {
-        RLogC("FORGE-INJECT skipped (bootstrap mode)");
-    } else {
-    NSUserDefaults *dd = [NSUserDefaults standardUserDefaults];
-    [dd setObject:@"2099-12-31 23:59:59" forKey:@"pendingUDIDDeadline"];
-    [dd setObject:[NSString stringWithUTF8String:udid[0] ? udid : "00008020-00091DCE0EF1002E"] forKey:@"pendingUDIDChallenge"];
-    [dd setObject:[NSString stringWithUTF8String:keyv[0] ? keyv : "TEST123"] forKey:@"pendingUDIDKey"];
-    RLogC("FORGE-INJECT deadline=2099 chal+key filled");
-    }
     return [NSData dataWithBytes:buf length:strlen(buf)];
 }
 
