@@ -1,7 +1,6 @@
-// NetWatch v0.4 — تسجيل C صرف، صفر إعادة دخول، خداع الرد
+// NetWatch v0.5 — خداع الرد + وقت السيرفر الحي + فلترة الضجيج
 #import <UIKit/UIKit.h>
 #import <Security/Security.h>
-#import <os/log.h>
 #import <CommonCrypto/CommonHMAC.h>
 #import <fcntl.h>
 #include <unistd.h>
@@ -23,19 +22,29 @@ static void RLogC(const char *fmt, ...) {
     if (fd >= 0) { ssize_t w = write(fd, buf, strlen(buf)); (void)w; close(fd); }
 }
 
-static const char *FAKE_JSON = "{\"status\":\"success\",\"code\":\"success\",\"messenger\":\"Kich hoat thanh cong\",\"key\":\"TEST123\",\"expired_time\":\"2099-12-31 23:59:59\",\"device_id\":\"00008020-00091DCE0EF1002E\",\"data\":{\"status\":\"active\",\"expire\":\"2099-12-31\",\"type\":\"VIP\"}}";
+static NSData *ForgedSuccess(void) {
+    char json[1024];
+    long now = (long)time(NULL);
+    snprintf(json, sizeof(json),
+        "{\"status\":\"success\",\"code\":\"success\",\"messenger\":\"Kich hoat thanh cong\","
+        "\"key\":\"TEST123\",\"expired_time\":\"2099-12-31 23:59:59\",\"expire\":\"2099-12-31\","
+        "\"device_id\":\"00008020-00091DCE0EF1002E\","
+        "\"timestamp\":%ld,\"server_time\":%ld,\"server_timestamp\":%ld,\"time\":%ld,"
+        "\"data\":{\"status\":\"active\",\"expire\":\"2099-12-31\",\"type\":\"VIP\",\"timestamp\":%ld}}",
+        now, now, now, now, now);
+    return [NSData dataWithBytesNoCopy:json length:strlen(json) freeWhenDone:NO];
+}
 
 %hook NSURLSession
 - (NSURLSessionDataTask *)dataTaskWithRequest:(NSURLRequest *)req completionHandler:(void (^)(NSData *, NSURLResponse *, NSError *))cb {
     RLogC("REQ %s %s", req.HTTPMethod.UTF8String ?: "-", req.URL.absoluteString.UTF8String ?: "-");
-    if (req.HTTPBody) RLogC("REQ-BODY %.*s", (int)MIN((NSUInteger)2000, req.HTTPBody.length), (const char *)req.HTTPBody.bytes);
     void (^wrapped)(NSData *, NSURLResponse *, NSError *) = ^(NSData *d, NSURLResponse *r, NSError *e) {
-        RLogC("RESP %s | status=%ld | err=%s | body=%.*s", req.URL.absoluteString.UTF8String ?: "-",
-              (long)[(NSHTTPURLResponse *)r statusCode], e ? "ERR" : "ok",
-              (int)MIN((NSUInteger)3000, d.length), d ? (const char *)d.bytes : "(nil)");
+        RLogC("RESP %s | status=%ld | body=%.*s", req.URL.absoluteString.UTF8String ?: "-",
+              (long)[(NSHTTPURLResponse *)r statusCode],
+              (int)MIN((NSUInteger)2000, d.length), d ? (const char *)d.bytes : "(nil)");
         if (cb && [req.URL.absoluteString containsString:@"Cheack.php"]) {
-            RLogC("FORGE >>> replaced Cheack.php response with fake success");
-            cb([NSData dataWithBytesNoCopy:(void *)FAKE_JSON length:strlen(FAKE_JSON) freeWhenDone:NO], r, nil);
+            RLogC("FORGE >>> replaced with fake success (live server_time)");
+            cb(ForgedSuccess(), r, nil);
             return;
         }
         if (cb) cb(d, r, e);
@@ -53,7 +62,7 @@ static const char *FAKE_JSON = "{\"status\":\"success\",\"code\":\"success\",\"m
 
 %hook NSString
 - (BOOL)writeToFile:(NSString *)path atomically:(BOOL)u encoding:(NSStringEncoding)e error:(NSError **)err {
-    RLogC("WRITE-NSString %s : %.*s", path.UTF8String ?: "?", (int)MIN((NSUInteger)400, self.length), self.UTF8String ?: "");
+    RLogC("WRITE-NSString %s", path.UTF8String ?: "?");
     return %orig(path, u, e, err);
 }
 %end
@@ -65,18 +74,27 @@ static const char *FAKE_JSON = "{\"status\":\"success\",\"code\":\"success\",\"m
 }
 %end
 
-%hookf(void, _os_log_impl, void *dso, os_log_t log, os_log_type_t type, const char *fmt, uint8_t *buffer, uint32_t size) {
-    if (fmt) RLogC("APP-OSLOG type=%u size=%u fmt=%s", (unsigned)type, (unsigned)size, fmt);
-    %orig(dso, log, type, fmt, buffer, size);
+// فلترة: فقط سجلات الـLoader الحقيقية
+static int interesting(const char *f) {
+    if (!f) return 0;
+    return (strstr(f,"Cheack")||strstr(f,"Key")||strstr(f,"key")||strstr(f,"lua")||strstr(f,"Lua")||
+            strstr(f,"patch")||strstr(f,"Patch")||strstr(f,"AUTO")||strstr(f,"Loader")||
+            strstr(f,"session")||strstr(f,"Session")||strstr(f,"token")||strstr(f,"Token")||
+            strstr(f,"expire")||strstr(f,"Expire")||strstr(f,"VIP")||strstr(f,"time")||
+            strstr(f,"Time")||strstr(f,"sync")||strstr(f,"Sync")) ? 1 : 0;
+}
+
+%hookf(void, os_log, os_log_t log, const char *fmt, ...) {
+    if (interesting(fmt)) RLogC("APP-OSLOG %s", fmt);
 }
 
 %hookf(void, NSLog, NSString *format, ...) {
-    RLogC("NSLOG-FMT %s", format ? [format UTF8String] : "(nil)");
+    RLogC("NSLOG %s", format ? [format UTF8String] : "(nil)");
 }
 
 %hookf(void, CCHmac, CCHmacAlgorithm algorithm, const void *key, size_t keyLength, const void *data, size_t dataLength, void *macOut) {
-    RLogC("CCHMAC alg=%lu keyLen=%lu key=%.*s | dataLen=%lu data=%.*s",
-          (unsigned long)algorithm, (unsigned long)keyLength, (int)MIN(keyLength,(size_t)200), key?(const char*)key:"",
+    RLogC("CCHMAC alg=%lu keyLen=%lu | dataLen=%lu data=%.*s",
+          (unsigned long)algorithm, (unsigned long)keyLength,
           (unsigned long)dataLength, (int)MIN(dataLength,(size_t)4000), data?(const char*)data:"");
     %orig(algorithm, key, keyLength, data, dataLength, macOut);
 }
