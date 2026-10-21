@@ -1,4 +1,4 @@
-// NetWatch v3.8 — فورج نظيف بقيم واقعية متسقة (سنة/365 يوم) — 31 سنة ربما تفشل فحص المعقولية
+// NetWatch v3.9 — إعادة حقل time (اللودر يقرأه حرفيًا — DATE-FMT in= فارغ أكده)
 #import <UIKit/UIKit.h>
 #import <Security/Security.h>
 #import <os/log.h>
@@ -153,7 +153,7 @@ static NSData *ForgedSuccess(const char *url) {
     char buf[1600];
     snprintf(buf, sizeof(buf),
         "{\"status\":\"success\",\"messenger\":\"Kích hoạt thành công\",\"code\":\"success\","
-        "\"key\":\"%s\",\"device_id\":\"%s\",\"timestamp\":\"%s\",\"server_time\":\"%s\","
+        "\"key\":\"%s\",\"device_id\":\"%s\",\"timestamp\":\"%s\",\"server_time\":\"%s\",\"time\":\"%s\","
         "\"remaining_seconds\":31536000,\"remaining_text\":\"365 days\","
         "\"expiry_date\":\"%s\",\"expire\":\"%s\","
         "\"paid_challenge\":\"%s\","
@@ -162,6 +162,7 @@ static NSData *ForgedSuccess(const char *url) {
         keyv[0] ? keyv : "TEST123",
         udid[0] ? udid : "00008020-00091DCE0EF1002E",
         ts[0] ? ts : "0",
+        dts,
         dts,
         dte,
         dted,
