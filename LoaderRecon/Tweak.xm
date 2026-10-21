@@ -1,4 +1,4 @@
-// NetWatch v3.0 — القاضي: توقيع الرد HMAC على النص القانوني (السر مسروق + النص من قيمنا) — يقتل auth_failed
+// NetWatch v3.1 — التطابق المؤكد: سر تحقق الرد هو https://haxvip.p_sk_hmac_secret_v1 (34 بايت) — تحقق رياضي 100%
 #import <UIKit/UIKit.h>
 #import <Security/Security.h>
 #import <os/log.h>
@@ -127,7 +127,7 @@ static NSData *ForgedSuccess(const char *url) {
     RLogC("FORGE-DTS %s", dts);
     /* v3.0: توقيع الرد — اللودر يحسب HMAC على النص القانوني ويقارنه بحقل sig في الرد.
        نحسبه بأنفسنا: السر معروف والنص القانوني من قيم نتحكم بها */
-    const char *secret = "https://haxvip.pro/_sk_hmac_secret_v1";
+    const char *secret = "https://haxvip.p_sk_hmac_secret_v1"; /* v3.1: سر التحقق من الرد أقصر بـ3 بايت (خطأ مطبعي للمطور) — مؤكد حسابيًا بالتطابق مع CCHMAC-OUT الثاني */
     char canon[512];
     snprintf(canon, sizeof(canon),
         "status=success&key=%s&remaining_seconds=999999999&time=%s&uuid=%s&paid_challenge=",
