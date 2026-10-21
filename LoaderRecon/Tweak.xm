@@ -1,4 +1,4 @@
-// NetWatch v1.9 — ضربة مزدوجة: UD-FORGE على كل المساحات + بطارية camelCase
+// NetWatch v2.0 — القاتل: كل الحقول الزمنية كنصوص (Swift as? String) + camelCase وقتية
 #import <UIKit/UIKit.h>
 #import <Security/Security.h>
 #import <os/log.h>
@@ -127,8 +127,11 @@ static NSData *ForgedSuccess(const char *url) {
         "\"code\":\"success\","
         "\"key\":\"%s\","
         "\"device_id\":\"%s\","
-        "\"timestamp\":%s,"
-        "\"server_time\":%ld,"
+        "\\"timestamp\\":\\"%s\\","
+        "\\"server_time\\":\\"%ld\\","
+        "\\"server_timestamp\\":\\"%s\\","
+        "\\"serverTime\\":\\"%ld\\","
+        "\\"time\\":\\"%ld\\","
         "\"expired_time\":\"2099-12-31 23:59:59\","
         "\"expire\":\"2099-12-31\","
         "\"expiry\":\"31-12-2099 23:59:59\","
@@ -161,6 +164,9 @@ static NSData *ForgedSuccess(const char *url) {
         keyv[0] ? keyv : "TEST123",
         udid[0] ? udid : "00008020-00091DCE0EF1002E",
         ts[0] ? ts : "0",
+        (long)now,
+        ts[0] ? ts : "0",
+        (long)now,
         (long)now);
     RLogC("FORGE-BAT %s", buf);
     /* v1.8: حقنة المفاتيح المنتظرة — اللودر يفرغها قبل الطلب ويتوقع ملءها من bootstrap.
@@ -385,6 +391,12 @@ static NSData *ForgedSuccess(const char *url) {
 - (instancetype)initWithSuiteName:(NSString *)sn {
     RLogC("UD-SUITE %s", [sn UTF8String] ?: "?");
     return %orig(sn);
+}
+- (NSDictionary *)dictionaryRepresentation {
+    NSDictionary *d = %orig;
+    id dl = [d objectForKey:@"pendingUDIDDeadline"];
+    if (dl) RLogC("UD-DICT deadline=%s", [[dl description] UTF8String]);
+    return d;
 }
 - (NSString *)stringForKey:(NSString *)k {
     NSString *v = %orig(k);
