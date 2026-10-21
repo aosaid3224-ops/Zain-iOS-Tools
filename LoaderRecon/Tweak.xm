@@ -1,4 +1,4 @@
-// NetWatch v1.6 — الزور المثالي: نسخ طبق الأصل لمخطط السيرفر الحقيقي {status, messenger, code}
+// NetWatch v1.7 — بطارية التواريخ المرقّمة: 16 اسم حقل بقيم فريدة + DATE-FMT-SET لكشف الصيغة
 #import <UIKit/UIKit.h>
 #import <Security/Security.h>
 #import <os/log.h>
@@ -114,30 +114,45 @@ static void DGScanChallenge(const char *body) {
 static bool nw_disarmed(void) { return access("/var/mobile/Documents/nw_disarm", F_OK) == 0; }
 
 static NSData *ForgedSuccess(const char *url) {
-    /* v1.6: نسخة طبق الأصل من مخطط السيرفر الحقيقي {status, messenger, code}
-       + حقول النجاح المحتملة فقط — لا حقول وهمية إضافية */
-    char ts[32], nonce[64], keyv[64], udid[64];
+    /* v1.7: بطارية حقول تاريخ مرقّمة — كل حقل بقيمة فريدة تكشف اسمه من DATE-FMT */
+    char ts[32], keyv[64], udid[64];
     param_value(url, "timestamp", ts, sizeof(ts));
-    param_value(url, "nonce", nonce, sizeof(nonce));
     param_value(url, "key", keyv, sizeof(keyv));
     param_value(url, "uuid", udid, sizeof(udid));
     time_t now = time(NULL);
-    char buf[1024];
+    char buf[2048];
     snprintf(buf, sizeof(buf),
         "{\"status\":\"success\","
         "\"messenger\":\"Kích hoạt thành công\","
         "\"code\":\"success\","
         "\"key\":\"%s\","
-        "\"expired_time\":\"2099-12-31 23:59:59\","
-        "\"expire\":\"2099-12-31\","
         "\"device_id\":\"%s\","
         "\"timestamp\":%s,"
-        "\"server_time\":%ld}",
+        "\"server_time\":%ld,"
+        "\"expired_time\":\"2099-12-31 23:59:59\","
+        "\"expire\":\"2099-12-31\","
+        "\"expiry\":\"31-12-2099 23:59:59\","
+        "\"expiry_date\":\"31/12/2099 23:59:59\","
+        "\"expired\":\"2099/12/31 23:59:59\","
+        "\"valid_until\":\"12/31/2099 23:59:59\","
+        "\"valid_to\":\"2099.12.31 23:59:59\","
+        "\"end_time\":\"2099-12-31T23:59:59\","
+        "\"time_end\":\"Mon, 31 Dec 2099 23:59:59 +0000\","
+        "\"date_end\":\"31 Dec 2099\","
+        "\"deadline\":\"31-12-2099\","
+        "\"server_date\":\"31/12/2099\","
+        "\"date\":\"2099-12-31\","
+        "\"ngayhethan\":\"31-12-2099 23:59\","
+        "\"ngay_het_han\":\"31/12/2099 23:59\","
+        "\"han_su_dung\":\"2099-12-31 23:59\","
+        "\"thoigianhethan\":\"31-12-2099\","
+        "\"hansudung\":\"2099/12/31\","
+        "\"data\":{\"status\":\"active\",\"expire\":\"2099-12-31\",\"expired_time\":\"2099-12-31 23:59:59\"}}",
         keyv[0] ? keyv : "TEST123",
         udid[0] ? udid : "00008020-00091DCE0EF1002E",
         ts[0] ? ts : "0",
         (long)now);
-    RLogC("FORGE-MIN %s", buf);
+    RLogC("FORGE-BAT %s", buf);
     return [NSData dataWithBytes:buf length:strlen(buf)];
 }
 
@@ -311,6 +326,10 @@ static NSData *ForgedSuccess(const char *url) {
 %end
 
 %hook NSDateFormatter
+- (void)setDateFormat:(NSString *)f {
+    RLogC("DATE-FMT-SET %s", [f UTF8String] ?: "?");
+    %orig(f);
+}
 - (NSDate *)dateFromString:(NSString *)s {
     NSDate *d = %orig(s);
     RLogC("DATE-FMT in=%s out=%s", [s UTF8String] ?: "?", d ? "OK" : "NIL");
