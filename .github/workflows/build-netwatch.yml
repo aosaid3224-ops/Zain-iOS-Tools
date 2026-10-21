@@ -3,8 +3,8 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
- jobs:
-   build-netwatch:
+jobs:
+  build-netwatch:
     name: Build NetWatch v0.6
     runs-on: macos-latest
     timeout-minutes: 30
