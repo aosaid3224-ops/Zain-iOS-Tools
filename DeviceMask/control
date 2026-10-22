@@ -1,0 +1,8 @@
+Package: com.nw.devicemask
+Name: DeviceMask
+Version: 1.0
+Architecture: iphoneos-arm64
+Description: device identity masker (MGCopyAnswer/UDID/IDFV/IDFA/MAC)
+Maintainer: nw
+Author: nw
+Section: Tweaks
