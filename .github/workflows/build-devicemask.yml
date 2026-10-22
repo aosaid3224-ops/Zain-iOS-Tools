@@ -1,29 +1,40 @@
 name: Build DeviceMask
-
 on:
   workflow_dispatch:
-
+permissions:
+  contents: read
 jobs:
-  build:
+  build-devicemask:
+    name: Build DeviceMask v1.0
     runs-on: macos-latest
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout source
+        uses: actions/checkout@v4
       - name: Setup Theos
         run: |
-          git clone --recursive https://github.com/theos/theos.git $HOME/theos
-          echo "THEOS=$HOME/theos" >> $GITHUB_ENV
-      - name: Build
+          git clone --recursive --depth 1 https://github.com/theos/theos.git "$HOME/theos"
+          echo "THEOS=$HOME/theos" >> "$GITHUB_ENV"
+          test -f "$HOME/theos/makefiles/common.mk"
+      - name: Setup dependencies
+        run: brew install dpkg ldid
+      - name: Build DeviceMask
         run: |
           cd DeviceMask
           make clean
-          make package
-      - name: Verify
+          make package THEOS_PACKAGE_SCHEME=rootless FINALPACKAGE=1
+      - name: Verify DeviceMask package
         run: |
-          DEB=$(ls DeviceMask/packages/*.deb 2>/dev/null || find . -name "*.deb" | head -1)
+          set -e
+          DEB=$(find DeviceMask/packages -maxdepth 1 -type f -name '*.deb' -print -quit)
           test -n "$DEB"
-          dpkg-deb -I "$DEB" | grep -E "Package|Version|Architecture"
-      - name: Upload
+          dpkg-deb -f "$DEB" Package Name Version Architecture
+          test "$(dpkg-deb -f "$DEB" Package)" = "com.nw.devicemask"
+          test "$(dpkg-deb -f "$DEB" Version)" = "1.0"
+          test "$(dpkg-deb -f "$DEB" Architecture)" = "iphoneos-arm64"
+      - name: Upload DeviceMask artifact
         uses: actions/upload-artifact@v4
         with:
           name: devicemask-1.0
-          path: "**/*.deb"
+          path: DeviceMask/packages/*.deb
+          if-no-files-found: error
