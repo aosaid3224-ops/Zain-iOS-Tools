@@ -1,0 +1,29 @@
+name: Build DeviceMask
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Theos
+        run: |
+          git clone --recursive https://github.com/theos/theos.git $HOME/theos
+          echo "THEOS=$HOME/theos" >> $GITHUB_ENV
+      - name: Build
+        run: |
+          cd DeviceMask
+          make clean
+          make package
+      - name: Verify
+        run: |
+          DEB=$(ls DeviceMask/packages/*.deb 2>/dev/null || find . -name "*.deb" | head -1)
+          test -n "$DEB"
+          dpkg-deb -I "$DEB" | grep -E "Package|Version|Architecture"
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: devicemask-1.0
+          path: "**/*.deb"
