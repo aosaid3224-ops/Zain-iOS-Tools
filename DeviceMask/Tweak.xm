@@ -1,8 +1,11 @@
 // DeviceMask — تزوير هوية الجهاز لحماية من حظر الأجهزة
 // MGCopyAnswer + UIDevice + ASIdentifierManager + sysctl(hw.machine)
 #include <Foundation/Foundation.h>
+#include <AdSupport/AdSupport.h>
 #include <string.h>
 #include <sys/sysctl.h>
+
+extern "C" CFTypeRef MGCopyAnswer(CFStringRef property);
 
 static NSDictionary *gP = nil;
 
