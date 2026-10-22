@@ -6,6 +6,7 @@ include $(THEOS)/makefiles/common.mk
 TWEAK_NAME = DeviceMask
 THEOS_PACKAGE_SCHEME = rootless
 DeviceMask_CFLAGS = -Wno-deprecated-declarations -fobjc-arc
+DeviceMask_PRIVATE_FRAMEWORKS = MobileGestalt
 DeviceMask_FILES = Tweak.xm
 
 include $(THEOS_MAKE_PATH)/tweak.mk
