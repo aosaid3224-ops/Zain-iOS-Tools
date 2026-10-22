@@ -65,8 +65,18 @@ static void DMLoad(void) {
 
 // UIDevice
 %hook UIDevice
-- (NSString *)name { DMLoad(); return gP[@"DeviceName"] ?: %orig; }
-- (NSString *)systemVersion { DMLoad(); return gP[@"ProductVersion"] ?: %orig; }
+- (NSString *)name {
+    DMLoad();
+    NSString *v = gP[@"DeviceName"];
+    if (v) return v;
+    return %orig;
+}
+- (NSString *)systemVersion {
+    DMLoad();
+    NSString *v = gP[@"ProductVersion"];
+    if (v) return v;
+    return %orig;
+}
 - (NSUUID *)identifierForVendor {
     DMLoad();
     NSString *u = gP[@"IDFV"];
