@@ -1,0 +1,8 @@
+{
+    Filter = {
+        Bundles = (
+            "com.garena.game.df",
+            "com.apple.mobile.MobileHouseArrest"
+        );
+    };
+}
