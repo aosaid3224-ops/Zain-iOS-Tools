@@ -110,3 +110,21 @@ canon = `status=success&key=TEST123&remaining_seconds=31536000&time=<GMT>&uuid=<
 - الثنائي **ملفوف** (protector): 30+ أوامر THREAD وهمية، إنتروبي 7.72، cryptsize=0 — الفك الساكن غير ممكن؛ الذاكرة الحية هي المرجع
 - النجاح الدائم: التويك مثبت + **بدون** nw_no_kcforge / nw_disarm / nw_dump
 - اللودر الآن يخزن تفعيله بنفسه — حتى إن توقف الفورج يبقى التفعيل محليًا
+
+
+---
+
+## 🎮 مرحلة ما بعد الكسر — دليل ESP والأداء (مجرّب على iPhone XS)
+### ترجمة القائمة
+- Hiển thị=العرض | Hiệu năng=الأداء | Chức năng=الوظائف(Aimbot) | Vật phẩm=العناصر | Tiện ích=أدوات
+- Khung viền=مربعات | Thanh máu=دم | Khoảng cách=مسافة | Tên người chơi=أسماء
+- Khung xương=هيكل | Đường nối=خطوط ربط | Kiểm tra tầm nhìn=فحص رؤية(ثقيل)
+- Số người=عداد | Bỏ qua đồng đội=تجاهل الفريق | Bỏ qua bot=تجاهل البوتات
+
+### إعداد صفر-لاك (مؤكد)
+Khung viền + Thanh máu + Khoảng cách + Số người + Bỏ qua đồng độي
+تجنّب: skeleton, lines, visibility check
+
+### ⚠️ مخاطر الباند
+- ESP فقط = آمن شبه كامل
+- Aimbot: FOV صغير + smoothing عالي + لا تتبع عبر الجدران + حساب بديل
