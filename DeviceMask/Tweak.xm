@@ -28,6 +28,11 @@ static void DMLoad(void) {
         NSString *path = [NSString stringWithFormat:@"%@/%@.plist", dir, bundle];
         NSMutableDictionary *d = [NSMutableDictionary dictionaryWithContentsOfFile:path];
         if (!d) {
+            /* v1.1: تخزين مزدوج — UserDefaults دائمًا يعمل داخل أي sandbox */
+            NSUserDefaults *ud = [NSUserDefaults standardUserDefaults];
+            d = [[ud dictionaryForKey:@"DMProfile"] mutableCopy];
+        }
+        if (!d) {
             d = [@{
                 @"SerialNumber": randSerial(),
                 @"ProductType": @"iPhone14,2",
@@ -38,7 +43,12 @@ static void DMLoad(void) {
                 @"DeviceName": @"iPhone"
             } mutableCopy];
             [[NSFileManager defaultManager] createDirectoryAtPath:dir withIntermediateDirectories:YES attributes:nil error:nil];
-            [d writeToFile:path atomically:YES];
+            BOOL ok = [d writeToFile:path atomically:YES];
+            if (!ok) {
+                NSUserDefaults *ud = [NSUserDefaults standardUserDefaults];
+                [ud setObject:d forKey:@"DMProfile"];
+                [ud synchronize];
+            }
         }
         gP = d;
     }
