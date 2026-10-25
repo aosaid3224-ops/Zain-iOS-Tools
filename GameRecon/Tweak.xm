@@ -7,6 +7,10 @@
     NSString *grs = [NSString stringWithFormat:__VA_ARGS__]; \
     const char *grc = [grs UTF8String]; if (!grc) break; \
     FILE *grf = fopen("/var/mobile/Documents/gamerecon.log","a"); \
+    if (!grf) { \
+        const char *grh = getenv("HOME"); \
+        if (grh) { char grp[512]; snprintf(grp, sizeof(grp), "%s/tmp/gamerecon.log", grh); grf = fopen(grp, "a"); } \
+    } \
     if (grf) { fprintf(grf, "%s\n", grc); fclose(grf); } \
 } while(0)
 
