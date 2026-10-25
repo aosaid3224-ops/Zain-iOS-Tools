@@ -172,7 +172,6 @@ __attribute__((constructor))
 static void gf_yesman_ctor(void) {
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(8 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         @autoreleasepool {
-            NSString *target = @"/DragonGA.dylib";
             int num = objc_getClassList(NULL, 0);
             if (num <= 0) return;
             Class *lst = (Class *)malloc(sizeof(Class) * num);
