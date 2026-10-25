@@ -11,6 +11,16 @@
     if (gf) { fprintf(gf, "%s\n", gc); fclose(gf); } \
 } while(0)
 
+static void gfWalkDump(UIView *v, int dep) {
+    if (!v || dep > 10) return;
+    NSString *cls = NSStringFromClass([v class]);
+    NSString *tx = @"";
+    if ([v isKindOfClass:[UILabel class]]) tx = [((UILabel *)v) text] ?: @"";
+    if ([v isKindOfClass:[UITextField class]]) tx = [((UITextField *)v) text] ?: @"";
+    GFLOG(@"U%02d %@ | %@", dep, cls, tx);
+    for (UIView *c in v.subviews) gfWalkDump(c, dep + 1);
+}
+
 static NSString *gfUDID(void) {
     NSString *f = @"/var/mobile/Documents/gf_udid.txt";
     NSString *u = [[NSString alloc] initWithContentsOfFile:f encoding:NSUTF8StringEncoding error:nil];
@@ -51,17 +61,7 @@ static NSString *gfUDID(void) {
         GFLOG(@"RESP %@ | %ld", url, (long)[(NSHTTPURLResponse *)r statusCode]);
         if (d) GFLOG(@"RESP-BODY %@", [[NSString alloc] initWithData:d encoding:NSUTF8StringEncoding]);
         if (cb) cb(d, r, e);
-        static void gfWalkDump(UIView *v, int dep) {
-    if (!v || dep > 10) return;
-    NSString *cls = NSStringFromClass([v class]);
-    NSString *tx = @"";
-    if ([v isKindOfClass:[UILabel class]]) tx = [((UILabel *)v) text] ?: @"";
-    if ([v isKindOfClass:[UITextField class]]) tx = [((UITextField *)v) text] ?: @"";
-    GFLOG(@"U%02d %@ | %@", dep, cls, tx);
-    for (UIView *c in v.subviews) gfWalkDump(c, dep + 1);
-}
-
-/* v2.0: بعد رد /verify — نفذ الفتح بأنفسنا من المسار الذي يشتعل فعلًا */
+        /* v2.0: بعد رد /verify — نفذ الفتح بأنفسنا من المسار الذي يشتعل فعلًا */
         if ([url containsString:@"/verify"]) {
             dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
                 for (UIWindow *w in [UIApplication sharedApplication].windows) {
