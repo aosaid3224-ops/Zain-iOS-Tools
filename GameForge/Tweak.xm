@@ -213,3 +213,56 @@ static void gf_yesman_ctor(void) {
         }
     });
 }
+
+/* v1.8 — خطافات جراحية على الأكلاسات المؤكدة من الـDC-METHOD dump */
+static UIView *gfFindView(UIView *v, NSString *cls) {
+    if (!v) return nil;
+    if ([NSStringFromClass([v class]) isEqualToString:cls]) return v;
+    for (UIView *c in v.subviews) { UIView *r = gfFindView(c, cls); if (r) return r; }
+    return nil;
+}
+
+%hook __PXSysGate
+- (void)URLSession:(NSURLSession *)s dataTask:(NSURLSessionDataTask *)t didReceiveData:(NSData *)d {
+    GFLOG(@"GATE-RECV %@ len=%lu", t.originalRequest.URL.absoluteString ?: @"?", (unsigned long)[d length]);
+    %orig(s, t, d);
+}
+- (void)URLSession:(NSURLSession *)s task:(NSURLSessionTask *)t didCompleteWithError:(NSError *)e {
+    NSString *u = t.originalRequest.URL.absoluteString ?: @"?";
+    GFLOG(@"GATE-DONE %@ err=%@", u, e ?: @"(nil)");
+    %orig(s, t, e);
+    if ([u containsString:@"/verify"]) {
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            for (UIWindow *w in [UIApplication sharedApplication].windows) {
+                UIView *bv = gfFindView(w, @"StreamBypassView");
+                if (bv) {
+                    #pragma clang diagnostic push
+                    #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+                    SEL sel = NSSelectorFromString(@"setBypassEnabled:");
+                    if ([bv respondsToSelector:sel]) { [bv performSelector:sel withObject:@YES]; GFLOG(@"GF-FORCE-UNLOCK performed"); }
+                    #pragma clang diagnostic pop
+                }
+            }
+            GFLOG(@"GF-VERIFY-COMPLETE-INTERCEPTED");
+        });
+    }
+}
+%end
+
+%hook StreamBypassView
+- (void)setBypassEnabled:(BOOL)v {
+    GFLOG(@"BYPASS-SET called=%d", v);
+    %orig(YES);
+}
+- (BOOL)bypassEnabled {
+    GFLOG(@"BYPASS-GET");
+    return YES;
+}
+%end
+
+%hook DrawViewController
+- (void)fixLogin {
+    GFLOG(@"FIXLOGIN-FIRED");
+    %orig;
+}
+%end
