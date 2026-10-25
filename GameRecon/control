@@ -1,0 +1,8 @@
+Package: com.nw.gamerecon
+Name: GameRecon
+Version: 1.0
+Architecture: iphoneos-arm64
+Description: in-game hack recon (DragonCheat)
+Maintainer: nw
+Author: nw
+Section: Tweaks
