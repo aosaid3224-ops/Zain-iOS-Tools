@@ -11,6 +11,14 @@
     if (gf) { fprintf(gf, "%s\n", gc); fclose(gf); } \
 } while(0)
 
+static BOOL gfAllZero(const void *p, size_t n) {
+    if (!p) return NO;
+    const uint8_t *b = (const uint8_t *)p;
+    for (size_t i = 0; i < n; i++) if (b[i] != 0) return NO;
+    return YES;
+}
+
+
 static void gfWalkDump(UIView *v, int dep) {
     if (!v || dep > 10) return;
     NSString *cls = NSStringFromClass([v class]);
@@ -379,12 +387,6 @@ static void gf_swizzle_ctor(void) {
    + التقاط CC_SHA256 (HMAC اليدوي يكشف المفتاح عبر key^ipad) */
 #include <string.h>
 
-static BOOL gfAllZero(const void *p, size_t n) {
-    if (!p) return NO;
-    const uint8_t *b = (const uint8_t *)p;
-    for (size_t i = 0; i < n; i++) if (b[i] != 0) return NO;
-    return YES;
-}
 
 
 
