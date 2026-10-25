@@ -25,6 +25,10 @@ static BOOL gForceSig = NO;
 
 #include <string.h>
 %hookf(int, memcmp, const void *s1, const void *s2, size_t n) {
+    if (n == 32 && (gfAllZero(s1, 32) || gfAllZero(s2, 32))) {
+        GFLOG(@"MEMCMP-ZERO-SIDE-PASS");
+        return 0;
+    }
     if (gForceSig && (n == 32 || n == 64)) {
         NSMutableString *h1 = [NSMutableString string], *h2 = [NSMutableString string];
         const uint8_t *a = (const uint8_t *)s1, *b = (const uint8_t *)s2;
