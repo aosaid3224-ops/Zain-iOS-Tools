@@ -214,15 +214,3 @@ static void gf_yesman_ctor(void) {
         }
     });
 }
-
-/* فك أسرار CC_SHA256 (HMAC اليدوي المحتمل) */
-#include <CommonCrypto/CommonDigest.h>
-%hookf(unsigned char *, CC_SHA256, const void *data, CC_LONG len, unsigned char *md) {
-    if (data && len < 600) {
-        NSMutableString *hs = [NSMutableString string];
-        const uint8_t *b = (const uint8_t *)data;
-        for (CC_LONG i = 0; i < len && i < 300; i++) [hs appendFormat:@"%02x", b[i]];
-        GFLOG(@"CC_SHA256 len=%u data=%@", (unsigned)len, hs);
-    }
-    return %orig(data, len, md);
-}
