@@ -37,13 +37,6 @@ static BOOL gForceSig = NO;
         GFLOG(@"MEMCMP-ZERO-SIDE-PASS");
         return 0;
     }
-    if (gForceSig && (n == 32 || n == 64)) {
-        NSMutableString *h1 = [NSMutableString string], *h2 = [NSMutableString string];
-        const uint8_t *a = (const uint8_t *)s1, *b = (const uint8_t *)s2;
-        for (size_t i = 0; i < n && i < 64; i++) { [h1 appendFormat:@"%02x", a[i]]; [h2 appendFormat:@"%02x", b[i]]; }
-        GFLOG(@"MEMCMP-FORCE n=%zu a=%@ b=%@", n, h1, h2);
-        return 0;
-    }
     return %orig(s1, s2, n);
 }
 
