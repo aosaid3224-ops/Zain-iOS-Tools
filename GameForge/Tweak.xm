@@ -117,10 +117,9 @@ static void gf_recon_ctor(void) {
                     NSString *low = [n lowercaseString];
                     if ([low rangeOfString:@"dragon"].location != NSNotFound ||
                         [low rangeOfString:@"cheat"].location != NSNotFound ||
-                        [low rangeOfString:@"dckey"].location != NSNotFound ||
-                        [low rangeOfString:@"hack"].location != NSNotFound ||
-                        [low hasPrefix:@"dc"]) {
-                        GFLOG(@"CLASS %@", n);
+                        [low hasPrefix:@"stream"] ||
+                        [low hasPrefix:@"bypass"]) {
+                        GFLOG(@"CLASS %@ IMG=%s", n, class_getImageName(lst[i]) ?: "?");
                         unsigned mc = 0;
                         Method *ml = class_copyMethodList(lst[i], &mc);
                         for (unsigned j = 0; j < mc; j++) {
