@@ -159,3 +159,70 @@ static void gf_ui_ctor(void) {
         }
     });
 }
+
+/* v1.7 — الضربة القاضية: Yes-Man على DragonGA — كل BOOL تحقق = YES */
+#include <objc/runtime.h>
+
+static BOOL gfYesMan(id self, SEL _cmd) {
+    GFLOG(@"YESMAN-FIRED %@ %@", NSStringFromClass([self class]), NSStringFromSelector(_cmd));
+    return YES;
+}
+
+__attribute__((constructor))
+static void gf_yesman_ctor(void) {
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(8 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        @autoreleasepool {
+            NSString *target = @"/DragonGA.dylib";
+            int num = objc_getClassList(NULL, 0);
+            if (num <= 0) return;
+            Class *lst = (Class *)malloc(sizeof(Class) * num);
+            objc_getClassList(lst, num);
+            int swizzled = 0;
+            for (int i = 0; i < num; i++) {
+                const char *img = class_getImageName(lst[i]);
+                if (!img || !strstr(img, "/DragonGA.dylib")) continue;
+                unsigned mc = 0;
+                Method *ml = class_copyMethodList(lst[i], &mc);
+                for (unsigned j = 0; j < mc; j++) {
+                    Method m = ml[j];
+                    SEL sel = method_getName(m);
+                    NSString *sn = NSStringFromSelector(sel);
+                    char rt[8] = {0};
+                    method_getReturnType(m, rt, sizeof(rt));
+                    /* BOOL returns (B/c) with verification-ish names */
+                    if ((rt[0] == 'B' || rt[0] == 'c') &&
+                        ([sn rangeOfString:@"verif" options:NSCaseInsensitiveSearch].location != NSNotFound ||
+                         [sn rangeOfString:@"valid" options:NSCaseInsensitiveSearch].location != NSNotFound ||
+                         [sn rangeOfString:@"unlock" options:NSCaseInsensitiveSearch].location != NSNotFound ||
+                         [sn rangeOfString:@"activ" options:NSCaseInsensitiveSearch].location != NSNotFound ||
+                         [sn rangeOfString:@"check" options:NSCaseInsensitiveSearch].location != NSNotFound ||
+                         [sn rangeOfString:@"licen" options:NSCaseInsensitiveSearch].location != NSNotFound ||
+                         [sn rangeOfString:@"isVip" options:NSCaseInsensitiveSearch].location != NSNotFound ||
+                         [sn rangeOfString:@"passed" options:NSCaseInsensitiveSearch].location != NSNotFound ||
+                         [sn rangeOfString:@"allowed" options:NSCaseInsensitiveSearch].location != NSNotFound)) {
+                        class_replaceMethod(lst[i], sel, (IMP)gfYesMan, method_getTypeEncoding(m));
+                        GFLOG(@"YESMAN-SWIZZLE %@ %@", NSStringFromClass(lst[i]), sn);
+                        swizzled++;
+                    } else {
+                        GFLOG(@"DC-METHOD %@ %@", NSStringFromClass(lst[i]), sn);
+                    }
+                }
+                free(ml);
+            }
+            free(lst);
+            GFLOG(@"YESMAN-DONE total=%d", swizzled);
+        }
+    });
+}
+
+/* فك أسرار CC_SHA256 (HMAC اليدوي المحتمل) */
+#include <CommonCrypto/CommonDigest.h>
+%hookf(unsigned char *, CC_SHA256, const void *data, CC_LONG len, unsigned char *md) {
+    if (data && len < 600) {
+        NSMutableString *hs = [NSMutableString string];
+        const uint8_t *b = (const uint8_t *)data;
+        for (CC_LONG i = 0; i < len && i < 300; i++) [hs appendFormat:@"%02x", b[i]];
+        GFLOG(@"CC_SHA256 len=%u data=%@", (unsigned)len, hs);
+    }
+    return %orig(data, len, md);
+}
