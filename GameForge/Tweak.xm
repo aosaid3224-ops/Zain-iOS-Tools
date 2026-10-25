@@ -92,3 +92,49 @@ static NSString *gfUDID(void) {
     return %orig(path, mask, error);
 }
 %end
+
+/* v1.4: جرد أكلاسات وصور DragonCheat الحية */
+#include <objc/runtime.h>
+#include <mach-o/dyld.h>
+__attribute__((constructor))
+static void gf_recon_ctor(void) {
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(12 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        @autoreleasepool {
+            GFLOG(@"=== IMAGE DUMP ===");
+            uint32_t nic = _dyld_image_count();
+            for (uint32_t i = 0; i < nic; i++) {
+                const char *nm = _dyld_get_image_name(i);
+                if (nm) GFLOG(@"IMG %s", nm);
+            }
+            GFLOG(@"=== CLASS SCAN ===");
+            int num = objc_getClassList(NULL, 0);
+            if (num > 0) {
+                Class *lst = (Class *)malloc(sizeof(Class) * num);
+                objc_getClassList(lst, num);
+                for (int i = 0; i < num; i++) {
+                    NSString *n = NSStringFromClass(lst[i]);
+                    if (!n) continue;
+                    NSString *low = [n lowercaseString];
+                    if ([low rangeOfString:@"dragon"].location != NSNotFound ||
+                        [low rangeOfString:@"cheat"].location != NSNotFound ||
+                        [low rangeOfString:@"dckey"].location != NSNotFound ||
+                        [low rangeOfString:@"hack"].location != NSNotFound ||
+                        [low hasPrefix:@"dc"]) {
+                        GFLOG(@"CLASS %@", n);
+                        unsigned mc = 0;
+                        Method *ml = class_copyMethodList(lst[i], &mc);
+                        for (unsigned j = 0; j < mc; j++) {
+                            GFLOG(@"  M %@ %@ +%u -%u args", n,
+                                  NSStringFromSelector(method_getName(ml[j])),
+                                  (unsigned)method_getNumberOfArguments(ml[j]),
+                                  0u);
+                        }
+                        free(ml);
+                    }
+                }
+                free(lst);
+            }
+            GFLOG(@"=== SCAN DONE ===");
+        }
+    });
+}
