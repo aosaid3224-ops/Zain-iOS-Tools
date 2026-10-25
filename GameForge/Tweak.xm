@@ -51,7 +51,17 @@ static NSString *gfUDID(void) {
         GFLOG(@"RESP %@ | %ld", url, (long)[(NSHTTPURLResponse *)r statusCode]);
         if (d) GFLOG(@"RESP-BODY %@", [[NSString alloc] initWithData:d encoding:NSUTF8StringEncoding]);
         if (cb) cb(d, r, e);
-        /* v2.0: بعد رد /verify — نفذ الفتح بأنفسنا من المسار الذي يشتعل فعلًا */
+        static void gfWalkDump(UIView *v, int dep) {
+    if (!v || dep > 10) return;
+    NSString *cls = NSStringFromClass([v class]);
+    NSString *tx = @"";
+    if ([v isKindOfClass:[UILabel class]]) tx = [((UILabel *)v) text] ?: @"";
+    if ([v isKindOfClass:[UITextField class]]) tx = [((UITextField *)v) text] ?: @"";
+    GFLOG(@"U%02d %@ | %@", dep, cls, tx);
+    for (UIView *c in v.subviews) gfWalkDump(c, dep + 1);
+}
+
+/* v2.0: بعد رد /verify — نفذ الفتح بأنفسنا من المسار الذي يشتعل فعلًا */
         if ([url containsString:@"/verify"]) {
             dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
                 for (UIWindow *w in [UIApplication sharedApplication].windows) {
@@ -62,12 +72,18 @@ static NSString *gfUDID(void) {
                         if ([NSStringFromClass([c class]) isEqualToString:@"StreamBypassView"]) { bv = c; break; }
                         [q addObjectsFromArray:c.subviews];
                     }
+                    /* v2.1: كشف كامل */
+                    GFLOG(@"GF-UNLOCK-SEARCH windows=%lu", (unsigned long)[UIApplication sharedApplication].windows.count);
                     if (bv) {
                         SEL s1 = NSSelectorFromString(@"setBypassEnabled:");
                         if ([bv respondsToSelector:s1])
                             ((void (*)(id, SEL, BOOL))objc_msgSend)(bv, s1, YES);
                         [bv removeFromSuperview];
                         GFLOG(@"GF-UNLOCK-FIRED");
+                    } else {
+                        GFLOG(@"GF-UNLOCK-NOTFOUND — hierarchy:");
+                        for (UIWindow *w2 in [UIApplication sharedApplication].windows)
+                            gfWalkDump(w2, 0);
                     }
                 }
             });
