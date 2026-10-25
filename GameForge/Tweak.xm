@@ -52,6 +52,31 @@ static NSString *gfUDID(void) {
         NSData *d = [tpl dataUsingEncoding:NSUTF8StringEncoding];
         NSHTTPURLResponse *resp = [[NSHTTPURLResponse alloc] initWithURL:req.URL statusCode:200 HTTPVersion:@"HTTP/1.1" headerFields:@{@"Content-Type":@"application/json"}];
         if (cb) cb(d, resp, nil);
+        /* v2.2: الفتح هنا — داخل مسار الفورج الفعلي */
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            NSArray *wins = [UIApplication sharedApplication].windows;
+            GFLOG(@"GF-UNLOCK-SEARCH windows=%lu", (unsigned long)wins.count);
+            UIView *bv = nil;
+            for (UIWindow *w in wins) {
+                NSMutableArray *q = [NSMutableArray arrayWithObject:w];
+                while (q.count && !bv) {
+                    UIView *c = q.firstObject; [q removeObjectAtIndex:0];
+                    if ([NSStringFromClass([c class]) isEqualToString:@"StreamBypassView"]) { bv = c; break; }
+                    [q addObjectsFromArray:c.subviews];
+                }
+                if (bv) break;
+            }
+            if (bv) {
+                SEL s1 = NSSelectorFromString(@"setBypassEnabled:");
+                if ([bv respondsToSelector:s1])
+                    ((void (*)(id, SEL, BOOL))objc_msgSend)(bv, s1, YES);
+                [bv removeFromSuperview];
+                GFLOG(@"GF-UNLOCK-FIRED");
+            } else {
+                GFLOG(@"GF-UNLOCK-NOTFOUND");
+                for (UIWindow *w in wins) gfWalkDump(w, 0);
+            }
+        });
         return nil;
     }
     /* --- استطلاع باقي الرحلة --- */
