@@ -393,7 +393,10 @@ extern "C" unsigned char *CC_SHA256(const void *data, CC_LONG len, unsigned char
         for (CC_LONG i = 0; i < len && i < 320; i++) [hs appendFormat:@"%02x", b[i]];
         GFLOG(@"CC_SHA256 len=%u data=%@%@", (unsigned)len, hs, len > 320 ? @"..." : @"");
     }
-    return %orig(data, len, md);
+    unsigned char *gr = %orig(data, len, md);
+    if (gr) { NSMutableString *mo=[NSMutableString string]; for(int k=0;k<32;k++) [mo appendFormat:@"%02x",gr[k]];
+        GFLOG(@"CC_SHA256-OUT len=%u out=%@", (unsigned)len, mo); }
+    return gr;
 }
 
 /* v3.3 — مقارنة التوقيع نصية: توقيعنا 64-صفر = أي توقيع محسوب */
