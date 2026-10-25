@@ -272,20 +272,20 @@ static void gf_swizzle_ctor(void) {
             Class gate = NSClassFromString(@"__PXSysGate");
             if (gate) {
                 Method m = class_getInstanceMethod(gate, NSSelectorFromString(@"URLSession:task:didCompleteWithError:"));
-                if (m) { orig_gate_done = (void *)method_getImplementation(m); method_setImplementation(m, (IMP)gf_gate_done); GFLOG(@"SWIZZLED gate done"); }
+                if (m) { do { IMP _i = method_getImplementation(m); memcpy(&orig_gate_done, &_i, sizeof(_i)); } while(0); method_setImplementation(m, (IMP)gf_gate_done); GFLOG(@"SWIZZLED gate done"); }
             } else GFLOG(@"GATE CLASS NOT FOUND");
             Class bv = NSClassFromString(@"StreamBypassView");
             if (bv) {
                 Method ms = class_getInstanceMethod(bv, NSSelectorFromString(@"setBypassEnabled:"));
-                if (ms) { orig_bypass_set = (void *)method_getImplementation(ms); method_setImplementation(ms, (IMP)gf_bypass_set); GFLOG(@"SWIZZLED bypass set"); }
+                if (ms) { do { IMP _i = method_getImplementation(ms); memcpy(&orig_bypass_set, &_i, sizeof(_i)); } while(0); method_setImplementation(ms, (IMP)gf_bypass_set); GFLOG(@"SWIZZLED bypass set"); }
                 Method mg = class_getInstanceMethod(bv, NSSelectorFromString(@"bypassEnabled"));
                 if (!mg) mg = class_getInstanceMethod(bv, NSSelectorFromString(@"isBypassEnabled"));
-                if (mg) { orig_bypass_get = (void *)method_getImplementation(mg); method_setImplementation(mg, (IMP)gf_bypass_get); GFLOG(@"SWIZZLED bypass get"); }
+                if (mg) { do { IMP _i = method_getImplementation(mg); memcpy(&orig_bypass_get, &_i, sizeof(_i)); } while(0); method_setImplementation(mg, (IMP)gf_bypass_get); GFLOG(@"SWIZZLED bypass get"); }
             }
             Class dc = NSClassFromString(@"DrawViewController");
             if (dc) {
                 Method m = class_getInstanceMethod(dc, NSSelectorFromString(@"fixLogin"));
-                if (m) { orig_fixlogin = (void *)method_getImplementation(m); method_setImplementation(m, (IMP)gf_fixlogin); GFLOG(@"SWIZZLED fixLogin"); }
+                if (m) { do { IMP _i = method_getImplementation(m); memcpy(&orig_fixlogin, &_i, sizeof(_i)); } while(0); method_setImplementation(m, (IMP)gf_fixlogin); GFLOG(@"SWIZZLED fixLogin"); }
             }
             GFLOG(@"SWIZZLE-SETUP-COMPLETE");
         }
