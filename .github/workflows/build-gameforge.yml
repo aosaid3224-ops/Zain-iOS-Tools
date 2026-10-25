@@ -1,0 +1,35 @@
+name: Build GameForge
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Theos
+        run: |
+          git clone --recursive --depth 1 https://github.com/theos/theos.git "$HOME/theos"
+          echo "THEOS=$HOME/theos" >> "$GITHUB_ENV"
+      - name: Setup dependencies
+        run: brew install dpkg ldid
+      - name: Build
+        run: |
+          cd GameForge
+          make clean
+          make package THEOS_PACKAGE_SCHEME=rootless FINALPACKAGE=1
+      - name: Verify
+        run: |
+          set -e
+          DEB=$(find GameForge/packages -maxdepth 1 -name '*.deb' -print -quit)
+          test -n "$DEB"
+          test "$(dpkg-deb -f "$DEB" Package)" = "com.nw.gameforge"
+          test "$(dpkg-deb -f "$DEB" Architecture)" = "iphoneos-arm64"
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: gameforge-1.0
+          path: GameForge/packages/*.deb
+          if-no-files-found: error
