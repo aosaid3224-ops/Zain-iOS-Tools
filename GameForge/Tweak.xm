@@ -1,0 +1,81 @@
+// GameForge v1.0 — فورج تحقق DragonCheat (udid/lookup) + استطلاع كامل للمرحلة التالية
+#include <UIKit/UIKit.h>
+#include <Security/Security.h>
+#include <CommonCrypto/CommonHMAC.h>
+
+#define GFLOG(...) do { \
+    NSString *gs = [NSString stringWithFormat:__VA_ARGS__]; \
+    const char *gc = [gs UTF8String]; if (!gc) break; \
+    FILE *gf = fopen("/var/mobile/Documents/gamerecon.log","a"); \
+    if (!gf) { const char *gh = getenv("HOME"); if (gh) { char gp[512]; snprintf(gp,sizeof(gp),"%s/tmp/gamerecon.log",gh); gf = fopen(gp,"a"); } } \
+    if (gf) { fprintf(gf, "%s\n", gc); fclose(gf); } \
+} while(0)
+
+static NSString *gfUDID(void) {
+    NSString *f = @"/var/mobile/Documents/gf_udid.txt";
+    NSString *u = [[NSString alloc] initWithContentsOfFile:f encoding:NSUTF8StringEncoding error:nil];
+    u = [u stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    if ([u length] > 5) return u;
+    return @"00008020-00091DCE0EF1002E";
+}
+
+%hook NSURLSession
+- (NSURLSessionDataTask *)dataTaskWithRequest:(NSURLRequest *)req completionHandler:(void (^)(NSData *, NSURLResponse *, NSError *))cb {
+    NSString *url = req.URL.absoluteString ?: @"";
+    /* --- الفورج القاتل: lookup يجيب ok+udid دائمًا --- */
+    if ([url containsString:@"api.hackgamefile.com"] && [url containsString:@"/udid/lookup"]) {
+        GFLOG(@"GF-FORGE lookup %@", url);
+        NSString *json = [NSString stringWithFormat:@"{\"ok\":true,\"udid\":\"%@\"}", gfUDID()];
+        NSData *d = [json dataUsingEncoding:NSUTF8StringEncoding];
+        NSHTTPURLResponse *resp = [[NSHTTPURLResponse alloc] initWithURL:req.URL statusCode:200 HTTPVersion:@"HTTP/1.1" headerFields:@{@"Content-Type":@"application/json"}];
+        if (cb) cb(d, resp, nil);
+        return nil;
+    }
+    /* --- استطلاع باقي الرحلة (key validation لاحقًا) --- */
+    GFLOG(@"REQ %@ %@", req.HTTPMethod ?: @"?", url);
+    if (req.HTTPBody) GFLOG(@"REQ-BODY %@", [[NSString alloc] initWithData:req.HTTPBody encoding:NSUTF8StringEncoding]);
+    void (^wrapped)(NSData *, NSURLResponse *, NSError *) = ^(NSData *d, NSURLResponse *r, NSError *e){
+        GFLOG(@"RESP %@ | %ld", url, (long)[(NSHTTPURLResponse *)r statusCode]);
+        if (d) GFLOG(@"RESP-BODY %@", [[NSString alloc] initWithData:d encoding:NSUTF8StringEncoding]);
+        if (cb) cb(d, r, e);
+    };
+    return %orig(req, wrapped);
+}
+%end
+
+/* استطلاع مساند */
+%hookf(OSStatus, SecItemCopyMatching, CFDictionaryRef q, CFTypeRef *result) {
+    OSStatus s = %orig(q, result);
+    NSString *sv = q ? (__bridge NSString *)CFDictionaryGetValue(q, CFSTR("svce")) : nil;
+    NSString *ac = q ? (__bridge NSString *)CFDictionaryGetValue(q, CFSTR("acct")) : nil;
+    GFLOG(@"KC-FIND %d svce=%@ acct=%@", (int)s, sv ?: @"-", ac ?: @"-");
+    if (s == 0 && result && *result) GFLOG(@"KC-HIT %@", [(__bridge id)*result description]);
+    return s;
+}
+%hookf(OSStatus, SecItemAdd, CFDictionaryRef q, CFTypeRef *r) {
+    NSString *sv = q ? (__bridge NSString *)CFDictionaryGetValue(q, CFSTR("svce")) : nil;
+    NSString *ac = q ? (__bridge NSString *)CFDictionaryGetValue(q, CFSTR("acct")) : nil;
+    GFLOG(@"KC-ADD svce=%@ acct=%@ data=%@", sv ?: @"-", ac ?: @"-", q ? [(__bridge id)CFDictionaryGetValue(q, CFSTR("v_Data")) description] : @"-");
+    return %orig(q, r);
+}
+%hookf(void, CCHmac, CCHmacAlgorithm alg, const void *key, size_t keyLen, const void *data, size_t dataLen, void *macOut) {
+    NSMutableString *kb = [NSMutableString string];
+    for (size_t i = 0; key && i < keyLen && i < 48; i++) [kb appendFormat:@"%02x", ((const uint8_t *)key)[i]];
+    NSMutableString *db = [NSMutableString string];
+    for (size_t i = 0; data && i < dataLen && i < 160; i++) [db appendFormat:@"%02x", ((const uint8_t *)data)[i]];
+    GFLOG(@"CCHMAC alg=%lu key=%@ data=%@", (unsigned long)alg, kb, db);
+    %orig(alg, key, keyLen, data, dataLen, macOut);
+}
+%hookf(void, NSLog, NSString *format, ...) {
+    va_list args; va_start(args, format);
+    NSString *s = [[NSString alloc] initWithFormat:format arguments:args];
+    va_end(args);
+    GFLOG(@"NSLOG %@", s);
+    %orig(@"%@", s);
+}
+%hook NSData
+- (BOOL)writeToFile:(NSString *)path options:(NSDataWritingOptions)mask error:(NSError **)error {
+    GFLOG(@"WRITE %@", path ?: @"?");
+    return %orig(path, mask, error);
+}
+%end
