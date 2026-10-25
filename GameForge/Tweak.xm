@@ -395,3 +395,33 @@ extern "C" unsigned char *CC_SHA256(const void *data, CC_LONG len, unsigned char
     }
     return %orig(data, len, md);
 }
+
+/* v3.3 — مقارنة التوقيع نصية: توقيعنا 64-صفر = أي توقيع محسوب */
+static BOOL gfIsZeroHex64(NSString *s) {
+    if (!s || [s length] != 64) return NO;
+    const char *c = [s UTF8String];
+    if (!c) return NO;
+    for (int i = 0; i < 64; i++) if (c[i] != '0') return NO;
+    return YES;
+}
+static BOOL gfIsHex64(NSString *s) {
+    if (!s || [s length] != 64) return NO;
+    const char *c = [s UTF8String];
+    if (!c) return NO;
+    for (int i = 0; i < 64; i++) if (!isxdigit((unsigned char)c[i])) return NO;
+    return YES;
+}
+%hook NSString
+- (BOOL)isEqualToString:(NSString *)other {
+    NSString *me = (NSString *)self;
+    if (gfIsZeroHex64(me) && gfIsHex64(other)) {
+        GFLOG(@"SIG-STRCMP-PASS zero-vs-%@", other);
+        return YES;
+    }
+    if (gfIsZeroHex64(other) && gfIsHex64(me)) {
+        GFLOG(@"SIG-STRCMP-PASS %@-vs-zero", me);
+        return YES;
+    }
+    return %orig(other);
+}
+%end
