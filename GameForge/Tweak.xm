@@ -382,13 +382,7 @@ static BOOL gfAllZero(const void *p, size_t n) {
     return YES;
 }
 
-%hookf(int, memcmp, const void *a, const void *b, size_t n) {
-    if (n == 32 && (gfAllZero(a, 32) || gfAllZero(b, 32))) {
-        GFLOG(@"MEMCMP-SIG-PASS (forced equal, zero-side)");
-        return 0;
-    }
-    return %orig(a, b, n);
-}
+
 
 extern "C" unsigned char *CC_SHA256(const void *data, CC_LONG len, unsigned char *md);
 %hookf(unsigned char *, CC_SHA256, const void *data, CC_LONG len, unsigned char *md) {
