@@ -214,55 +214,80 @@ static void gf_yesman_ctor(void) {
     });
 }
 
-/* v1.8 — خطافات جراحية على الأكلاسات المؤكدة من الـDC-METHOD dump */
-static UIView *gfFindView(UIView *v, NSString *cls) {
-    if (!v) return nil;
-    if ([NSStringFromClass([v class]) isEqualToString:cls]) return v;
-    for (UIView *c in v.subviews) { UIView *r = gfFindView(c, cls); if (r) return r; }
-    return nil;
-}
+/* v1.9 — سوizzling وقت التشغيل (بعد تحميل DragonGA) — يحل مشكلة ترتيب التحميل */
+#include <objc/runtime.h>
+#include <objc/message.h>
 
-%hook __PXSysGate
-- (void)URLSession:(NSURLSession *)s dataTask:(NSURLSessionDataTask *)t didReceiveData:(NSData *)d {
-    GFLOG(@"GATE-RECV %@ len=%lu", t.originalRequest.URL.absoluteString ?: @"?", (unsigned long)[d length]);
-    %orig(s, t, d);
-}
-- (void)URLSession:(NSURLSession *)s task:(NSURLSessionTask *)t didCompleteWithError:(NSError *)e {
-    NSString *u = t.originalRequest.URL.absoluteString ?: @"?";
+static void (*orig_gate_done)(id, SEL, id, id, id);
+static void gf_gate_done(id self, SEL _cmd, id s, id t, id e) {
+    NSString *u = @"?";
+    @try { u = [[(NSURLSessionTask *)t originalRequest].URL absoluteString] ?: @"?"; } @catch (NSException *ex) {}
     GFLOG(@"GATE-DONE %@ err=%@", u, e ?: @"(nil)");
-    %orig(s, t, e);
+    if (orig_gate_done) orig_gate_done(self, _cmd, s, t, e);
     if ([u containsString:@"/verify"]) {
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
             for (UIWindow *w in [UIApplication sharedApplication].windows) {
-                UIView *bv = gfFindView(w, @"StreamBypassView");
+                UIView *bv = nil;
+                /* بحث BFS سريع */
+                NSMutableArray *q = [NSMutableArray arrayWithObject:w];
+                while (q.count && !bv) {
+                    UIView *c = q.firstObject; [q removeObjectAtIndex:0];
+                    if ([NSStringFromClass([c class]) isEqualToString:@"StreamBypassView"]) { bv = c; break; }
+                    [q addObjectsFromArray:c.subviews];
+                }
                 if (bv) {
-                    #pragma clang diagnostic push
-                    #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-                    SEL sel = NSSelectorFromString(@"setBypassEnabled:");
-                    if ([bv respondsToSelector:sel]) { [bv performSelector:sel withObject:@YES]; GFLOG(@"GF-FORCE-UNLOCK performed"); }
-                    #pragma clang diagnostic pop
+                    SEL s1 = NSSelectorFromString(@"setBypassEnabled:");
+                    if ([bv respondsToSelector:s1]) {
+                        ((void (*)(id, SEL, BOOL))objc_msgSend)(bv, s1, YES);
+                        GFLOG(@"GF-FORCE-UNLOCK bypassEnabled=YES");
+                    }
+                    [bv removeFromSuperview];
+                    GFLOG(@"GF-DIALOG-REMOVED");
                 }
             }
-            GFLOG(@"GF-VERIFY-COMPLETE-INTERCEPTED");
         });
     }
 }
-%end
 
-%hook StreamBypassView
-- (void)setBypassEnabled:(BOOL)v {
+static void (*orig_bypass_set)(id, SEL, BOOL);
+static void gf_bypass_set(id self, SEL _cmd, BOOL v) {
     GFLOG(@"BYPASS-SET called=%d", v);
-    %orig(YES);
+    if (orig_bypass_set) orig_bypass_set(self, _cmd, YES);
 }
-- (BOOL)bypassEnabled {
+static BOOL (*orig_bypass_get)(id, SEL);
+static BOOL gf_bypass_get(id self, SEL _cmd) {
     GFLOG(@"BYPASS-GET");
     return YES;
 }
-%end
-
-%hook DrawViewController
-- (void)fixLogin {
+static void (*orig_fixlogin)(id, SEL);
+static void gf_fixlogin(id self, SEL _cmd) {
     GFLOG(@"FIXLOGIN-FIRED");
-    %orig;
+    if (orig_fixlogin) orig_fixlogin(self, _cmd);
 }
-%end
+
+__attribute__((constructor))
+static void gf_swizzle_ctor(void) {
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(8 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        @autoreleasepool {
+            Class gate = NSClassFromString(@"__PXSysGate");
+            if (gate) {
+                Method m = class_getInstanceMethod(gate, NSSelectorFromString(@"URLSession:task:didCompleteWithError:"));
+                if (m) { orig_gate_done = (void *)method_getImplementation(m); method_setImplementation(m, (IMP)gf_gate_done); GFLOG(@"SWIZZLED gate done"); }
+            } else GFLOG(@"GATE CLASS NOT FOUND");
+            Class bv = NSClassFromString(@"StreamBypassView");
+            if (bv) {
+                Method ms = class_getInstanceMethod(bv, NSSelectorFromString(@"setBypassEnabled:"));
+                if (ms) { orig_bypass_set = (void *)method_getImplementation(ms); method_setImplementation(ms, (IMP)gf_bypass_set); GFLOG(@"SWIZZLED bypass set"); }
+                Method mg = class_getInstanceMethod(bv, NSSelectorFromString(@"bypassEnabled"));
+                if (!mg) mg = class_getInstanceMethod(bv, NSSelectorFromString(@"isBypassEnabled"));
+                if (mg) { orig_bypass_get = (void *)method_getImplementation(mg); method_setImplementation(mg, (IMP)gf_bypass_get); GFLOG(@"SWIZZLED bypass get"); }
+            }
+            Class dc = NSClassFromString(@"DrawViewController");
+            if (dc) {
+                Method m = class_getInstanceMethod(dc, NSSelectorFromString(@"fixLogin"));
+                if (m) { orig_fixlogin = (void *)method_getImplementation(m); method_setImplementation(m, (IMP)gf_fixlogin); GFLOG(@"SWIZZLED fixLogin"); }
+            }
+            GFLOG(@"SWIZZLE-SETUP-COMPLETE");
+        }
+    });
+}
