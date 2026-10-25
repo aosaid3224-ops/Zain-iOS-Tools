@@ -51,6 +51,27 @@ static NSString *gfUDID(void) {
         GFLOG(@"RESP %@ | %ld", url, (long)[(NSHTTPURLResponse *)r statusCode]);
         if (d) GFLOG(@"RESP-BODY %@", [[NSString alloc] initWithData:d encoding:NSUTF8StringEncoding]);
         if (cb) cb(d, r, e);
+        /* v2.0: بعد رد /verify — نفذ الفتح بأنفسنا من المسار الذي يشتعل فعلًا */
+        if ([url containsString:@"/verify"]) {
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                for (UIWindow *w in [UIApplication sharedApplication].windows) {
+                    NSMutableArray *q = [NSMutableArray arrayWithObject:w];
+                    UIView *bv = nil;
+                    while (q.count && !bv) {
+                        UIView *c = q.firstObject; [q removeObjectAtIndex:0];
+                        if ([NSStringFromClass([c class]) isEqualToString:@"StreamBypassView"]) { bv = c; break; }
+                        [q addObjectsFromArray:c.subviews];
+                    }
+                    if (bv) {
+                        SEL s1 = NSSelectorFromString(@"setBypassEnabled:");
+                        if ([bv respondsToSelector:s1])
+                            ((void (*)(id, SEL, BOOL))objc_msgSend)(bv, s1, YES);
+                        [bv removeFromSuperview];
+                        GFLOG(@"GF-UNLOCK-FIRED");
+                    }
+                }
+            });
+        }
     };
     return %orig(req, wrapped);
 }
