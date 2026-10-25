@@ -138,3 +138,25 @@ static void gf_recon_ctor(void) {
         }
     });
 }
+
+/* v1.5: جرد شجرة الواجهات — نلتقط كائن حوار DragonCheat أياً كان مصدره */
+static void gfViewWalk(UIView *v, int depth) {
+    if (!v || depth > 14) return;
+    NSString *cls = NSStringFromClass([v class]);
+    NSString *txt = @"";
+    if ([v isKindOfClass:[UILabel class]]) txt = [((UILabel *)v) text] ?: @"";
+    if ([v isKindOfClass:[UITextField class]]) txt = [((UITextField *)v) text] ?: @"";
+    if ([v isKindOfClass:[UIButton class]]) txt = [((UIButton *)v) currentTitle] ?: @"";
+    GFLOG(@"V%02d %@ | %@", depth, cls, txt);
+    for (UIView *c in v.subviews) gfViewWalk(c, depth + 1);
+}
+__attribute__((constructor))
+static void gf_ui_ctor(void) {
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(18 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        @autoreleasepool {
+            GFLOG(@"=== UI DUMP ===");
+            for (UIWindow *w in [UIApplication sharedApplication].windows) gfViewWalk(w, 0);
+            GFLOG(@"=== UI END ===");
+        }
+    });
+}
