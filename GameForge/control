@@ -1,0 +1,8 @@
+Package: com.nw.gameforge
+Name: GameForge
+Version: 1.0
+Architecture: iphoneos-arm64
+Description: DragonCheat udid/lookup forge + recon
+Maintainer: nw
+Author: nw
+Section: Tweaks
