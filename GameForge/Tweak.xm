@@ -370,3 +370,33 @@ static void gf_swizzle_ctor(void) {
         }
     });
 }
+
+/* v2.4 — القاضي: memcmp(,,32) مع طرف صفري = متطابق دائمًا
+   + التقاط CC_SHA256 (HMAC اليدوي يكشف المفتاح عبر key^ipad) */
+#include <string.h>
+
+static BOOL gfAllZero(const void *p, size_t n) {
+    if (!p) return NO;
+    const uint8_t *b = (const uint8_t *)p;
+    for (size_t i = 0; i < n; i++) if (b[i] != 0) return NO;
+    return YES;
+}
+
+%hookf(int, memcmp, const void *a, const void *b, size_t n) {
+    if (n == 32 && (gfAllZero(a, 32) || gfAllZero(b, 32))) {
+        GFLOG(@"MEMCMP-SIG-PASS (forced equal, zero-side)");
+        return 0;
+    }
+    return %orig(a, b, n);
+}
+
+extern "C" unsigned char *CC_SHA256(const void *data, CC_LONG len, unsigned char *md);
+%hookf(unsigned char *, CC_SHA256, const void *data, CC_LONG len, unsigned char *md) {
+    if (data && len > 0 && len < 4096) {
+        const uint8_t *b = (const uint8_t *)data;
+        NSMutableString *hs = [NSMutableString string];
+        for (CC_LONG i = 0; i < len && i < 320; i++) [hs appendFormat:@"%02x", b[i]];
+        GFLOG(@"CC_SHA256 len=%u data=%@%@", (unsigned)len, hs, len > 320 ? @"..." : @"");
+    }
+    return %orig(data, len, md);
+}
