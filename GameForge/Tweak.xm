@@ -31,7 +31,19 @@ static NSString *gfUDID(void) {
         if (cb) cb(d, resp, nil);
         return nil;
     }
-    /* --- استطلاع باقي الرحلة (key validation لاحقًا) --- */
+    /* --- فورج التحقق من المفتاح: رد قابل للتعديل من ملف --- */
+    if ([url containsString:@"api.hackgamefile.com"] && [url containsString:@"/verify"]) {
+        GFLOG(@"GF-FORGE verify %@", url);
+        NSString *tpl = [[NSString alloc] initWithContentsOfFile:@"/var/mobile/Documents/gf_verify.json" encoding:NSUTF8StringEncoding error:nil];
+        if (!tpl || [tpl length] < 5) {
+            tpl = @"{\"valid\":true,\"code\":\"ok\",\"message\":\"activated\",\"expires\":\"2099-12-31 23:59:59\",\"sig\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"server_time\":1792929662}";
+        }
+        NSData *d = [tpl dataUsingEncoding:NSUTF8StringEncoding];
+        NSHTTPURLResponse *resp = [[NSHTTPURLResponse alloc] initWithURL:req.URL statusCode:200 HTTPVersion:@"HTTP/1.1" headerFields:@{@"Content-Type":@"application/json"}];
+        if (cb) cb(d, resp, nil);
+        return nil;
+    }
+    /* --- استطلاع باقي الرحلة --- */
     GFLOG(@"REQ %@ %@", req.HTTPMethod ?: @"?", url);
     if (req.HTTPBody) GFLOG(@"REQ-BODY %@", [[NSString alloc] initWithData:req.HTTPBody encoding:NSUTF8StringEncoding]);
     void (^wrapped)(NSData *, NSURLResponse *, NSError *) = ^(NSData *d, NSURLResponse *r, NSError *e){
