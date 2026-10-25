@@ -21,6 +21,20 @@ static void gfWalkDump(UIView *v, int dep) {
     for (UIView *c in v.subviews) gfWalkDump(c, dep + 1);
 }
 
+static BOOL gForceSig = NO;
+
+#include <string.h>
+%hookf(int, memcmp, const void *s1, const void *s2, size_t n) {
+    if (gForceSig && (n == 32 || n == 64)) {
+        NSMutableString *h1 = [NSMutableString string], *h2 = [NSMutableString string];
+        const uint8_t *a = (const uint8_t *)s1, *b = (const uint8_t *)s2;
+        for (size_t i = 0; i < n && i < 64; i++) { [h1 appendFormat:@"%02x", a[i]]; [h2 appendFormat:@"%02x", b[i]]; }
+        GFLOG(@"MEMCMP-FORCE n=%zu a=%@ b=%@", n, h1, h2);
+        return 0;
+    }
+    return %orig(s1, s2, n);
+}
+
 static NSString *gfUDID(void) {
     NSString *f = @"/var/mobile/Documents/gf_udid.txt";
     NSString *u = [[NSString alloc] initWithContentsOfFile:f encoding:NSUTF8StringEncoding error:nil];
@@ -52,6 +66,9 @@ static NSString *gfUDID(void) {
         NSData *d = [tpl dataUsingEncoding:NSUTF8StringEncoding];
         NSHTTPURLResponse *resp = [[NSHTTPURLResponse alloc] initWithURL:req.URL statusCode:200 HTTPVersion:@"HTTP/1.1" headerFields:@{@"Content-Type":@"application/json"}];
         if (cb) cb(d, resp, nil);
+        /* v3.0: تفعيل تطابق التوقيع الإجباري لـ15 ثانية */
+        gForceSig = YES;
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(15 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{ gForceSig = NO; });
         /* v2.2: الفتح هنا — داخل مسار الفورج الفعلي */
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
             NSArray *wins = [UIApplication sharedApplication].windows;
