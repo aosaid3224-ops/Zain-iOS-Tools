@@ -1,0 +1,33 @@
+{
+  "source": "DragonGA.dylib",
+  "parts": 4,
+  "original_size": 13872416,
+  "original_sha256": "81b16d07416fe636c5a8ffe30a65867b57c7764e2490f6b6652c1810b5ec2e41",
+  "files": [
+    {
+      "file": "DragonGA.dylib.part01",
+      "offset": 0,
+      "size": 3468104,
+      "sha256": "54ec57699b4186f1dcb4ef9cfd3dd2b734411754a9876eb10169ef90ade4b946"
+    },
+    {
+      "file": "DragonGA.dylib.part02",
+      "offset": 3468104,
+      "size": 3468104,
+      "sha256": "75a4512ceb05b9723504ef845c848216dc7aaf64457ae86acfce76f7bf801055"
+    },
+    {
+      "file": "DragonGA.dylib.part03",
+      "offset": 6936208,
+      "size": 3468104,
+      "sha256": "958c13b50a194003025e175323af8b43a44fae2dc1516095952a7f57ff3cc498"
+    },
+    {
+      "file": "DragonGA.dylib.part04",
+      "offset": 10404312,
+      "size": 3468104,
+      "sha256": "2711805a221211a51f6dcfaecdaccb967ec450688a8a1fab6d37470d70346968"
+    }
+  ],
+  "restore_command": "cat \"dylib DARGON\"/DragonGA.dylib.part01 \"dylib DARGON\"/DragonGA.dylib.part02 \"dylib DARGON\"/DragonGA.dylib.part03 \"dylib DARGON\"/DragonGA.dylib.part04 > DragonGA.dylib"
+}
