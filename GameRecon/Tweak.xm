@@ -1,6 +1,7 @@
 // GameRecon — استطلاع DragonCheat داخل اللعبة (استطلاع نقي، لا تزوير)
 #include <UIKit/UIKit.h>
 #include <Security/Security.h>
+#include <CommonCrypto/CommonHMAC.h>
 
 #define GRLOG(...) do { \
     NSString *s = [NSString stringWithFormat:__VA_ARGS__]; \
@@ -23,11 +24,13 @@ static void gr_dictdump(NSString *tag, NSDictionary *d) {
     id v = %orig;
     NSString *ks = [k description];
     if ([ks rangeOfString:@"."].location == NSNotFound || [ks hasPrefix:@"dragon"] || [ks hasPrefix:@"DC"] || [ks hasPrefix:@"cheat"] || [ks hasPrefix:@"key"] || [ks hasPrefix:@"UDID"] || [ks hasPrefix:@"vip"] || [ks hasPrefix:@"licen"])
-        GRLOG(@"UD-GET %s=%s", [ks UTF8String] ?: "?", v ? [[[v description] substringToIndex:MIN((NSUInteger)100, [[v description] length])] UTF8String] : "(nil)");
+        NSString *vs = [v description];
+        GRLOG(@"UD-GET %@=%s", ks, v ? [[vs substringToIndex:MIN((NSUInteger)100, [vs length])] UTF8String] : "(nil)");
     return v;
 }
 - (void)setObject:(id)v forKey:(NSString *)k {
-    GRLOG(@"UD-SET %s=%s", [k UTF8String] ?: "?", v ? [[[v description] substringToIndex:MIN((NSUInteger)100, [[v description] length])] UTF8String] : "(nil)");
+    NSString *vs2 = [v description];
+    GRLOG(@"UD-SET %@=%s", k, v ? [[vs2 substringToIndex:MIN((NSUInteger)100, [vs2 length])] UTF8String] : "(nil)");
     %orig(v, k);
 }
 - (void)removeObjectForKey:(NSString *)k {
@@ -39,17 +42,19 @@ static void gr_dictdump(NSString *tag, NSDictionary *d) {
 /* ---- Keychain ---- */
 static void gr_kcdump(NSString *tag, CFDictionaryRef q) {
     if (!q) return;
-    GRLOG(@"%@ svce=%s acct=%s class=%s",
-        tag,
-        [((__bridge NSString *)CFDictionaryGetValue(q, CFSTR("svce"))) description] ?: @"-",
-        [((__bridge NSString *)CFDictionaryGetValue(q, CFSTR("acct"))) description] ?: @"-",
-        [((__bridge NSString *)CFDictionaryGetValue(q, CFSTR("class"))) description] ?: @"-");
+    NSString *sv = (__bridge NSString *)CFDictionaryGetValue(q, CFSTR("svce"));
+    NSString *ac = (__bridge NSString *)CFDictionaryGetValue(q, CFSTR("acct"));
+    NSString *cl = (__bridge NSString *)CFDictionaryGetValue(q, CFSTR("class"));
+    GRLOG(@"%@ svce=%@ acct=%@ class=%@", tag, sv ?: @"-", ac ?: @"-", cl ?: @"-");
 }
 %hookf(OSStatus, SecItemCopyMatching, CFDictionaryRef q, CFTypeRef *result) {
     OSStatus s = %orig(q, result);
     GRLOG(@"KC-FIND status=%d", (int)s);
     gr_kcdump(@"KC-FIND", q);
-    if (s == 0 && result && *result) GRLOG(@"KC-HIT data=%s", [[[(__bridge id)*result description] substringToIndex:MIN((NSUInteger)120, [[(__bridge id)*result description] length])] UTF8String]);
+    if (s == 0 && result && *result) {
+        NSString *ds = [(__bridge id)*result description];
+        GRLOG(@"KC-HIT data=%s", [[ds substringToIndex:MIN((NSUInteger)120, [ds length])] UTF8String]);
+    }
     return s;
 }
 %hookf(OSStatus, SecItemAdd, CFDictionaryRef q, CFTypeRef *r) {
