@@ -1,0 +1,11 @@
+framework module DataDomeSDK {
+  umbrella header "DataDomeSDK.h"
+
+  export *
+  module * { export * }
+}
+
+module DataDomeSDK.Swift {
+  header "DataDomeSDK-Swift.h"
+  requires objc
+}

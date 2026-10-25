@@ -1,0 +1,14 @@
+{
+	"last_updated": 1748406560715,
+	"translation": {
+		"aggregated_login_dialog_subtitle": "以下のアカウントでログイン",
+		"aggregated_login_dialog_title": "ログイン",
+		"shareTwitter_share_btn_txt": "ツイートする",
+		"shareVK_share_btn_txt": "作成",
+		"unknown_error_description": "不明なエラーが発生しました。",
+		"unknown_error_title": "不明なエラー",
+		"utilities_back_btn": "戻る",
+		"utilities_close_btn": "閉じる",
+		"webview_retry_btn": "やり直す"
+	}
+}

@@ -1,0 +1,10 @@
+NSPhotoLibraryUsageDescription = "Oyundan ekran görüntüleri paylaşmana ve diğer ilgili işlevler için ekran görüntüsü kaydetmene olanak tanır.";
+NSPhotoLibraryAddUsageDescription = "Oyundan ekran görüntüleri paylaşmana ve diğer ilgili işlevler için ekran görüntüsü kaydetmene olanak tanır.";
+NSCameraUsageDescription = "Fotoğraf çekmene olanak tanır.";
+NSMicrophoneUsageDescription = "Oyun içi sesli mesajlar göndermek ve gerçek zamanlı sesli iletişim sağlamak için olanak sunar.";
+NSUserTrackingUsageDescription = "Verileri analiz etmek ve reklam performansını optimize etmek için reklam yerleştirmelerinin etkinliğini izler.";
+NSCalendarsUsageDescription = "Oyun içi etkinlikleri planlama, abonelikleri yönetme ve diğer takvim hatırlatıcıları için bildirimler sunar.";
+NSLocationAlwaysUsageDescription = "Oyunda yakındaki arkadaşları eklemek için konum işlevselliği sağlar.";
+NSLocationWhenInUseUsageDescription = "Oyunda yakındaki arkadaşları eklemek için konum işlevselliği sağlar.";
+NSBluetoothPeripheralUsageDescription = "Oyun içi sesli sohbet için Bluetooth kulaklıklar aracılığıyla Bluetooth cihazlarına bağlanmanı sağlar.";
+NSBluetoothAlwaysUsageDescription = "Oyun içi sesli sohbet için Bluetooth kulaklıklar aracılığıyla Bluetooth cihazlarına bağlanmanı sağlar.";

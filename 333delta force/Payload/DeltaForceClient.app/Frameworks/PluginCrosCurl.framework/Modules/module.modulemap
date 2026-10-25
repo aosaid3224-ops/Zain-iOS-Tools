@@ -1,0 +1,6 @@
+framework module PluginCrosCurl {
+  umbrella header "PluginCrosCurl.h"
+
+  export *
+  module * { export * }
+}

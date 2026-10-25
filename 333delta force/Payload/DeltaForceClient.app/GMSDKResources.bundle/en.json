@@ -1,0 +1,14 @@
+{
+	"last_updated": 1748406560842,
+	"translation": {
+		"aggregated_login_dialog_subtitle": "Login with the following accounts",
+		"aggregated_login_dialog_title": "Login",
+		"shareTwitter_share_btn_txt": "Tweet",
+		"shareVK_share_btn_txt": "Create",
+		"unknown_error_description": "An unknown error has occurred.",
+		"unknown_error_title": "Unknown error",
+		"utilities_back_btn": "Back",
+		"utilities_close_btn": "Close",
+		"webview_retry_btn": "Retry"
+	}
+}

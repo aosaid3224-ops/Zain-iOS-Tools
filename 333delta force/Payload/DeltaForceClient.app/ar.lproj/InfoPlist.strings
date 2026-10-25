@@ -1,0 +1,10 @@
+NSPhotoLibraryUsageDescription = "يسمح لك بحفظ الصور لمشاركة صور اللعبة والوظائف ذات الصلة.";
+NSPhotoLibraryAddUsageDescription = "يسمح لك بحفظ الصور لمشاركة صور اللعبة والوظائف ذات الصلة.";
+NSCameraUsageDescription = "يسمح لك بالتقاط الصور.";
+NSMicrophoneUsageDescription = "يوفر قدرات لإرسال رسائل صوتية داخل اللعبة وإجراء اتصالات صوتية فورية.";
+NSUserTrackingUsageDescription = "يراقب فعالية وضع الإعلانات لتحليل البيانات وتحسين مستوى أداء الإعلانات.";
+NSCalendarsUsageDescription = "يوفر إشعارات لجدولة الأحداث داخل اللعبة وإدارة الاشتراكات وتذكيرات التقويم الأخرى.";
+NSLocationAlwaysUsageDescription = "يوفر ميزة تحديد الموقع لإضافة الأصدقاء القريبين داخل اللعبة.";
+NSLocationWhenInUseUsageDescription = "يوفر ميزة تحديد الموقع لإضافة الأصدقاء القريبين داخل اللعبة.";
+NSBluetoothPeripheralUsageDescription = "يمكّن من الاتصال بأجهزة بلوتوث للدردشة الصوتية داخل اللعبة عبر سماعات بلوتوث.";
+NSBluetoothAlwaysUsageDescription = "يمكّن من الاتصال بأجهزة بلوتوث للدردشة الصوتية داخل اللعبة عبر سماعات بلوتوث.";

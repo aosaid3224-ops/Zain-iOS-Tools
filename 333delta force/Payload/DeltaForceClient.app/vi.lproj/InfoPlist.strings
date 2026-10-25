@@ -1,0 +1,9 @@
+NSPhotoLibraryAddUsageDescription = "Cho phép bạn lưu hình ảnh để chia sẻ và các chức năng tương tự.";
+NSCameraUsageDescription = "Cho phép bạn chụp ảnh.";
+NSMicrophoneUsageDescription = "Cung cấp chức năng gửi tin nhắn thoại trong game và giao tiếp bằng giọng nói thời gian thực.";
+NSUserTrackingUsageDescription = "Dùng để đánh giá, phân tích và tối ưu hóa hiệu quả chiến dịch quảng cáo.";
+NSCalendarsUsageDescription = "Hiện thông báo cho việc lên lịch các sự kiện trong game, quản lý đăng ký, và các nhắc lịch khác.";
+NSLocationAlwaysUsageDescription = "Cung cấp chức năng định vị để thêm bạn bè trong khu vực.";
+NSLocationWhenInUseUsageDescription = "Cung cấp chức năng định vị để thêm bạn bè trong khu vực.";
+NSBluetoothPeripheralUsageDescription = "Cho phép kết nối thiết bị Bluetooth để sử dụng tai nghe Bluetooth chat bằng giọng nói trong game.";
+NSBluetoothAlwaysUsageDescription = "Cho phép kết nối thiết bị Bluetooth để sử dụng tai nghe Bluetooth chat bằng giọng nói trong game.";

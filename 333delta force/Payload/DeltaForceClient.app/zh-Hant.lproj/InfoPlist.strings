@@ -1,0 +1,12 @@
+NSPhotoLibraryUsageDescription = "提供圖片保存功能，用於遊戲圖片分享等遊戲功能。";
+NSPhotoLibraryAddUsageDescription = "提供圖片保存功能，用於遊戲圖片分享等遊戲功能。";
+NSCameraUsageDescription = "提供拍照功能。";
+NSMicrophoneUsageDescription = "提供語音服務，用於遊戲內語音發送和實時語音的功能。";
+NSUserTrackingUsageDescription = "用於廣告投放效果監測，分析、優化廣告投放效果。";
+NSCalendarsUsageDescription = "提供訂閲推送功能，用於遊戲內活動預約、訂閲等日曆提醒功能。";
+NSLocationAlwaysUsageDescription = "提供定位功能，用於遊戲內添加附近好友的功能。";
+NSLocationWhenInUseUsageDescription = "提供定位功能，用於遊戲內添加附近好友的功能。";
+NSBluetoothPeripheralUsageDescription = "提供連接藍牙設備服務，用於遊戲內可使用藍牙耳機進行語音聊天。";
+NSBluetoothAlwaysUsageDescription = "提供連接藍牙設備服務，用於遊戲內可使用藍牙耳機進行語音聊天。";
+CFBundleDisplayName = "Garena 三角洲行動";
+CFBundleName = "Garena 三角洲行動";

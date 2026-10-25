@@ -1,0 +1,14 @@
+{
+	"last_updated": 1748406560979,
+	"translation": {
+		"aggregated_login_dialog_subtitle": "使用以下帳號登入",
+		"aggregated_login_dialog_title": "登入",
+		"shareTwitter_share_btn_txt": "推文",
+		"shareVK_share_btn_txt": "創建",
+		"unknown_error_description": "發生未知錯誤。",
+		"unknown_error_title": "未知錯誤",
+		"utilities_back_btn": "返回",
+		"utilities_close_btn": "關閉",
+		"webview_retry_btn": "重試"
+	}
+}

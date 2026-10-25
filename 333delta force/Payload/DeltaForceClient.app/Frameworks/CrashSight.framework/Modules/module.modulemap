@@ -1,0 +1,6 @@
+framework module CrashSight {
+  umbrella header "CrashSight.h"
+
+  export *
+  module * { export * }
+}

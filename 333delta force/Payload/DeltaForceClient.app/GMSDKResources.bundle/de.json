@@ -1,0 +1,14 @@
+{
+	"last_updated": 1748406560567,
+	"translation": {
+		"aggregated_login_dialog_subtitle": "Mit den folgenden Konten anmelden",
+		"aggregated_login_dialog_title": "Anmelden",
+		"shareTwitter_share_btn_txt": "Tweeten",
+		"shareVK_share_btn_txt": "Erstellen",
+		"unknown_error_description": "Ein unbekannter Fehler ist aufgetreten.",
+		"unknown_error_title": "Unbekannter Fehler",
+		"utilities_back_btn": "Zurück",
+		"utilities_close_btn": "Schließen",
+		"webview_retry_btn": "Wiederholen"
+	}
+}

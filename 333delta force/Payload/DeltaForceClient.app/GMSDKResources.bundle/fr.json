@@ -1,0 +1,14 @@
+{
+	"last_updated": 1748406560649,
+	"translation": {
+		"aggregated_login_dialog_subtitle": "Connectez-vous avec les comptes suivants",
+		"aggregated_login_dialog_title": "Connexion",
+		"shareTwitter_share_btn_txt": "Twitter",
+		"shareVK_share_btn_txt": "Créer",
+		"unknown_error_description": "Une erreur inconnue s'est produite.",
+		"unknown_error_title": "Erreur inconnue",
+		"utilities_back_btn": "Retour",
+		"utilities_close_btn": "Fermer",
+		"webview_retry_btn": "Réessayer"
+	}
+}

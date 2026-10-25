@@ -1,0 +1,14 @@
+{
+	"last_updated": 1748406560916,
+	"translation": {
+		"aggregated_login_dialog_subtitle": "Đăng nhập bằng các tài khoản sau",
+		"aggregated_login_dialog_title": "Đăng nhập",
+		"shareTwitter_share_btn_txt": "Tweet",
+		"shareVK_share_btn_txt": "Tạo",
+		"unknown_error_description": "Đã xảy ra lỗi không xác định.",
+		"unknown_error_title": "Lỗi không xác định",
+		"utilities_back_btn": "Quay lại",
+		"utilities_close_btn": "Đóng",
+		"webview_retry_btn": "Thử lại"
+	}
+}
