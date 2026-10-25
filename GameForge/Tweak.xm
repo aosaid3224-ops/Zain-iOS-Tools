@@ -83,7 +83,7 @@ static NSString *gfUDID(void) {
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(15 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{ gForceSig = NO; });
         /* v3.1: الفتح القسري معطّل افتراضيًا — DragonCheat يجري مساره الذاتي الكامل.
            لتفعيله يدويًا: touch /var/mobile/Documents/gf_force_unlock */
-        if (access("/var/mobile/Documents/gf_force_unlock", F_OK) != 0) return;
+        if (access("/var/mobile/Documents/gf_force_unlock", F_OK) != 0) return nil;
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
             NSArray *wins = [UIApplication sharedApplication].windows;
             GFLOG(@"GF-UNLOCK-SEARCH windows=%lu", (unsigned long)wins.count);
