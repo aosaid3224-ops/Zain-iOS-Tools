@@ -658,8 +658,27 @@ static int gfValHook(void *a, void *b, void *c, void *d, void *e, void *f, void 
     return r;
 }
 
+/* v6.1 — تركيب مبكر عبر add-image (قبل بدايات DG) */
+static void gfInstallValHook(uintptr_t dgbase) {
+    static int done = 0;
+    if (done || !dgbase) return;
+    done = 1;
+    void *valfn = (void *)(dgbase + 0x1765b90);
+    void *orig_p = NULL;
+    MSHookFunction(valfn, (void *)gfValHook, &orig_p);
+    gOrigVal = (GFValFn)orig_p;
+    GFLOG(@"VAL-HOOK installed at DG+0x1765b90 (early)");
+}
+static void gfDGImageAdded(const struct mach_header *mh, intptr_t slide) {
+    Dl_info info;
+    if (dladdr(mh, &info) && info.dli_fname && strstr(info.dli_fname, "/DragonGA.dylib")) {
+        gfInstallValHook((uintptr_t)mh);
+    }
+}
+
 __attribute__((constructor))
 static void gf_statewatch_ctor(void) {
+    _dyld_register_func_for_add_image(&gfDGImageAdded);
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_BACKGROUND, 0), ^{
         for (int t = 0; t < 120 && !gStateByte; t++) {
             for (uint32_t i = 0; i < _dyld_image_count(); i++) {
@@ -673,14 +692,17 @@ static void gf_statewatch_ctor(void) {
         }
         if (!gStateByte) { GFLOG(@"STATE-WATCH DragonGA not found"); return; }
 
-        /* v5.0 — خطّاف مُتحقق الرخصة DG+0x1765b90 (تسجيل قيمة الإرجاع) */
+        /* v6.1 — تركيب مبكر + dump ذاكرة نافذة المتحقق */
+        gfInstallValHook((uintptr_t)gStateByte - 0xd0c7a0);
         {
             uintptr_t dgbase = (uintptr_t)gStateByte - 0xd0c7a0;
-            void *valfn = (void *)(dgbase + 0x1765b90);
-            void *orig_p = NULL;
-            MSHookFunction(valfn, (void *)gfValHook, &orig_p);
-            gOrigVal = (GFValFn)orig_p;
-            GFLOG(@"VAL-HOOK installed at DG+0x1765b90");
+            const unsigned char *mem = (const unsigned char *)(dgbase + 0x1765b90 - 0x300);
+            NSMutableString *acc = [NSMutableString string];
+            for (int i = 0; i < 0x600; i++) {
+                [acc appendFormat:@"%02x", mem[i]];
+                if ((i % 64) == 63) { GFLOG(@"DUMP %04x %@", (unsigned)(0x1765b90 - 0x300 + i - 63), acc); [acc setString:@""]; }
+            }
+            GFLOG(@"DUMP-END");
         }
 
         int forceVal = -1;
