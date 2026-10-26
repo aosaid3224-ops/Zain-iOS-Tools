@@ -489,3 +489,44 @@ extern "C" unsigned char *CC_SHA512(const void *data, CC_LONG len, unsigned char
     }
     return r;
 }
+
+/* v4.0 — كاشف مسار التحقق: backtrace لحظة قراءة حقول الرد داخل DragonGA */
+#include <mach-o/dyld.h>
+
+static uintptr_t gDGbase = 0;
+static void gfFindDG(void) {
+    if (gDGbase) return;
+    for (uint32_t i = 0; i < _dyld_image_count(); i++) {
+        const char *nm = _dyld_get_image_name(i);
+        if (nm && strstr(nm, "/DragonGA.dylib")) {
+            gDGbase = (uintptr_t)_dyld_get_image_header(i);
+            break;
+        }
+    }
+}
+
+%hook NSDictionary
+- (id)objectForKey:(id)aKey {
+    id v = %orig(aKey);
+    if ([aKey isKindOfClass:[NSString class]]) {
+        NSString *k = (NSString *)aKey;
+        if ([k isEqualToString:@"sig"] || [k isEqualToString:@"valid"] ||
+            [k isEqualToString:@"code"] || [k isEqualToString:@"sig_ed"]) {
+            gfFindDG();
+            NSArray *bt = [NSThread callStackReturnAddresses];
+            NSMutableString *offs = [NSMutableString string];
+            int n = 0;
+            for (NSNumber *a in bt) {
+                uintptr_t ad = [a unsignedIntegerValue];
+                if (gDGbase && ad > gDGbase && ad < gDGbase + 0x2000000 && n < 10) {
+                    [offs appendFormat:@"+%lx ", (unsigned long)(ad - gDGbase)];
+                    n++;
+                }
+            }
+            if ([offs length] > 0)
+                GFLOG(@"TRACE %@ = %@ | DG:%@", k, v ? @"Y" : @"N", offs);
+        }
+    }
+    return v;
+}
+%end
