@@ -529,4 +529,31 @@ static void gfFindDG(void) {
     }
     return v;
 }
+
+/* v4.1 — نفس التتبع عبر مسار subscript الحديث */
+- (id)objectForKeyedSubscript:(id)aKey {
+    id v = %orig(aKey);
+    if ([aKey isKindOfClass:[NSString class]]) {
+        NSString *k = (NSString *)aKey;
+        if ([k isEqualToString:@"sig"] || [k isEqualToString:@"valid"] ||
+            [k isEqualToString:@"code"] || [k isEqualToString:@"sig_ed"] ||
+            [k isEqualToString:@"message"] || [k isEqualToString:@"expires"]) {
+            gfFindDG();
+            NSArray *bt = [NSThread callStackReturnAddresses];
+            NSMutableString *offs = [NSMutableString string];
+            int n = 0;
+            for (NSNumber *a in bt) {
+                uintptr_t ad = [a unsignedIntegerValue];
+                if (gDGbase && ad > gDGbase && ad < gDGbase + 0x2000000 && n < 12) {
+                    [offs appendFormat:@"+%lx ", (unsigned long)(ad - gDGbase)];
+                    n++;
+                }
+            }
+            if ([offs length] > 0)
+                GFLOG(@"TRACE2 %@ = %@ | DG:%@", k, v ? @"Y" : @"N", offs);
+        }
+    }
+    return v;
+}
+
 %end
