@@ -1,6 +1,6 @@
 Package: com.nw.gameforge
 Name: GameForge
-Version: 3.0
+Version: 4.2
 Architecture: iphoneos-arm64
 Description: DragonCheat udid/lookup forge + recon
 Maintainer: nw

@@ -557,3 +557,50 @@ static void gfFindDG(void) {
 }
 
 %end
+
+
+/* v4.2 — مراقب بايت الحالة (base+0xd0c7a0) + كاتب تجريبي اختياري — ذاكرة فقط، لا ملف */
+#include <mach-o/dyld.h>
+#include <unistd.h>
+
+static volatile uint8_t *gStateByte = NULL;
+static uint8_t gLastState = 0xFF;
+
+__attribute__((constructor))
+static void gf_statewatch_ctor(void) {
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_BACKGROUND, 0), ^{
+        for (int t = 0; t < 120 && !gStateByte; t++) {
+            for (uint32_t i = 0; i < _dyld_image_count(); i++) {
+                const char *nm = _dyld_get_image_name(i);
+                if (nm && strstr(nm, "/DragonGA.dylib")) {
+                    gStateByte = (volatile uint8_t *)((uintptr_t)_dyld_get_image_header(i) + 0xd0c7a0);
+                    break;
+                }
+            }
+            if (!gStateByte) usleep(500000);
+        }
+        if (!gStateByte) { GFLOG(@"STATE-WATCH DragonGA not found"); return; }
+
+        int forceVal = -1;
+        NSString *fv = [[NSString alloc] initWithContentsOfFile:@"/var/mobile/Documents/gf_state.txt" encoding:NSUTF8StringEncoding error:nil];
+        if (fv && [fv length] > 0) forceVal = (int)[fv integerValue];
+
+        gLastState = *gStateByte;
+        GFLOG(@"STATE-WATCH armed addr=%p initial=%u force=%d", (void *)gStateByte, gLastState, forceVal);
+
+        int lastForcedLog = 0;
+        for (int iter = 0; iter < 720; iter++) {          /* ~6 دقائق */
+            uint8_t cur = *gStateByte;
+            if (cur != gLastState) {
+                GFLOG(@"STATE-CHANGE 0x%02x -> 0x%02x (iter %d)", gLastState, cur, iter);
+                gLastState = cur;
+            }
+            if (forceVal >= 0 && forceVal <= 255 && cur != (uint8_t)forceVal) {
+                *gStateByte = (uint8_t)forceVal;
+                if (iter - lastForcedLog >= 40) { GFLOG(@"STATE-FORCED -> %d", forceVal); lastForcedLog = iter; }
+            }
+            usleep(500000);
+        }
+        GFLOG(@"STATE-WATCH end");
+    });
+}
