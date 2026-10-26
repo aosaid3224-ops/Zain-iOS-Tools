@@ -657,26 +657,6 @@ static void gfFindDG(void) {
 
 static volatile uint8_t *gStateByte = NULL;
 static uint8_t gLastState = 0xFF;
-typedef int (*GFValFn)(void*,void*,void*,void*,void*,void*,void*,void*);
-static GFValFn gOrigVal = NULL;
-static int gValFlip = -1;
-static int gfValHook(void *a, void *b, void *c, void *d, void *e, void *f, void *g, void *h) {
-    static int lastReload = 0;
-    int now = (int)time(NULL);
-    if (now - lastReload >= 5) {
-        lastReload = now;
-        NSString *home = [NSString stringWithUTF8String:(getenv("HOME") ?: "")];
-        for (NSString *p in @[[home stringByAppendingPathComponent:@"tmp/gf_val.txt"], @"/var/mobile/Documents/gf_val.txt", @"/var/mobile/tmp/gf_val.txt"]) {
-            NSString *fv = [[NSString alloc] initWithContentsOfFile:p encoding:NSUTF8StringEncoding error:nil];
-            if (fv && [fv length] > 0) { gValFlip = (int)[fv integerValue]; break; }
-        }
-    }
-    int r = gOrigVal(a,b,c,d,e,f,g,h);
-    GFLOG(@"VAL-RET %d flip=%d args=%p,%p,%p", r, gValFlip, a, b, c);
-    if (gValFlip >= 0 && gValFlip != r) { GFLOG(@"VAL-FORCE -> %d", gValFlip); return gValFlip; }
-    return r;
-}
-
 /* v6.1 — تركيب مبكر عبر add-image (قبل بدايات DG) */
 static void gfInstallValHook(uintptr_t dgbase) {
     (void)dgbase;
