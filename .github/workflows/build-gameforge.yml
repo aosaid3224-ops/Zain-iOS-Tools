@@ -5,7 +5,7 @@ permissions:
   contents: read
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
@@ -18,15 +18,21 @@ jobs:
           git clone --depth 1 https://github.com/ProcursusTeam/ldid.git /tmp/ldid
           make -C /tmp/ldid -j$(nproc)
           sudo cp /tmp/ldid/ldid /usr/local/bin/ldid
-          ldid 2>&1 | head -2 || true
-      - name: Setup Theos + SDK
+      - name: Setup Theos
         run: |
           git clone --recursive --depth 1 https://github.com/theos/theos.git "$HOME/theos"
           git clone --depth 1 --filter=blob:none --sparse https://github.com/theos/sdks.git /tmp/sdks
           cp -a /tmp/sdks/. "$HOME/theos/sdks/"
           cd "$HOME/theos/sdks"
           git sparse-checkout set iPhoneOS16.5.sdk iPhoneOS14.5.sdk
-          ls "$HOME/theos/sdks"
+      - name: Setup iOS toolchain
+        run: |
+          curl -sL -o /tmp/swift.tar.gz https://download.swift.org/swift-6.0.3-release/ubuntu2404/swift-6.0.3-RELEASE/swift-6.0.3-RELEASE-ubuntu24.04.tar.gz
+          tar -xzf /tmp/swift.tar.gz -C /tmp
+          rm -rf "$HOME/theos/toolchain/linux/iphone"
+          mkdir -p "$HOME/theos/toolchain/linux"
+          cp -a /tmp/swift-6.0.3-RELEASE-ubuntu24.04/usr "$HOME/theos/toolchain/linux/iphone"
+          "$HOME/theos/toolchain/linux/iphone/bin/clang" --version
           echo "THEOS=$HOME/theos" >> "$GITHUB_ENV"
       - name: Build
         run: |
