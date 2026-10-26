@@ -68,7 +68,7 @@ jobs:
         run: |
           cd GameForge
           make clean
-          make package THEOS_PACKAGE_SCHEME=rootless FINALPACKAGE=1 messages=yes
+          make package THEOS_PACKAGE_SCHEME=rootless FINALPACKAGE=1 messages=yes ARCHS=arm64
           rc=$?
           echo "---- ld args dump ----"
           cat /tmp/ldargs.log 2>/dev/null || echo "no ldargs"
