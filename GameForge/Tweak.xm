@@ -11,6 +11,13 @@
     if (gf) { fprintf(gf, "%s\n", gc); fclose(gf); } \
 } while(0)
 
+static BOOL gfAllSameByte(const void *p, size_t n) {
+    if (!p) return NO;
+    const uint8_t *b = (const uint8_t *)p;
+    uint8_t v = b[0];
+    for (size_t i = 1; i < n; i++) if (b[i] != v) return NO;
+    return YES;
+}
 static BOOL gfAllZero(const void *p, size_t n) {
     if (!p) return NO;
     const uint8_t *b = (const uint8_t *)p;
@@ -33,7 +40,7 @@ static BOOL gForceSig = NO;
 
 #include <string.h>
 %hookf(int, memcmp, const void *s1, const void *s2, size_t n) {
-    if (n == 32 && (gfAllZero(s1, 32) || gfAllZero(s2, 32))) {
+    if (n == 32 && (gfAllSameByte(s1, 32) || gfAllSameByte(s2, 32))) {
         GFLOG(@"MEMCMP-ZERO-SIDE-PASS");
         return 0;
     }
