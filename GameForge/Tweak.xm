@@ -217,6 +217,39 @@ static NSString *gfHex(id obj) {
     return r;
 }
 
+/* v6.3 — فخ التواقيع: SecKeyVerifySignature / SecKeyRawVerify مع قلب اختياري */
+static int gfSigFlip(void) {
+    static int flip = -1, last = 0;
+    int now = (int)time(NULL);
+    if (now - last >= 5) {
+        last = now;
+        NSString *home = [NSString stringWithUTF8String:(getenv("HOME") ?: "")];
+        for (NSString *p in @[[home stringByAppendingPathComponent:@"tmp/gf_sig.txt"], @"/var/mobile/Documents/gf_sig.txt", @"/var/mobile/tmp/gf_sig.txt"]) {
+            NSString *fv = [[NSString alloc] initWithContentsOfFile:p encoding:NSUTF8StringEncoding error:nil];
+            if (fv && [fv length] > 0) { flip = (int)[fv integerValue]; break; }
+        }
+    }
+    return flip;
+}
+%hookf(OSStatus, SecKeyVerifySignature, SecKeyRef key, SecKeyAlgorithm algorithm, CFDataRef signedData, CFDataRef signature, CFErrorRef *error) {
+    OSStatus s = %orig(key, algorithm, signedData, signature, error);
+    if (gfDGFrameKC()) {
+        GFLOG(@"SIG-VERIFY st=%d alg=%@ dataLen=%ld sigLen=%ld", (int)s, algorithm, signedData ? (long)CFDataGetLength(signedData) : -1, signature ? (long)CFDataGetLength(signature) : -1);
+        int f = gfSigFlip();
+        if (f == 1 && s != 0) { GFLOG(@"SIG-FORCE ok"); if (error) *error = NULL; return 0; }
+    }
+    return s;
+}
+%hookf(OSStatus, SecKeyRawVerify, SecKeyRef key, SecPadding padding, const uint8_t *signedData, size_t dataLen, const uint8_t *sig, size_t sigLen) {
+    OSStatus s = %orig(key, padding, signedData, dataLen, sig, sigLen);
+    if (gfDGFrameKC()) {
+        GFLOG(@"SIG-RAW st=%d padding=%ld dataLen=%zu sigLen=%zu", (int)s, (long)padding, dataLen, sigLen);
+        int f = gfSigFlip();
+        if (f == 1 && s != 0) { GFLOG(@"SIG-RAW-FORCE ok"); return 0; }
+    }
+    return s;
+}
+
 %hookf(OSStatus, SecItemCopyMatching, CFDictionaryRef q, CFTypeRef *result) {
     OSStatus s = %orig(q, result);
     NSString *sv = q ? (__bridge NSString *)CFDictionaryGetValue(q, CFSTR("svce")) : nil;
