@@ -13,12 +13,19 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential git curl dpkg libssl-dev libplist-dev libplist++-dev libplist-utils
+      - name: Cache Theos
+        id: theos-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/theos
+          key: theos-linux-v3
       - name: Build ldid
         run: |
           git clone --depth 1 https://github.com/ProcursusTeam/ldid.git /tmp/ldid
           make -C /tmp/ldid -j$(nproc)
           sudo cp /tmp/ldid/ldid /usr/local/bin/ldid
       - name: Setup Theos
+        if: steps.theos-cache.outputs.cache-hit != 'true'
         run: |
           git clone --recursive --depth 1 https://github.com/theos/theos.git "$HOME/theos"
           git clone --depth 1 --filter=blob:none --sparse https://github.com/theos/sdks.git /tmp/sdks
@@ -26,26 +33,46 @@ jobs:
           cd "$HOME/theos/sdks"
           git sparse-checkout set iPhoneOS16.5.sdk iPhoneOS14.5.sdk
       - name: Setup iOS toolchain
+        if: steps.theos-cache.outputs.cache-hit != 'true'
         run: |
           curl -sL -o /tmp/swift.tar.gz https://download.swift.org/swift-6.0.3-release/ubuntu2404/swift-6.0.3-RELEASE/swift-6.0.3-RELEASE-ubuntu24.04.tar.gz
           tar -xzf /tmp/swift.tar.gz -C /tmp
           rm -rf "$HOME/theos/toolchain/linux/iphone"
           mkdir -p "$HOME/theos/toolchain/linux"
           cp -a /tmp/swift-6.0.3-RELEASE-ubuntu24.04/usr "$HOME/theos/toolchain/linux/iphone"
-          ls "$HOME/theos/toolchain/linux/iphone/bin/" | grep -E "^(ld|clang)" || true
-          if [ -f "$HOME/theos/toolchain/linux/iphone/bin/ld64.lld" ]; then
-            printf '#!/bin/sh\nexec "$(dirname "$0")/ld64.lld" "$@"\n' > "$HOME/theos/toolchain/linux/iphone/bin/ld"
-            chmod +x "$HOME/theos/toolchain/linux/iphone/bin/ld"
-          else
-            echo "NO ld64.lld in toolchain"; ls "$HOME/theos/toolchain/linux/iphone/bin/"; exit 1
-          fi
-          "$HOME/theos/toolchain/linux/iphone/bin/clang" --version
+      - name: ld wrapper (ld64 flag translation)
+        run: |
+          BIN="$HOME/theos/toolchain/linux/iphone/bin"
+          ls "$BIN" | grep -E "^(ld|clang)" || true
+          cat > "$BIN/ld" <<'EOF'
+          #!/bin/sh
+          echo "=== ld raw: $@" >> /tmp/ldargs.log
+          out=""
+          have_ver=0
+          for a in "$@"; do
+            case "$a" in
+              -platform_version) have_ver=1; out="$out $a";;
+              -iphoneos_version_min=*|-ios_version_min=*|-miphoneos-version-min=*) v="${a#*=}"; out="$out -platform_version ios $v 16.5"; have_ver=1;;
+              *) out="$out $a";;
+            esac
+          done
+          if [ $have_ver -eq 0 ]; then out="$out -platform_version ios 15.0 16.5"; fi
+          echo "=== ld lld: $out" >> /tmp/ldargs.log
+          exec "$(dirname "$0")/ld64.lld" $out
+          EOF
+          sed -i 's/^          //' "$BIN/ld"
+          chmod +x "$BIN/ld"
+          "$BIN/clang" --version
           echo "THEOS=$HOME/theos" >> "$GITHUB_ENV"
       - name: Build
         run: |
           cd GameForge
           make clean
-          make package THEOS_PACKAGE_SCHEME=rootless FINALPACKAGE=1
+          make package THEOS_PACKAGE_SCHEME=rootless FINALPACKAGE=1 messages=yes
+          rc=$?
+          echo "---- ld args dump ----"
+          cat /tmp/ldargs.log 2>/dev/null || echo "no ldargs"
+          exit $rc
       - name: Verify
         run: |
           set -e
