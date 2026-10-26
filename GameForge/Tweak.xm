@@ -638,6 +638,25 @@ static void gfFindDG(void) {
 
 static volatile uint8_t *gStateByte = NULL;
 static uint8_t gLastState = 0xFF;
+typedef int (*GFValFn)(void*,void*,void*,void*,void*,void*,void*,void*);
+static GFValFn gOrigVal = NULL;
+static int gValFlip = -1;
+static int gfValHook(void *a, void *b, void *c, void *d, void *e, void *f, void *g, void *h) {
+    static int lastReload = 0;
+    int now = (int)time(NULL);
+    if (now - lastReload >= 5) {
+        lastReload = now;
+        NSString *home = [NSString stringWithUTF8String:(getenv("HOME") ?: "")];
+        for (NSString *p in @[[home stringByAppendingPathComponent:@"tmp/gf_val.txt"], @"/var/mobile/Documents/gf_val.txt", @"/var/mobile/tmp/gf_val.txt"]) {
+            NSString *fv = [[NSString alloc] initWithContentsOfFile:p encoding:NSUTF8StringEncoding error:nil];
+            if (fv && [fv length] > 0) { gValFlip = (int)[fv integerValue]; break; }
+        }
+    }
+    int r = gOrigVal(a,b,c,d,e,f,g,h);
+    GFLOG(@"VAL-RET %d flip=%d args=%p,%p,%p", r, gValFlip, a, b, c);
+    if (gValFlip >= 0 && gValFlip != r) { GFLOG(@"VAL-FORCE -> %d", gValFlip); return gValFlip; }
+    return r;
+}
 
 __attribute__((constructor))
 static void gf_statewatch_ctor(void) {
@@ -658,27 +677,9 @@ static void gf_statewatch_ctor(void) {
         {
             uintptr_t dgbase = (uintptr_t)gStateByte - 0xd0c7a0;
             void *valfn = (void *)(dgbase + 0x1765b90);
-            static int (*orig_val)(void*,void*,void*,void*,void*,void*,void*,void*);
-            static int valFlip = -1;
-            int (*val_hook)(void*,void*,void*,void*,void*,void*,void*,void*) = ^int(void *a,void *b,void *c,void *d,void *e,void *f,void *g,void *h){
-                static int lastReload = 0;
-                int now = (int)time(NULL);
-                if (now - lastReload >= 5) {
-                    lastReload = now;
-                    NSString *home = [NSString stringWithUTF8String:(getenv("HOME") ?: "")];
-                    for (NSString *p in @[[home stringByAppendingPathComponent:@"tmp/gf_val.txt"], @"/var/mobile/Documents/gf_val.txt", @"/var/mobile/tmp/gf_val.txt"]) {
-                        NSString *fv = [[NSString alloc] initWithContentsOfFile:p encoding:NSUTF8StringEncoding error:nil];
-                        if (fv && [fv length] > 0) { valFlip = (int)[fv integerValue]; break; }
-                    }
-                }
-                int r = orig_val(a,b,c,d,e,f,g,h);
-                GFLOG(@"VAL-RET %d flip=%d args=%p,%p,%p", r, valFlip, a, b, c);
-                if (valFlip >= 0 && valFlip != r) { GFLOG(@"VAL-FORCE -> %d", valFlip); return valFlip; }
-                return r;
-            };
             void *orig_p = NULL;
-            MSHookFunction(valfn, (void *)val_hook, &orig_p);
-            orig_val = (int (*)(void*,void*,void*,void*,void*,void*,void*,void*))orig_p;
+            MSHookFunction(valfn, (void *)gfValHook, &orig_p);
+            gOrigVal = (GFValFn)orig_p;
             GFLOG(@"VAL-HOOK installed at DG+0x1765b90");
         }
 
