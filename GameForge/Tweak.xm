@@ -386,7 +386,15 @@ static void gf_swizzle_ctor(void) {
 
 
 extern "C" unsigned char *CC_SHA256(const void *data, CC_LONG len, unsigned char *md);
+static const uint8_t gKprefix[32] = {0xe3,0xb0,0xc4,0x42,0x98,0xfc,0x1c,0x14,0x9a,0xfb,0xf4,0xc8,0x99,0x6f,0xb9,0x24,0x27,0xae,0x41,0xe4,0x64,0x9b,0x93,0x4c,0xa4,0x95,0x99,0x1b,0x78,0x52,0xb8,0x55};
 %hookf(unsigned char *, CC_SHA256, const void *data, CC_LONG len, unsigned char *md) {
+    /* v3.5: تسميم حساب MAC — أي نداء بمفتاح DragonCheat (بادئة K) نُصفّر ناتجه
+       → التوقيع المتوقع = أصفار = توقيع ردنا المزوّر → المقارنة تنجح */
+    if (data && len == 64 && md && memcmp(data, gKprefix, 32) == 0) {
+        unsigned char *r = %orig(data, len, md);
+        if (r) { memset(r, 0, 32); GFLOG(@"MAC-POISONED (expected-sig zeroed)"); }
+        return r;
+    }
     if (data && len > 0 && len < 4096) {
         const uint8_t *b = (const uint8_t *)data;
         NSMutableString *hs = [NSMutableString string];
