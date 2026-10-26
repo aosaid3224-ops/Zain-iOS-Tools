@@ -202,7 +202,16 @@ static NSString *gfHex(id obj) {
     OSStatus s = %orig(q, result);
     NSString *sv = q ? (__bridge NSString *)CFDictionaryGetValue(q, CFSTR("svce")) : nil;
     NSString *ac = q ? (__bridge NSString *)CFDictionaryGetValue(q, CFSTR("acct")) : nil;
-    GFLOG(@"KC-FIND dg=%d %d svce=%@ acct=%@", (int)gfDGFrameKC(), (int)s, sv ?: @"-", ac ?: @"-");
+    {
+        NSArray *bt = [NSThread callStackReturnAddresses];
+        NSString *caller = @"-";
+        if (bt.count > 1) {
+            uintptr_t a0 = [bt[1] unsignedIntegerValue];
+            if (gDGbaseKC && a0 > gDGbaseKC && a0 < gDGbaseKC + 0x2000000)
+                caller = [NSString stringWithFormat:@"DG+%lx", (unsigned long)(a0 - gDGbaseKC)];
+        }
+        GFLOG(@"KC-FIND dg=%d %d svce=%@ acct=%@ from=%@", (int)gfDGFrameKC(), (int)s, sv ?: @"-", ac ?: @"-", caller);
+    }
     if (s == 0 && result && *result) GFLOG(@"KC-HIT-RAW dg=%d %@", (int)gfDGFrameKC(), gfHex((__bridge id)*result));
     return s;
 }
