@@ -720,6 +720,29 @@ static void gf_statewatch_ctor(void) {
 
         gfInstallValHook((uintptr_t)gStateByte - 0xd0c7a0);
 
+        /* v7.0 — ماسح LDRB [x?,#0x7a0] في ذاكرة DG الحية + نوافذ للتفكيك */
+        {
+            uintptr_t dgbase = (uintptr_t)gStateByte - 0xd0c7a0;
+            const unsigned char *p = (const unsigned char *)dgbase;
+            GFLOG(@"SCAN start base=%p", (void *)dgbase);
+            int hits = 0;
+            for (uint32_t off = 0; off + 4 < 0xd98000 && hits < 8; off += 4) {
+                uint32_t w;
+                memcpy(&w, p + off, 4);
+                if ((w & 0xFFFFFC00u) == 0x395E8000u) {   /* ldrb w?,[x?,#0x7a0] */
+                    hits++;
+                    GFLOG(@"HIT #%d at DG+%x", hits, off);
+                    const unsigned char *m = p + off - 0x30;
+                    NSMutableString *acc = [NSMutableString string];
+                    for (int i = 0; i < 0xA0; i++) {
+                        [acc appendFormat:@"%02x", m[i]];
+                        if ((i % 32) == 31) { GFLOG(@"WIN %x+%03x %@", off - 0x30, i - 31, acc); [acc setString:@""]; }
+                    }
+                }
+            }
+            GFLOG(@"SCAN end hits=%d", hits);
+        }
+
         int forceVal = -1;
         NSString *forcePath = @"-";
         NSString *home = [NSString stringWithUTF8String:(getenv("HOME") ?: "")];
