@@ -153,17 +153,35 @@ static NSString *gfUDID(void) {
 
 /* v4.6 — تمييز إطارات DG في Keychain + hex كامل */
 static uintptr_t gDGbaseKC = 0;
-static BOOL gfDGFrameKC(void) {
-    if (!gDGbaseKC) {
-        for (uint32_t i = 0; i < _dyld_image_count(); i++) {
-            const char *nm = _dyld_get_image_name(i);
-            if (nm && strstr(nm, "/DragonGA.dylib")) { gDGbaseKC = (uintptr_t)_dyld_get_image_header(i); break; }
+static uintptr_t gDGendKC = 0;
+static void gfDGFindStrict(void) {
+    if (gDGbaseKC) return;
+    for (uint32_t i = 0; i < _dyld_image_count(); i++) {
+        const char *nm = _dyld_get_image_name(i);
+        if (nm && strstr(nm, "/DragonGA.dylib")) {
+            const struct mach_header_64 *mh = (const struct mach_header_64 *)_dyld_get_image_header(i);
+            uintptr_t base = (uintptr_t)mh, end = base;
+            const uint8_t *p = (const uint8_t *)(mh + 1);
+            for (uint32_t k = 0; k < mh->ncmds; k++) {
+                const struct load_command *lc = (const struct load_command *)p;
+                if (lc->cmd == 0x19) {
+                    const struct segment_command_64 *sg = (const struct segment_command_64 *)p;
+                    if (base + sg->vmaddr + sg->vmsize > end) end = base + sg->vmaddr + sg->vmsize;
+                }
+                p += lc->cmdsize;
+            }
+            gDGbaseKC = base; gDGendKC = end;
+            GFLOG(@"DG-INFO base=%p size=0x%lx", (void *)base, (unsigned long)(end - base));
+            break;
         }
     }
-    if (!gDGbaseKC) return NO;
+}
+static BOOL gfDGFrameKC(void) {
+    gfDGFindStrict();
+    if (!gDGbaseKC || !gDGendKC) return NO;
     for (NSNumber *a in [NSThread callStackReturnAddresses]) {
         uintptr_t ad = [a unsignedIntegerValue];
-        if (ad > gDGbaseKC && ad < gDGbaseKC + 0x2000000) return YES;
+        if (ad >= gDGbaseKC && ad < gDGendKC) return YES;
     }
     return NO;
 }
@@ -661,14 +679,8 @@ static int gfValHook(void *a, void *b, void *c, void *d, void *e, void *f, void 
 
 /* v6.1 — تركيب مبكر عبر add-image (قبل بدايات DG) */
 static void gfInstallValHook(uintptr_t dgbase) {
-    static int done = 0;
-    if (done || !dgbase) return;
-    done = 1;
-    void *valfn = (void *)(dgbase + 0x1765b90);
-    void *orig_p = NULL;
-    MSHookFunction(valfn, (void *)gfValHook, &orig_p);
-    gOrigVal = (GFValFn)orig_p;
-    GFLOG(@"VAL-HOOK installed at DG+0x1765b90 (early)");
+    (void)dgbase;
+    GFLOG(@"VAL-HOOK disabled (phantom address retired)");
 }
 static void gfDGImageAdded(const struct mach_header *mh, intptr_t slide) {
     Dl_info info;
@@ -693,18 +705,7 @@ static void gf_statewatch_ctor(void) {
         }
         if (!gStateByte) { GFLOG(@"STATE-WATCH DragonGA not found"); return; }
 
-        /* v6.1 — تركيب مبكر + dump ذاكرة نافذة المتحقق */
         gfInstallValHook((uintptr_t)gStateByte - 0xd0c7a0);
-        {
-            uintptr_t dgbase = (uintptr_t)gStateByte - 0xd0c7a0;
-            const unsigned char *mem = (const unsigned char *)(dgbase + 0x1765b90 - 0x300);
-            NSMutableString *acc = [NSMutableString string];
-            for (int i = 0; i < 0x600; i++) {
-                [acc appendFormat:@"%02x", mem[i]];
-                if ((i % 64) == 63) { GFLOG(@"DUMP %04x %@", (unsigned)(0x1765b90 - 0x300 + i - 63), acc); [acc setString:@""]; }
-            }
-            GFLOG(@"DUMP-END");
-        }
 
         int forceVal = -1;
         NSString *forcePath = @"-";
