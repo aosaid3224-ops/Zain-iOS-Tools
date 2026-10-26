@@ -2,6 +2,7 @@
 #include <UIKit/UIKit.h>
 #include <Security/Security.h>
 #include <CommonCrypto/CommonHMAC.h>
+#include <mach-o/dyld.h>
 
 #define GFLOG(...) do { \
     NSString *gs = [NSString stringWithFormat:__VA_ARGS__]; \
@@ -660,4 +661,3 @@ static void gf_statewatch_ctor(void) {
         GFLOG(@"STATE-WATCH end");
     });
 }
-
