@@ -71,9 +71,9 @@ static NSString *gfUDID(void) {
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(10 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{ gIV512 = false; });
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(10 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{ gIV = false; });
         NSString *tpl = [[NSString alloc] initWithContentsOfFile:@"/var/mobile/Documents/gf_verify.json" encoding:NSUTF8StringEncoding error:nil];
-        if (!tpl || [tpl length] < 5) {
+                if (!tpl || [tpl length] < 5) {
             long gnow = (long)[[NSDate date] timeIntervalSince1970];
-            tpl = [NSString stringWithFormat:@"{\"valid\":true,\"code\":\"ok\",\"message\":\"activated\",\"expires\":\"2099-12-31 23:59:59\",\"sig\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"sig_ed\":\"00\",\"sig_ed2\":\"00\",\"server_time\":%ld}", gnow];
+            tpl = [NSString stringWithFormat:@"{\"valid\":true,\"code\":\"success\",\"message\":\"ok\",\"expires\":\"2099-12-31 23:59:59\",\"expire\":\"2099-12-31\",\"remaining_seconds\":31536000,\"remaining_text\":\"365 days\",\"sig\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"server_time\":%ld}", gnow];
         }
         NSData *d = [tpl dataUsingEncoding:NSUTF8StringEncoding];
         NSHTTPURLResponse *resp = [[NSHTTPURLResponse alloc] initWithURL:req.URL statusCode:200 HTTPVersion:@"HTTP/1.1" headerFields:@{@"Content-Type":@"application/json"}];
