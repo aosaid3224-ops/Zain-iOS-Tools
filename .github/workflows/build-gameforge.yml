@@ -5,16 +5,28 @@ permissions:
   contents: read
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Theos
+      - name: Install deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential git curl dpkg libssl-dev libplist-dev libplist++-dev libplist-utils
+      - name: Build ldid
+        run: |
+          git clone --depth 1 https://github.com/ProcursusTeam/ldid.git /tmp/ldid
+          make -C /tmp/ldid -j$(nproc)
+          sudo cp /tmp/ldid/ldid /usr/local/bin/ldid
+          ldid 2>&1 | head -2 || true
+      - name: Setup Theos + SDK
         run: |
           git clone --recursive --depth 1 https://github.com/theos/theos.git "$HOME/theos"
+          git clone --depth 1 --filter=blob:none --sparse https://github.com/theos/sdks.git "$HOME/theos/sdks"
+          cd "$HOME/theos/sdks"
+          git sparse-checkout set iPhoneOS16.5.sdk iPhoneOS14.5.sdk
+          ls "$HOME/theos/sdks"
           echo "THEOS=$HOME/theos" >> "$GITHUB_ENV"
-      - name: Setup dependencies
-        run: brew install dpkg ldid
       - name: Build
         run: |
           cd GameForge
