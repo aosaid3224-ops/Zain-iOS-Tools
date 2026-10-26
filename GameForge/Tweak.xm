@@ -42,7 +42,6 @@ static BOOL gForceSig = NO;
 }
 
 static bool gIV = false;
-static bool gIV512 = false;
 
 static NSString *gfUDID(void) {
     NSString *f = @"/var/mobile/Documents/gf_udid.txt";
