@@ -32,6 +32,13 @@ jobs:
           rm -rf "$HOME/theos/toolchain/linux/iphone"
           mkdir -p "$HOME/theos/toolchain/linux"
           cp -a /tmp/swift-6.0.3-RELEASE-ubuntu24.04/usr "$HOME/theos/toolchain/linux/iphone"
+          ls "$HOME/theos/toolchain/linux/iphone/bin/" | grep -E "^(ld|clang)" || true
+          if [ -f "$HOME/theos/toolchain/linux/iphone/bin/ld64.lld" ]; then
+            printf '#!/bin/sh\nexec "$(dirname "$0")/ld64.lld" "$@"\n' > "$HOME/theos/toolchain/linux/iphone/bin/ld"
+            chmod +x "$HOME/theos/toolchain/linux/iphone/bin/ld"
+          else
+            echo "NO ld64.lld in toolchain"; ls "$HOME/theos/toolchain/linux/iphone/bin/"; exit 1
+          fi
           "$HOME/theos/toolchain/linux/iphone/bin/clang" --version
           echo "THEOS=$HOME/theos" >> "$GITHUB_ENV"
       - name: Build
