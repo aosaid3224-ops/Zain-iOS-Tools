@@ -32,6 +32,7 @@ jobs:
           cp -a /tmp/sdks/. "$HOME/theos/sdks/"
           cd "$HOME/theos/sdks"
           git sparse-checkout set iPhoneOS16.5.sdk iPhoneOS14.5.sdk
+          echo "THEOS=$HOME/theos" >> "$GITHUB_ENV"
       - name: Setup iOS toolchain
         if: steps.theos-cache.outputs.cache-hit != 'true'
         run: |
