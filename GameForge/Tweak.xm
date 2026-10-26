@@ -559,7 +559,8 @@ static void gfFindDG(void) {
 %end
 
 
-/* v4.2 — مراقب بايت الحالة (base+0xd0c7a0) + كاتب تجريبي اختياري — ذاكرة فقط، لا ملف */
+/* v4.3 — إصلاح مسار gf_state.txt (sandbox) + إعادة تحميل الإجبار كل 30ث
+   v4.2 — مراقب بايت الحالة (base+0xd0c7a0) + كاتب تجريبي اختياري — ذاكرة فقط، لا ملف */
 #include <mach-o/dyld.h>
 #include <unistd.h>
 
@@ -582,11 +583,26 @@ static void gf_statewatch_ctor(void) {
         if (!gStateByte) { GFLOG(@"STATE-WATCH DragonGA not found"); return; }
 
         int forceVal = -1;
-        NSString *fv = [[NSString alloc] initWithContentsOfFile:@"/var/mobile/Documents/gf_state.txt" encoding:NSUTF8StringEncoding error:nil];
-        if (fv && [fv length] > 0) forceVal = (int)[fv integerValue];
+        NSString *forcePath = @"-";
+        NSString *home = [NSString stringWithUTF8String:(getenv("HOME") ?: "")];
+        NSArray *cands = @[
+            [home stringByAppendingPathComponent:@"tmp/gf_state.txt"],
+            @"/var/mobile/Documents/gf_state.txt",
+            @"/var/mobile/tmp/gf_state.txt",
+        ];
+        for (NSString *c in cands) {
+            NSString *fv = [[NSString alloc] initWithContentsOfFile:c encoding:NSUTF8StringEncoding error:nil];
+            if (fv && [fv length] > 0) { forceVal = (int)[fv integerValue]; forcePath = c; break; }
+        }
+        #define GF_RELOAD_FORCE() do { \
+            for (NSString *c in cands) { \
+                NSString *fv = [[NSString alloc] initWithContentsOfFile:c encoding:NSUTF8StringEncoding error:nil]; \
+                if (fv && [fv length] > 0) { forceVal = (int)[fv integerValue]; forcePath = c; break; } \
+            } \
+        } while (0)
 
         gLastState = *gStateByte;
-        GFLOG(@"STATE-WATCH armed addr=%p initial=%u force=%d", (void *)gStateByte, gLastState, forceVal);
+        GFLOG(@"STATE-WATCH armed addr=%p initial=%u force=%d path=%@", (void *)gStateByte, gLastState, forceVal, forcePath);
 
         int lastForcedLog = 0;
         for (int iter = 0; iter < 720; iter++) {          /* ~6 دقائق */
@@ -595,6 +611,7 @@ static void gf_statewatch_ctor(void) {
                 GFLOG(@"STATE-CHANGE 0x%02x -> 0x%02x (iter %d)", gLastState, cur, iter);
                 gLastState = cur;
             }
+            if ((iter % 60) == 0) GF_RELOAD_FORCE();
             if (forceVal >= 0 && forceVal <= 255 && cur != (uint8_t)forceVal) {
                 *gStateByte = (uint8_t)forceVal;
                 if (iter - lastForcedLog >= 40) { GFLOG(@"STATE-FORCED -> %d", forceVal); lastForcedLog = iter; }
