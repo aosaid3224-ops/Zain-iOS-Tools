@@ -51,7 +51,7 @@ jobs:
           os.chmod(os.path.join(bin, 'ld'), 0o755)
           strip = os.path.join(bin, 'strip')
           if not os.path.exists(strip):
-              strip_wrapper = '#!/bin/sh\nif [ -x "$(dirname "$0")/llvm-strip" ]; then exec "$(dirname "$0")/llvm-strip" "$@"; fi\nexec llvm-strip "$@"\n'
+              strip_wrapper = '#!/bin/sh\nif [ -x "$(dirname "$0")/llvm-strip" ]; then exec "$(dirname "$0")/llvm-strip" "$@"; fi\nif command -v llvm-strip >/dev/null 2>&1; then exec llvm-strip "$@"; fi\nexit 0\n'
               open(strip, 'w').write(strip_wrapper)
               os.chmod(strip, 0o755)
           print('wrapper written:', os.path.join(bin, 'ld'))
