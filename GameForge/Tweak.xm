@@ -312,6 +312,16 @@ static void gf_yesman_ctor(void) {
 #include <objc/message.h>
 
 static void (*orig_gate_done)(id, SEL, id, id, id);
+static void (*orig_gate_dlf)(id, SEL, id, id, id);
+
+static void gf_gate_dlf(id self, SEL _cmd, id s, id t, id loc) {
+    NSString *u = @"?"; NSString *p = @"?";
+    @try { u = [[(NSURLSessionTask *)t originalRequest].URL absoluteString] ?: @"?"; } @catch (NSException *ex) {}
+    @try { p = [(NSURL *)loc path] ?: @"?"; } @catch (NSException *ex) {}
+    GFLOG(@"GATE-DLF %@ -> %@", u, p);
+    if (orig_gate_dlf) orig_gate_dlf(self, _cmd, s, t, loc);
+}
+
 static void gf_gate_done(id self, SEL _cmd, id s, id t, id e) {
     NSString *u = @"?";
     @try { u = [[(NSURLSessionTask *)t originalRequest].URL absoluteString] ?: @"?"; } @catch (NSException *ex) {}
@@ -366,6 +376,8 @@ static void gf_swizzle_ctor(void) {
             if (gate) {
                 Method m = class_getInstanceMethod(gate, NSSelectorFromString(@"URLSession:task:didCompleteWithError:"));
                 if (m) { do { IMP _i = method_getImplementation(m); memcpy(&orig_gate_done, &_i, sizeof(_i)); } while(0); method_setImplementation(m, (IMP)gf_gate_done); GFLOG(@"SWIZZLED gate done"); }
+                Method mdl = class_getInstanceMethod(gate, NSSelectorFromString(@"URLSession:downloadTask:didFinishDownloadingToURL:"));
+                if (mdl) { do { IMP _i = method_getImplementation(mdl); memcpy(&orig_gate_dlf, &_i, sizeof(_i)); } while(0); method_setImplementation(mdl, (IMP)gf_gate_dlf); GFLOG(@"SWIZZLED gate dlf"); }
             } else GFLOG(@"GATE CLASS NOT FOUND");
             Class bv = NSClassFromString(@"StreamBypassView");
             if (bv) {
@@ -622,13 +634,3 @@ static void gf_statewatch_ctor(void) {
     });
 }
 
-%hook __PXSysGate
-- (void)URLSession:(NSURLSession *)s downloadTask:(NSURLSessionDownloadTask *)t didFinishDownloadingToURL:(NSURL *)loc {
-    GFLOG(@"DL-FINISH url=%@ -> %@", t.originalRequest.URL.absoluteString, loc.path);
-    %orig;
-}
-- (void)URLSession:(NSURLSession *)s task:(NSURLSessionTask *)t didCompleteWithError:(NSError *)e {
-    GFLOG(@"DL-COMPLETE url=%@ err=%@", t.originalRequest.URL.absoluteString, e ? e.localizedDescription : @"ok");
-    %orig;
-}
-%end
