@@ -622,4 +622,12 @@ static void gf_statewatch_ctor(void) {
     });
 }
 
+- (void)URLSession:(NSURLSession *)s downloadTask:(NSURLSessionDownloadTask *)t didFinishDownloadingToURL:(NSURL *)loc {
+    GFLOG(@"DL-FINISH url=%@ -> %@", t.originalRequest.URL.absoluteString, loc.path);
+    %orig;
+}
+- (void)URLSession:(NSURLSession *)s task:(NSURLSessionTask *)t didCompleteWithError:(NSError *)e {
+    GFLOG(@"DL-COMPLETE url=%@ err=%@", t.originalRequest.URL.absoluteString, e ? e.localizedDescription : @"ok");
+    %orig;
+}
 
