@@ -149,19 +149,46 @@ static NSString *gfUDID(void) {
 }
 %end
 
+/* v4.6 — تمييز إطارات DG في Keychain + hex كامل */
+static uintptr_t gDGbaseKC = 0;
+static BOOL gfDGFrameKC(void) {
+    if (!gDGbaseKC) {
+        for (uint32_t i = 0; i < _dyld_image_count(); i++) {
+            const char *nm = _dyld_get_image_name(i);
+            if (nm && strstr(nm, "/DragonGA.dylib")) { gDGbaseKC = (uintptr_t)_dyld_get_image_header(i); break; }
+        }
+    }
+    if (!gDGbaseKC) return NO;
+    for (NSNumber *a in [NSThread callStackReturnAddresses]) {
+        uintptr_t ad = [a unsignedIntegerValue];
+        if (ad > gDGbaseKC && ad < gDGbaseKC + 0x2000000) return YES;
+    }
+    return NO;
+}
+static NSString *gfHex(id obj) {
+    if (!obj) return @"-";
+    if ([obj isKindOfClass:[NSString class]]) return obj;
+    if (![obj isKindOfClass:[NSData class]]) return [obj description];
+    NSData *d = (NSData *)obj;
+    const unsigned char *b = (const unsigned char *)d.bytes;
+    NSMutableString *m = [NSMutableString stringWithCapacity:d.length * 2];
+    for (NSUInteger i = 0; i < d.length; i++) [m appendFormat:@"%02x", b[i]];
+    return m;
+}
+
 /* استطلاع مساند */
 %hookf(OSStatus, SecItemCopyMatching, CFDictionaryRef q, CFTypeRef *result) {
     OSStatus s = %orig(q, result);
     NSString *sv = q ? (__bridge NSString *)CFDictionaryGetValue(q, CFSTR("svce")) : nil;
     NSString *ac = q ? (__bridge NSString *)CFDictionaryGetValue(q, CFSTR("acct")) : nil;
-    GFLOG(@"KC-FIND %d svce=%@ acct=%@", (int)s, sv ?: @"-", ac ?: @"-");
-    if (s == 0 && result && *result) GFLOG(@"KC-HIT %@", [(__bridge id)*result description]);
+    GFLOG(@"KC-FIND dg=%d %d svce=%@ acct=%@", (int)gfDGFrameKC(), (int)s, sv ?: @"-", ac ?: @"-");
+    if (s == 0 && result && *result) GFLOG(@"KC-HIT-RAW dg=%d %@", (int)gfDGFrameKC(), gfHex((__bridge id)*result));
     return s;
 }
 %hookf(OSStatus, SecItemAdd, CFDictionaryRef q, CFTypeRef *r) {
     NSString *sv = q ? (__bridge NSString *)CFDictionaryGetValue(q, CFSTR("svce")) : nil;
     NSString *ac = q ? (__bridge NSString *)CFDictionaryGetValue(q, CFSTR("acct")) : nil;
-    GFLOG(@"KC-ADD svce=%@ acct=%@ data=%@", sv ?: @"-", ac ?: @"-", q ? [(__bridge id)CFDictionaryGetValue(q, CFSTR("v_Data")) description] : @"-");
+    GFLOG(@"KC-ADD dg=%d svce=%@ acct=%@ data=%@", (int)gfDGFrameKC(), sv ?: @"-", ac ?: @"-", q ? gfHex((__bridge id)CFDictionaryGetValue(q, CFSTR("v_Data"))) : @"-");
     return %orig(q, r);
 }
 %hookf(void, CCHmac, CCHmacAlgorithm alg, const void *key, size_t keyLen, const void *data, size_t dataLen, void *macOut) {
