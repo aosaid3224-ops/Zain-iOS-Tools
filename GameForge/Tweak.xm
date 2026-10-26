@@ -64,6 +64,8 @@ static NSString *gfUDID(void) {
     /* --- فورج التحقق من المفتاح: رد قابل للتعديل من ملف --- */
     if ([url containsString:@"api.hackgamefile.com"] && [url containsString:@"/verify"]) {
         GFLOG(@"GF-FORGE verify %@", url);
+        gIV = true;
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(10 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{ gIV = false; });
         NSString *tpl = [[NSString alloc] initWithContentsOfFile:@"/var/mobile/Documents/gf_verify.json" encoding:NSUTF8StringEncoding error:nil];
         if (!tpl || [tpl length] < 5) {
             long gnow = (long)[[NSDate date] timeIntervalSince1970];
@@ -437,3 +439,38 @@ static BOOL gfIsHex64(NSString *s) {
     return %orig(other);
 }
 %end
+
+/* v3.7 — عقّ SHA256 الداخلي الحقيقي (base+0xdc5d4) → تسميم الحالة → التوقيع المتوقع أصفار */
+#include <substrate.h>
+#include <mach-o/dyld.h>
+
+static bool gIV = false;
+static void (*orig_isha)(void *a, void *b);
+static void hooked_isha(void *a, void *b) {
+    if (orig_isha) orig_isha(a, b);
+    if (gIV && a) {
+        memset(a, 0, 32);
+        GFLOG(@"ISHA-POISONED a=%p b=%p", a, b);
+    } else if (a && b) {
+        GFLOG(@"ISHA-CALL a=%p b=%p head=%02x%02x%02x%02x", a, b,
+              ((uint8_t*)a)[0], ((uint8_t*)a)[1], ((uint8_t*)a)[2], ((uint8_t*)a)[3]);
+    }
+}
+
+__attribute__((constructor))
+static void gf_isha_ctor(void) {
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(10 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        @autoreleasepool {
+            for (uint32_t i = 0; i < _dyld_image_count(); i++) {
+                const char *nm = _dyld_get_image_name(i);
+                if (nm && strstr(nm, "/DragonGA.dylib")) {
+                    const struct mach_header_64 *mh = (const struct mach_header_64 *)_dyld_get_image_header(i);
+                    void *target = (void *)((uintptr_t)mh + 0xdc5d4);
+                    MSHookFunction(target, (void *)hooked_isha, (void **)&orig_isha);
+                    GFLOG(@"ISHA-HOOKED %p (base %p)", target, mh);
+                    break;
+                }
+            }
+        }
+    });
+}
