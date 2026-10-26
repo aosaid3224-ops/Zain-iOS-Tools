@@ -3,6 +3,7 @@
 #include <Security/Security.h>
 #include <CommonCrypto/CommonHMAC.h>
 #include <mach-o/dyld.h>
+#include <dlfcn.h>
 
 #define GFLOG(...) do { \
     NSString *gs = [NSString stringWithFormat:__VA_ARGS__]; \
