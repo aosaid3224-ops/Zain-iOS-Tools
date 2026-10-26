@@ -42,12 +42,14 @@ jobs:
           cp -a /tmp/swift-6.0.3-RELEASE-ubuntu24.04/usr "$HOME/theos/toolchain/linux/iphone"
       - name: ld wrapper
         run: |
+          python3 - <<'PY'
           import os
           bin = os.path.expanduser('~/theos/toolchain/linux/iphone/bin')
           wrapper = '#!/bin/sh\necho "=== ld raw: $@" >> /tmp/ldargs.log\nout=""\nhave_ver=0\nfor a in "$@"; do\n  case "$a" in\n    -platform_version) have_ver=1; out="$out $a";;\n    -iphoneos_version_min=*|-ios_version_min=*|-miphoneos-version-min=*) v="${a#*=}"; out="$out -platform_version ios $v 16.5"; have_ver=1;;\n    *) out="$out $a";;\n  esac\ndone\nif [ $have_ver -eq 0 ]; then out="$out -platform_version ios 15.0 16.5"; fi\necho "=== ld lld: $out" >> /tmp/ldargs.log\nexec "$(dirname "$0")/ld64.lld" $out\n'
           open(os.path.join(bin, 'ld'), 'w').write(wrapper)
           os.chmod(os.path.join(bin, 'ld'), 0o755)
           print('wrapper written:', os.path.join(bin, 'ld'))
+          PY
           
 
       - name: Build
