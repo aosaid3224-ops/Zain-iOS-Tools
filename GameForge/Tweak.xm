@@ -42,6 +42,7 @@ static BOOL gForceSig = NO;
 }
 
 static bool gIV = false;
+static bool gIV512 = false;
 
 static NSString *gfUDID(void) {
     NSString *f = @"/var/mobile/Documents/gf_udid.txt";
@@ -480,7 +481,6 @@ static void gf_isha_ctor(void) {
 /* v3.8 — تسميم SHA-512 (محرك Ed25519) أثناء نافذة التحقق */
 #include <CommonCrypto/CommonDigest.h>
 extern "C" unsigned char *CC_SHA512(const void *data, CC_LONG len, unsigned char *md);
-static bool gIV512 = false;
 %hookf(unsigned char *, CC_SHA512, const void *data, CC_LONG len, unsigned char *md) {
     unsigned char *r = %orig(data, len, md);
     if (gIV512 && r) {
