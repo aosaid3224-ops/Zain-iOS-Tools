@@ -178,6 +178,26 @@ static NSString *gfHex(id obj) {
 }
 
 /* استطلاع مساند */
+/* v4.7 — فخ فك تشفير RSA: النص الصريح للرخصة */
+%hookf(CFTypeRef, SecKeyCreateDecrypted, SecKeyRef key, SecAlgorithm algorithm, CFDataRef ciphertext, CFDictionaryRef parameters, CFErrorRef *error) {
+    CFTypeRef out = %orig(key, algorithm, ciphertext, parameters, error);
+    if (gfDGFrameKC()) {
+        GFLOG(@"DEC alg=%@ in=%@", algorithm, ciphertext ? gfHex((__bridge id)ciphertext) : @"-");
+        if (out) GFLOG(@"DEC-OUT %@", gfHex((__bridge id)out));
+        if (error && *error) GFLOG(@"DEC-ERR %@", *error);
+    }
+    return out;
+}
+%hookf(CFTypeRef, SecKeyCreateEncrypted, SecKeyRef key, SecAlgorithm algorithm, CFDataRef plaintext, CFDictionaryRef parameters, CFErrorRef *error) {
+    if (gfDGFrameKC() && plaintext) GFLOG(@"ENC alg=%@ plain=%@", algorithm, gfHex((__bridge id)plaintext));
+    return %orig(key, algorithm, plaintext, parameters, error);
+}
+%hookf(CFTypeRef, SecKeyGeneratePair, CFDictionaryRef parameters, CFTypeRef *publicKey, CFTypeRef *privateKey) {
+    CFTypeRef r = %orig(parameters, publicKey, privateKey);
+    if (gfDGFrameKC()) GFLOG(@"GEN-PAIR");
+    return r;
+}
+
 %hookf(OSStatus, SecItemCopyMatching, CFDictionaryRef q, CFTypeRef *result) {
     OSStatus s = %orig(q, result);
     NSString *sv = q ? (__bridge NSString *)CFDictionaryGetValue(q, CFSTR("svce")) : nil;
