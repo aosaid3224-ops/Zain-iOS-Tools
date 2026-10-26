@@ -18,12 +18,6 @@ static BOOL gfAllSameByte(const void *p, size_t n) {
     for (size_t i = 1; i < n; i++) if (b[i] != v) return NO;
     return YES;
 }
-static BOOL gfAllZero(const void *p, size_t n) {
-    if (!p) return NO;
-    const uint8_t *b = (const uint8_t *)p;
-    for (size_t i = 0; i < n; i++) if (b[i] != 0) return NO;
-    return YES;
-}
 
 
 static void gfWalkDump(UIView *v, int dep) {
