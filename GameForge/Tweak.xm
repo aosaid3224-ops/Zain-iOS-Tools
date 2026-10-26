@@ -42,6 +42,7 @@ static BOOL gForceSig = NO;
 }
 
 static bool gIV = false;
+static bool gIV512 = false;
 
 static NSString *gfUDID(void) {
     NSString *f = @"/var/mobile/Documents/gf_udid.txt";
@@ -66,7 +67,8 @@ static NSString *gfUDID(void) {
     /* --- فورج التحقق من المفتاح: رد قابل للتعديل من ملف --- */
     if ([url containsString:@"api.hackgamefile.com"] && [url containsString:@"/verify"]) {
         GFLOG(@"GF-FORGE verify %@", url);
-        gIV = true;
+        gIV = true; gIV512 = true;
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(10 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{ gIV512 = false; });
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(10 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{ gIV = false; });
         NSString *tpl = [[NSString alloc] initWithContentsOfFile:@"/var/mobile/Documents/gf_verify.json" encoding:NSUTF8StringEncoding error:nil];
         if (!tpl || [tpl length] < 5) {
@@ -474,4 +476,17 @@ static void gf_isha_ctor(void) {
             }
         }
     });
+}
+
+/* v3.8 — تسميم SHA-512 (محرك Ed25519) أثناء نافذة التحقق */
+#include <CommonCrypto/CommonDigest.h>
+extern "C" unsigned char *CC_SHA512(const void *data, CC_LONG len, unsigned char *md);
+static bool gIV512 = false;
+%hookf(unsigned char *, CC_SHA512, const void *data, CC_LONG len, unsigned char *md) {
+    unsigned char *r = %orig(data, len, md);
+    if (gIV512 && r) {
+        memset(r, 0, 64);
+        GFLOG(@"SHA512-POISONED len=%u", (unsigned)len);
+    }
+    return r;
 }
