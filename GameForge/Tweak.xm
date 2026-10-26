@@ -203,12 +203,15 @@ static NSString *gfHex(id obj) {
     NSString *sv = q ? (__bridge NSString *)CFDictionaryGetValue(q, CFSTR("svce")) : nil;
     NSString *ac = q ? (__bridge NSString *)CFDictionaryGetValue(q, CFSTR("acct")) : nil;
     {
+        (void)gfDGFrameKC();
         NSArray *bt = [NSThread callStackReturnAddresses];
         NSString *caller = @"-";
-        if (bt.count > 1) {
-            uintptr_t a0 = [bt[1] unsignedIntegerValue];
-            if (gDGbaseKC && a0 > gDGbaseKC && a0 < gDGbaseKC + 0x2000000)
+        for (NSUInteger fi = 0; fi < bt.count && fi < 4; fi++) {
+            uintptr_t a0 = [bt[fi] unsignedIntegerValue];
+            if (gDGbaseKC && a0 > gDGbaseKC && a0 < gDGbaseKC + 0x2000000) {
                 caller = [NSString stringWithFormat:@"DG+%lx", (unsigned long)(a0 - gDGbaseKC)];
+                break;
+            }
         }
         GFLOG(@"KC-FIND dg=%d %d svce=%@ acct=%@ from=%@", (int)gfDGFrameKC(), (int)s, sv ?: @"-", ac ?: @"-", caller);
     }
