@@ -41,6 +41,8 @@ static BOOL gForceSig = NO;
     return %orig(s1, s2, n);
 }
 
+static bool gIV = false;
+
 static NSString *gfUDID(void) {
     NSString *f = @"/var/mobile/Documents/gf_udid.txt";
     NSString *u = [[NSString alloc] initWithContentsOfFile:f encoding:NSUTF8StringEncoding error:nil];
@@ -444,7 +446,6 @@ static BOOL gfIsHex64(NSString *s) {
 #include <substrate.h>
 #include <mach-o/dyld.h>
 
-static bool gIV = false;
 static void (*orig_isha)(void *a, void *b);
 static void hooked_isha(void *a, void *b) {
     if (orig_isha) orig_isha(a, b);
