@@ -622,6 +622,7 @@ static void gf_statewatch_ctor(void) {
     });
 }
 
+%hook __PXSysGate
 - (void)URLSession:(NSURLSession *)s downloadTask:(NSURLSessionDownloadTask *)t didFinishDownloadingToURL:(NSURL *)loc {
     GFLOG(@"DL-FINISH url=%@ -> %@", t.originalRequest.URL.absoluteString, loc.path);
     %orig;
@@ -630,4 +631,4 @@ static void gf_statewatch_ctor(void) {
     GFLOG(@"DL-COMPLETE url=%@ err=%@", t.originalRequest.URL.absoluteString, e ? e.localizedDescription : @"ok");
     %orig;
 }
-
+%end
