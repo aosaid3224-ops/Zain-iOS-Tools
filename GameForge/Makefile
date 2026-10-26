@@ -9,3 +9,4 @@ GameForge_CFLAGS = -Wno-deprecated-declarations -fobjc-arc
 GameForge_FILES = Tweak.xm
 
 include $(THEOS_MAKE_PATH)/tweak.mk
+GameForge_FRAMEWORKS = Security
