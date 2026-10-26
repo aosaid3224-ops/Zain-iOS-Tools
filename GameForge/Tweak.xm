@@ -654,6 +654,22 @@ static void gf_statewatch_ctor(void) {
         }
         if (!gStateByte) { GFLOG(@"STATE-WATCH DragonGA not found"); return; }
 
+        /* v5.0 — خطّاف مُتحقق الرخصة DG+0x1765b90 (تسجيل قيمة الإرجاع) */
+        {
+            uintptr_t dgbase = (uintptr_t)gStateByte - 0xd0c7a0;
+            void *valfn = (void *)(dgbase + 0x1765b90);
+            static int (*orig_val)(void*,void*,void*,void*,void*,void*,void*,void*);
+            int (*val_hook)(void*,void*,void*,void*,void*,void*,void*,void*) = ^int(void *a,void *b,void *c,void *d,void *e,void *f,void *g,void *h){
+                int r = orig_val(a,b,c,d,e,f,g,h);
+                GFLOG(@"VAL-RET %d", r);
+                return r;
+            };
+            void *orig_p = NULL;
+            MSHookFunction(valfn, (void *)val_hook, &orig_p);
+            orig_val = (int (*)(void*,void*,void*,void*,void*,void*,void*,void*))orig_p;
+            GFLOG(@"VAL-HOOK installed at DG+0x1765b90");
+        }
+
         int forceVal = -1;
         NSString *forcePath = @"-";
         NSString *home = [NSString stringWithUTF8String:(getenv("HOME") ?: "")];
