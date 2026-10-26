@@ -178,9 +178,9 @@ static NSString *gfHex(id obj) {
 }
 
 /* استطلاع مساند */
-/* v4.7 — فخ فك تشفير RSA: النص الصريح للرخصة */
-%hookf(CFTypeRef, SecKeyCreateDecrypted, SecKeyRef key, SecAlgorithm algorithm, CFDataRef ciphertext, CFDictionaryRef parameters, CFErrorRef *error) {
-    CFTypeRef out = %orig(key, algorithm, ciphertext, parameters, error);
+/* v4.7 — استطلاع Security API دون تعديل نتيجة التحقق */
+%hookf(CFDataRef, SecKeyCreateDecryptedData, SecKeyRef key, SecKeyAlgorithm algorithm, CFDataRef ciphertext, CFErrorRef *error) {
+    CFDataRef out = %orig(key, algorithm, ciphertext, error);
     if (gfDGFrameKC()) {
         GFLOG(@"DEC alg=%@ in=%@", algorithm, ciphertext ? gfHex((__bridge id)ciphertext) : @"-");
         if (out) GFLOG(@"DEC-OUT %@", gfHex((__bridge id)out));
@@ -188,9 +188,9 @@ static NSString *gfHex(id obj) {
     }
     return out;
 }
-%hookf(CFTypeRef, SecKeyCreateEncrypted, SecKeyRef key, SecAlgorithm algorithm, CFDataRef plaintext, CFDictionaryRef parameters, CFErrorRef *error) {
+%hookf(CFDataRef, SecKeyCreateEncryptedData, SecKeyRef key, SecKeyAlgorithm algorithm, CFDataRef plaintext, CFErrorRef *error) {
     if (gfDGFrameKC() && plaintext) GFLOG(@"ENC alg=%@ plain=%@", algorithm, gfHex((__bridge id)plaintext));
-    return %orig(key, algorithm, plaintext, parameters, error);
+    return %orig(key, algorithm, plaintext, error);
 }
 %hookf(CFTypeRef, SecKeyGeneratePair, CFDictionaryRef parameters, CFTypeRef *publicKey, CFTypeRef *privateKey) {
     CFTypeRef r = %orig(parameters, publicKey, privateKey);
