@@ -623,6 +623,87 @@ static void gfTraceErrorText(NSString *text, NSString *via) {
 }
 %end
 
+/* v21 — GOD MODE: تشريح لحظة الخطأ + ملعب الباتشات الحي */
+#include <objc/runtime.h>
+#include <sys/mman.h>
+
+static void gfScanLog(const char *ndl, size_t nl) {
+    if (!gDGbaseKC) return;
+    uintptr_t p = gDGbaseKC + 0x41c000, end = gDGbaseKC + 0xd64000;
+    int hits = 0;
+    for (; p + nl < end && hits < 6; p += 4) {
+        if (memcmp((void *)p, ndl, nl) == 0) {
+            GFLOG(@"SCAN-HIT DG+0x%lx str=%.80s", (unsigned long)(p - gDGbaseKC), (const char *)p);
+            hits++;
+        }
+    }
+}
+
+static void gfApplyPatches(uintptr_t dgbase) {
+    NSString *home = [NSString stringWithUTF8String:(getenv("HOME") ?: "")];
+    NSString *pf = [[NSString alloc] initWithContentsOfFile:[home stringByAppendingPathComponent:@"tmp/gf_patch.txt"] encoding:NSUTF8StringEncoding error:nil];
+    if (!pf || [pf length] == 0) return;
+    for (NSString *ln in [pf componentsSeparatedByString:@"\n"]) {
+        NSArray *kv = [ln componentsSeparatedByString:@"="];
+        if (kv.count != 2) continue;
+        uintptr_t off = strtoull([kv[0] UTF8String], NULL, 16);
+        NSString *hex = [kv[1] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
+        uintptr_t addr = dgbase + off;
+        uintptr_t page = addr & ~0xFFFULL;
+        mprotect((void *)page, 0x8000, PROT_READ|PROT_WRITE|PROT_EXEC);
+        for (NSUInteger k = 0; k * 2 < [hex length]; k++) {
+            unsigned v = 0;
+            sscanf([[hex substringWithRange:NSMakeRange(k*2, 2)] UTF8String], "%x", &v);
+            ((uint8_t *)addr)[k] = (uint8_t)v;
+        }
+        GFLOG(@"PATCH DG+%lx=%@ (mem)", (unsigned long)off, hex);
+    }
+}
+
+static int gGodDraws = 0;
+%hook StreamBypassView
+- (void)drawRect:(CGRect)rect {
+    gGodDraws++;
+    if (gGodDraws == 4) {
+        (void)gfDGFrameKC();
+        GFLOG(@"GOD-DRAW #%d", gGodDraws);
+        unsigned int ni = 0;
+        Ivar *ivs = class_copyIvarList([self class], &ni);
+        for (unsigned k = 0; k < ni; k++) {
+            const char *nm = ivar_getName(ivs[k]);
+            const char *ty = ivar_getTypeEncoding(ivs[k]);
+            @try {
+                if (ty && ty[0] == '@') {
+                    GFLOG(@"IVAR %s = %@", nm, object_getIvar(self, ivs[k]));
+                } else {
+                    uintptr_t a = (uintptr_t)self + ivar_getOffset(ivs[k]);
+                    GFLOG(@"IVAR %s ty=%s raw=%016lx %.48s", nm, ty?ty:"?", *(uintptr_t *)a, (const char *)a);
+                }
+            } @catch (...) { GFLOG(@"IVAR %s = ?", nm); }
+        }
+        if (ivs) free(ivs);
+        gfScanLog("Invalid server sig", 18);
+        gfScanLog("Network: Invalid", 16);
+        if (gDGbaseKC) {
+            uint8_t *sb = (uint8_t *)(gDGbaseKC + 0xd0c7a0);
+            NSMutableString *hx = [NSMutableString string];
+            for (int k = -16; k < 32; k++) [hx appendFormat:@"%02x", sb[k]];
+            GFLOG(@"STATE-CTX %@ cur=%d", hx, sb[0]);
+        }
+        NSArray *bt = [NSThread callStackReturnAddresses];
+        int n = 0;
+        for (NSNumber *a in bt) {
+            uintptr_t ad = [a unsignedIntegerValue];
+            if (gDGbaseKC && ad >= gDGbaseKC && ad < gDGendKC) {
+                GFLOG(@"GOD-FRAME DG+%lx", (unsigned long)(ad - gDGbaseKC));
+                if (++n >= 6) break;
+            }
+        }
+    }
+    %orig;
+}
+%end
+
 %hook UILabel
 - (void)setText:(NSString *)text {
     gfTraceErrorText(text, @"UILabel.setText");
@@ -1128,6 +1209,7 @@ static void gf_statewatch_ctor(void) {
         if (!gStateByte) { GFLOG(@"STATE-WATCH DragonGA not found"); return; }
 
         gfInstallValHook((uintptr_t)gStateByte - 0xd0c7a0);
+        gfApplyPatches((uintptr_t)gStateByte - 0xd0c7a0);
 
         /* v7.0 — ماسح LDRB [x?,#0x7a0] في ذاكرة DG الحية + نوافذ للتفكيك */
         {
@@ -1238,7 +1320,7 @@ static void gf_statewatch_ctor(void) {
                 GFLOG(@"STATE-CHANGE 0x%02x -> 0x%02x (iter %d)", gLastState, cur, iter);
                 gLastState = cur;
             }
-            if ((iter % 60) == 0) GF_RELOAD_FORCE();
+            if ((iter % 60) == 0) { GF_RELOAD_FORCE(); gfApplyPatches((uintptr_t)gStateByte - 0xd0c7a0); }
             if (forceVal >= 0 && forceVal <= 255 && cur != (uint8_t)forceVal) {
                 *gStateByte = (uint8_t)forceVal;
                 if (iter - lastForcedLog >= 40) { GFLOG(@"STATE-FORCED -> %d", forceVal); lastForcedLog = iter; }
