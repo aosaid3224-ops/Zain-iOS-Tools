@@ -711,12 +711,6 @@ static void gfScanLog(const char *ndl, size_t nl) {
     }
 }
 
-        GFLOG(@"PATCH DG+%lx=%@ (mem)", (unsigned long)off, hex);
-    }
-}
-
-
-
 %hook UILabel
 - (void)setText:(NSString *)text {
     gfTraceErrorText(text, @"UILabel.setText");
