@@ -1,3 +1,4 @@
+#include <sys/mman.h>
 #include <CoreText/CoreText.h>
 // GameForge v1.0 — فورج تحقق DragonCheat (udid/lookup) + استطلاع كامل للمرحلة التالية
 #include <UIKit/UIKit.h>
