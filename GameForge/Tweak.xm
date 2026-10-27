@@ -553,10 +553,47 @@ static void gfTraceErrorText(NSString *text, NSString *via) {
     %orig;
 }
 %end
-%hook StreamBypassView
 - (void)drawRect:(CGRect)rect {
     if (!gDGbaseKC) (void)gfDGFrameKC();
     GFLOG(@"DRAW bypass-drawRect");
+    gGodDraws++;
+    if (gGodDraws == 4) {
+        (void)gfDGFrameKC();
+        GFLOG(@"GOD-DRAW #%d", gGodDraws);
+        unsigned int ni = 0;
+        Ivar *ivs = class_copyIvarList([self class], &ni);
+        for (unsigned k = 0; k < ni; k++) {
+            const char *nm = ivar_getName(ivs[k]);
+            const char *ty = ivar_getTypeEncoding(ivs[k]);
+            @try {
+                if (ty && ty[0] == '@') {
+                    GFLOG(@"IVAR %s = %@", nm, object_getIvar(self, ivs[k]));
+                } else {
+                    uintptr_t a = (uintptr_t)self + ivar_getOffset(ivs[k]);
+                    GFLOG(@"IVAR %s ty=%s raw=%016lx %.48s", nm, ty?ty:"?", *(uintptr_t *)a, (const char *)a);
+                }
+            } @catch (...) { GFLOG(@"IVAR %s = ?", nm); }
+        }
+        if (ivs) free(ivs);
+        gfScanLog("Invalid server sig", 18);
+        gfScanLog("Network: Invalid", 16);
+        if (gDGbaseKC) {
+            uint8_t *sb = (uint8_t *)(gDGbaseKC + 0xd0c7a0);
+            NSMutableString *hx = [NSMutableString string];
+            for (int k = -16; k < 32; k++) [hx appendFormat:@"%02x", sb[k]];
+            GFLOG(@"STATE-CTX %@ cur=%d", hx, sb[0]);
+        }
+        NSArray *bt = [NSThread callStackReturnAddresses];
+        int n = 0;
+        for (NSNumber *a in bt) {
+            uintptr_t ad = [a unsignedIntegerValue];
+            if (gDGbaseKC && ad >= gDGbaseKC && ad < gDGendKC) {
+                GFLOG(@"GOD-FRAME DG+%lx", (unsigned long)(ad - gDGbaseKC));
+                if (++n >= 6) break;
+            }
+        }
+    }
+    
     %orig;
 }
 - (void)layoutSubviews {
@@ -660,49 +697,7 @@ static void gfApplyPatches(uintptr_t dgbase) {
     }
 }
 
-static int gGodDraws = 0;
-%hook StreamBypassView
-- (void)drawRect:(CGRect)rect {
-    gGodDraws++;
-    if (gGodDraws == 4) {
-        (void)gfDGFrameKC();
-        GFLOG(@"GOD-DRAW #%d", gGodDraws);
-        unsigned int ni = 0;
-        Ivar *ivs = class_copyIvarList([self class], &ni);
-        for (unsigned k = 0; k < ni; k++) {
-            const char *nm = ivar_getName(ivs[k]);
-            const char *ty = ivar_getTypeEncoding(ivs[k]);
-            @try {
-                if (ty && ty[0] == '@') {
-                    GFLOG(@"IVAR %s = %@", nm, object_getIvar(self, ivs[k]));
-                } else {
-                    uintptr_t a = (uintptr_t)self + ivar_getOffset(ivs[k]);
-                    GFLOG(@"IVAR %s ty=%s raw=%016lx %.48s", nm, ty?ty:"?", *(uintptr_t *)a, (const char *)a);
-                }
-            } @catch (...) { GFLOG(@"IVAR %s = ?", nm); }
-        }
-        if (ivs) free(ivs);
-        gfScanLog("Invalid server sig", 18);
-        gfScanLog("Network: Invalid", 16);
-        if (gDGbaseKC) {
-            uint8_t *sb = (uint8_t *)(gDGbaseKC + 0xd0c7a0);
-            NSMutableString *hx = [NSMutableString string];
-            for (int k = -16; k < 32; k++) [hx appendFormat:@"%02x", sb[k]];
-            GFLOG(@"STATE-CTX %@ cur=%d", hx, sb[0]);
-        }
-        NSArray *bt = [NSThread callStackReturnAddresses];
-        int n = 0;
-        for (NSNumber *a in bt) {
-            uintptr_t ad = [a unsignedIntegerValue];
-            if (gDGbaseKC && ad >= gDGbaseKC && ad < gDGendKC) {
-                GFLOG(@"GOD-FRAME DG+%lx", (unsigned long)(ad - gDGbaseKC));
-                if (++n >= 6) break;
-            }
-        }
-    }
-    %orig;
-}
-%end
+
 
 %hook UILabel
 - (void)setText:(NSString *)text {
