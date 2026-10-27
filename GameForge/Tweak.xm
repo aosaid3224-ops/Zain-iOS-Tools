@@ -70,33 +70,25 @@ static void gfDumpObjectState(id obj, NSString *tag) {
     if (props) free(props);
 }
 static void gfLobbyDissect(void) {
-    Class sc = NSClassFromString(@"StreamBypassView");
-    if (sc) {
-        unsigned int nm = 0;
-        Method *ms = class_copyMethodList(sc, &nm);
-        GFLOG(@"BYPASS methods=%u", nm);
-        for (unsigned i = 0; i < nm; i++) GFLOG(@"  M %@", NSStringFromSelector(method_getName(ms[i])));
-        if (ms) free(ms);
-    }
     unsigned int nc = 0;
     Class *all = objc_copyClassList(&nc);
     int shown = 0;
-    for (unsigned i = 0; i < nc && shown < 40; i++) {
+    for (unsigned i = 0; i < nc && shown < 120; i++) {
         Class c = all[i];
         NSString *cn = NSStringFromClass(c);
         if (!cn) continue;
         NSString *ip = nil;
         @try { ip = [[NSBundle bundleForClass:c].executablePath lastPathComponent]; } @catch (...) {}
         if (![ip isEqualToString:@"DragonGA.dylib"]) continue;
-        if ([cn containsString:@"Menu"] || [cn containsString:@"View"] || [cn containsString:@"Panel"] ||
-            [cn containsString:@"Cheat"] || [cn containsString:@"ESP"] || [cn containsString:@"Bypass"] ||
-            [cn containsString:@"Gate"] || [cn containsString:@"Hack"] || [cn containsString:@"Item"] ||
-            [cn containsString:@"Switch"] || [cn containsString:@"Float"] || [cn containsString:@"Root"] ||
-            [cn containsString:@"Manager"] || [cn containsString:@"Window"]) {
-            GFLOG(@"DGCLASS %@", cn);
-            shown++;
-        }
+        unsigned int nm = 0;
+        Method *ms = class_copyMethodList(c, &nm);
+        GFLOG(@"DGCLASS %@ m=%u", cn, nm);
+        for (unsigned k = 0; k < nm && k < 16; k++)
+            GFLOG(@"  CM %@ %@", cn, NSStringFromSelector(method_getName(ms[k])));
+        if (ms) free(ms);
+        shown++;
     }
+    GFLOG(@"DGCLASS-END total=%d", shown);
     if (all) free(all);
 }
 
