@@ -73,17 +73,19 @@ static void gfLobbyDissect(void) {
     unsigned int nc = 0;
     Class *all = objc_copyClassList(&nc);
     int shown = 0;
-    for (unsigned i = 0; i < nc && shown < 120; i++) {
+    for (unsigned i = 0; i < nc && shown < 200; i++) {
         Class c = all[i];
         NSString *cn = NSStringFromClass(c);
         if (!cn) continue;
+        Dl_info di;
         NSString *ip = nil;
-        @try { ip = [[NSBundle bundleForClass:c].executablePath lastPathComponent]; } @catch (...) {}
+        if (dladdr((void *)c, &di) && di.dli_fname)
+            ip = [[NSString stringWithUTF8String:di.dli_fname] lastPathComponent];
         if (![ip isEqualToString:@"DragonGA.dylib"]) continue;
         unsigned int nm = 0;
         Method *ms = class_copyMethodList(c, &nm);
         GFLOG(@"DGCLASS %@ m=%u", cn, nm);
-        for (unsigned k = 0; k < nm && k < 16; k++)
+        for (unsigned k = 0; k < nm && k < 20; k++)
             GFLOG(@"  CM %@ %@", cn, NSStringFromSelector(method_getName(ms[k])));
         if (ms) free(ms);
         shown++;
