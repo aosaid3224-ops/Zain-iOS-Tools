@@ -267,6 +267,38 @@ static int gfSigFlip(void) {
     %orig(code);
 }
 
+/* v11 — فخ عرض الحوار: عنوان فرع فشل التوقيع */
+%hook UIAlertController
++ (instancetype)alertControllerWithTitle:(NSString *)title message:(NSString *)message preferredStyle:(UIAlertControllerStyle)style {
+    if (message && [message containsString:@"Invalid server sig"] && gfDGFrameKC()) {
+        GFLOG(@"ALERT-SIG msg=%@", message);
+        (void)gfDGFrameKC();
+        NSArray *bt = [NSThread callStackReturnAddresses];
+        for (NSNumber *a in bt) {
+            uintptr_t ad = [a unsignedIntegerValue];
+            if (gDGbaseKC && ad >= gDGbaseKC && ad < gDGendKC) {
+                GFLOG(@"ALERT-FRAME DG+%lx", (unsigned long)(ad - gDGbaseKC));
+            }
+        }
+    }
+    return %orig(title, message, style);
+}
+- (instancetype)initWithTitle:(NSString *)title message:(NSString *)message preferredStyle:(UIAlertControllerStyle)style {
+    if (message && [message containsString:@"Invalid server sig"] && gfDGFrameKC()) {
+        GFLOG(@"ALERT-SIG-INIT msg=%@", message);
+        (void)gfDGFrameKC();
+        NSArray *bt = [NSThread callStackReturnAddresses];
+        for (NSNumber *a in bt) {
+            uintptr_t ad = [a unsignedIntegerValue];
+            if (gDGbaseKC && ad >= gDGbaseKC && ad < gDGendKC) {
+                GFLOG(@"ALERT-FRAME DG+%lx", (unsigned long)(ad - gDGbaseKC));
+            }
+        }
+    }
+    return %orig(title, message, style);
+}
+%end
+
 %hookf(OSStatus, SecItemCopyMatching, CFDictionaryRef q, CFTypeRef *result) {
     OSStatus s = %orig(q, result);
     NSString *sv = q ? (__bridge NSString *)CFDictionaryGetValue(q, CFSTR("svce")) : nil;
