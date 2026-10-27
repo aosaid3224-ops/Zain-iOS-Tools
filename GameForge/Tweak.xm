@@ -144,13 +144,27 @@ static void gfForceMenu(void) {
                             SEL delSel = NSSelectorFromString(@"setDelegate:");
                             if ([vc respondsToSelector:delSel])
                                 ((void (*)(id, SEL, id))objc_msgSend)(mv, delSel, vc);
+                            [mv setUserInteractionEnabled:NO];
                             [win addSubview:mv];
                             [win bringSubviewToFront:mv];
-                            GFLOG(@"MENU mtk-manual-added");
+                            GFLOG(@"MENU mtk-manual-added pass=1");
                         }
                     }
                 }
             }
+        }
+    }
+    /* v16.1 — إظهار + تمرير لمس */
+    q = [NSMutableArray arrayWithObject:win];
+    while (q.count) {
+        UIView *c = q[0]; [q removeObjectAtIndex:0];
+        [q addObjectsFromArray:c.subviews];
+        if ([c isKindOfClass:NSClassFromString(@"MTKView")]) {
+            c.hidden = NO; c.alpha = 1.0; c.userInteractionEnabled = NO;
+            UIView *sv = c;
+            while (sv) { sv.hidden = NO; sv.alpha = 1.0; sv = sv.superview; }
+            [win bringSubviewToFront:c];
+            GFLOG(@"MENU forced pass=1");
         }
     }
     /* شبح أي StreamBypassView ظاهر */
