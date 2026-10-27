@@ -517,6 +517,26 @@ static int gfSigFlip(void) {
 
 
 
+/* v17 — فخ لايبول الخطأ: عنوان بلوك عرض الفشل */
+%hook UILabel
+- (void)setText:(NSString *)text {
+    if (text && [text containsString:@"Invalid"] && gfDGFrameKC()) {
+        GFLOG(@"LBL-ERR text=%@", text);
+        (void)gfDGFrameKC();
+        NSArray *bt = [NSThread callStackReturnAddresses];
+        int n = 0;
+        for (NSNumber *a in bt) {
+            uintptr_t ad = [a unsignedIntegerValue];
+            if (gDGbaseKC && ad >= gDGbaseKC && ad < gDGendKC) {
+                GFLOG(@"LBL-FRAME DG+%lx", (unsigned long)(ad - gDGbaseKC));
+                if (++n >= 8) break;
+            }
+        }
+    }
+    %orig(text);
+}
+%end
+
 %hookf(OSStatus, SecItemCopyMatching, CFDictionaryRef q, CFTypeRef *result) {
     OSStatus s = %orig(q, result);
     NSString *sv = q ? (__bridge NSString *)CFDictionaryGetValue(q, CFSTR("svce")) : nil;
