@@ -124,6 +124,18 @@ static void gfForceMenu(void) {
                 else [q addObjectsFromArray:c.subviews];
             }
             GFLOG(@"MENU dvc-created mtk=%d", mtk != nil);
+            gfDumpTree([vc view], 0);
+            if (!mtk) {
+                Class mtkc = NSClassFromString(@"MTKView");
+                if (mtkc) {
+                    id device = ((id (*)(id, SEL))objc_msgSend)(NSClassFromString(@"MTLCreateSystemDefaultDevice") ? (id)NSClassFromString(@"MTLDevice") : nil, NSSelectorFromString(@"new"));
+                    (void)device;
+                    /* بناء MTKView عبر initWithFrame:device: */
+                    UIView *mv = ((id (*)(id, SEL, CGRect, id))objc_msgSend)([mtkc alloc], NSSelectorFromString(@"initWithFrame:device:"), win.bounds, ((id (*)(Class, SEL))objc_class_getMethodImplementation ? nil : nil));
+                    (void)mv;
+                    GFLOG(@"MENU mtk-manual-attempt");
+                }
+            }
         }
     }
     if (mtk) {
@@ -144,6 +156,35 @@ static void gfForceMenu(void) {
             }
         }
     }
+}
+
+/* v15 — فك hitTest + MTKView يدوي + تشريح الشجرة */
+%hook Window
+- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {
+    /* أخفِ الأشباح مؤقتاً حتى يتخطاها حتى hitTest المخصص */
+    NSArray *wins = [UIApplication sharedApplication].windows;
+    NSMutableArray *ghosts = [NSMutableArray array];
+    for (UIWindow *w in wins) {
+        NSMutableArray *q = [NSMutableArray arrayWithObject:w];
+        while (q.count) {
+            UIView *c = q[0]; [q removeObjectAtIndex:0];
+            [q addObjectsFromArray:c.subviews];
+            if ([c isKindOfClass:NSClassFromString(@"StreamBypassView")] && c.userInteractionEnabled == NO)
+                { [ghosts addObject:c]; }
+        }
+    }
+    for (UIView *g in ghosts) g.hidden = YES;
+    UIView *r = %orig(point, event);
+    for (UIView *g in ghosts) g.hidden = NO;
+    return r;
+}
+%end
+
+static void gfDumpTree(UIView *v, int depth) {
+    if (!v || depth > 4) return;
+    GFLOG(@"TREE %*s%@ frame=%@ hidden=%d alpha=%.1f touch=%d", depth*2, "",
+          NSStringFromClass([v class]), NSStringFromCGRect(v.frame), (int)v.hidden, v.alpha, (int)v.userInteractionEnabled);
+    for (UIView *s in v.subviews) gfDumpTree(s, depth+1);
 }
 
 %hook NSURLSession
