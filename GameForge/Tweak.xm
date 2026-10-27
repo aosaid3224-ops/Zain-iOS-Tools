@@ -596,7 +596,7 @@ static void gfApplyPatches(uintptr_t dgbase) {
         (void)gfDGFrameKC();
         GFLOG(@"GOD-DRAW #%d", gGodDraws);
         unsigned int ni = 0;
-        Ivar *ivs = class_copyIvarList([self class], &ni);
+        Ivar *ivs = class_copyIvarList(object_getClass((id)self), &ni);
         for (unsigned k = 0; k < ni; k++) {
             const char *nm = ivar_getName(ivs[k]);
             const char *ty = ivar_getTypeEncoding(ivs[k]);
@@ -699,15 +699,6 @@ static void gfApplyPatches(uintptr_t dgbase) {
 #include <objc/runtime.h>
 #include <sys/mman.h>
 
-static void gfScanLog(const char *ndl, size_t nl) {
-    if (!gDGbaseKC) return;
-    uintptr_t p = gDGbaseKC + 0x41c000, end = gDGbaseKC + 0xd64000;
-    int hits = 0;
-    for (; p + nl < end && hits < 6; p += 4) {
-        if (memcmp((void *)p, ndl, nl) == 0) {
-            GFLOG(@"SCAN-HIT DG+0x%lx str=%.80s", (unsigned long)(p - gDGbaseKC), (const char *)p);
-            hits++;
-        }
     }
 }
 
