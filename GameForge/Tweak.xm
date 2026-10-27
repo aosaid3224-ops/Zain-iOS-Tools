@@ -95,6 +95,8 @@ static void gfLobbyDissect(void) {
 }
 
 /* v13 — MenuForcer: إنشاء/إظهار DrawViewController يدوياً */
+static void gfDumpTree(UIView *v, int depth);
+
 static void gfForceMenu(void) {
     UIWindow *win = [UIApplication sharedApplication].keyWindow;
     if (!win) { GFLOG(@"MENU no-window"); return; }
