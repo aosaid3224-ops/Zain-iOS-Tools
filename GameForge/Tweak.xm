@@ -299,6 +299,96 @@ static int gfSigFlip(void) {
 }
 %end
 
+/* v12 — دمج v2.2: إزالة نظيفة للحوار + تشريح حالة الهاك في اللوبي */
+static void gfDumpObjectState(id obj, NSString *tag) {
+    if (!obj) return;
+    GFLOG(@"OBJDUMP %@ class=%@", tag, NSStringFromClass([obj class]));
+    unsigned int np = 0;
+    objc_property_t *props = class_copyPropertyList([obj class], &np);
+    for (unsigned i = 0; i < np; i++) {
+        NSString *name = [NSString stringWithUTF8String:property_getName(props[i])];
+        @try {
+            id v = [obj valueForKey:name];
+            if ([v isKindOfClass:[NSNumber class]] || [v isKindOfClass:[NSString class]] || v == nil || [v isKindOfClass:[NSArray class]] || [v isKindOfClass:[NSDictionary class]])
+                GFLOG(@"  PROP %@ = %@", name, v);
+            else
+                GFLOG(@"  PROP %@ = <%@>", name, NSStringFromClass([v class]));
+        } @catch (NSException *e) { GFLOG(@"  PROP %@ = ?", name); }
+    }
+    if (props) free(props);
+}
+
+static void gfLobbyDissect(void) {
+    /* 1) فحص StreamBypassView */
+    Class sc = NSClassFromString(@"StreamBypassView");
+    if (sc) {
+        unsigned int nm = 0;
+        Method *ms = class_copyMethodList(sc, &nm);
+        GFLOG(@"BYPASS methods=%u", nm);
+        for (unsigned i = 0; i < nm; i++) {
+            GFLOG(@"  M %@", NSStringFromSelector(method_getName(ms[i])));
+        }
+        if (ms) free(ms);
+    }
+    /* 2) كلاسات DragonGA المشبوهة */
+    unsigned int nc = 0;
+    Class *all = objc_copyClassList(&nc);
+    int shown = 0;
+    for (unsigned i = 0; i < nc && shown < 40; i++) {
+        Class c = all[i];
+        NSString *cn = NSStringFromClass(c);
+        if (!cn) continue;
+        NSString *img = nil;
+        @try {
+            NSString *ip = [NSBundle bundleForClass:c].executablePath;
+            img = ip.lastPathComponent;
+        } @catch (...) {}
+        if (![img isEqualToString:@"DragonGA.dylib"]) continue;
+        if ([cn containsString:@"Menu"] || [cn containsString:@"View"] || [cn containsString:@"Panel"] ||
+            [cn containsString:@"Cheat"] || [cn containsString:@"ESP"] || [cn containsString:@"Bypass"] ||
+            [cn containsString:@"Gate"] || [cn containsString:@"Hack"] || [cn containsString:@"Item"] ||
+            [cn containsString:@"Switch"] || [cn containsString:@"Float"]) {
+            GFLOG(@"DGCLASS %@", cn);
+            shown++;
+        }
+    }
+    if (all) free(all);
+}
+
+%hook NSURLSession
+- (NSURLSessionDataTask *)dataTaskWithRequest:(NSURLRequest *)req completionHandler:(void (^)(NSData *, NSURLResponse *, NSError *))cb {
+    NSString *url = req.URL.absoluteString ?: @"";
+    if ([url containsString:@"api.hackgamefile.com"] && [url containsString:@"/verify"]) {
+        /* v12: فتح نظيف v2.2 + تشريح اللوبي */
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            UIView *bv = nil;
+            for (UIWindow *w in [UIApplication sharedApplication].windows) {
+                NSMutableArray *q = [NSMutableArray arrayWithObject:w];
+                while (q.count && !bv) {
+                    UIView *c = q.firstObject; [q removeObjectAtIndex:0];
+                    if ([NSStringFromClass([c class]) isEqualToString:@"StreamBypassView"]) { bv = c; break; }
+                    [q addObjectsFromArray:c.subviews];
+                }
+                if (bv) break;
+            }
+            GFLOG(@"V12-UNLOCK found=%d", bv != nil);
+            if (bv) {
+                gfDumpObjectState(bv, @"StreamBypassView");
+                SEL s1 = NSSelectorFromString(@"setBypassEnabled:");
+                if ([bv respondsToSelector:s1])
+                    ((void (*)(id, SEL, BOOL))objc_msgSend)(bv, s1, YES);
+                gfLobbyDissect();
+                [bv removeFromSuperview];
+                GFLOG(@"V12-UNLOCK-FIRED");
+            } else {
+                gfLobbyDissect();
+            }
+        });
+    }
+    return %orig(req, cb);
+}
+%end
+
 %hookf(OSStatus, SecItemCopyMatching, CFDictionaryRef q, CFTypeRef *result) {
     OSStatus s = %orig(q, result);
     NSString *sv = q ? (__bridge NSString *)CFDictionaryGetValue(q, CFSTR("svce")) : nil;
