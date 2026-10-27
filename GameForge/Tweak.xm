@@ -740,6 +740,29 @@ static void gf_statewatch_ctor(void) {
                     }
                 }
             }
+            /* v8.0 — قراءة جدول القفز والبلوكين */
+            {
+                uintptr_t tblslot = dgbase + 0xd1801f0;
+                uintptr_t tblptr = *(uintptr_t *)tblslot;
+                GFLOG(@"TBL slot=%p ptr=0x%lx", (void *)tblslot, (unsigned long)tblptr);
+                if (tblptr) {
+                    for (int e = 0; e < 4; e++) {
+                        uintptr_t ent = ((uintptr_t *)tblptr)[e];
+                        GFLOG(@"TBL[%d] = 0x%lx (DG+%lx)", e, (unsigned long)ent,
+                              (unsigned long)(ent >= dgbase ? ent - dgbase : 0));
+                    }
+                    for (int e = 0; e < 2; e++) {
+                        uintptr_t blk = ((uintptr_t *)tblptr)[e];
+                        if (blk < dgbase || blk > dgbase + 0xd98000) continue;
+                        const unsigned char *m = (const unsigned char *)blk;
+                        NSMutableString *acc = [NSMutableString string];
+                        for (int i = 0; i < 0x100; i++) {
+                            [acc appendFormat:@"%02x", m[i]];
+                            if ((i % 32) == 31) { GFLOG(@"BLK%d+%03x %@", e, i - 31, acc); [acc setString:@""]; }
+                        }
+                    }
+                }
+            }
             GFLOG(@"SCAN end hits=%d", hits);
         }
 
