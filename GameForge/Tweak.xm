@@ -740,28 +740,42 @@ static void gf_statewatch_ctor(void) {
                     }
                 }
             }
-            /* v8.0 — قراءة جدول القفز والبلوكين */
+            /* v8.1 — جدول القفز بحساب ديناميكي آمن من التعليمات الحية */
             {
-                uintptr_t tblslot = dgbase + 0xd1801f0;
-                uintptr_t tblptr = *(uintptr_t *)tblslot;
-                GFLOG(@"TBL slot=%p ptr=0x%lx", (void *)tblslot, (unsigned long)tblptr);
-                if (tblptr) {
-                    for (int e = 0; e < 4; e++) {
-                        uintptr_t ent = ((uintptr_t *)tblptr)[e];
-                        GFLOG(@"TBL[%d] = 0x%lx (DG+%lx)", e, (unsigned long)ent,
-                              (unsigned long)(ent >= dgbase ? ent - dgbase : 0));
-                    }
-                    for (int e = 0; e < 2; e++) {
-                        uintptr_t blk = ((uintptr_t *)tblptr)[e];
-                        if (blk < dgbase || blk > dgbase + 0xd98000) continue;
-                        const unsigned char *m = (const unsigned char *)blk;
-                        NSMutableString *acc = [NSMutableString string];
-                        for (int i = 0; i < 0x100; i++) {
-                            [acc appendFormat:@"%02x", m[i]];
-                            if ((i % 32) == 31) { GFLOG(@"BLK%d+%03x %@", e, i - 31, acc); [acc setString:@""]; }
+                uintptr_t imgend = dgbase + 0xd98000;
+                uint32_t w_adrp, w_ldr;
+                memcpy(&w_adrp, (void *)(dgbase + 0x1fd3d4), 4);
+                memcpy(&w_ldr,  (void *)(dgbase + 0x1fd3d8), 4);
+                GFLOG(@"TBL adrp=%08x ldr=%08x", w_adrp, w_ldr);
+                uintptr_t slot = 0;
+                if ((w_adrp & 0x9F00001F) == 0x90000009 && ((w_ldr >> 22) & 3) == 1) {
+                    int64_t imm = ((w_adrp >> 5) & 0x7FFFF);
+                    imm = (imm << 2) | ((w_adrp >> 29) & 3);
+                    if (imm & (1LL << 20)) imm -= (1LL << 21);
+                    uintptr_t page = ((dgbase + 0x1fd3d4) & ~0xFFFULL) + ((uintptr_t)imm << 12);
+                    slot = page + (((w_ldr >> 10) & 0xFFF) << 3);
+                }
+                GFLOG(@"TBL slot=%p", (void *)slot);
+                if (slot >= dgbase && slot + 8 <= imgend) {
+                    uintptr_t tblptr = *(uintptr_t *)slot;
+                    GFLOG(@"TBL ptr=0x%lx", (unsigned long)tblptr);
+                    if (tblptr >= dgbase && tblptr + 16 <= imgend) {
+                        for (int e = 0; e < 2; e++) {
+                            uintptr_t blk = ((uintptr_t *)tblptr)[e];
+                            GFLOG(@"TBL[%d]=0x%lx DG+%lx", e, (unsigned long)blk,
+                                  (unsigned long)(blk >= dgbase ? blk - dgbase : 0));
+                            if (blk >= dgbase && blk + 0x100 <= imgend) {
+                                const unsigned char *m = (const unsigned char *)blk;
+                                NSMutableString *acc = [NSMutableString string];
+                                for (int i = 0; i < 0x100; i++) {
+                                    [acc appendFormat:@"%02x", m[i]];
+                                    if ((i % 32) == 31) { GFLOG(@"BLK%d+%03x %@", e, i - 31, acc); [acc setString:@""]; }
+                                }
+                            }
                         }
                     }
                 }
+                GFLOG(@"TBL done");
             }
             GFLOG(@"SCAN end hits=%d", hits);
         }
