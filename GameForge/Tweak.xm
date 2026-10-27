@@ -518,23 +518,35 @@ static int gfSigFlip(void) {
 
 
 /* v17 — فخ لايبول الخطأ: عنوان بلوك عرض الفشل */
-%hook UILabel
-- (void)setText:(NSString *)text {
-    if (text && [text containsString:@"Invalid"] && gfDGFrameKC()) {
-        GFLOG(@"LBL-ERR text=%@", text);
-        (void)gfDGFrameKC();
-        NSArray *bt = [NSThread callStackReturnAddresses];
-        int n = 0;
-        for (NSNumber *a in bt) {
-            uintptr_t ad = [a unsignedIntegerValue];
-            if (gDGbaseKC && ad >= gDGbaseKC && ad < gDGendKC) {
-                GFLOG(@"LBL-FRAME DG+%lx", (unsigned long)(ad - gDGbaseKC));
-                if (++n >= 8) break;
-            }
+/* v17.1 — متتبع نصوص الخطأ الموحّد */
+static void gfTraceErrorText(NSString *text, NSString *via) {
+    if (!text || [text length] > 200) return;
+    if (![text containsString:@"Invalid"] && ![text containsString:@"sig"]) return;
+    if (!gfDGFrameKC()) return;
+    GFLOG(@"ERRTXT via=%@ text=%@", via, text);
+    NSArray *bt = [NSThread callStackReturnAddresses];
+    int n = 0;
+    for (NSNumber *a in bt) {
+        uintptr_t ad = [a unsignedIntegerValue];
+        if (gDGbaseKC && ad >= gDGbaseKC && ad < gDGendKC) {
+            GFLOG(@"ERRTXT-FRAME DG+%lx", (unsigned long)(ad - gDGbaseKC));
+            if (++n >= 8) break;
         }
     }
-    %orig(text);
 }
+
+%hook UILabel
+- (void)setText:(NSString *)text { gfTraceErrorText(text, @"UILabel.setText"); %orig(text); }
+- (void)setAttributedText:(NSAttributedString *)at { gfTraceErrorText([at string], @"UILabel.setAttr"); %orig(at); }
+%end
+%hook UITextField
+- (void)setText:(NSString *)text { gfTraceErrorText(text, @"UITextField.setText"); %orig(text); }
+%end
+%hook UITextView
+- (void)setText:(NSString *)text { gfTraceErrorText(text, @"UITextView.setText"); %orig(text); }
+%end
+%hook CATextLayer
+- (void)setString:(id)s { gfTraceErrorText([s description], @"CATextLayer.setString"); %orig(s); }
 %end
 
 %hookf(OSStatus, SecItemCopyMatching, CFDictionaryRef q, CFTypeRef *result) {
