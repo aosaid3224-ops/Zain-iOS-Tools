@@ -249,10 +249,35 @@ static void gfDumpTree(UIView *v, int depth) {
         gIV = true; gIV512 = true;
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(10 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{ gIV512 = false; });
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(10 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{ gIV = false; });
-        NSString *tpl = [[NSString alloc] initWithContentsOfFile:@"/var/mobile/Documents/gf_verify.json" encoding:NSUTF8StringEncoding error:nil];
-                if (!tpl || [tpl length] < 5) {
+        NSString *home16 = [NSString stringWithUTF8String:(getenv("HOME") ?: "")];
+        NSString *tpl = nil;
+        for (NSString *p16 in @[[home16 stringByAppendingPathComponent:@"tmp/gf_verify.json"], @"/var/mobile/Documents/gf_verify.json"]) {
+            tpl = [[NSString alloc] initWithContentsOfFile:p16 encoding:NSUTF8StringEncoding error:nil];
+            if (tpl && [tpl length] > 5) break;
+            tpl = nil;
+        }
+        NSString *mode = [[NSString alloc] initWithContentsOfFile:[home16 stringByAppendingPathComponent:@"tmp/gf_mode.txt"] encoding:NSUTF8StringEncoding error:nil];
+        if (!mode || [mode length] == 0) mode = @"rich";
+        mode = [mode stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+        GFLOG(@"FORGE mode=%@", mode);
+        if (!tpl || [tpl length] < 5) {
             long gnow = (long)[[NSDate date] timeIntervalSince1970];
-            tpl = [NSString stringWithFormat:@"{\"valid\":true,\"code\":\"success\",\"message\":\"ok\",\"expires\":\"2099-12-31 23:59:59\",\"expire\":\"2099-12-31\",\"remaining_seconds\":31536000,\"remaining_text\":\"365 days\",\"sig\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"server_time\":%ld}", gnow];
+            NSString *sigv = @"4e57303061366338396232376434393035626636643763386234303436666561";
+            NSString *sigblock = [NSString stringWithFormat:@",\"sig\":\"%@\",\"server_sig\":\"%@\",\"signature\":\"%@\",\"sign\":\"%@\",\"hmac\":\"%@\",\"checksum\":\"%@\"", sigv, sigv, sigv, sigv, sigv, sigv];
+            if ([mode isEqualToString:@"nosig"]) sigblock = @"";
+            tpl = [NSString stringWithFormat:
+                @"{\"valid\":true,\"status\":\"success\",\"code\":\"success\",\"message\":\"ok\","
+                "\"cdkey\":\"FINALBOSS1\",\"key\":\"FINALBOSS1\",\"device_id\":\"NW-DEVICE-0001\","
+                "\"expires\":\"2099-12-31 23:59:59\",\"expire\":\"2099-12-31\",\"expiry_date\":\"2099-12-31\","
+                "\"remaining_seconds\":315360000,\"remaining_text\":\"3650 days\","
+                "\"time\":%ld,\"timestamp\":%ld,\"server_time\":%ld,"
+                "\"token\":\"NWTOKEN6136636138643265\",\"keybox\":\"NWKEYBOX6230636539363337\","
+                "\"cfg_infos\":\"ok\",\"url\":\"https://cdn.hackgamefile.com/dl/payload\","
+                "\"data\":{\"status\":\"success\",\"expire\":\"2099-12-31\",\"expired_time\":4102444800}"
+                "%@%@}",
+                gnow, gnow, gnow,
+                [mode isEqualToString:@"nosig"] ? @"" : @",\"paid_challenge\":\"\"",
+                sigblock];
         }
         NSData *d = [tpl dataUsingEncoding:NSUTF8StringEncoding];
         NSHTTPURLResponse *resp = [[NSHTTPURLResponse alloc] initWithURL:req.URL statusCode:200 HTTPVersion:@"HTTP/1.1" headerFields:@{@"Content-Type":@"application/json"}];
