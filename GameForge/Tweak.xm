@@ -101,7 +101,6 @@ static void gfForceMenu(void) {
     Class dvc = NSClassFromString(@"DrawViewController");
     if (!dvc) { GFLOG(@"MENU no-class"); return; }
 
-    /* 1) ابحث عن MTKView قائم (دليل أن DVC مضاف) */
     __block UIView *mtk = nil;
     NSMutableArray *q = [NSMutableArray arrayWithObject:win];
     while (q.count && !mtk) {
@@ -111,46 +110,39 @@ static void gfForceMenu(void) {
     }
     GFLOG(@"MENU mtk=%d", mtk != nil);
 
-    if (mtk) {
-        mtk.hidden = NO; mtk.alpha = 1.0; mtk.userInteractionEnabled = YES;
-        UIView *sv = mtk.superview;
-        while (sv && sv != win) { sv.hidden = NO; sv.alpha = 1.0; sv.userInteractionEnabled = YES; sv = sv.superview; }
-        [win bringSubviewToFront:mtk];
-        GFLOG(@"MENU mtk-forced frame=%@", NSStringFromCGRect(mtk.frame));
-    } else {
+    if (!mtk) {
         id vc = [[dvc alloc] init];
         if (vc) {
             UIView *v = [vc view];
-            v.frame = win.bounds;
-            v.hidden = NO;
-            v.alpha = 1.0;
-            v.userInteractionEnabled = YES;
+            v.tag = 1337001;
             [win addSubview:v];
-            [win bringSubviewToFront:v];
-            GFLOG(@"MENU dvc-created+added");
+            mtk = nil;
+            q = [NSMutableArray arrayWithObject:win];
+            while (q.count && !mtk) {
+                UIView *c = q[0]; [q removeObjectAtIndex:0];
+                if ([c isKindOfClass:NSClassFromString(@"MTKView")]) mtk = c;
+                else [q addObjectsFromArray:c.subviews];
+            }
+            GFLOG(@"MENU dvc-created mtk=%d", mtk != nil);
         }
     }
-
-    /* 2) فعّل البايباس على أي StreamBypassView موجود */
+    if (mtk) {
+        mtk.hidden = NO; mtk.alpha = 1.0; mtk.userInteractionEnabled = YES;
+        UIView *sv = mtk;
+        while (sv) { sv.hidden = NO; sv.alpha = 1.0; sv.userInteractionEnabled = YES; sv = sv.superview; }
+        [win bringSubviewToFront:mtk];
+        GFLOG(@"MENU forced frame=%@", NSStringFromCGRect(mtk.frame));
+    }
+    /* شبح أي StreamBypassView ظاهر */
     for (UIWindow *w in [UIApplication sharedApplication].windows) {
         NSMutableArray *q2 = [NSMutableArray arrayWithObject:w];
         while (q2.count) {
             UIView *c = q2[0]; [q2 removeObjectAtIndex:0];
             [q2 addObjectsFromArray:c.subviews];
             if ([c isKindOfClass:NSClassFromString(@"StreamBypassView")]) {
-                SEL s = NSSelectorFromString(@"setBypassEnabled:");
-                if ([c respondsToSelector:s]) ((void (*)(id, SEL, BOOL))objc_msgSend)(c, s, YES);
-                GFLOG(@"MENU bypass-enabled");
+                c.alpha = 0.0; c.userInteractionEnabled = NO;
             }
         }
-    }
-    /* 3) نادِ fixLogin إن وُجد */
-    if ([dvc respondsToSelector:NSSelectorFromString(@"fixLogin")]) {
-        #pragma clang diagnostic push
-        #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-        [dvc performSelector:NSSelectorFromString(@"fixLogin")];
-        #pragma clang diagnostic pop
-        GFLOG(@"MENU fixLogin-called");
     }
 }
 
@@ -177,11 +169,17 @@ static void gfForceMenu(void) {
                 if ([bv respondsToSelector:s1])
                     ((void (*)(id, SEL, BOOL))objc_msgSend)(bv, s1, YES);
                 gfLobbyDissect();
-                [bv removeFromSuperview];
-                GFLOG(@"V12-UNLOCK-FIRED");
-                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(8 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                    gfForceMenu();
-                });
+                bv.alpha = 0.0;
+                bv.userInteractionEnabled = NO;
+                bv.hidden = NO;
+                GFLOG(@"V12-GHOST-FIRED");
+                gfForceMenu();
+                /* معيد التفعيل الدوري — يحارب أي إعادة ترتيب */
+                for (int r = 1; r <= 10; r++) {
+                    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(r * 6 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                        gfForceMenu();
+                    });
+                }
             } else {
                 gfLobbyDissect();
             }
