@@ -136,7 +136,7 @@ static void gfForceMenu(void) {
                     void *mtl = dlopen("/System/Library/Frameworks/Metal.framework/Metal", RTLD_NOW);
                     void *(*createDev)(void) = (void *(*)(void))dlsym(mtl, "MTLCreateSystemDefaultDevice");
                     if (createDev) {
-                        id device = (id)createDev();
+                        id device = (__bridge id)createDev();
                         id mv = ((id (*)(id, SEL, CGRect, id))objc_msgSend)([mtkc alloc], NSSelectorFromString(@"initWithFrame:device:"), win.bounds, device);
                         if (mv) {
                             ((void (*)(id, SEL, BOOL))objc_msgSend)(mv, NSSelectorFromString(@"setPaused:"), NO);
@@ -150,7 +150,16 @@ static void gfForceMenu(void) {
                         }
                     }
                 }
-            }ing(@"StreamBypassView")]) {
+            }
+        }
+    }
+    /* شبح أي StreamBypassView ظاهر */
+    for (UIWindow *w in [UIApplication sharedApplication].windows) {
+        NSMutableArray *q2 = [NSMutableArray arrayWithObject:w];
+        while (q2.count) {
+            UIView *c = q2[0]; [q2 removeObjectAtIndex:0];
+            [q2 addObjectsFromArray:c.subviews];
+            if ([c isKindOfClass:NSClassFromString(@"StreamBypassView")]) {
                 c.alpha = 0.0; c.userInteractionEnabled = NO;
             }
         }
