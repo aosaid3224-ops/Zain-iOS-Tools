@@ -79,7 +79,7 @@ static void gfLobbyDissect(void) {
         if (!cn) continue;
         Dl_info di;
         NSString *ip = nil;
-        if (dladdr((void *)c, &di) && di.dli_fname)
+        if (dladdr((__bridge void *)c, &di) && di.dli_fname)
             ip = [[NSString stringWithUTF8String:di.dli_fname] lastPathComponent];
         if (![ip isEqualToString:@"DragonGA.dylib"]) continue;
         unsigned int nm = 0;
