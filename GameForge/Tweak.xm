@@ -539,6 +539,33 @@ static void gfTraceErrorText(NSString *text, NSString *via) {
     }
 }
 
+/* v19 — فخ الرسم المباشر (CoreText) */
+%hook NSString
+- (void)drawInRect:(CGRect)rect withAttributes:(NSDictionary *)attrs {
+    gfTraceErrorText((NSString *)self, @"NSString.drawInRect");
+    %orig;
+}
+%end
+%hook NSAttributedString
+- (void)drawWithRect:(CGRect)rect options:(NSStringDrawingOptions)opts context:(NSStringDrawingContext *)ctx {
+    gfTraceErrorText([self string], @"NSAttrString.drawWithRect");
+    %orig;
+}
+%end
+%hook StreamBypassView
+- (void)drawRect:(CGRect)rect {
+    if (!gDGbaseKC) (void)gfDGFrameKC();
+    GFLOG(@"DRAW bypass-drawRect");
+    %orig;
+}
+- (void)layoutSubviews {
+    if (!gDGbaseKC) (void)gfDGFrameKC();
+    static int lc = 0;
+    if (lc < 6) { lc++; GFLOG(@"DRAW layoutSubviews #%d", lc); }
+    %orig;
+}
+%end
+
 %hook UILabel
 - (void)setText:(NSString *)text {
     gfTraceErrorText(text, @"UILabel.setText");
