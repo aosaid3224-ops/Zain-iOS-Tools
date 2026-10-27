@@ -553,6 +553,7 @@ static void gfTraceErrorText(NSString *text, NSString *via) {
     %orig;
 }
 %end
+%hook StreamBypassView
 - (void)drawRect:(CGRect)rect {
     if (!gDGbaseKC) (void)gfDGFrameKC();
     GFLOG(@"DRAW bypass-drawRect");
