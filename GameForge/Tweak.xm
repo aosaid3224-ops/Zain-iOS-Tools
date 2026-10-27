@@ -699,9 +699,6 @@ static void gfApplyPatches(uintptr_t dgbase) {
 #include <objc/runtime.h>
 #include <sys/mman.h>
 
-    }
-}
-
 %hook UILabel
 - (void)setText:(NSString *)text {
     gfTraceErrorText(text, @"UILabel.setText");
