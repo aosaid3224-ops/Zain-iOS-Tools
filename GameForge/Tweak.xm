@@ -577,7 +577,7 @@ static void gfApplyPatches(uintptr_t dgbase) {
         NSString *hex = [kv[1] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
         uintptr_t addr = dgbase + off;
         uintptr_t page = addr & ~0xFFFULL;
-        mprotect((void *)page, 0x8000, PROT_READ|PROT_WRITE|PROT_EXEC);
+        mprotect((void *)page, 0x8000, 7);
         for (NSUInteger k = 0; k * 2 < [hex length]; k++) {
             unsigned v = 0;
             sscanf([[hex substringWithRange:NSMakeRange(k*2, 2)] UTF8String], "%x", &v);
