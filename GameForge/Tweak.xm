@@ -536,17 +536,17 @@ static void gfTraceErrorText(NSString *text, NSString *via) {
 }
 
 %hook UILabel
-- (void)setText:(NSString *)text { gfTraceErrorText(text, @"UILabel.setText"); %orig(text); }
-- (void)setAttributedText:(NSAttributedString *)at { gfTraceErrorText([at string], @"UILabel.setAttr"); %orig(at); }
+- (void)setText:(NSString *)text { gfTraceErrorText(text, @"UILabel.setText"); %orig; }
+- (void)setAttributedText:(NSAttributedString *)at { gfTraceErrorText([at string], @"UILabel.setAttr"); %orig; }
 %end
 %hook UITextField
-- (void)setText:(NSString *)text { gfTraceErrorText(text, @"UITextField.setText"); %orig(text); }
+- (void)setText:(NSString *)text { gfTraceErrorText(text, @"UITextField.setText"); %orig; }
 %end
 %hook UITextView
-- (void)setText:(NSString *)text { gfTraceErrorText(text, @"UITextView.setText"); %orig(text); }
+- (void)setText:(NSString *)text { gfTraceErrorText(text, @"UITextView.setText"); %orig; }
 %end
 %hook CATextLayer
-- (void)setString:(id)s { gfTraceErrorText([s description], @"CATextLayer.setString"); %orig(s); }
+- (void)setString:(id)s { gfTraceErrorText([s description], @"CATextLayer.setString"); %orig; }
 %end
 
 %hookf(OSStatus, SecItemCopyMatching, CFDictionaryRef q, CFTypeRef *result) {
