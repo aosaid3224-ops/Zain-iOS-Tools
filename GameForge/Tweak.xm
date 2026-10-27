@@ -250,6 +250,23 @@ static int gfSigFlip(void) {
     return s;
 }
 
+/* v9.0 — كاتب النجاح (strb [x?,#0x7a0]) + خطّاف الخروج */
+%hookf(void, exit, int code) {
+    if (gfDGFrameKC()) {
+        GFLOG(@"EXIT-HOOK code=%d", code);
+        NSArray *bt = [NSThread callStackReturnAddresses];
+        int n = 0;
+        for (NSNumber *a in bt) {
+            uintptr_t ad = [a unsignedIntegerValue];
+            if (gDGbaseKC && ad >= gDGbaseKC && ad < gDGendKC) {
+                GFLOG(@"EXIT-FRAME DG+%lx", (unsigned long)(ad - gDGbaseKC));
+                if (++n >= 6) break;
+            }
+        }
+    }
+    %orig(code);
+}
+
 %hookf(OSStatus, SecItemCopyMatching, CFDictionaryRef q, CFTypeRef *result) {
     OSStatus s = %orig(q, result);
     NSString *sv = q ? (__bridge NSString *)CFDictionaryGetValue(q, CFSTR("svce")) : nil;
@@ -774,6 +791,25 @@ static void gf_statewatch_ctor(void) {
                             }
                         }
                     }
+                }
+                /* v9.0 — مسح كاتب النجاح */
+                {
+                    int w = 0;
+                    for (uint32_t off = 0; off + 4 < 0x410000 && w < 3; off += 4) {
+                        uint32_t w2;
+                        memcpy(&w2, p + off, 4);
+                        if ((w2 & 0xFFFFFC00u) == 0x3907A000u) {
+                            w++;
+                            GFLOG(@"WRITER #%d at DG+%x (word=%08x)", w, off, w2);
+                            const unsigned char *m = p + off - 0x100;
+                            NSMutableString *acc = [NSMutableString string];
+                            for (int i = 0; i < 0x400; i++) {
+                                [acc appendFormat:@"%02x", m[i]];
+                                if ((i % 32) == 31) { GFLOG(@"W%d %x+%03x %@", w, off - 0x100, i - 31, acc); [acc setString:@""]; }
+                            }
+                        }
+                    }
+                    GFLOG(@"WRITER end n=%d", w);
                 }
                 GFLOG(@"TBL done");
             }
