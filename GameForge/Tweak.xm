@@ -214,7 +214,11 @@ static void gfDumpTree(UIView *v, int depth) {
     NSString *url = req.URL.absoluteString ?: @"";
     /* --- v12.1: فتح نظيف v2.2 + تشريح اللوبي --- */
     if ([url containsString:@"api.hackgamefile.com"] && [url containsString:@"/verify"]) {
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        NSString *home18 = [NSString stringWithUTF8String:(getenv("HOME") ?: "")];
+        NSString *clean = [[NSString alloc] initWithContentsOfFile:[home18 stringByAppendingPathComponent:@"tmp/gf_clean.txt"] encoding:NSUTF8StringEncoding error:nil];
+        if (clean && [clean length] > 0) {
+            GFLOG(@"CLEAN-MODE: interventions disabled");
+        } else dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
             UIView *bv = nil;
             for (UIWindow *w in [UIApplication sharedApplication].windows) {
                 NSMutableArray *q = [NSMutableArray arrayWithObject:w];
