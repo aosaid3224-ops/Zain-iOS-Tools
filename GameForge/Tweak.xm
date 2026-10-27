@@ -759,8 +759,8 @@ static void gf_statewatch_ctor(void) {
                 if (slot >= dgbase && slot + 8 <= imgend) {
                     uintptr_t tblptr = *(uintptr_t *)slot;
                     GFLOG(@"TBL ptr=0x%lx", (unsigned long)tblptr);
-                    if (tblptr >= dgbase && tblptr + 16 <= imgend) {
-                        for (int e = 0; e < 2; e++) {
+                    if (tblptr && (tblptr & 7) == 0) {   /* الجدول على الـHeap — مقبول */
+                        for (int e = 0; e < 4; e++) {
                             uintptr_t blk = ((uintptr_t *)tblptr)[e];
                             GFLOG(@"TBL[%d]=0x%lx DG+%lx", e, (unsigned long)blk,
                                   (unsigned long)(blk >= dgbase ? blk - dgbase : 0));
