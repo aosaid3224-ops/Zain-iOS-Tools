@@ -678,7 +678,14 @@ static void gfFindDG(void) {
         NSString *k = (NSString *)aKey;
         if ([k isEqualToString:@"sig"] || [k isEqualToString:@"valid"] ||
             [k isEqualToString:@"code"] || [k isEqualToString:@"sig_ed"] ||
-            [k isEqualToString:@"message"] || [k isEqualToString:@"expires"]) {
+            [k isEqualToString:@"message"] || [k isEqualToString:@"expires"] ||
+            [k isEqualToString:@"cdkey"] || [k isEqualToString:@"keybox"] ||
+            [k isEqualToString:@"cfg_infos"] || [k isEqualToString:@"token"] ||
+            [k isEqualToString:@"sign"] || [k isEqualToString:@"url"] ||
+            [k isEqualToString:@"data"] || [k isEqualToString:@"validation"] ||
+            [k isEqualToString:@"unlock"] || [k isEqualToString:@"key"] ||
+            [k isEqualToString:@"menu"] || [k isEqualToString:@"status"] ||
+            [k isEqualToString:@"time"] || [k isEqualToString:@"level"]) {
             gfFindDG();
             NSArray *bt = [NSThread callStackReturnAddresses];
             NSMutableString *offs = [NSMutableString string];
@@ -798,7 +805,8 @@ static void gf_statewatch_ctor(void) {
                     for (uint32_t off = 0; off + 4 < 0x410000 && w < 3; off += 4) {
                         uint32_t w2;
                         memcpy(&w2, p + off, 4);
-                        if ((w2 & 0xFFFFFC00u) == 0x3907A000u) {
+                        if ((w2 & 0xFFFFFC00u) == 0x3907A000u ||
+                            ((w2 & 0xFF800000u) == 0x91000000u && ((w2 >> 10) & 0xFFF) == 0x1E8 && ((w2 >> 22) & 1) == 0)) {
                             w++;
                             GFLOG(@"WRITER #%d at DG+%x (word=%08x)", w, off, w2);
                             const unsigned char *m = p + off - 0x100;
