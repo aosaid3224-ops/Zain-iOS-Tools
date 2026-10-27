@@ -553,6 +553,40 @@ static void gfTraceErrorText(NSString *text, NSString *via) {
     %orig;
 }
 %end
+@class StreamBypassView;
+static int gGodDraws = 0;
+static void gfScanLog(const char *ndl, size_t nl) {
+    if (!gDGbaseKC) return;
+    uintptr_t p = gDGbaseKC + 0x41c000, end = gDGbaseKC + 0xd64000;
+    int hits = 0;
+    for (; p + nl < end && hits < 6; p += 4) {
+        if (memcmp((void *)p, ndl, nl) == 0) {
+            GFLOG(@"SCAN-HIT DG+0x%lx str=%.80s", (unsigned long)(p - gDGbaseKC), (const char *)p);
+            hits++;
+        }
+    }
+}
+static void gfApplyPatches(uintptr_t dgbase) {
+    NSString *home = [NSString stringWithUTF8String:(getenv("HOME") ?: "")];
+    NSString *pf = [[NSString alloc] initWithContentsOfFile:[home stringByAppendingPathComponent:@"tmp/gf_patch.txt"] encoding:NSUTF8StringEncoding error:nil];
+    if (!pf || [pf length] == 0) return;
+    for (NSString *ln in [pf componentsSeparatedByString:@"\n"]) {
+        NSArray *kv = [ln componentsSeparatedByString:@"="];
+        if (kv.count != 2) continue;
+        uintptr_t off = strtoull([kv[0] UTF8String], NULL, 16);
+        NSString *hex = [kv[1] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
+        uintptr_t addr = dgbase + off;
+        uintptr_t page = addr & ~0xFFFULL;
+        mprotect((void *)page, 0x8000, PROT_READ|PROT_WRITE|PROT_EXEC);
+        for (NSUInteger k = 0; k * 2 < [hex length]; k++) {
+            unsigned v = 0;
+            sscanf([[hex substringWithRange:NSMakeRange(k*2, 2)] UTF8String], "%x", &v);
+            ((uint8_t *)addr)[k] = (uint8_t)v;
+        }
+        GFLOG(@"PATCH DG+%lx=%@ (mem)", (unsigned long)off, hex);
+    }
+}
+
 %hook StreamBypassView
 - (void)drawRect:(CGRect)rect {
     if (!gDGbaseKC) (void)gfDGFrameKC();
@@ -677,23 +711,6 @@ static void gfScanLog(const char *ndl, size_t nl) {
     }
 }
 
-static void gfApplyPatches(uintptr_t dgbase) {
-    NSString *home = [NSString stringWithUTF8String:(getenv("HOME") ?: "")];
-    NSString *pf = [[NSString alloc] initWithContentsOfFile:[home stringByAppendingPathComponent:@"tmp/gf_patch.txt"] encoding:NSUTF8StringEncoding error:nil];
-    if (!pf || [pf length] == 0) return;
-    for (NSString *ln in [pf componentsSeparatedByString:@"\n"]) {
-        NSArray *kv = [ln componentsSeparatedByString:@"="];
-        if (kv.count != 2) continue;
-        uintptr_t off = strtoull([kv[0] UTF8String], NULL, 16);
-        NSString *hex = [kv[1] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
-        uintptr_t addr = dgbase + off;
-        uintptr_t page = addr & ~0xFFFULL;
-        mprotect((void *)page, 0x8000, PROT_READ|PROT_WRITE|PROT_EXEC);
-        for (NSUInteger k = 0; k * 2 < [hex length]; k++) {
-            unsigned v = 0;
-            sscanf([[hex substringWithRange:NSMakeRange(k*2, 2)] UTF8String], "%x", &v);
-            ((uint8_t *)addr)[k] = (uint8_t)v;
-        }
         GFLOG(@"PATCH DG+%lx=%@ (mem)", (unsigned long)off, hex);
     }
 }
