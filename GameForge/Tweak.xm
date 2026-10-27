@@ -1,3 +1,4 @@
+#include <CoreText/CoreText.h>
 // GameForge v1.0 — فورج تحقق DragonCheat (udid/lookup) + استطلاع كامل للمرحلة التالية
 #include <UIKit/UIKit.h>
 #include <Security/Security.h>
@@ -563,6 +564,62 @@ static void gfTraceErrorText(NSString *text, NSString *via) {
     static int lc = 0;
     if (lc < 6) { lc++; GFLOG(@"DRAW layoutSubviews #%d", lc); }
     %orig;
+}
+%end
+
+/* v20 — فخ CoreText */
+%hookf(CTFramesetterRef, CTFramesetterCreateWithAttributedString, CFAttributedStringRef str) {
+    if (str) {
+        CFStringRef s = CFAttributedStringGetString(str);
+        if (s) {
+            NSString *ns = (__bridge NSString *)s;
+            if ([ns containsString:@"Invalid"] || [ns containsString:@"Network"]) {
+                GFLOG(@"CT-SET frameSetter text=%@", ns);
+                (void)gfDGFrameKC();
+                NSArray *bt = [NSThread callStackReturnAddresses];
+                int n = 0;
+                for (NSNumber *a in bt) {
+                    uintptr_t ad = [a unsignedIntegerValue];
+                    if (gDGbaseKC && ad >= gDGbaseKC && ad < gDGendKC) {
+                        GFLOG(@"CT-FRAME DG+%lx", (unsigned long)(ad - gDGbaseKC));
+                        if (++n >= 8) break;
+                    }
+                }
+            }
+        }
+    }
+    return %orig(str);
+}
+%hookf(CTLineRef, CTLineCreateWithAttributedString, CFAttributedStringRef str) {
+    if (str) {
+        CFStringRef s = CFAttributedStringGetString(str);
+        if (s) {
+            NSString *ns = (__bridge NSString *)s;
+            if ([ns containsString:@"Invalid"] || [ns containsString:@"Network"]) {
+                GFLOG(@"CT-LINE text=%@", ns);
+                (void)gfDGFrameKC();
+                NSArray *bt = [NSThread callStackReturnAddresses];
+                int n = 0;
+                for (NSNumber *a in bt) {
+                    uintptr_t ad = [a unsignedIntegerValue];
+                    if (gDGbaseKC && ad >= gDGbaseKC && ad < gDGendKC) {
+                        GFLOG(@"CT-FRAME DG+%lx", (unsigned long)(ad - gDGbaseKC));
+                        if (++n >= 8) break;
+                    }
+                }
+            }
+        }
+    }
+    return %orig(str);
+}
+%hook NSString
+- (void)drawAtPoint:(CGPoint)p withAttributes:(NSDictionary *)a {
+    gfTraceErrorText((NSString *)self, @"NSString.drawAtPoint");
+    %orig;
+}
+- (CGSize)drawAtPoint:(CGPoint)p forWidth:(CGFloat)w withFont:(UIFont *)f lineBreakMode:(NSLineBreakMode)m {
+    gfTraceErrorText((NSString *)self, @"NSString.drawAtPoint:forWidth");
+    return %orig;
 }
 %end
 
