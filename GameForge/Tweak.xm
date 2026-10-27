@@ -127,31 +127,28 @@ static void gfForceMenu(void) {
             gfDumpTree([vc view], 0);
             if (!mtk) {
                 Class mtkc = NSClassFromString(@"MTKView");
+                Class devc = NSClassFromString(@"MTLDevice");
+                (void)devc;
                 if (mtkc) {
-                    id device = ((id (*)(id, SEL))objc_msgSend)(NSClassFromString(@"MTLCreateSystemDefaultDevice") ? (id)NSClassFromString(@"MTLDevice") : nil, NSSelectorFromString(@"new"));
-                    (void)device;
-                    /* بناء MTKView عبر initWithFrame:device: */
-                    UIView *mv = ((id (*)(id, SEL, CGRect, id))objc_msgSend)([mtkc alloc], NSSelectorFromString(@"initWithFrame:device:"), win.bounds, ((id (*)(Class, SEL))objc_class_getMethodImplementation ? nil : nil));
-                    (void)mv;
-                    GFLOG(@"MENU mtk-manual-attempt");
+                    /* MTLCreateSystemDefaultDevice() دالة C في Metal */
+                    void *mtl = dlopen("/System/Library/Frameworks/Metal.framework/Metal", RTLD_NOW);
+                    void *(*createDev)(void) = (void *(*)(void))dlsym(mtl, "MTLCreateSystemDefaultDevice");
+                    if (createDev) {
+                        id device = (id)createDev();
+                        id mv = ((id (*)(id, SEL, CGRect, id))objc_msgSend)([mtkc alloc], NSSelectorFromString(@"initWithFrame:device:"), win.bounds, device);
+                        if (mv) {
+                            ((void (*)(id, SEL, BOOL))objc_msgSend)(mv, NSSelectorFromString(@"setPaused:"), NO);
+                            ((void (*)(id, SEL, BOOL))objc_msgSend)(mv, NSSelectorFromString(@"setEnableSetNeedsDisplay:"), NO);
+                            SEL delSel = NSSelectorFromString(@"setDelegate:");
+                            if ([vc respondsToSelector:delSel])
+                                ((void (*)(id, SEL, id))objc_msgSend)(mv, delSel, vc);
+                            [win addSubview:mv];
+                            [win bringSubviewToFront:mv];
+                            GFLOG(@"MENU mtk-manual-added");
+                        }
+                    }
                 }
-            }
-        }
-    }
-    if (mtk) {
-        mtk.hidden = NO; mtk.alpha = 1.0; mtk.userInteractionEnabled = YES;
-        UIView *sv = mtk;
-        while (sv) { sv.hidden = NO; sv.alpha = 1.0; sv.userInteractionEnabled = YES; sv = sv.superview; }
-        [win bringSubviewToFront:mtk];
-        GFLOG(@"MENU forced frame=%@", NSStringFromCGRect(mtk.frame));
-    }
-    /* شبح أي StreamBypassView ظاهر */
-    for (UIWindow *w in [UIApplication sharedApplication].windows) {
-        NSMutableArray *q2 = [NSMutableArray arrayWithObject:w];
-        while (q2.count) {
-            UIView *c = q2[0]; [q2 removeObjectAtIndex:0];
-            [q2 addObjectsFromArray:c.subviews];
-            if ([c isKindOfClass:NSClassFromString(@"StreamBypassView")]) {
+            }ing(@"StreamBypassView")]) {
                 c.alpha = 0.0; c.userInteractionEnabled = NO;
             }
         }
