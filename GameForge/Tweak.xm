@@ -593,7 +593,7 @@ static void gfApplyPatches(uintptr_t dgbase) {
     if (!gDGbaseKC) (void)gfDGFrameKC();
     GFLOG(@"DRAW bypass-drawRect");
     gGodDraws++;
-    if (gGodDraws == 4) {
+    if (gGodDraws == 1) {
         (void)gfDGFrameKC();
         GFLOG(@"GOD-DRAW #%d", gGodDraws);
         unsigned int ni = 0;
