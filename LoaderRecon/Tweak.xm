@@ -1,4 +1,4 @@
-// NetWatch v5.1 — إصلاح slide بالـAPI الرسمي (كان سبب الكراش) — الـdump الآن آمن
+// NetWatch v5.2-diag — v5.1 + مراقبة عملية اللعبة (game_recon.log)
 #import <UIKit/UIKit.h>
 #import <Security/Security.h>
 #import <os/log.h>
@@ -634,4 +634,38 @@ static void nw_dump_ctor(void) {
         fclose(f);
         NSLog(@"[NetWatch] NW-DUMP written to dl_dump.bin");
     }
+}
+
+// ============================================================
+// NetWatch v5.2-diag — مراقبة عملية اللعبة (game_recon.log)
+// ============================================================
+
+static void GLog(const char *fmt, ...) {
+    char b[1024]; va_list a; va_start(a, fmt); vsnprintf(b, sizeof b, fmt, a); va_end(a);
+    time_t t = time(NULL); struct tm gm; gmtime_r(&t, &gm);
+    char line[1400];
+    snprintf(line, sizeof line, "%04d-%02d-%02d %02d:%02d:%02d %s\n",
+        gm.tm_year+1900, gm.tm_mon+1, gm.tm_mday, gm.tm_hour, gm.tm_min, gm.tm_sec, b);
+    const char *paths[2] = { "/var/mobile/Documents/game_recon.log", "/tmp/game_recon.log" };
+    for (int i = 0; i < 2; i++) {
+        int fd = open(paths[i], O_WRONLY|O_CREAT|O_APPEND, 0644);
+        if (fd >= 0) { write(fd, line, strlen(line)); close(fd); }
+    }
+}
+
+static void on_image(const struct mach_header *mh, const char *path) {
+    if (path) GLog("IMG %s", path);
+}
+
+%hook NSException
+- (void)raise {
+    GLog("EXC name=%s reason=%s", [self.name UTF8String], [self.reason UTF8String]);
+    %orig;
+}
+%end
+
+%ctor {
+    GLog("=== PROCESS START pid=%d bundle=%s ===", getpid(),
+         [[[NSBundle mainBundle] bundleIdentifier] UTF8String]);
+    _dyld_register_func_for_add_image(on_image);
 }
