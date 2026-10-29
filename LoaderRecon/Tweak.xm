@@ -701,6 +701,7 @@ static void on_image(const struct mach_header *mh, intptr_t slide) {
     _dyld_register_func_for_add_image(on_image);
 }
 %ctor {
+    %init();
     if (![[[NSBundle mainBundle] bundleIdentifier] isEqualToString:@"com.garena.game.df"]) {
         %init(Full_0);
         %init(Full_1);
