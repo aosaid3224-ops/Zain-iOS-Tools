@@ -653,8 +653,12 @@ static void GLog(const char *fmt, ...) {
     }
 }
 
-static void on_image(const struct mach_header *mh, const char *path) {
-    if (path) GLog("IMG %s", path);
+static void on_image(const struct mach_header *mh, intptr_t slide) {
+    const char *name = "?";
+    for (uint32_t i = 0; i < _dyld_image_count(); i++) {
+        if (_dyld_get_image_header(i) == mh) { name = _dyld_get_image_name(i); break; }
+    }
+    GLog("IMG %s slide=0x%lx", name, (long)slide);
 }
 
 %hook NSException
