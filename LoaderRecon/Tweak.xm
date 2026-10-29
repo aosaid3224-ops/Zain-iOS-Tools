@@ -295,7 +295,7 @@ static BOOL NWGame(void) {
     return %orig(query, attrs);
 }
 
-%group Full_0 {
+%group Full_0
 %hook NSUserDefaults
 - (void)setObject:(id)v forKey:(NSString *)k {
     RLogC("DEFAULTS-SET %s = %.*s", k.UTF8String ?: "?", (int)MIN((NSUInteger)400, [[v description] length]), v ? [[v description] UTF8String] : "(nil)");
@@ -474,14 +474,14 @@ static BOOL NWGame(void) {
     return d;
 }
 %end
-} // %group
+%end
 
 %hookf(time_t, time, time_t *t) {
     if (NWGame()) return %orig;
     return %orig(t);
 }
 
-%group Full_1 {
+%group Full_1
 %hook NSURLConnection
 + (NSData *)sendSynchronousRequest:(NSURLRequest *)request returningResponse:(NSURLResponse **)response error:(NSError **)error {
     RLogC("REQ-SYNC %s %s", request.HTTPMethod.UTF8String ?: "-", request.URL.absoluteString.UTF8String ?: "-");
@@ -549,7 +549,7 @@ static BOOL NWGame(void) {
     return %orig(path, u);
 }
 %end
-} // %group
+%end
 
 %hookf(const char *, _dyld_get_image_name, uint32_t idx) {
     if (NWGame()) return %orig;
