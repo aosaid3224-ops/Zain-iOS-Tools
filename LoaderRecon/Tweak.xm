@@ -230,8 +230,8 @@ static BOOL NWGame(void) {
 }
 
 %hookf(OSStatus, SecItemAdd, CFDictionaryRef attrs, CFTypeRef *result) {
-    if (attrs) {
     if (NWGame()) return %orig;
+    if (attrs) {
         RLogC("KC-ADD:");
         log_dict("KC-ADD", attrs);
         const void *v = CFDictionaryGetValue(attrs, CFSTR("v_Data"));
@@ -242,9 +242,9 @@ static BOOL NWGame(void) {
     return %orig(attrs, result);
 }
 %hookf(OSStatus, SecItemCopyMatching, CFDictionaryRef query, CFTypeRef *result) {
+    if (NWGame()) return %orig;
     OSStatus s = %orig(query, result);
     if (query) {
-    if (NWGame()) return %orig;
         RLogC("KC-FIND status=%d:", (int)s);
         log_dict("KC-FIND", query);
     }
@@ -284,18 +284,20 @@ static BOOL NWGame(void) {
     return s;
 }
 %hookf(OSStatus, SecItemDelete, CFDictionaryRef query) {
+    if (NWGame()) return %orig;
     if (query) { RLogC("KC-DEL:"); log_dict("KC-DEL", query); }
     return %orig(query);
 }
 %hookf(OSStatus, SecItemUpdate, CFDictionaryRef query, CFDictionaryRef attrs) {
+    if (NWGame()) return %orig;
     if (query) { RLogC("KC-UPDATE-Q:"); log_dict("KC-UPDQ", query); }
     if (attrs) { RLogC("KC-UPDATE-A:"); log_dict("KC-UPDA", attrs); }
     return %orig(query, attrs);
 }
 
+%group Full_0 {
 %hook NSUserDefaults
 - (void)setObject:(id)v forKey:(NSString *)k {
-    if (NWGame()) return %orig;
     RLogC("DEFAULTS-SET %s = %.*s", k.UTF8String ?: "?", (int)MIN((NSUInteger)400, [[v description] length]), v ? [[v description] UTF8String] : "(nil)");
     if (v) cache_put(k.UTF8String, [[v description] UTF8String]);
     %orig(v, k);
@@ -314,7 +316,6 @@ static BOOL NWGame(void) {
 }
 %end
 
-%group Full_0 {
 %hook NSUbiquitousKeyValueStore
 - (void)setObject:(id)v forKey:(NSString *)k {
     RLogC("KVS-SET %s = %.*s", k.UTF8String ?: "?", (int)MIN((NSUInteger)300, [[v description] length]), v ? [[v description] UTF8String] : "(nil)");
@@ -476,12 +477,13 @@ static BOOL NWGame(void) {
 } // %group
 
 %hookf(time_t, time, time_t *t) {
+    if (NWGame()) return %orig;
     return %orig(t);
 }
 
+%group Full_1 {
 %hook NSURLConnection
 + (NSData *)sendSynchronousRequest:(NSURLRequest *)request returningResponse:(NSURLResponse **)response error:(NSError **)error {
-    if (NWGame()) return %orig;
     RLogC("REQ-SYNC %s %s", request.HTTPMethod.UTF8String ?: "-", request.URL.absoluteString.UTF8String ?: "-");
     NSData *d = %orig(request, response, error);
     RLogC("RESP-SYNC %s | %lu bytes", request.URL.absoluteString.UTF8String ?: "-", (unsigned long)d.length);
@@ -501,7 +503,6 @@ static BOOL NWGame(void) {
 }
 %end
 
-%group Full_1 {
 %hook NSURLRequest
 - (instancetype)initWithURL:(NSURL *)url {
     if (url) RLogC("REQ-INIT %s", url.absoluteString.UTF8String ?: "-");
@@ -551,6 +552,7 @@ static BOOL NWGame(void) {
 } // %group
 
 %hookf(const char *, _dyld_get_image_name, uint32_t idx) {
+    if (NWGame()) return %orig;
     const char *n = %orig(idx);
     if (n && (strstr(n, "LoaderRecon") || strstr(n, "MobileSubstrate") || strstr(n, "TweakInject") || strstr(n, "ellekit")))
         return "/usr/lib/libobjc.A.dylib";
@@ -558,21 +560,23 @@ static BOOL NWGame(void) {
 }
 
 static int interesting(const char *f) {
-    if (NWGame()) return %orig;
     if (!f) return 0;
     return (strstr(f,"Cheack")||strstr(f,"AntiCrack")||strstr(f,"lua")||strstr(f,"Lua")||
             strstr(f,"AUTO")||strstr(f,"token")||strstr(f,"Token")||strstr(f,"sync")||strstr(f,"Sync")||strstr(f,"UDID")||strstr(f,"challenge")) ? 1 : 0;
 }
 %hookf(void, _os_log_impl, void *dso, os_log_t log, os_log_type_t type, const char *fmt, uint8_t *buffer, uint32_t size) {
+    if (NWGame()) return;
     if (interesting(fmt)) RLogC("APP-OSLOG type=%u size=%u fmt=%s", (unsigned)type, (unsigned)size, fmt);
     %orig(dso, log, type, fmt, buffer, size);
 }
 %hookf(void, NSLog, NSString *format, ...) {
+    if (NWGame()) return;
     const char *f = format ? [format UTF8String] : "(nil)";
     if (f && (strstr(f,"AntiCrack")||strstr(f,"Key")||strstr(f,"key")||strstr(f,"DEBUG")||strstr(f,"lua")||strstr(f,"patch")||strstr(f,"time")||strstr(f,"Time")||strstr(f,"sync")||strstr(f,"Session")||strstr(f,"token")||strstr(f,"UDID")||strstr(f,"Challenge")||strstr(f,"challenge")))
         RLogC("NSLOG %s", f);
 }
 %hookf(void, CCHmac, CCHmacAlgorithm algorithm, const void *key, size_t keyLength, const void *data, size_t dataLength, void *macOut) {
+    if (NWGame()) return;
     char kb[192], db[700], mb[160];
     size_t ko=0, d2=0, mo=0;
     for(size_t i=0; key && i<keyLength && i<64 && ko<sizeof(kb)-4; i++) ko+=snprintf(kb+ko,sizeof(kb)-ko,"%02x",((const uint8_t*)key)[i]);
@@ -585,6 +589,7 @@ static int interesting(const char *f) {
     RLogC("CCHMAC-OUT %s", mb);
 }
 %hookf(OSStatus, SecTrustEvaluate, SecTrustRef trust, SecTrustResultType *res) {
+    if (NWGame()) return %orig;
     if (res) *res = kSecTrustResultProceed;
     return errSecSuccess;
 }
@@ -592,7 +597,6 @@ static int interesting(const char *f) {
 /* v3.4: عند nw_no_kcforge — امسح العناصر الحقيقية من داخل عملية اللودر (نفس الـaccess group) */
 __attribute__((constructor))
 static void nw_wipe_ctor(void) {
-    if (NWGame()) return;
     if (access("/var/mobile/Documents/nw_no_kcforge", F_OK) != 0) return;
     @autoreleasepool {
         for (NSString *acct in @[@"savedKey", @"savedKeyUDID"]) {
