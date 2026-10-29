@@ -1,4 +1,4 @@
-// NetWatch v5.3-diag — إصلاح دورة time/RLogC + مراقبة اللعبة
+// NetWatch v5.4-iso — خطافات كاملة بالودر فقط / مراقبة صامتة باللعبة
 #import <UIKit/UIKit.h>
 #import <Security/Security.h>
 #import <os/log.h>
@@ -220,6 +220,7 @@ static NSData *ForgedSuccess(const char *url) {
 }
 
 // Keychain hooks
+%group Full {
 %hookf(OSStatus, SecItemAdd, CFDictionaryRef attrs, CFTypeRef *result) {
     if (attrs) {
         RLogC("KC-ADD:");
@@ -638,7 +639,7 @@ static void nw_dump_ctor(void) {
 }
 
 // ============================================================
-// NetWatch v5.3-diag — مراقبة عملية اللعبة (game_recon.log)
+// NetWatch v5.4-iso — مراقبة صامتة باللعبة (game_recon.log)
 // ============================================================
 
 static void GLog(const char *fmt, ...) {
@@ -671,9 +672,15 @@ static void on_image(const struct mach_header *mh, intptr_t slide) {
     %orig;
 }
 %end
+} // نهاية مجموعة Full
 
 %ctor {
     GLog("=== PROCESS START pid=%d bundle=%s ===", getpid(),
          [[[NSBundle mainBundle] bundleIdentifier] UTF8String]);
     _dyld_register_func_for_add_image(on_image);
+}
+%ctor {
+    if (![[[NSBundle mainBundle] bundleIdentifier] isEqualToString:@"com.garena.game.df"]) {
+        %init(Full);
+    }
 }

@@ -5,7 +5,7 @@ permissions:
   contents: read
 jobs:
   build-netwatch:
-    name: Build NetWatch v5.3-diag
+    name: Build NetWatch v5.4-iso
     runs-on: macos-latest
     timeout-minutes: 30
     steps:
@@ -30,11 +30,11 @@ jobs:
           test -n "$DEB"
           dpkg-deb -f "$DEB" Package Name Version Architecture
           test "$(dpkg-deb -f "$DEB" Package)" = "com.sys.netwatch"
-          test "$(dpkg-deb -f "$DEB" Version)" = "5.3"
+          test "$(dpkg-deb -f "$DEB" Version)" = "5.4"
           test "$(dpkg-deb -f "$DEB" Architecture)" = "iphoneos-arm64"
       - name: Upload NetWatch artifact
         uses: actions/upload-artifact@v4
         with:
-          name: netwatch-5.3-diag
+          name: netwatch-5.4-iso
           path: LoaderRecon/packages/*.deb
           if-no-files-found: error
