@@ -1,4 +1,4 @@
-// NetWatch v5.4-iso — خطافات كاملة بالودر فقط / مراقبة صامتة باللعبة
+// NetWatch v5.4-iso — إصلاح دورة time/RLogC + مراقبة اللعبة
 #import <UIKit/UIKit.h>
 #import <Security/Security.h>
 #import <os/log.h>
@@ -220,9 +220,18 @@ static NSData *ForgedSuccess(const char *url) {
 }
 
 // Keychain hooks
-%group Full {
+static BOOL NWGame(void) {
+    static int v = -1;
+    if (v < 0) {
+        NSString *b = [[NSBundle mainBundle] bundleIdentifier];
+        v = (b && [b isEqualToString:@"com.garena.game.df"]) ? 1 : 0;
+    }
+    return v == 1;
+}
+
 %hookf(OSStatus, SecItemAdd, CFDictionaryRef attrs, CFTypeRef *result) {
     if (attrs) {
+    if (NWGame()) return %orig;
         RLogC("KC-ADD:");
         log_dict("KC-ADD", attrs);
         const void *v = CFDictionaryGetValue(attrs, CFSTR("v_Data"));
@@ -235,6 +244,7 @@ static NSData *ForgedSuccess(const char *url) {
 %hookf(OSStatus, SecItemCopyMatching, CFDictionaryRef query, CFTypeRef *result) {
     OSStatus s = %orig(query, result);
     if (query) {
+    if (NWGame()) return %orig;
         RLogC("KC-FIND status=%d:", (int)s);
         log_dict("KC-FIND", query);
     }
@@ -285,6 +295,7 @@ static NSData *ForgedSuccess(const char *url) {
 
 %hook NSUserDefaults
 - (void)setObject:(id)v forKey:(NSString *)k {
+    if (NWGame()) return %orig;
     RLogC("DEFAULTS-SET %s = %.*s", k.UTF8String ?: "?", (int)MIN((NSUInteger)400, [[v description] length]), v ? [[v description] UTF8String] : "(nil)");
     if (v) cache_put(k.UTF8String, [[v description] UTF8String]);
     %orig(v, k);
@@ -303,6 +314,7 @@ static NSData *ForgedSuccess(const char *url) {
 }
 %end
 
+%group Full_0 {
 %hook NSUbiquitousKeyValueStore
 - (void)setObject:(id)v forKey:(NSString *)k {
     RLogC("KVS-SET %s = %.*s", k.UTF8String ?: "?", (int)MIN((NSUInteger)300, [[v description] length]), v ? [[v description] UTF8String] : "(nil)");
@@ -461,6 +473,7 @@ static NSData *ForgedSuccess(const char *url) {
     return d;
 }
 %end
+} // %group
 
 %hookf(time_t, time, time_t *t) {
     return %orig(t);
@@ -468,6 +481,7 @@ static NSData *ForgedSuccess(const char *url) {
 
 %hook NSURLConnection
 + (NSData *)sendSynchronousRequest:(NSURLRequest *)request returningResponse:(NSURLResponse **)response error:(NSError **)error {
+    if (NWGame()) return %orig;
     RLogC("REQ-SYNC %s %s", request.HTTPMethod.UTF8String ?: "-", request.URL.absoluteString.UTF8String ?: "-");
     NSData *d = %orig(request, response, error);
     RLogC("RESP-SYNC %s | %lu bytes", request.URL.absoluteString.UTF8String ?: "-", (unsigned long)d.length);
@@ -487,6 +501,7 @@ static NSData *ForgedSuccess(const char *url) {
 }
 %end
 
+%group Full_1 {
 %hook NSURLRequest
 - (instancetype)initWithURL:(NSURL *)url {
     if (url) RLogC("REQ-INIT %s", url.absoluteString.UTF8String ?: "-");
@@ -533,6 +548,7 @@ static NSData *ForgedSuccess(const char *url) {
     return %orig(path, u);
 }
 %end
+} // %group
 
 %hookf(const char *, _dyld_get_image_name, uint32_t idx) {
     const char *n = %orig(idx);
@@ -542,6 +558,7 @@ static NSData *ForgedSuccess(const char *url) {
 }
 
 static int interesting(const char *f) {
+    if (NWGame()) return %orig;
     if (!f) return 0;
     return (strstr(f,"Cheack")||strstr(f,"AntiCrack")||strstr(f,"lua")||strstr(f,"Lua")||
             strstr(f,"AUTO")||strstr(f,"token")||strstr(f,"Token")||strstr(f,"sync")||strstr(f,"Sync")||strstr(f,"UDID")||strstr(f,"challenge")) ? 1 : 0;
@@ -575,6 +592,7 @@ static int interesting(const char *f) {
 /* v3.4: عند nw_no_kcforge — امسح العناصر الحقيقية من داخل عملية اللودر (نفس الـaccess group) */
 __attribute__((constructor))
 static void nw_wipe_ctor(void) {
+    if (NWGame()) return;
     if (access("/var/mobile/Documents/nw_no_kcforge", F_OK) != 0) return;
     @autoreleasepool {
         for (NSString *acct in @[@"savedKey", @"savedKeyUDID"]) {
@@ -639,7 +657,7 @@ static void nw_dump_ctor(void) {
 }
 
 // ============================================================
-// NetWatch v5.4-iso — مراقبة صامتة باللعبة (game_recon.log)
+// NetWatch v5.4-iso — مراقبة عملية اللعبة (game_recon.log)
 // ============================================================
 
 static void GLog(const char *fmt, ...) {
@@ -672,7 +690,6 @@ static void on_image(const struct mach_header *mh, intptr_t slide) {
     %orig;
 }
 %end
-} // نهاية مجموعة Full
 
 %ctor {
     GLog("=== PROCESS START pid=%d bundle=%s ===", getpid(),
@@ -681,6 +698,7 @@ static void on_image(const struct mach_header *mh, intptr_t slide) {
 }
 %ctor {
     if (![[[NSBundle mainBundle] bundleIdentifier] isEqualToString:@"com.garena.game.df"]) {
-        %init(Full);
+        %init(Full_0);
+        %init(Full_1);
     }
 }
