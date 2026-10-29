@@ -1,4 +1,4 @@
-// NetWatch v5.2-diag — v5.1 + مراقبة عملية اللعبة (game_recon.log)
+// NetWatch v5.3-diag — إصلاح دورة time/RLogC + مراقبة اللعبة
 #import <UIKit/UIKit.h>
 #import <Security/Security.h>
 #import <os/log.h>
@@ -12,6 +12,9 @@
 #include <CoreFoundation/CoreFoundation.h>
 
 static void RLogC(const char *fmt, ...) {
+    static __thread int in_rlog = 0;
+    if (in_rlog) return;
+    in_rlog = 1;
     char buf[16384];
     time_t t = time(NULL); struct tm tv; gmtime_r(&t, &tv);
     int n = snprintf(buf, sizeof(buf), "%04d-%02d-%02d %02d:%02d:%02d ",
@@ -23,6 +26,7 @@ static void RLogC(const char *fmt, ...) {
     buf[len]='\n'; buf[len+1]=0;
     int fd = open("/var/mobile/Documents/loader_recon.log", O_WRONLY|O_CREAT|O_APPEND, 0644);
     if (fd >= 0) { ssize_t w = write(fd, buf, strlen(buf)); (void)w; close(fd); }
+    in_rlog = 0;
 }
 
 // كاش القيم عبر كل المخازن
@@ -458,10 +462,7 @@ static NSData *ForgedSuccess(const char *url) {
 %end
 
 %hookf(time_t, time, time_t *t) {
-    time_t r = %orig(t);
-    static int tc = 0;
-    if (tc < 60) { tc++; RLogC("TIME() = %ld", (long)r); }
-    return r;
+    return %orig(t);
 }
 
 %hook NSURLConnection
@@ -637,12 +638,13 @@ static void nw_dump_ctor(void) {
 }
 
 // ============================================================
-// NetWatch v5.2-diag — مراقبة عملية اللعبة (game_recon.log)
+// NetWatch v5.3-diag — مراقبة عملية اللعبة (game_recon.log)
 // ============================================================
 
 static void GLog(const char *fmt, ...) {
     char b[1024]; va_list a; va_start(a, fmt); vsnprintf(b, sizeof b, fmt, a); va_end(a);
-    time_t t = time(NULL); struct tm gm; gmtime_r(&t, &gm);
+    struct timeval tv; gettimeofday(&tv, NULL); time_t t = tv.tv_sec;
+    struct tm gm; gmtime_r(&t, &gm);
     char line[1400];
     snprintf(line, sizeof line, "%04d-%02d-%02d %02d:%02d:%02d %s\n",
         gm.tm_year+1900, gm.tm_mon+1, gm.tm_mday, gm.tm_hour, gm.tm_min, gm.tm_sec, b);
@@ -654,11 +656,13 @@ static void GLog(const char *fmt, ...) {
 }
 
 static void on_image(const struct mach_header *mh, intptr_t slide) {
-    const char *name = "?";
-    for (uint32_t i = 0; i < _dyld_image_count(); i++) {
-        if (_dyld_get_image_header(i) == mh) { name = _dyld_get_image_name(i); break; }
-    }
-    GLog("IMG %s slide=0x%lx", name, (long)slide);
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), ^{
+        const char *name = "?";
+        for (uint32_t i = 0; i < _dyld_image_count(); i++) {
+            if (_dyld_get_image_header(i) == mh) { name = _dyld_get_image_name(i); break; }
+        }
+        GLog("IMG %s slide=0x%lx", name, (long)slide);
+    });
 }
 
 %hook NSException
