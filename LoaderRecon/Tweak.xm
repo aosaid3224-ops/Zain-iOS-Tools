@@ -1,4 +1,4 @@
-// NetWatch v5.4-iso — إصلاح دورة time/RLogC + مراقبة اللعبة
+// NetWatch v5.5 — إصلاح دورة time/RLogC + مراقبة اللعبة
 #import <UIKit/UIKit.h>
 #import <Security/Security.h>
 #import <os/log.h>
@@ -661,7 +661,7 @@ static void nw_dump_ctor(void) {
 }
 
 // ============================================================
-// NetWatch v5.4-iso — مراقبة عملية اللعبة (game_recon.log)
+// NetWatch v5.5 — مراقبة عملية اللعبة (game_recon.log)
 // ============================================================
 
 static void GLog(const char *fmt, ...) {
