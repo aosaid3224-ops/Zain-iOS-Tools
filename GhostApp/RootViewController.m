@@ -51,7 +51,7 @@
 }
 
 - (void)runHelper:(const char *)op {
-    const char *path = "/var/jb/usr/local/bin/ghosthelper";
+    const char *path = "/var/jb/usr/bin/ghosthelper";
     pid_t pid;
     char *argv[] = {(char *)path, (char *)op, NULL};
     if (posix_spawn(&pid, path, NULL, NULL, argv, NULL) == 0) {

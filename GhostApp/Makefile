@@ -5,6 +5,7 @@ include $(THEOS)/makefiles/common.mk
 APPLICATION_NAME = GhostApp
 GhostApp_FILES = main.m AppDelegate.m RootViewController.m
 GhostApp_FRAMEWORKS = UIKit Foundation
+GhostApp_POSTINST = $(THEOS_PROJECT_DIR)/postinst
 
 TOOL_NAME = ghosthelper
 ghosthelper_FILES = helper.c
