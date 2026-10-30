@@ -10,7 +10,13 @@
 #import <dlfcn.h>
 #import <mach-o/dyld.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 extern CFTypeRef MGCopyAnswer(CFStringRef key);
+#ifdef __cplusplus
+}
+#endif
 
 static BOOL gs_hidden(const char *path) {
     if (!path) return NO;
