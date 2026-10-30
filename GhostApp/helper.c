@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <fcntl.h>
+#include <time.h>
 
 #define SRC "/var/mobile/Documents/luasource_ghost.bin"
 #define NAMEF "/var/mobile/Documents/.ghost_name"
