@@ -1,0 +1,9 @@
+Package: com.zain.ghostshield
+Name: ZAIN GhostShield (درع)
+Version: 1.0
+Architecture: iphoneos-arm64
+Description: درع حماية للعبة — يخفي الحقن والجلبريك ويزوّر هوية الجهاز
+Maintainer: ZAIN iOS Tools
+Author: ZAIN
+Section: Tweaks
+Depends: firmware (>= 15.0)
