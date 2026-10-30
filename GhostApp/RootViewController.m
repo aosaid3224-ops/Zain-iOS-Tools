@@ -54,6 +54,7 @@
     self.statusView.layer.cornerRadius = 10;
     [self.view addSubview:self.statusView];
     [self refresh];
+    [NSTimer scheduledTimerWithTimeInterval:4.0 target:self selector:@selector(refresh) userInfo:nil repeats:YES];
 }
 
 - (void)btn:(UIButton *)b {

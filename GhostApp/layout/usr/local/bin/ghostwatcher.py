@@ -1,37 +1,42 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-═══════════════════════════════════════════════════════════
- GHOST WATCHER v1.1 — المراقب التلقائي | ZAIN iOS Tools
- يراقب اللعبة ويلصق الهاك تلقائيًا كل 20 ثانية
- اللوق: /var/mobile/Documents/ghost_watcher.log
-═══════════════════════════════════════════════════════════
-"""
+"""GHOST WATCHER v1.2 — نبض حي + لصق تلقائي | ZAIN iOS Tools"""
 import os, glob, shutil, time, subprocess
 
 GAME_BID  = "com.garena.game.df"
 SRC       = "/var/mobile/Documents/luasource_ghost.bin"
 NAME_CONF = "/var/mobile/Documents/.ghost_name"
 LOG       = "/var/mobile/Documents/ghost_watcher.log"
+HB        = "/var/mobile/Documents/.ghost_hb"
 
 def log(m):
     try:
         with open(LOG, "a") as f:
-            f.write(time.strftime("%Y-%m-%d %H:%M:%S ") + m + "\n")
+            f.write(time.strftime("%H:%M:%S ") + m + "\n")
     except Exception:
         pass
 
+def heartbeat(running):
+    now = time.time()
+    last = 0
+    if os.path.isfile(HB):
+        try: last = float(open(HB).read().strip() or 0)
+        except Exception: last = 0
+    if now - last >= 300:
+        with open(HB, "w") as f: f.write(str(now))
+        log("💓 المراقب حي | اللعبة: %s | الملف: %s" % (
+            "تعمل 🎮" if running else "لا",
+            "جاهز ✅" if os.path.isfile(SRC) else "ناقص ⚠️"))
+
 def game_running():
     try:
-        r = subprocess.run(["pgrep", "-x", "DeltaForceClient"],
-                           capture_output=True, timeout=5)
-        if r.returncode == 0:
-            return True
+        r = subprocess.run(["pgrep", "-x", "DeltaForceClient"], capture_output=True, timeout=5)
+        if r.returncode == 0: return True
     except FileNotFoundError:
         pass
     try:
         r = subprocess.run(["ps", "-A"], capture_output=True, timeout=5)
-        return b"DeltaForceClient" in r.stdout and b"grep" not in r.stdout
+        return b"DeltaForceClient" in r.stdout
     except Exception:
         return False
 
@@ -47,15 +52,15 @@ def find_lua():
     return None
 
 def main():
+    running = game_running()
+    heartbeat(running)
     if not os.path.isfile(SRC):
-        log("ERROR: luasource_ghost.bin غير موجود بوثائق الجهاز")
+        log("⚠️ ملف الهاك ناقص — أعد تثبيت الحزمة"); return
+    if not running:
         return
-    if not game_running():
-        return  # اللعبة نايمة — لا شيء نسويه
     lua = find_lua()
     if not lua:
-        log("ERROR: حاوية اللعبة غير موجودة")
-        return
+        log("⚠️ حاوية اللعبة غير موجودة"); return
     name = "GhostUpdate.lua"
     if os.path.isfile(NAME_CONF):
         name = open(NAME_CONF, "rb").read().decode("utf-8", "surrogateescape")
@@ -71,7 +76,7 @@ def main():
             os.makedirs(lua, exist_ok=True)
             shutil.copyfile(SRC, dst)
             os.chmod(dst, 0o644)
-            log("PASTED 👻 (" + name[:30] + ")")
+            log("PASTED 👻 (" + name[:28] + ")")
         except Exception as e:
             log("PASTE FAIL: " + str(e))
 
