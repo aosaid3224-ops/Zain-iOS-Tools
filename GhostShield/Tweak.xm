@@ -8,6 +8,9 @@
 #import <dirent.h>
 #import <errno.h>
 #import <dlfcn.h>
+#import <mach-o/dyld.h>
+
+extern CFTypeRef MGCopyAnswer(CFStringRef key);
 
 static BOOL gs_hidden(const char *path) {
     if (!path) return NO;
