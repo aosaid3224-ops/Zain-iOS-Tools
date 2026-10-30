@@ -1,8 +1,8 @@
 Package: com.zain.ghostapp
 Name: ZAIN Ghost (شبح)
-Version: 1.2
+Version: 1.3
 Architecture: iphoneos-arm64
-Description: نظام الشبح — فعّل والعب: مراقب تلقائي بنبض حي + واجهة عربية
+Description: نظام الشبح — مراقب + مساعد root للّصق + واجهة عربية
 Maintainer: ZAIN iOS Tools
 Author: ZAIN
 Section: Utilities
