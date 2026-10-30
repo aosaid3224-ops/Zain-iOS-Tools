@@ -5,6 +5,5 @@ include $(THEOS)/makefiles/common.mk
 TWEAK_NAME = GhostShield
 GhostShield_FILES = Tweak.xm
 GhostShield_CFLAGS = -fobjc-arc
-GhostShield_LDFLAGS = -lMobileGestalt
 
 include $(THEOS_MAKE_PATH)/tweak.mk

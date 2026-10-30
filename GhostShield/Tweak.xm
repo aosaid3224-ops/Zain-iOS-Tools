@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════
-//  GhostShield v1.0 — درع الحماية | ZAIN iOS Tools
-//  يعمل داخل اللعبة فقط: يخفي نفسه وإخوته + يخفي الجلبريك + يزوّر الهوية
-//  صامت تمامًا — لا ملفات، لا لوق، لا شبكة
+//  GhostShield v1.1 — درع الحماية (PAC-safe) | ZAIN iOS Tools
+//  إخفاء الحقون + إخفاء مسارات الجلبريك + IDFV spoof
+//  ملاحظة: MGCopyAnswer مُزال — خطافات C الخام تكسر PAC على arm64e
 // ═══════════════════════════════════════════════════════
 #import <UIKit/UIKit.h>
 #import <sys/stat.h>
@@ -9,14 +9,6 @@
 #import <errno.h>
 #import <dlfcn.h>
 #import <mach-o/dyld.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-extern CFTypeRef MGCopyAnswer(CFStringRef key);
-#ifdef __cplusplus
-}
-#endif
 
 static BOOL gs_hidden(const char *path) {
     if (!path) return NO;
@@ -30,6 +22,7 @@ static BOOL gs_hidden(const char *path) {
             strstr(path, "procursus")     != NULL ||
             strstr(path, "systemhook")    != NULL ||
             strstr(path, "GhostShield")   != NULL ||
+            strstr(path, "Choicy")        != NULL ||
             strstr(path, "dopamine-")     != NULL);
 }
 
@@ -45,7 +38,7 @@ static BOOL gs_jbpath(const char *path) {
             strstr(path, "Dopamine.app")  != NULL);
 }
 
-// ─── 1) إخفاء الصور الأجنبية من dyld ───
+// ─── 1) إخفاء الصور الأجنبية ───
 %hookf(const char *, _dyld_get_image_name, uint32_t image_index) {
     const char *n = %orig;
     if (gs_hidden(n)) return "/usr/lib/libobjc.A.dylib";
@@ -68,37 +61,24 @@ static BOOL gs_jbpath(const char *path) {
     if (gs_jbpath(path)) { errno = ENOENT; return -1; }
     return %orig;
 }
-
 %hookf(int, stat, const char *path, struct stat *buf) {
     if (gs_jbpath(path)) { errno = ENOENT; return -1; }
     return %orig;
 }
-
 %hookf(int, lstat, const char *path, struct stat *buf) {
     if (gs_jbpath(path)) { errno = ENOENT; return -1; }
     return %orig;
 }
-
 %hookf(int, fstatat, int fd, const char *path, struct stat *buf, int flag) {
     if (gs_jbpath(path)) { errno = ENOENT; return -1; }
     return %orig;
 }
-
 %hookf(DIR *, opendir, const char *path) {
     if (gs_jbpath(path)) { errno = ENOENT; return NULL; }
     return %orig;
 }
 
-// ─── 3) تزوير هوية الجهاز ───
-%hookf(CFTypeRef, MGCopyAnswer, CFStringRef key) {
-    if (key) {
-        NSString *k = (__bridge NSString *)key;
-        if ([k isEqualToString:@"SerialNumber"])    return CFSTR("Z2A1IN0GHO5T");
-        if ([k isEqualToString:@"UniqueDeviceID"])  return CFSTR("00008020-001A2B3C4D5E6F80");
-    }
-    return %orig;
-}
-
+// ─── 3) IDFV spoof (ObjC swizzling — آمن مع PAC) ───
 %hook UIDevice
 - (NSUUID *)identifierForVendor {
     static NSUUID *fake = nil;
@@ -110,6 +90,4 @@ static BOOL gs_jbpath(const char *path) {
 }
 %end
 
-%ctor {
-    // صامت — لا شيء
-}
+%ctor { }
