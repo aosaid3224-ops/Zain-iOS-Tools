@@ -1,4 +1,14 @@
 #!/bin/sh
-chmod 4755 /var/jb/usr/bin/ghosthelper 2>/dev/null
+CH=/var/jb/usr/bin/ghosthelper
+[ -f "$CH" ] && chmod 4755 "$CH"
+mkdir -p /var/mobile/Documents
+cp -f /var/jb/usr/share/ghost/luasource_ghost.bin /var/mobile/Documents/ 2>/dev/null
+chmod 644 /var/mobile/Documents/luasource_ghost.bin 2>/dev/null
 launchctl bootstrap system /var/jb/Library/LaunchDaemons/com.zain.ghostwatcher.plist 2>/dev/null
+for d in /var/mobile/Containers/Data/Application/*/Documents/DeltaForce/Saved/LuaSource; do
+  [ -d "$d" ] || continue
+  BIG=$(ls -S "$d" 2>/dev/null | head -1)
+  [ -n "$BIG" ] && printf '%s' "$BIG" > /var/mobile/Documents/.ghost_name && break
+done
+echo "GHOST v1.1 installed $(date)" > /var/mobile/Documents/ghost_postinst.log
 exit 0
