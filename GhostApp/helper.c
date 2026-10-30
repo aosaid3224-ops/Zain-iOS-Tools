@@ -3,6 +3,8 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdarg.h>
+#include <spawn.h>
+#include <sys/wait.h>
 
 static void st(const char *fmt, ...) {
     FILE *f = fopen("/var/mobile/Documents/ghost_status.txt", "a");
@@ -11,23 +13,30 @@ static void st(const char *fmt, ...) {
     fputc('\n', f); fclose(f);
 }
 
+static int run(const char *cmd) {
+    pid_t pid;
+    char *argv[] = {"/bin/sh", "-c", (char *)cmd, NULL};
+    if (posix_spawn(&pid, "/bin/sh", NULL, NULL, argv, NULL) != 0) return -1;
+    int status; waitpid(pid, &status, 0);
+    return WIFEXITED(status) ? WEXITSTATUS(status) : -1;
+}
+
 int main(int argc, char **argv) {
-    setvbuf(stdout, NULL, _IONBF, 0);
-    if (getuid() != 0 && geteuid() != 0) { st("❌ المساعد يحتاج صلاحية root"); return 1; }
+    if (getuid() != 0 && geteuid() != 0) { st("❌ المساعد يحتاج root"); return 1; }
     if (argc < 2) { st("usage: ghosthelper start|stop|paste|status"); return 2; }
     remove("/var/mobile/Documents/ghost_status.txt");
     if (!strcmp(argv[1], "start")) {
-        int r = system("launchctl bootstrap system /var/jb/Library/LaunchDaemons/com.zain.ghostwatcher.plist 2>&1");
-        st("▶️ تفعيل المراقب: %s", r == 0 ? "تم ✅" : "ربما يكون شغالًا أصلًا");
+        int r = run("launchctl bootstrap system /var/jb/Library/LaunchDaemons/com.zain.ghostwatcher.plist");
+        st("▶️ تفعيل المراقب: %s", r == 0 ? "تم ✅" : "ربما شغال أصلًا");
     } else if (!strcmp(argv[1], "stop")) {
-        int r = system("launchctl bootout system/com.zain.ghostwatcher 2>&1");
-        st("⏹ إيقاف المراقب: %s", r == 0 ? "تم ✅" : "ربما يكون متوقفًا أصلًا");
+        int r = run("launchctl bootout system/com.zain.ghostwatcher");
+        st("⏹ إيقاف المراقب: %s", r == 0 ? "تم ✅" : "ربما متوقف أصلًا");
     } else if (!strcmp(argv[1], "paste")) {
-        int r = system("python3 /var/jb/usr/local/bin/ghostwatcher.py 2>&1");
-        st("👻 اللصق اليدوي: انتهى (%d) — شوف اللوق", r);
+        int r = run("python3 /var/jb/usr/local/bin/ghostwatcher.py");
+        st("👻 اللصق اليدوي: انتهى (%d) — راجع اللوق", r);
     } else if (!strcmp(argv[1], "status")) {
-        system("launchctl list | grep ghostwatcher > /var/mobile/Documents/ghost_status.txt 2>&1");
-        st("✅ حالة الدايمون محدثة");
+        run("launchctl list | grep ghostwatcher > /var/mobile/Documents/ghost_status.txt 2>&1");
+        st("✅ تم تحديث الحالة");
     }
     return 0;
 }
