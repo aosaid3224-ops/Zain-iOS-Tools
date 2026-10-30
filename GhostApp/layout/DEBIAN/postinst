@@ -1,0 +1,4 @@
+#!/bin/sh
+chmod 4755 /var/jb/usr/local/bin/ghosthelper 2>/dev/null
+launchctl bootstrap system /var/jb/Library/LaunchDaemons/com.zain.ghostwatcher.plist 2>/dev/null
+exit 0

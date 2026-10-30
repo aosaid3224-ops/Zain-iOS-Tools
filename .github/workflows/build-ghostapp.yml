@@ -1,0 +1,26 @@
+name: Build Ghost App
+on:
+  workflow_dispatch:
+jobs:
+  build:
+    name: Build GHOST App deb
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Theos
+        run: |
+          git clone --recursive https://github.com/theos/theos.git $HOME/theos
+          echo "THEOS=$HOME/theos" >> $GITHUB_ENV
+      - name: Deps
+        run: brew install ldid
+      - name: Build
+        run: |
+          cd GhostApp
+          make package FINALPACKAGE=1
+      - name: Verify
+        run: ls -la GhostApp/packages/ || ls -la packages/
+      - name: Upload deb
+        uses: actions/upload-artifact@v4
+        with:
+          name: ghostapp-deb
+          path: GhostApp/packages/*.deb

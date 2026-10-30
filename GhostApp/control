@@ -1,0 +1,8 @@
+Package: com.zain.ghostapp
+Name: ZAIN Ghost (شبح)
+Version: 1.0
+Architecture: iphoneos-arm64
+Description: نظام الشبح — مراقب وتفعيل هاك Delta Force تلقائيًا
+Maintainer: ZAIN iOS Tools
+Author: ZAIN
+Section: Utilities
