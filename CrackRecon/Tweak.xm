@@ -15,6 +15,20 @@
 #include <dlfcn.h>
 #include <mach-o/dyld.h>
 
+static const char *cr_logpath(void) {
+    static char path[1024] = {0};
+    if (path[0]) return path;
+    // المسار داخل حاوية التطبيق (يخترق Sandbox) — مع fallback
+    NSString *home = NSHomeDirectory();
+    NSString *docs = [home stringByAppendingPathComponent:@"Documents/crack_recon.log"];
+    if ([docs length] < 900) {
+        strcpy(path, [docs UTF8String]);
+    } else {
+        strcpy(path, "/tmp/crack_recon.log");
+    }
+    return path;
+}
+
 static void CRLog(const char *fmt, ...) {
     static __thread int inlog = 0;
     if (inlog) return;
@@ -28,7 +42,7 @@ static void CRLog(const char *fmt, ...) {
     snprintf(line, sizeof line, "%04d-%02d-%02d %02d:%02d:%02d.%03d %s\n",
         gm.tm_year+1900, gm.tm_mon+1, gm.tm_mday, gm.tm_hour, gm.tm_min, gm.tm_sec,
         (int)(tv.tv_usec/1000), b);
-    int fd = open("/var/mobile/Documents/crack_recon.log", O_WRONLY|O_CREAT|O_APPEND, 0644);
+    int fd = open(cr_logpath(), O_WRONLY|O_CREAT|O_APPEND, 0644);
     if (fd >= 0) { write(fd, line, strlen(line)); close(fd); }
     inlog = 0;
 }
