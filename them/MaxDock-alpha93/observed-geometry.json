@@ -1,0 +1,32 @@
+{
+  "observationOnly": true,
+  "os": "16.7.16",
+  "viewport": [
+    375,
+    812
+  ],
+  "ancestor": "SBIconContentView",
+  "ancestorScale": 0.88,
+  "ancestorHidden": true,
+  "requestedOffset": 120,
+  "observedAppliedOffset": 57.28,
+  "nativeDockCenter": [
+    187.5,
+    760
+  ],
+  "dockBounds": [
+    0,
+    0,
+    375,
+    104
+  ],
+  "localContent": [
+    7,
+    27,
+    361.3333333333333,
+    40
+  ],
+  "logicalRestingMaximumOffset": 13,
+  "logicalMaximumIsDerived": true,
+  "realDockModified": false
+}

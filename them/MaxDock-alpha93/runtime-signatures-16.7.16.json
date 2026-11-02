@@ -1,0 +1,26 @@
+{
+  "SBIconListView": {
+    "centerForIconAtIndex:": "{CGPoint=dd}24@0:8Q16",
+    "centerForIconAtIndex:metrics:": "{CGPoint=dd}32@0:8Q16@24",
+    "centerForIcon:": "{CGPoint=dd}24@0:8@16",
+    "centerForIcon:metrics:": "{CGPoint=dd}32@0:8@16@24",
+    "originForIconAtCoordinate:metrics:": "{CGPoint=dd}40@0:8{SBIconCoordinate=qq}16@32",
+    "originForIconAtCoordinate:metrics:options:": "{CGPoint=dd}48@0:8{SBIconCoordinate=qq}16@32Q40",
+    "layoutSubviews": "v16@0:8",
+    "layout": "@16@0:8",
+    "iconSpacing": "{CGSize=dd}16@0:8",
+    "additionalLayoutInsets": "{UIEdgeInsets=dddd}16@0:8",
+    "automaticallyAdjustsLayoutMetricsToFit": "B16@0:8",
+    "indexOfIcon:": "Q24@0:8@16"
+  },
+  "SBDockView": {
+    "setBackgroundAlpha:": "v24@0:8d16",
+    "didMoveToWindow": "v16@0:8",
+    "layoutSubviews": "v16@0:8"
+  },
+  "SBApplication": {
+    "setRunning:": null,
+    "_setActivationState:": null,
+    "_setInternalProcessState:": "v24@0:8@16"
+  }
+}

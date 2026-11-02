@@ -1,0 +1,18 @@
+make: Entering directory '/private/preboot/4E0B2B3C601F3FA4957EFF736B286B7DF58E686CD783A1CC2D620E16622E011E179882A365F0B6157486F2DCE598DD43/dopamine-LY6MhQ/procursus/var/mobile/MaxDock-alpha93'
+/var/jb/usr/bin/clang -fobjc-arc -O1 -target arm64-apple-ios15.0 -isysroot /var/jb/var/mobile/theos/sdks/iPhoneOS16.5.sdk -I. -DHB_CIRCULAR_TEST=1 tests/CircularHandoffTests.m HBCircularDock.m HBIconColor.m -framework UIKit -framework Foundation -framework QuartzCore -framework CoreGraphics -o .circular-handoff-tests
+/var/jb/usr/bin/ldid -S .circular-handoff-tests
+./.circular-handoff-tests > circular-handoff-results.json
+/var/jb/usr/bin/clang -fobjc-arc -O1 -target arm64-apple-ios15.0 -isysroot /var/jb/var/mobile/theos/sdks/iPhoneOS16.5.sdk -I. -DHB_CIRCULAR_TEST=1 tests/CircularDockTests.m HBCircularDock.m HBIconColor.m -framework UIKit -framework Foundation -framework QuartzCore -framework CoreGraphics -o .circular-dock-tests
+tests/CircularDockTests.m:26:220: warning: performSelector may cause a leak because its selector is unknown [-Warc-performSelector-leaks]
+ for(UIView*v in ring.subviews)if([v isKindOfClass:UIButton.class]){UIButton*b=(id)v;for(id target in b.allTargets)for(NSString*action in [b actionsForTarget:target forControlEvent:UIControlEventTouchUpInside]){[target performSelector:NSSelectorFromString(action) withObject:b];}break;}CHECK(taps==1);
+                                                                                                                                                                                                                           ^
+tests/CircularDockTests.m:26:236: note: used here
+ for(UIView*v in ring.subviews)if([v isKindOfClass:UIButton.class]){UIButton*b=(id)v;for(id target in b.allTargets)for(NSString*action in [b actionsForTarget:target forControlEvent:UIControlEventTouchUpInside]){[target performSelector:NSSelectorFromString(action) withObject:b];}break;}CHECK(taps==1);
+                                                                                                                                                                                                                                           ^
+1 warning generated.
+/var/jb/usr/bin/ldid -S .circular-dock-tests
+./.circular-dock-tests > circular-dock-results.json
+/var/jb/usr/bin/clang -fobjc-arc -O1 -target arm64-apple-ios15.0 -isysroot /var/jb/var/mobile/theos/sdks/iPhoneOS16.5.sdk -I. tests/PreferencesLoadTests.m -framework UIKit -framework Foundation -o .preferences-load-tests
+/var/jb/usr/bin/ldid -S .preferences-load-tests
+./.preferences-load-tests > preferences-load-results.json
+make: Leaving directory '/private/preboot/4E0B2B3C601F3FA4957EFF736B286B7DF58E686CD783A1CC2D620E16622E011E179882A365F0B6157486F2DCE598DD43/dopamine-LY6MhQ/procursus/var/mobile/MaxDock-alpha93'

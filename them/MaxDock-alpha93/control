@@ -1,0 +1,9 @@
+Package: com.eswick.harbor16
+Name: MaxDock Compatibility Preview
+Depends: firmware (>= 15.0), firmware (<< 27.0), ellekit (>= 1.0), preferenceloader
+Version: 2.0.0-alpha93
+Architecture: iphoneos-arm64
+Description: Rootless compatibility preview. iOS16 is the tested baseline. iOS15/17/18/26 require explicit experimental enablement and respring; runtime behavior is unverified.
+Maintainer: Flip Max
+Author: Flip Max
+Section: Tweaks

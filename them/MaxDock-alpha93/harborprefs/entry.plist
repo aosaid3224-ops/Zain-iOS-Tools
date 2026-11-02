@@ -1,0 +1,10 @@
+{
+    entry = {
+        bundle = harborprefs;
+        cell = PSLinkCell;
+        detail = HPRootListController;
+        icon = harborprefs;
+        isController = 1;
+        label = MaxDock;
+    };
+}

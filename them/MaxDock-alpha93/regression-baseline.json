@@ -1,0 +1,7 @@
+{
+  "implementation": "alpha85",
+  "failureReproduced": true,
+  "failedCheck": "max offset changed when hidden Home Screen root was scaled to .88",
+  "isolatedProcess": true,
+  "realDockModified": false
+}
