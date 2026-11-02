@@ -339,99 +339,96 @@ static void cr_kcdesc(CFDictionaryRef query, const char *tag) {
 }
 
 
-// ─── 6ج) طبقة التطبيق الصريحة: nghttp2 (H2 على ذاكرة مفكوكة) + send/recv ───
+// ─── 6ج) طبقة nghttp2 عبر hook بالعنوان (الرموز static داخل التطبيق) ───
+#include <substrate.h>
+#include <mach-o/nlist.h>
+#include <mach-o/loader.h>
+
 typedef void *cr_nghttp2_session;
 typedef long cr_nghttp2_ssize;
-extern "C" {
-extern cr_nghttp2_ssize nghttp2_session_mem_recv(cr_nghttp2_session, const uint8_t *, size_t);
-extern cr_nghttp2_ssize nghttp2_session_mem_recv2(cr_nghttp2_session, const uint8_t *, size_t);
-extern cr_nghttp2_ssize nghttp2_session_mem_send(cr_nghttp2_session, const uint8_t **);
-extern cr_nghttp2_ssize nghttp2_session_mem_send2(cr_nghttp2_session, const uint8_t **);
-}
 
-%hookf(cr_nghttp2_ssize, nghttp2_session_mem_recv, cr_nghttp2_session session, const uint8_t *data, size_t len) {
-    CRLog("H2-RECV len=%zu %s", len,
-          [[NSData dataWithBytes:data length:MIN(len, 3000)] description].UTF8String);
-    return %orig;
-}
+static cr_nghttp2_ssize (*orig_mrecv)(cr_nghttp2_session, const uint8_t *, size_t);
+static cr_nghttp2_ssize (*orig_mrecv2)(cr_nghttp2_session, const uint8_t *, size_t);
+static cr_nghttp2_ssize (*orig_msend)(cr_nghttp2_session, const uint8_t **);
+static cr_nghttp2_ssize (*orig_msend2)(cr_nghttp2_session, const uint8_t **);
 
-%hookf(cr_nghttp2_ssize, nghttp2_session_mem_recv2, cr_nghttp2_session session, const uint8_t *data, size_t len) {
-    CRLog("H2-RECV2 len=%zu %s", len,
-          [[NSData dataWithBytes:data length:MIN(len, 3000)] description].UTF8String);
-    return %orig;
+static cr_nghttp2_ssize my_mrecv(cr_nghttp2_session s, const uint8_t *data, size_t len) {
+    if (data && len > 0)
+        CRLog("H2-RECV len=%zu %s", len,
+              [[NSData dataWithBytes:data length:MIN(len, 3000)] description].UTF8String);
+    return orig_mrecv(s, data, len);
 }
-
-%hookf(cr_nghttp2_ssize, nghttp2_session_mem_send, cr_nghttp2_session session, const uint8_t **data_ptr) {
-    ssize_t r = %orig;
+static cr_nghttp2_ssize my_mrecv2(cr_nghttp2_session s, const uint8_t *data, size_t len) {
+    if (data && len > 0)
+        CRLog("H2-RECV2 len=%zu %s", len,
+              [[NSData dataWithBytes:data length:MIN(len, 3000)] description].UTF8String);
+    return orig_mrecv2(s, data, len);
+}
+static cr_nghttp2_ssize my_msend(cr_nghttp2_session s, const uint8_t **data_ptr) {
+    cr_nghttp2_ssize r = orig_msend(s, data_ptr);
     if (r > 0 && data_ptr && *data_ptr)
-        CRLog("H2-SEND len=%zd %s", r,
+        CRLog("H2-SEND len=%zd %s", (ssize_t)r,
               [[NSData dataWithBytes:*data_ptr length:MIN((size_t)r, 3000)] description].UTF8String);
     return r;
 }
-
-%hookf(cr_nghttp2_ssize, nghttp2_session_mem_send2, cr_nghttp2_session session, const uint8_t **data_ptr) {
-    cr_nghttp2_ssize r = %orig;
+static cr_nghttp2_ssize my_msend2(cr_nghttp2_session s, const uint8_t **data_ptr) {
+    cr_nghttp2_ssize r = orig_msend2(s, data_ptr);
     if (r > 0 && data_ptr && *data_ptr)
         CRLog("H2-SEND2 len=%zd %s", (ssize_t)r,
               [[NSData dataWithBytes:*data_ptr length:MIN((size_t)r, 3000)] description].UTF8String);
     return r;
 }
 
-static void cr_peer(int sockfd, char *host, size_t hostlen, int *port) {
-    struct sockaddr_storage ss; socklen_t sl = sizeof ss;
-    if (getpeername(sockfd, (struct sockaddr *)&ss, &sl) == 0) {
-        if (ss.ss_family == AF_INET) {
-            inet_ntop(AF_INET, &((struct sockaddr_in *)&ss)->sin_addr, host, hostlen);
-            if (port) *port = ntohs(((struct sockaddr_in *)&ss)->sin_port);
-        } else if (ss.ss_family == AF_INET6) {
-            inet_ntop(AF_INET6, &((struct sockaddr_in6 *)&ss)->sin6_addr, host, hostlen);
-            if (port) *port = ntohs(((struct sockaddr_in6 *)&ss)->sin6_port);
+static void *cr_find_sym(const char *name) {
+    const struct mach_header_64 *mh = NULL;
+    intptr_t slide = 0;
+    uint32_t cnt = _dyld_image_count();
+    for (uint32_t i = 0; i < cnt; i++) {
+        const char *p = _dyld_get_image_name(i);
+        if (p && strstr(p, "TempMail")) {
+            mh = (const struct mach_header_64 *)_dyld_get_image_header(i);
+            slide = _dyld_get_image_vmaddr_slide(i);
+            break;
         }
     }
-}
-
-%hookf(ssize_t, send, int sockfd, const void *buf, size_t len, int flags) {
-    char host[128] = {0}; int port = 0;
-    cr_peer(sockfd, host, sizeof host, &port);
-    if (host[0]) CRLog("SEND %s:%d len=%zu %s", host, port, len,
-                       [[NSData dataWithBytes:buf length:MIN(len,384)] description].UTF8String);
-    return %orig;
-}
-
-%hookf(ssize_t, recv, int sockfd, void *buf, size_t len, int flags) {
-    ssize_t r = %orig;
-    if (r > 0) {
-        char host[128] = {0}; int port = 0;
-        cr_peer(sockfd, host, sizeof host, &port);
-        if (host[0]) CRLog("RECV %s:%d len=%zd %s", host, port, r,
-                           [[NSData dataWithBytes:buf length:MIN((size_t)r,384)] description].UTF8String);
+    if (!mh) return NULL;
+    uint32_t ncmds = mh->ncmds;
+    const uint8_t *q = (const uint8_t *)(mh + 1);
+    uint32_t symoff = 0, nsyms = 0, stroff = 0;
+    for (uint32_t i = 0; i < ncmds; i++) {
+        const struct load_command *lc = (const struct load_command *)q;
+        if (lc->cmd == LC_SYMTAB) {
+            const struct symtab_command *sc = (const struct symtab_command *)lc;
+            symoff = sc->symoff; nsyms = sc->nsyms; stroff = sc->stroff;
+            break;
+        }
+        q += lc->cmdsize;
     }
-    return r;
+    if (!symoff || !nsyms) return NULL;
+    const uint8_t *img = (const uint8_t *)mh;
+    for (uint32_t i = 0; i < nsyms; i++) {
+        const struct nlist_64 *nl = (const struct nlist_64 *)(img + symoff + i * 16);
+        if (!nl->n_value || !(nl->n_type & N_STAB)) { }
+        const char *nm = (const char *)(img + stroff + nl->n_strx);
+        if (nl->n_value && strcmp(nm, name) == 0)
+            return (void *)(nl->n_value + slide);
+    }
+    return NULL;
 }
 
-%hookf(ssize_t, sendto, int sockfd, const void *buf, size_t len, int flags,
-       const struct sockaddr *dest, socklen_t destlen) {
-    if (dest) {
-        char host[128] = {0};
-        if (dest->sa_family == AF_INET) inet_ntop(AF_INET, &((struct sockaddr_in *)dest)->sin_addr, host, sizeof host);
-        else if (dest->sa_family == AF_INET6) inet_ntop(AF_INET6, &((struct sockaddr_in6 *)dest)->sin6_addr, host, sizeof host);
-        if (host[0]) CRLog("SENDTO %s len=%zu", host, len);
-    }
-    return %orig;
-}
-
-%hookf(ssize_t, recvfrom, int sockfd, void *buf, size_t len, int flags,
-       struct sockaddr *src, socklen_t *srclen) {
-    ssize_t r = %orig;
-    if (r > 0 && src) {
-        char host[128] = {0};
-        if (src->sa_family == AF_INET) inet_ntop(AF_INET, &((struct sockaddr_in *)src)->sin_addr, host, sizeof host);
-        else if (src->sa_family == AF_INET6) inet_ntop(AF_INET6, &((struct sockaddr_in6 *)src)->sin6_addr, host, sizeof host);
-        if (host[0]) CRLog("RECVFROM %s len=%zd", host, r);
-    }
-    return r;
+static void cr_hook_h2(void) {
+    void *p;
+    if ((p = cr_find_sym("nghttp2_session_mem_recv")))
+        MSHookFunction(p, (void *)my_mrecv, (void **)&orig_mrecv);
+    if ((p = cr_find_sym("nghttp2_session_mem_recv2")))
+        MSHookFunction(p, (void *)my_mrecv2, (void **)&orig_mrecv2);
+    if ((p = cr_find_sym("nghttp2_session_mem_send")))
+        MSHookFunction(p, (void *)my_msend, (void **)&orig_msend);
+    if ((p = cr_find_sym("nghttp2_session_mem_send2")))
+        MSHookFunction(p, (void *)my_msend2, (void **)&orig_msend2);
 }
 
 %ctor {
+    cr_hook_h2();
     CRLog("=== CrackRecon v1.0 injected | pid=%d ===", getpid());
 }
