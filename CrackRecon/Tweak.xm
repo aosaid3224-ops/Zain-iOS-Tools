@@ -323,7 +323,7 @@ static void cr_kcdesc(CFDictionaryRef query, const char *tag) {
     %orig;
 }
 
-%hookf(int, connectx, int sockfd, const sa_endpoints_t *endpoints, saassocid_t associd,
+%hookf(int, connectx, int sockfd, const sa_endpoints_t *endpoints, sae_associd_t associd,
        unsigned int flags, const struct iovec *iov, unsigned int iovcnt,
        size_t *bytes_sent, int *reserved) {
     if (endpoints && endpoints->sae_dstaddr) {
