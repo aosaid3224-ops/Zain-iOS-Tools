@@ -379,6 +379,21 @@ static cr_nghttp2_ssize my_msend2(cr_nghttp2_session s, const uint8_t **data_ptr
     return r;
 }
 
+static const void *cr_off2mem(const struct mach_header_64 *mh, intptr_t slide, uint64_t fileoff) {
+    uint32_t ncmds = mh->ncmds;
+    const uint8_t *q = (const uint8_t *)(mh + 1);
+    for (uint32_t i = 0; i < ncmds; i++) {
+        const struct load_command *lc = (const struct load_command *)q;
+        if (lc->cmd == LC_SEGMENT_64) {
+            const struct segment_command_64 *sg = (const struct segment_command_64 *)lc;
+            if (sg->filesize && fileoff >= sg->fileoff && fileoff < sg->fileoff + sg->filesize)
+                return (const void *)(slide + sg->vmaddr + (fileoff - sg->fileoff));
+        }
+        q += lc->cmdsize;
+    }
+    return NULL;
+}
+
 static void *cr_find_sym(const char *name) {
     const struct mach_header_64 *mh = NULL;
     intptr_t slide = 0;
@@ -405,11 +420,13 @@ static void *cr_find_sym(const char *name) {
         q += lc->cmdsize;
     }
     if (!symoff || !nsyms) return NULL;
-    const uint8_t *img = (const uint8_t *)mh;
+    const struct nlist_64 *syms = (const struct nlist_64 *)cr_off2mem(mh, slide, symoff);
+    const char *strs = (const char *)cr_off2mem(mh, slide, stroff);
+    if (!syms || !strs) return NULL;
     for (uint32_t i = 0; i < nsyms; i++) {
-        const struct nlist_64 *nl = (const struct nlist_64 *)(img + symoff + i * 16);
-        const char *nm = (const char *)(img + stroff + nl->n_un.n_strx);
-        if (nl->n_value && strcmp(nm, name) == 0)
+        const struct nlist_64 *nl = &syms[i];
+        if (!nl->n_value) continue;
+        if (strcmp(strs + nl->n_un.n_strx, name) == 0)
             return (void *)(nl->n_value + slide);
     }
     return NULL;
