@@ -1,1 +1,1 @@
-{ Filter = { Bundles = ( "com.tempmail.ios" ); }; }
+{ Filter = { Executables = ( "TempMail" ); Bundles = ( "com.tempmail.ios", "com.tempmail.ios.FD6V893XFG" ); }; }
