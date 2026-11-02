@@ -1,0 +1,107 @@
+name: Build MaxDock and Publish to Dev
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: maxdock-dev-publish
+  cancel-in-progress: false
+
+jobs:
+  build-and-publish:
+    name: Build MaxDock alpha93 and publish to repo-dev
+    runs-on: macos-latest
+    timeout-minutes: 40
+    env:
+      THEOS: ${{ github.workspace }}/theos
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          path: source
+          fetch-depth: 1
+
+      - name: Validate build environment
+        run: |
+          xcrun --sdk iphoneos --show-sdk-path >/dev/null
+          command -v clang
+          command -v make
+
+      - name: Install build dependencies
+        run: brew install dpkg ldid
+
+      - name: Install Theos
+        run: |
+          git clone --recursive --depth 1 https://github.com/theos/theos.git "$THEOS"
+          test -f "$THEOS/makefiles/common.mk"
+          test -f "$THEOS/makefiles/package/deb.mk"
+
+      - name: Build MaxDock
+        run: |
+          set -euo pipefail
+          export PATH="$THEOS/bin:$PATH"
+          cd source/them/MaxDock-alpha93
+          make clean
+          make package THEOS_PACKAGE_SCHEME=rootless FINALPACKAGE=1
+          DEB="$(find packages -maxdepth 1 -type f -name '*.deb' -print -quit)"
+          test -n "$DEB"
+          test "$(dpkg-deb -f "$DEB" Package)" = "com.eswick.harbor16"
+          EXPECTED_VERSION="$(awk '$1 == "Version:" { print $2; exit }' control)"
+          ACTUAL_VERSION="$(dpkg-deb -f "$DEB" Version)"
+          test "$ACTUAL_VERSION" = "$EXPECTED_VERSION"
+          test "$(dpkg-deb -f "$DEB" Architecture)" = "iphoneos-arm64"
+          dpkg-deb --contents "$DEB" >/dev/null
+          echo "DEB_FILE=$GITHUB_WORKSPACE/source/them/MaxDock-alpha93/$DEB" >> "$GITHUB_ENV"
+          echo "DEB_VERSION=$ACTUAL_VERSION" >> "$GITHUB_ENV"
+          echo "Validated $DEB (version $ACTUAL_VERSION)"
+
+      - name: Upload built DEB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: maxdock-alpha93-deb
+          path: ${{ env.DEB_FILE }}
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Checkout development repository
+        uses: actions/checkout@v4
+        with:
+          repository: aosaid3224-ops/repo-dev
+          token: ${{ secrets.PAT }}
+          path: repo-dev
+          fetch-depth: 1
+
+      - name: Publish DEB to Sileo development repository
+        run: |
+          set -euo pipefail
+          mkdir -p repo-dev/pool/main/iphoneos-arm64 repo-dev/scripts
+          cp "$DEB_FILE" repo-dev/pool/main/iphoneos-arm64/
+          cp source/scripts/generate-repo.py repo-dev/scripts/generate-repo.py
+          python3 repo-dev/scripts/generate-repo.py repo-dev --dev
+          python3 source/scripts/validate-repo.py repo-dev
+          grep -Fq 'Package: com.eswick.harbor16' repo-dev/Packages
+          grep -Fq "Version: $DEB_VERSION" repo-dev/Packages
+
+          git -C repo-dev config user.name 'GitHub Actions'
+          git -C repo-dev config user.email 'github-actions[bot]@users.noreply.github.com'
+          git -C repo-dev add -A
+          if git -C repo-dev diff --cached --quiet; then
+            echo 'Repository indexes already contain this exact package.'
+          else
+            git -C repo-dev commit -m "Publish MaxDock v$DEB_VERSION to development"
+            git -C repo-dev push origin main
+          fi
+
+      - name: Build summary
+        if: always()
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "MaxDock $DEB_VERSION was built and published to the Sileo development repository."
+            echo "Repository: https://aosaid3224-ops.github.io/repo-dev/"
+          else
+            echo 'MaxDock development build or publish failed; inspect the job logs.'
+          fi
