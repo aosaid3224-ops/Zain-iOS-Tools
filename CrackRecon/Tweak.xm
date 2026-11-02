@@ -342,22 +342,24 @@ static void cr_kcdesc(CFDictionaryRef query, const char *tag) {
 // ─── 6ج) طبقة التطبيق الصريحة: nghttp2 (H2 على ذاكرة مفكوكة) + send/recv ───
 typedef void *cr_nghttp2_session;
 typedef long cr_nghttp2_ssize;
-#define nghttp2_session cr_nghttp2_session
-#define nghttp2_ssize cr_nghttp2_ssize
+extern cr_nghttp2_ssize nghttp2_session_mem_recv(cr_nghttp2_session, const uint8_t *, size_t);
+extern cr_nghttp2_ssize nghttp2_session_mem_recv2(cr_nghttp2_session, const uint8_t *, size_t);
+extern cr_nghttp2_ssize nghttp2_session_mem_send(cr_nghttp2_session, const uint8_t **);
+extern cr_nghttp2_ssize nghttp2_session_mem_send2(cr_nghttp2_session, const uint8_t **);
 
-%hookf(ssize_t, nghttp2_session_mem_recv, nghttp2_session *session, const uint8_t *data, size_t len) {
+%hookf(cr_nghttp2_ssize, nghttp2_session_mem_recv, cr_nghttp2_session session, const uint8_t *data, size_t len) {
     CRLog("H2-RECV len=%zu %s", len,
           [[NSData dataWithBytes:data length:MIN(len, 3000)] description].UTF8String);
     return %orig;
 }
 
-%hookf(nghttp2_ssize, nghttp2_session_mem_recv2, nghttp2_session *session, const uint8_t *data, size_t len) {
+%hookf(cr_nghttp2_ssize, nghttp2_session_mem_recv2, cr_nghttp2_session session, const uint8_t *data, size_t len) {
     CRLog("H2-RECV2 len=%zu %s", len,
           [[NSData dataWithBytes:data length:MIN(len, 3000)] description].UTF8String);
     return %orig;
 }
 
-%hookf(ssize_t, nghttp2_session_mem_send, nghttp2_session *session, const uint8_t **data_ptr) {
+%hookf(cr_nghttp2_ssize, nghttp2_session_mem_send, cr_nghttp2_session session, const uint8_t **data_ptr) {
     ssize_t r = %orig;
     if (r > 0 && data_ptr && *data_ptr)
         CRLog("H2-SEND len=%zd %s", r,
@@ -365,7 +367,7 @@ typedef long cr_nghttp2_ssize;
     return r;
 }
 
-%hookf(nghttp2_ssize, nghttp2_session_mem_send2, nghttp2_session *session, const uint8_t **data_ptr) {
+%hookf(cr_nghttp2_ssize, nghttp2_session_mem_send2, cr_nghttp2_session session, const uint8_t **data_ptr) {
     nghttp2_ssize r = %orig;
     if (r > 0 && data_ptr && *data_ptr)
         CRLog("H2-SEND2 len=%zd %s", (ssize_t)r,
