@@ -40,13 +40,21 @@ jobs:
           test -f "$THEOS/makefiles/common.mk"
           test -f "$THEOS/makefiles/package/deb.mk"
 
+      - name: Install Theos iOS SDK
+        run: |
+          git clone --depth 1 --filter=blob:none --sparse https://github.com/theos/sdks.git "$RUNNER_TEMP/theos-sdks"
+          git -C "$RUNNER_TEMP/theos-sdks" sparse-checkout set iPhoneOS16.5.sdk
+          mkdir -p "$THEOS/sdks"
+          cp -a "$RUNNER_TEMP/theos-sdks/iPhoneOS16.5.sdk" "$THEOS/sdks/"
+          test -d "$THEOS/sdks/iPhoneOS16.5.sdk/System/Library/PrivateFrameworks/Preferences.framework"
+
       - name: Build MaxDock
         run: |
           set -euo pipefail
           export PATH="$THEOS/bin:$PATH"
           cd source/them/MaxDock-alpha93
           make clean
-          make package THEOS_PACKAGE_SCHEME=rootless FINALPACKAGE=1
+          make package THEOS_PACKAGE_SCHEME=rootless SDKVERSION=16.5 FINALPACKAGE=1
           DEB="$(find packages -maxdepth 1 -type f -name '*.deb' -print -quit)"
           test -n "$DEB"
           test "$(dpkg-deb -f "$DEB" Package)" = "com.eswick.harbor16"
