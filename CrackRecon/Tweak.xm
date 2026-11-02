@@ -408,8 +408,7 @@ static void *cr_find_sym(const char *name) {
     const uint8_t *img = (const uint8_t *)mh;
     for (uint32_t i = 0; i < nsyms; i++) {
         const struct nlist_64 *nl = (const struct nlist_64 *)(img + symoff + i * 16);
-        if (!nl->n_value || !(nl->n_type & N_STAB)) { }
-        const char *nm = (const char *)(img + stroff + nl->n_strx);
+        const char *nm = (const char *)(img + stroff + nl->n_un.n_strx);
         if (nl->n_value && strcmp(nm, name) == 0)
             return (void *)(nl->n_value + slide);
     }
