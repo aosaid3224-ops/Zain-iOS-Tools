@@ -10,6 +10,7 @@
 #include <sys/time.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <arpa/inet.h>
 #include <os/log.h>
 #include <dlfcn.h>
 #include <mach-o/dyld.h>

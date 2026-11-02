@@ -4,6 +4,6 @@ include $(THEOS)/makefiles/common.mk
 
 TWEAK_NAME = CrackRecon
 CrackRecon_FILES = Tweak.xm
-CrackRecon_CFLAGS = -fobjc-arc
+CrackRecon_CFLAGS = -fobjc-arc -Wno-deprecated-declarations -Wno-error
 
 include $(THEOS_MAKE_PATH)/tweak.mk
