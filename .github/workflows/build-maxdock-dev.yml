@@ -90,9 +90,26 @@ jobs:
           cp "$DEB_FILE" repo-dev/pool/main/iphoneos-arm64/
           cp source/scripts/generate-repo.py repo-dev/scripts/generate-repo.py
           python3 repo-dev/scripts/generate-repo.py repo-dev --dev
-          python3 source/scripts/validate-repo.py repo-dev
-          grep -Fq 'Package: com.eswick.harbor16' repo-dev/Packages
-          grep -Fq "Version: $DEB_VERSION" repo-dev/Packages
+          python3 - <<'PY'
+          import hashlib, os, subprocess
+          from pathlib import Path
+          deb = Path(os.environ['DEB_FILE'])
+          relative = f'pool/main/iphoneos-arm64/{deb.name}'
+          raw = deb.read_bytes()
+          control = subprocess.check_output(['dpkg-deb', '-f', str(deb)], text=True)
+          fields = dict(line.split(': ', 1) for line in control.splitlines() if ': ' in line)
+          text = Path('repo-dev/Packages').read_text()
+          stanza = next((s for s in text.strip().split('\n\n') if s.startswith('Package: com.eswick.harbor16\n')), None)
+          assert stanza, 'MaxDock package missing from Packages index'
+          indexed = dict(line.split(': ', 1) for line in stanza.splitlines() if ': ' in line)
+          expected = {'Package': 'com.eswick.harbor16', 'Version': os.environ['DEB_VERSION'],
+                      'Architecture': 'iphoneos-arm64', 'Filename': relative,
+                      'Size': str(len(raw)), 'SHA256': hashlib.sha256(raw).hexdigest()}
+          for key, value in expected.items():
+              assert indexed.get(key) == value, f'{key} mismatch: {indexed.get(key)!r} != {value!r}'
+          assert fields['Package'] == expected['Package'] and fields['Architecture'] == expected['Architecture']
+          print('MaxDock package and Packages index verified.')
+          PY
 
           git -C repo-dev config user.name 'GitHub Actions'
           git -C repo-dev config user.email 'github-actions[bot]@users.noreply.github.com'
