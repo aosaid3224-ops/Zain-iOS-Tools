@@ -196,7 +196,8 @@ static void cr_kcdesc(CFDictionaryRef query, const char *tag) {
 + (id)JSONObjectWithData:(NSData *)d options:(NSJSONReadingOptions)o error:(NSError **)e {
     id v = %orig;
     NSString *s = [[NSString alloc] initWithData:d encoding:NSUTF8StringEncoding];
-    CRLog("JSON-IN %s", [s UTF8String]);
+    if (s && ![s containsString:@"AHAP"] && ![s containsString:@"Haptic"])
+        CRLog("JSON-IN %s", [s UTF8String]);
     return v;
 }
 %end
@@ -279,6 +280,62 @@ static void cr_kcdesc(CFDictionaryRef query, const char *tag) {
     OSStatus s = %orig;
     CRLog("TRUST result=%d", res ? (int)*res : -1);
     return s;
+}
+
+
+// ─── 6ب) Network.framework — كشف مسار nw/QUIC الخفي ───
+#import <Network/Network.h>
+
+%hookf(nw_connection_t, nw_connection_create, nw_endpoint_t endpoint, nw_parameters_t params) {
+    const char *host = endpoint ? nw_endpoint_get_hostname(endpoint) : NULL;
+    uint16_t port = endpoint ? nw_endpoint_get_port(endpoint) : 0;
+    CRLog("NW-CONN host=%s port=%u", host ? host : "?", port);
+    return %orig;
+}
+
+%hookf(void, nw_connection_send, nw_connection_t conn, dispatch_data_t content,
+       nw_content_context_t ctx, bool complete, nw_connection_send_completion_t completion) {
+    if (content) {
+        const void *buf = NULL; size_t len = 0;
+        dispatch_data_create_map(content, &buf, &len);
+        CRLog("NW-SEND len=%zu %s", len,
+              [[NSData dataWithBytes:buf length:MIN(len, 768)] description].UTF8String);
+    }
+    %orig;
+}
+
+%hookf(void, nw_connection_receive, nw_connection_t conn, uint32_t minimum,
+       uint32_t maximum, nw_connection_receive_completion_t completion) {
+    if (completion) {
+        nw_connection_receive_completion_t wrapped =
+        ^(dispatch_data_t content, nw_content_context_t ctx, bool complete, nw_error_t error) {
+            if (content) {
+                const void *buf = NULL; size_t len = 0;
+                dispatch_data_create_map(content, &buf, &len);
+                CRLog("NW-RECV len=%zu %s", len,
+                      [[NSData dataWithBytes:buf length:MIN(len, 2048)] description].UTF8String);
+            }
+            completion(content, ctx, complete, error);
+        };
+        %orig(conn, minimum, maximum, wrapped);
+        return;
+    }
+    %orig;
+}
+
+%hookf(int, connectx, int sockfd, const sa_endpoints_t *endpoints, saassocid_t associd,
+       unsigned int flags, const struct iovec *iov, unsigned int iovcnt,
+       size_t *bytes_sent, int *reserved) {
+    if (endpoints && endpoints->sae_dstaddr) {
+        char host[128] = {0};
+        const struct sockaddr *sa = endpoints->sae_dstaddr;
+        if (sa->sa_family == AF_INET)
+            inet_ntop(AF_INET, &((struct sockaddr_in *)sa)->sin_addr, host, sizeof host);
+        else if (sa->sa_family == AF_INET6)
+            inet_ntop(AF_INET6, &((struct sockaddr_in6 *)sa)->sin6_addr, host, sizeof host);
+        CRLog("CONNECTX %s", host);
+    }
+    return %orig;
 }
 
 %ctor {
