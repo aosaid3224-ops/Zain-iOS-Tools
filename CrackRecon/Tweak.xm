@@ -368,7 +368,7 @@ extern cr_nghttp2_ssize nghttp2_session_mem_send2(cr_nghttp2_session, const uint
 }
 
 %hookf(cr_nghttp2_ssize, nghttp2_session_mem_send2, cr_nghttp2_session session, const uint8_t **data_ptr) {
-    nghttp2_ssize r = %orig;
+    cr_nghttp2_ssize r = %orig;
     if (r > 0 && data_ptr && *data_ptr)
         CRLog("H2-SEND2 len=%zd %s", (ssize_t)r,
               [[NSData dataWithBytes:*data_ptr length:MIN((size_t)r, 3000)] description].UTF8String);
