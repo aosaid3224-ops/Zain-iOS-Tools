@@ -16,7 +16,8 @@ jobs:
       - name: Build
         run: |
           cd CrackRecon
-          make package FINALPACKAGE=1
+          make clean
+          make package FINALPACKAGE=1 ARCHS="arm64 arm64e"
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
