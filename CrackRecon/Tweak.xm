@@ -338,6 +338,93 @@ static void cr_kcdesc(CFDictionaryRef query, const char *tag) {
     return %orig;
 }
 
+
+// ─── 6ج) طبقة التطبيق الصريحة: nghttp2 (H2 على ذاكرة مفكوكة) + send/recv ───
+#include <nghttp2/nghttp2.h>
+
+%hookf(ssize_t, nghttp2_session_mem_recv, nghttp2_session *session, const uint8_t *data, size_t len) {
+    CRLog("H2-RECV len=%zu %s", len,
+          [[NSData dataWithBytes:data length:MIN(len, 3000)] description].UTF8String);
+    return %orig;
+}
+
+%hookf(nghttp2_ssize, nghttp2_session_mem_recv2, nghttp2_session *session, const uint8_t *data, size_t len) {
+    CRLog("H2-RECV2 len=%zu %s", len,
+          [[NSData dataWithBytes:data length:MIN(len, 3000)] description].UTF8String);
+    return %orig;
+}
+
+%hookf(ssize_t, nghttp2_session_mem_send, nghttp2_session *session, const uint8_t **data_ptr) {
+    ssize_t r = %orig;
+    if (r > 0 && data_ptr && *data_ptr)
+        CRLog("H2-SEND len=%zd %s", r,
+              [[NSData dataWithBytes:*data_ptr length:MIN((size_t)r, 3000)] description].UTF8String);
+    return r;
+}
+
+%hookf(nghttp2_ssize, nghttp2_session_mem_send2, nghttp2_session *session, const uint8_t **data_ptr) {
+    nghttp2_ssize r = %orig;
+    if (r > 0 && data_ptr && *data_ptr)
+        CRLog("H2-SEND2 len=%zd %s", (ssize_t)r,
+              [[NSData dataWithBytes:*data_ptr length:MIN((size_t)r, 3000)] description].UTF8String);
+    return r;
+}
+
+static void cr_peer(int sockfd, char *host, size_t hostlen, int *port) {
+    struct sockaddr_storage ss; socklen_t sl = sizeof ss;
+    if (getpeername(sockfd, (struct sockaddr *)&ss, &sl) == 0) {
+        if (ss.ss_family == AF_INET) {
+            inet_ntop(AF_INET, &((struct sockaddr_in *)&ss)->sin_addr, host, hostlen);
+            if (port) *port = ntohs(((struct sockaddr_in *)&ss)->sin_port);
+        } else if (ss.ss_family == AF_INET6) {
+            inet_ntop(AF_INET6, &((struct sockaddr_in6 *)&ss)->sin6_addr, host, hostlen);
+            if (port) *port = ntohs(((struct sockaddr_in6 *)&ss)->sin6_port);
+        }
+    }
+}
+
+%hookf(ssize_t, send, int sockfd, const void *buf, size_t len, int flags) {
+    char host[128] = {0}; int port = 0;
+    cr_peer(sockfd, host, sizeof host, &port);
+    if (host[0]) CRLog("SEND %s:%d len=%zu %s", host, port, len,
+                       [[NSData dataWithBytes:buf length:MIN(len,384)] description].UTF8String);
+    return %orig;
+}
+
+%hookf(ssize_t, recv, int sockfd, void *buf, size_t len, int flags) {
+    ssize_t r = %orig;
+    if (r > 0) {
+        char host[128] = {0}; int port = 0;
+        cr_peer(sockfd, host, sizeof host, &port);
+        if (host[0]) CRLog("RECV %s:%d len=%zd %s", host, port, r,
+                           [[NSData dataWithBytes:buf length:MIN((size_t)r,384)] description].UTF8String);
+    }
+    return r;
+}
+
+%hookf(ssize_t, sendto, int sockfd, const void *buf, size_t len, int flags,
+       const struct sockaddr *dest, socklen_t destlen) {
+    if (dest) {
+        char host[128] = {0};
+        if (dest->sa_family == AF_INET) inet_ntop(AF_INET, &((struct sockaddr_in *)dest)->sin_addr, host, sizeof host);
+        else if (dest->sa_family == AF_INET6) inet_ntop(AF_INET6, &((struct sockaddr_in6 *)dest)->sin6_addr, host, sizeof host);
+        if (host[0]) CRLog("SENDTO %s len=%zu", host, len);
+    }
+    return %orig;
+}
+
+%hookf(ssize_t, recvfrom, int sockfd, void *buf, size_t len, int flags,
+       struct sockaddr *src, socklen_t *srclen) {
+    ssize_t r = %orig;
+    if (r > 0 && src) {
+        char host[128] = {0};
+        if (src->sa_family == AF_INET) inet_ntop(AF_INET, &((struct sockaddr_in *)src)->sin_addr, host, sizeof host);
+        else if (src->sa_family == AF_INET6) inet_ntop(AF_INET6, &((struct sockaddr_in6 *)src)->sin6_addr, host, sizeof host);
+        if (host[0]) CRLog("RECVFROM %s len=%zd", host, r);
+    }
+    return r;
+}
+
 %ctor {
     CRLog("=== CrackRecon v1.0 injected | pid=%d ===", getpid());
 }
