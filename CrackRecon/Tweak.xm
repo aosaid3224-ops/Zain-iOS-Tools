@@ -340,7 +340,10 @@ static void cr_kcdesc(CFDictionaryRef query, const char *tag) {
 
 
 // ─── 6ج) طبقة التطبيق الصريحة: nghttp2 (H2 على ذاكرة مفكوكة) + send/recv ───
-#include <nghttp2/nghttp2.h>
+typedef void *cr_nghttp2_session;
+typedef long cr_nghttp2_ssize;
+#define nghttp2_session cr_nghttp2_session
+#define nghttp2_ssize cr_nghttp2_ssize
 
 %hookf(ssize_t, nghttp2_session_mem_recv, nghttp2_session *session, const uint8_t *data, size_t len) {
     CRLog("H2-RECV len=%zu %s", len,
