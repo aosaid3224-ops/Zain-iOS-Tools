@@ -1,0 +1,9 @@
+Package: com.zain.crackrecon
+Name: ZAIN CrackRecon (استطلاع ANUBIS)
+Version: 1.0
+Architecture: iphoneos-arm64
+Description: استطلاع سلبي كامل لبروتوكول ترخيص لودر ANUBIS (PUBG)
+Maintainer: ZAIN iOS Tools
+Author: ZAIN
+Section: Tweaks
+Depends: firmware (>= 15.0)
