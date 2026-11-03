@@ -565,14 +565,14 @@ static int my_submit_req(cr_nghttp2_session s, const void *pri, const cr_nghttp2
 
 static void cr_scan_mem(const char *tag) {
     task_t task = mach_task_self();
-    vm_address_t addr = 0;
-    vm_size_t sz = 0;
+    mach_vm_address_t addr = 0;
+    mach_vm_size_t sz = 0;
     vm_region_basic_info_data_64_t info;
     mach_msg_type_number_t cnt = VM_REGION_BASIC_INFO_COUNT_64;
-    vm_prot_t prot = 0;
-    while (vm_region_64(task, &addr, &sz, VM_REGION_BASIC_INFO_64, (vm_region_info_t)&info, &cnt, &prot) == KERN_SUCCESS) {
+    memory_object_name_t obj = 0;
+    while (mach_vm_region(task, &addr, &sz, VM_REGION_BASIC_INFO_64, (vm_region_info_t)&info, &cnt, &obj) == KERN_SUCCESS) {
         if (sz > 0 && (info.protection & VM_PROT_READ)) {
-            const uint8_t *base = (const uint8_t *)addr;
+            const uint8_t *base = (const uint8_t *)(uintptr_t)addr;
             const char *s1 = "Key not found.";
             const char *s2 = "ABCD1234ABCD1234ABCD1234ABCD1234";
             for (vm_size_t i = 0; i + 32 < sz; i += 4) {
