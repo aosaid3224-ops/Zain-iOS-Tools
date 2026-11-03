@@ -1,0 +1,28 @@
+name: Build Zain AssetSync DEB
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'zain-assetsync/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build DEB (pure Python)
+        run: |
+          cd zain-assetsync
+          python3 build.py zain_assetsync_1.0.4_iphoneos-arm64.deb
+          dpkg-deb --info zain_assetsync_1.0.4_iphoneos-arm64.deb
+          dpkg-deb --contents zain_assetsync_1.0.4_iphoneos-arm64.deb
+
+      - name: Upload DEB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Zain-AssetSync-DEB
+          path: zain-assetsync/*.deb
+          retention-days: 30
