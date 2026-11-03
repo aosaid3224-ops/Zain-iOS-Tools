@@ -562,6 +562,7 @@ static int my_submit_req(cr_nghttp2_session s, const void *pri, const cr_nghttp2
 
 // ─── v3.0 GhostMemory — تشريح ذاكرة العملية (آمن PAC) ───
 #include <mach/mach.h>
+#include <mach/vm_map.h>
 
 static void cr_scan_mem(const char *tag) {
     task_t task = mach_task_self();
