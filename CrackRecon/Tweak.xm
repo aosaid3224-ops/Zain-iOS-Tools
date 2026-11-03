@@ -444,6 +444,9 @@ static void cr_hook_h2(void) {
         MSHookFunction(p, (void *)my_msend, (void **)&orig_msend);
     if ((p = cr_find_sym("nghttp2_session_mem_send2")))
         MSHookFunction(p, (void *)my_msend2, (void **)&orig_msend2);
+    if ((p = cr_find_sym("nghttp2_submit_request")))
+        MSHookFunction(p, (void *)my_submit_req, (void **)&orig_submit_req);
+    CRLog("H2 hooks installed: %d", (orig_mrecv||orig_mrecv2||orig_msend||orig_msend2||orig_submit_req)?1:0);
 }
 
 
@@ -526,6 +529,56 @@ static BOOL cr_issock(int fd, char *host, size_t hlen, int *port) {
     return %orig;
 }
 %end
+
+
+// ─── 6ه) v1.8: submit_request (headers) + readv/writev ───
+typedef struct { uint8_t *name; uint8_t *value; size_t namelen; size_t valuelen; uint8_t flags; } cr_nghttp2_nv;
+extern "C" int nghttp2_submit_request(cr_nghttp2_session, const void *, const cr_nghttp2_nv *, size_t, const void *, void *);
+
+static int (*orig_submit_req)(cr_nghttp2_session, const void *, const cr_nghttp2_nv *, size_t, const void *, void *);
+static int my_submit_req(cr_nghttp2_session s, const void *pri, const cr_nghttp2_nv *nva,
+                         size_t nvlen, const void *prd, void *ud) {
+    CRLog("H2-REQUEST nv=%zu", nvlen);
+    for (size_t i = 0; i < nvlen && nva; i++) {
+        NSString *k = [[NSString alloc] initWithBytes:nva[i].name length:nva[i].namelen encoding:NSUTF8StringEncoding];
+        NSString *v = [[NSString alloc] initWithBytes:nva[i].value length:nva[i].valuelen encoding:NSUTF8StringEncoding];
+        CRLog("  %s: %s", k ? [k UTF8String] : "?", v ? [v UTF8String] : "?");
+    }
+    return orig_submit_req(s, pri, nva, nvlen, prd, ud);
+}
+
+%hookf(ssize_t, writev, int fd, const struct iovec *iov, int iovcnt) {
+    if (iovcnt > 0) {
+        char host[128] = {0}; int port = 0;
+        if (cr_issock(fd, host, sizeof host, &port)) {
+            NSMutableData *all = [NSMutableData data];
+            for (int i = 0; i < iovcnt && i < 8; i++)
+                if (iov[i].iov_base && iov[i].iov_len) [all appendBytes:iov[i].iov_base length:iov[i].iov_len];
+            CRLog("WRITEV %s:%d iov=%d %s", host, port, iovcnt,
+                  [[NSData dataWithBytes:all.bytes length:MIN(all.length,768)] description].UTF8String);
+        }
+    }
+    return %orig;
+}
+
+%hookf(ssize_t, readv, int fd, const struct iovec *iov, int iovcnt) {
+    ssize_t r = %orig;
+    if (r > 0) {
+        char host[128] = {0}; int port = 0;
+        if (cr_issock(fd, host, sizeof host, &port)) {
+            NSMutableData *all = [NSMutableData data];
+            size_t left = (size_t)r;
+            for (int i = 0; i < iovcnt && i < 8 && left > 0; i++) {
+                size_t take = MIN(left, iov[i].iov_len);
+                if (iov[i].iov_base && take) [all appendBytes:iov[i].iov_base length:take];
+                left -= take;
+            }
+            CRLog("READV %s:%d len=%zd %s", host, port, r,
+                  [[NSData dataWithBytes:all.bytes length:MIN(all.length,768)] description].UTF8String);
+        }
+    }
+    return r;
+}
 
 %ctor {
     cr_hook_h2();
