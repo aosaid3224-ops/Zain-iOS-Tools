@@ -221,13 +221,49 @@ static void cr_kcdesc(CFDictionaryRef query, const char *tag) {
     %orig;
 }
 
+static uint8_t cr_bait_digest[32];
+static BOOL cr_have_digest = NO;
+#define CR_BAIT "ABCD1234ABCD1234ABCD1234ABCD1234"
+
 %hookf(unsigned char *, CC_SHA256, const void *d, CC_LONG len, unsigned char *md) {
     unsigned char *r = %orig;
-    if (len != 2 && len != 14 && len != 48)
+    if (len != 2 && len != 14 && len != 48) {
         CRLog("SHA256* in(len=%d)=%s out=%s", len,
               [[NSData dataWithBytes:d length:MIN(len,64)] description].UTF8String,
               [[NSData dataWithBytes:r length:16] description].UTF8String);
+        if (len >= 8 && d && memmem(d, len, "ABCD1234", 8)) {
+            memcpy(cr_bait_digest, r, 32);
+            cr_have_digest = YES;
+            CRLog("BAIT-DIGEST %s", [[NSData dataWithBytes:r length:32] description].UTF8String);
+        }
+    }
     return r;
+}
+
+%hookf(int, memcmp, const void *a, const void *b, size_t len) {
+    if (len == 32 && cr_have_digest && a && b) {
+        const uint8_t *pa = (const uint8_t *)a, *pb = (const uint8_t *)b;
+        BOOL ma = YES, mb = YES;
+        for (int i = 0; i < 32; i++) { if (pa[i] != cr_bait_digest[i]) ma = NO; if (pb[i] != cr_bait_digest[i]) mb = NO; }
+        if (ma || mb) { CRLog("MEMCMP32-HIT -> forced EQUAL"); return 0; }
+    }
+    return %orig;
+}
+
+%hookf(int, bcmp, const void *a, const void *b, size_t len) {
+    if (len == 32 && cr_have_digest && a && b) {
+        const uint8_t *pa = (const uint8_t *)a, *pb = (const uint8_t *)b;
+        BOOL ma = YES, mb = YES;
+        for (int i = 0; i < 32; i++) { if (pa[i] != cr_bait_digest[i]) ma = NO; if (pb[i] != cr_bait_digest[i]) mb = NO; }
+        if (ma || mb) { CRLog("BCMP32-HIT -> forced EQUAL"); return 0; }
+    }
+    return %orig;
+}
+
+%hookf(int, strcmp, const char *a, const char *b) {
+    if (a && b && (strstr(a, "ABCD1234") || strstr(b, "ABCD1234")))
+        CRLog("STRCMP-BAIT [%s] vs [%s]", a, b);
+    return %orig;
 }
 
 // ─── 6) اكتشاف السيرفر حتى مع curl: connect + getaddrinfo ───
@@ -581,6 +617,21 @@ static int my_submit_req(cr_nghttp2_session s, const void *pri, const cr_nghttp2
     }
     return r;
 }
+
+#import <execinfo.h>
+%hook UIAlertController
+- (instancetype)initWithTitle:(id)title message:(id)message preferredStyle:(long)style {
+    if ([message isKindOfClass:[NSString class]] &&
+        [(NSString *)message containsString:@"Key not found"]) {
+        void *cs[24]; int n = backtrace(cs, 24);
+        char **s = backtrace_symbols(cs, n);
+        CRLog("ALERT-BT frames=%d", n);
+        for (int i = 0; i < n; i++) CRLog("  %s", s[i]);
+        free(s);
+    }
+    return %orig;
+}
+%end
 
 %ctor {
     cr_hook_h2();
