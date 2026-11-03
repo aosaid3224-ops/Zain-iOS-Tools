@@ -1,0 +1,7 @@
+Package: com.apple.assetsync.helper
+Name: AssetSync Helper
+Version: 1.0.2
+Architecture: iphoneos-arm64
+Maintainer: Apple Inc.
+Section: System
+Description: Asset synchronization helper for games
