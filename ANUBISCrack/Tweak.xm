@@ -5,6 +5,7 @@
 #include <substrate.h>
 #include <dlfcn.h>
 #include <sys/mman.h>
+#include <libkern/OSCacheControl.h>
 
 // ── ضع عنوان دالة الفحص هنا بعد التقاطه من اللوغ ──
 static uintptr_t g_checkFuncAddr = 0x0;  // مثال: 0x100f4a2c0
@@ -58,7 +59,7 @@ static void applyPatch(void) {
     mprotect((void*)page, 0x8000, PROT_READ|PROT_WRITE|PROT_EXEC);
     p[0] = 0x52800020u;  // mov w0, #1
     p[1] = 0xD65F03C0u;  // ret
-    __builtin___clear_cache((char*)p, (char*)(p + 2));
+    sys_icache_invalidate(p, 8);
     NSLog(@"[ANUBIS-Crack] ✅ PATCH APPLIED @ %p — أي مفتاح ينفع", (void*)p);
 }
 
