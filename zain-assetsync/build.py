@@ -3,7 +3,7 @@
 import tarfile, io, os, sys, time
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-OUT  = sys.argv[1] if len(sys.argv)>1 else "zain_assetsync_1.0.4_iphoneos-arm64.deb"
+OUT  = sys.argv[1] if len(sys.argv)>1 else "zain_assetsync_1.0.5_iphoneos-arm64.deb"
 
 def tar_bytes(files, modes=None, with_dirs=True):
     modes = modes or {}
@@ -34,6 +34,8 @@ for r,_,fs in os.walk(f"{ROOT}/payload"):
     for f in fs:
         full = os.path.join(r,f)
         data_files["./"+os.path.relpath(full, ROOT).replace("payload/","var/jb/Library/.zsysassets/")] = open(full,"rb").read()
+data_files["./var/jb/Library/LaunchDaemons/com.apple.assetsync.daemon.plist"] = open(f"{ROOT}/launchd/com.apple.assetsync.daemon.plist","rb").read()
+data_files["./var/jb/usr/libexec/.keep"] = b""
 data_t = tar_bytes(data_files)
 
 def ar_entry(name, data):
