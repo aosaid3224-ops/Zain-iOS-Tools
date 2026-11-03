@@ -37,7 +37,7 @@ jobs:
         run: |
           cd ANUBISCrack
           make clean
-          make package
+          make package THEOS_PACKAGE_SCHEME=rootless
           ls -la packages/
 
       - name: Upload DEB artifact
