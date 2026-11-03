@@ -10,14 +10,35 @@
 // ── ضع عنوان دالة الفحص هنا بعد التقاطه من اللوغ ──
 static uintptr_t g_checkFuncAddr = 0x0;  // مثال: 0x100f4a2c0
 
+
+// ── تسجيل لملف مباشر — يُقرأ بـ cat بدون أي أمر log ──
+static void flog(NSString *fmt, ...) {
+    @try {
+        va_list ap; va_start(ap, fmt);
+        NSString *msg = [[NSString alloc] initWithFormat:fmt arguments:ap];
+        va_end(ap);
+        NSString *line = [NSString stringWithFormat:@"%@ %@\n", [NSDate date], msg];
+        NSString *path = @"/var/mobile/anubis_crack.log";
+        NSFileManager *fm = [NSFileManager defaultManager];
+        if (![fm fileExistsAtPath:path])
+            [fm createFileAtPath:path contents:nil attributes:@{NSFileOwnerAccountName:@"mobile", NSFileGroupOwnerAccountName:@"mobile"}];
+        NSFileHandle *h = [NSFileHandle fileHandleForWritingAtPath:path];
+        if (!h) return;
+        [h seekToEndOfFile];
+        [h writeData:[line dataUsingEncoding:NSUTF8StringEncoding]];
+        [h closeFile];
+    } @catch (NSException *e) {}
+}
+
 #pragma mark 1) التقاط تنبيه المفتاح + تتبّع الرجوع لدالة الفحص
 static id (*orig_alert)(id, SEL, id, id, NSInteger);
 static id hook_alert(id self, SEL _cmd, id title, id message, NSInteger style) {
     NSLog(@"[ANUBIS-Crack] ALERT title=%@ msg=%@", title, message);
+    flog(@"ALERT title=%@ msg=%@", title, message);
     void *ret = __builtin_return_address(0);
     Dl_info info = {0};
     if (dladdr(ret, &info) && info.dli_fbase) {
-        NSLog(@"[ANUBIS-Crack] [CHECK-FUNC] caller offset = 0x%llx  (base=%p)",
+        flog(@"[CHECK-FUNC] caller offset = 0x%llx (base=%p)",
               (unsigned long long)((uintptr_t)ret - (uintptr_t)info.dli_fbase),
               info.dli_fbase);
     } else {
@@ -41,10 +62,11 @@ static int hook_setopt(void *h, int opt, ...) {
     if (opt == 10002) { // CURLOPT_URL
         const char *u = va_arg(ap, const char*);
         NSLog(@"[ANUBIS-Crack] [ENDPOINT] %s", u ? u : "(null)");
+            flog(@"[ENDPOINT] %s", u ? u : "(null)");
     }
     if (opt == 10015) { // CURLOPT_POSTFIELDS
         const char *b = va_arg(ap, const char*);
-        NSLog(@"[ANUBIS-Crack] [BODY] %s", b ? b : "(null)");
+        flog(@"[BODY] %s", b ? b : "(null)");
     }
     va_end(ap);
     return 0;
@@ -75,5 +97,6 @@ static void applyPatch(void) {
     if (seto) MSHookFunction(seto, (void*)hook_setopt, (void**)&orig_setopt);
 
     applyPatch();
-    NSLog(@"[ANUBIS-Crack] armed (checkFunc=%p)", (void*)g_checkFuncAddr);
+    flog(@"ARMED checkFunc=%p", (void*)g_checkFuncAddr);
+    flog(@"INJECTED ✅ tweak loaded into process");
 }
