@@ -4,9 +4,9 @@
 <dict>
     <key>Filter</key>
     <dict>
-        <key>Bundles</key>
+        <key>Executables</key>
         <array>
-            <string>com.tempmail.ios</string>
+            <string>TempMail</string>
         </array>
     </dict>
 </dict>
