@@ -568,10 +568,10 @@ static void cr_scan_mem(const char *tag) {
     task_t task = mach_task_self();
     vm_address_t addr = 0;
     vm_size_t sz = 0;
-    vm_region_basic_info_data_64_t info;
-    mach_msg_type_number_t cnt = VM_REGION_BASIC_INFO_COUNT_64;
-    vm_prot_t prot = 0;
-    while (vm_region_64(task, &addr, &sz, VM_REGION_BASIC_INFO_64, (vm_region_info_t)&info, &cnt, &prot) == KERN_SUCCESS) {
+    natural_t depth = 0;
+    vm_region_submap_info_data_64_t info;
+    mach_msg_type_number_t cnt = VM_REGION_SUBMAP_INFO_COUNT_64;
+    while (vm_region_recurse_64(task, &addr, &sz, &depth, (vm_region_recurse_info_t)&info, &cnt) == KERN_SUCCESS) {
         if (sz > 0 && (info.protection & VM_PROT_READ)) {
             const uint8_t *base = (const uint8_t *)(uintptr_t)addr;
             const char *s1 = "Key not found.";
@@ -588,7 +588,8 @@ static void cr_scan_mem(const char *tag) {
             }
         }
         addr += sz;
-        cnt = VM_REGION_BASIC_INFO_COUNT_64;
+        depth = 0;
+        cnt = VM_REGION_SUBMAP_INFO_COUNT_64;
     }
     CRLog("GM-SCAN-DONE [%s]", tag);
 }
