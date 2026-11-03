@@ -557,22 +557,55 @@ static int my_submit_req(cr_nghttp2_session s, const void *pri, const cr_nghttp2
     return r;
 }
 
-#import <execinfo.h>
-%hook UIAlertController
-- (instancetype)initWithTitle:(id)title message:(id)message preferredStyle:(long)style {
-    if ([message isKindOfClass:[NSString class]] &&
-        [(NSString *)message containsString:@"Key not found"]) {
-        void *cs[24]; int n = backtrace(cs, 24);
-        char **s = backtrace_symbols(cs, n);
-        CRLog("ALERT-BT frames=%d", n);
-        for (int i = 0; i < n; i++) CRLog("  %s", s[i]);
-        free(s);
+
+
+
+// ─── v3.0 GhostMemory — تشريح ذاكرة العملية (آمن PAC) ───
+#include <mach/mach.h>
+
+static void cr_scan_mem(const char *tag) {
+    task_t task = mach_task_self();
+    vm_address_t addr = 0;
+    vm_size_t sz = 0;
+    vm_region_basic_info_data_64_t info;
+    mach_msg_type_number_t cnt = VM_REGION_BASIC_INFO_COUNT_64;
+    vm_prot_t prot = 0;
+    while (vm_region_64(task, &addr, &sz, VM_REGION_BASIC_INFO_64, (vm_region_info_t)&info, &cnt, &prot) == KERN_SUCCESS) {
+        if (sz > 0 && (info.protection & VM_PROT_READ)) {
+            const uint8_t *base = (const uint8_t *)addr;
+            const char *s1 = "Key not found.";
+            const char *s2 = "ABCD1234ABCD1234ABCD1234ABCD1234";
+            for (vm_size_t i = 0; i + 32 < sz; i += 4) {
+                if (memcmp(base + i, s2, 32) == 0) {
+                    CRLog("GM-KEY [%s] @ %p (region %p size %llu)", tag, base + i, (void *)addr, sz);
+                }
+                if (memcmp(base + i, s1, 14) == 0) {
+                    CRLog("GM-MSG [%s] @ %p", tag, base + i, base + i);
+                    // dump 256 بايت حولها (قد تحوي مؤشرات/سلاسل مجاورة)
+                    CRLog("GM-CTX %s", [[NSData dataWithBytes:base + i - 96 length:256] description].UTF8String);
+                }
+            }
+        }
+        addr += sz;
+        cnt = VM_REGION_BASIC_INFO_COUNT_64;
     }
-    return %orig;
+    CRLog("GM-SCAN-DONE [%s]", tag);
+}
+
+%hook UIControl
+- (void)sendAction:(SEL)action to:(id)target forEvent:(UIEvent *)event {
+    CRLog("GM-ACTION %s", action ? sel_getName(action) : "?");
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        cr_scan_mem("post-action");
+    });
+    %orig;
 }
 %end
 
 %ctor {
     cr_hook_h2();
-    CRLog("=== CrackRecon v1.0 injected | pid=%d ===", getpid());
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(6 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        cr_scan_mem("startup");
+    });
+    CRLog("=== CrackRecon v3.0 GhostMemory injected ===");
 }
