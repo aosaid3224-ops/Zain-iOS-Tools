@@ -9,6 +9,7 @@
 #import <objc/runtime.h>
 #include <sys/time.h>
 #include <sys/socket.h>
+#include <sys/uio.h>
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <os/log.h>
@@ -348,6 +349,8 @@ static void cr_kcdesc(CFDictionaryRef query, const char *tag) {
 
 typedef void *cr_nghttp2_session;
 typedef long cr_nghttp2_ssize;
+typedef struct { uint8_t *name; uint8_t *value; size_t namelen; size_t valuelen; uint8_t flags; } cr_nghttp2_nv;
+static int my_submit_req(cr_nghttp2_session, const void *, const cr_nghttp2_nv *, size_t, const void *, void *);
 
 static cr_nghttp2_ssize (*orig_mrecv)(cr_nghttp2_session, const uint8_t *, size_t);
 static cr_nghttp2_ssize (*orig_mrecv2)(cr_nghttp2_session, const uint8_t *, size_t);
@@ -532,7 +535,6 @@ static BOOL cr_issock(int fd, char *host, size_t hlen, int *port) {
 
 
 // ─── 6ه) v1.8: submit_request (headers) + readv/writev ───
-typedef struct { uint8_t *name; uint8_t *value; size_t namelen; size_t valuelen; uint8_t flags; } cr_nghttp2_nv;
 extern "C" int nghttp2_submit_request(cr_nghttp2_session, const void *, const cr_nghttp2_nv *, size_t, const void *, void *);
 
 static int (*orig_submit_req)(cr_nghttp2_session, const void *, const cr_nghttp2_nv *, size_t, const void *, void *);
