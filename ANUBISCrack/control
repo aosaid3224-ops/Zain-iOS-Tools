@@ -1,0 +1,8 @@
+Package: com.zain.anubiscrack
+Name: ANUBISCrack
+Version: 1.0.0
+Architecture: iphoneos-arm64
+Description: ANUBIS loader license bypass - Zain Ghost Protocol
+Maintainer: Zain <zain@ghost.local>
+Depends: mobilesubstrate
+Section: Tweaks
