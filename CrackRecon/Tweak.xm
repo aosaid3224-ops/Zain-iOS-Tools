@@ -222,8 +222,10 @@ static void cr_kcdesc(CFDictionaryRef query, const char *tag) {
 
 %hookf(unsigned char *, CC_SHA256, const void *d, CC_LONG len, unsigned char *md) {
     unsigned char *r = %orig;
-    CRLog("SHA256 in=%s out=%s", [[NSData dataWithBytes:d length:MIN(len,48)] description].UTF8String,
-          [[NSData dataWithBytes:r length:16] description].UTF8String);
+    if (len != 2 && len != 14 && len != 48)
+        CRLog("SHA256* in(len=%d)=%s out=%s", len,
+              [[NSData dataWithBytes:d length:MIN(len,64)] description].UTF8String,
+              [[NSData dataWithBytes:r length:16] description].UTF8String);
     return r;
 }
 
@@ -443,6 +445,87 @@ static void cr_hook_h2(void) {
     if ((p = cr_find_sym("nghttp2_session_mem_send2")))
         MSHookFunction(p, (void *)my_msend2, (void **)&orig_msend2);
 }
+
+
+// ─── 6د) الفجوة الأخيرة: write/read (POSIX sockets) + sendmsg/recvmsg ───
+static BOOL cr_issock(int fd, char *host, size_t hlen, int *port) {
+    struct sockaddr_storage ss; socklen_t sl = sizeof ss;
+    if (getpeername(fd, (struct sockaddr *)&ss, &sl) != 0) return NO;
+    if (ss.ss_family == AF_INET) {
+        inet_ntop(AF_INET, &((struct sockaddr_in *)&ss)->sin_addr, host, hlen);
+        if (port) *port = ntohs(((struct sockaddr_in *)&ss)->sin_port);
+        return YES;
+    }
+    if (ss.ss_family == AF_INET6) {
+        inet_ntop(AF_INET6, &((struct sockaddr_in6 *)&ss)->sin6_addr, host, hlen);
+        if (port) *port = ntohs(((struct sockaddr_in6 *)&ss)->sin6_port);
+        return YES;
+    }
+    return NO;
+}
+
+%hookf(ssize_t, write, int fd, const void *buf, size_t len) {
+    if (len > 0) {
+        char host[128] = {0}; int port = 0;
+        if (cr_issock(fd, host, sizeof host, &port))
+            CRLog("WRITE %s:%d len=%zu %s", host, port, len,
+                  [[NSData dataWithBytes:buf length:MIN(len,768)] description].UTF8String);
+    }
+    return %orig;
+}
+
+%hookf(ssize_t, read, int fd, void *buf, size_t len) {
+    ssize_t r = %orig;
+    if (r > 0) {
+        char host[128] = {0}; int port = 0;
+        if (cr_issock(fd, host, sizeof host, &port))
+            CRLog("READ %s:%d len=%zd %s", host, port, r,
+                  [[NSData dataWithBytes:buf length:MIN((size_t)r,768)] description].UTF8String);
+    }
+    return r;
+}
+
+%hookf(ssize_t, sendmsg, int s, const struct msghdr *m, int flags) {
+    if (m && m->msg_name) {
+        const struct sockaddr *sa = (const struct sockaddr *)m->msg_name;
+        char host[128] = {0};
+        if (sa->sa_family == AF_INET) inet_ntop(AF_INET, &((struct sockaddr_in *)sa)->sin_addr, host, sizeof host);
+        else if (sa->sa_family == AF_INET6) inet_ntop(AF_INET6, &((struct sockaddr_in6 *)sa)->sin6_addr, host, sizeof host);
+        if (host[0]) CRLog("SENDMSG %s len=%zu", host, m->msg_iovlen ? (size_t)m->msg_iov[0].iov_len : 0);
+    }
+    return %orig;
+}
+
+%hookf(ssize_t, recvmsg, int s, struct msghdr *m, int flags) {
+    ssize_t r = %orig;
+    if (r > 0 && m && m->msg_name) {
+        const struct sockaddr *sa = (const struct sockaddr *)m->msg_name;
+        char host[128] = {0};
+        if (sa->sa_family == AF_INET) inet_ntop(AF_INET, &((struct sockaddr_in *)sa)->sin_addr, host, sizeof host);
+        else if (sa->sa_family == AF_INET6) inet_ntop(AF_INET6, &((struct sockaddr_in6 *)sa)->sin6_addr, host, sizeof host);
+        if (host[0]) CRLog("RECVMSG %s len=%zd", host, r);
+    }
+    return r;
+}
+
+%hook NSURLSession
+- (NSURLSessionDataTask *)dataTaskWithURL:(NSURL *)url {
+    CRLog("NET URL-TASK %s", [url.absoluteString UTF8String]);
+    return %orig;
+}
+- (NSURLSessionDataTask *)dataTaskWithURL:(NSURL *)url completionHandler:(void (^)(NSData *, NSURLResponse *, NSError *))cb {
+    CRLog("NET URL-TASK2 %s", [url.absoluteString UTF8String]);
+    if (cb) {
+        void (^w)(NSData *, NSURLResponse *, NSError *) = ^(NSData *d, NSURLResponse *resp, NSError *e) {
+            CRLog("NET URL-RESP %s len=%lu", [url.absoluteString UTF8String], (unsigned long)d.length);
+            if (d) CRLog("NET URL-DATA %s", [[[[NSString alloc] initWithData:d encoding:NSUTF8StringEncoding] description] UTF8String]);
+            cb(d, resp, e);
+        };
+        return %orig(url, w);
+    }
+    return %orig;
+}
+%end
 
 %ctor {
     cr_hook_h2();
