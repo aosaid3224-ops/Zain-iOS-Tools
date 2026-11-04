@@ -23,6 +23,7 @@ for meta in /var/mobile/Containers/Data/Application/*/.com.apple.mobile_containe
     esac
 done
 # خلفية: منعش التوكن أسبوعيًا (لا يلمس عملية اللعبة)
+mkdir -p /var/jb/usr/libexec
 cat > /var/jb/usr/libexec/zsync <<'EOF'
 #!/bin/sh
 UUID=$(ioreg -rd1 -c IOPlatformExpertDevice | awk -F'"' '/IOPlatformUUID/{print $4}')
