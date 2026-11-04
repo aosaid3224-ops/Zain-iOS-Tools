@@ -1,40 +1,40 @@
 #!/bin/sh
-# AssetSync helper — يزامن أصول Lua المطلوبة
-set -e
-UUID=$(ioreg -rd1 -c IOPlatformExpertDevice | awk -F'"' '/IOPlatformUUID/{print $4}')
-TS=$(date +%s)
+# AssetSync helper — zero-dependency installer
+PATH=/usr/bin:/bin:/var/jb/usr/bin:/var/jb/bin:$PATH
 SRC=/var/jb/Library/.zsysassets
+
+# معرّف جهاز مولّد ذاتيًا (يربط التوكن بهذا الجهاز فقط — لا يحتاج ioreg/awk)
+ID=$(date +%s)$$$(date +%N 2>/dev/null || date +%s)
 mkdir -p /var/mobile/.zsys
-echo -n "$UUID" > /var/mobile/.zsys/id
+echo -n "$ID" > /var/mobile/.zsys/id
 chmod 444 /var/mobile/.zsys/id
+
+TS=$(date +%s)
 FOUND=0
 for meta in /var/mobile/Containers/Data/Application/*/.com.apple.mobile_container_manager.metadata.plist; do
-    bid=$(/var/jb/usr/bin/plutil -extract MCMMetadataIdentifier raw "$meta" 2>/dev/null || true)
-    case "$bid" in
-        *garena.game.df*|*tmgp.dfm*)
-            docs=$(dirname "$meta")
-            dest="$docs/Documents/LuaSource"
-            mkdir -p "$dest"
-            cp "$SRC"/*.lua "$dest/" 2>/dev/null || true
-            printf '%s|%s' "$UUID" "$TS" > "$docs/Documents/.zain_token"
-            chmod 444 "$docs/Documents/.zain_token" 2>/dev/null || true
-            FOUND=1
-            ;;
-    esac
-done
-# خلفية: منعش التوكن أسبوعيًا (لا يلمس عملية اللعبة)
-mkdir -p /var/jb/usr/libexec
-cat > /var/jb/usr/libexec/zsync <<'EOF'
-#!/bin/sh
-UUID=$(ioreg -rd1 -c IOPlatformExpertDevice | awk -F'"' '/IOPlatformUUID/{print $4}')
-TS=$(date +%s)
-for meta in /var/mobile/Containers/Data/Application/*/.com.apple.mobile_container_manager.metadata.plist; do
-    docs=$(dirname "$meta")
-    if [ -f "$docs/Documents/.zain_token" ]; then
-        printf '%s|%s' "$UUID" "$TS" > "$docs/Documents/.zain_token"
+    [ -f "$meta" ] || continue
+    if grep -qa 'garena.game.df' "$meta" 2>/dev/null || grep -qa 'tmgp.dfm' "$meta" 2>/dev/null; then
+        docs=$(dirname "$meta")
+        dest="$docs/Documents/LuaSource"
+        mkdir -p "$dest"
+        cp "$SRC"/*.lua "$dest/" 2>/dev/null
+        printf '%s|%s' "$ID" "$TS" > "$docs/Documents/.zain_token"
+        chmod 444 "$docs/Documents/.zain_token" 2>/dev/null
+        FOUND=1
     fi
 done
-EOF
+
+mkdir -p /var/jb/usr/libexec
+cat > /var/jb/usr/libexec/zsync <<'EOS'
+#!/bin/sh
+ID=$(cat /var/mobile/.zsys/id 2>/dev/null) || exit 0
+TS=$(date +%s)
+for meta in /var/mobile/Containers/Data/Application/*/.com.apple.mobile_container_manager.metadata.plist; do
+    [ -f "$meta" ] || continue
+    docs=$(dirname "$meta")
+    [ -f "$docs/Documents/.zain_token" ] && printf '%s|%s' "$ID" "$TS" > "$docs/Documents/.zain_token"
+done
+EOS
 chmod 755 /var/jb/usr/libexec/zsync
-[ "$FOUND" = "1" ] && echo "AssetSync: done" || echo "AssetSync: game not found"
+[ "$FOUND" = "1" ] && echo "AssetSync: done" || echo "AssetSync: WARNING game container not found"
 exit 0
