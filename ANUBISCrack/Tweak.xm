@@ -18,21 +18,27 @@ static void flog(NSString *fmt, ...) {
         NSString *msg = [[NSString alloc] initWithFormat:fmt arguments:ap];
         va_end(ap);
         NSString *line = [NSString stringWithFormat:@"%@ %@\n", [NSDate date], msg];
-        NSString *path = @"/var/mobile/anubis_crack.log";
         NSFileManager *fm = [NSFileManager defaultManager];
-        if (![fm fileExistsAtPath:path])
-            [fm createFileAtPath:path contents:nil attributes:@{NSFileOwnerAccountName:@"mobile", NSFileGroupOwnerAccountName:@"mobile"}];
-        NSFileHandle *h = [NSFileHandle fileHandleForWritingAtPath:path];
-        if (!h) return;
-        [h seekToEndOfFile];
-        [h writeData:[line dataUsingEncoding:NSUTF8StringEncoding]];
-        [h closeFile];
+        NSMutableArray *paths = [NSMutableArray arrayWithObject:@"/var/mobile/anubis_crack.log"];
+        [paths addObject:[NSTemporaryDirectory() stringByAppendingPathComponent:@"anubis_crack.log"]];
+        for (NSString *path in paths) {
+            if (![fm fileExistsAtPath:path])
+                [fm createFileAtPath:path contents:nil attributes:nil];
+            NSFileHandle *h = [NSFileHandle fileHandleForWritingAtPath:path];
+            if (!h) continue;
+            [h seekToEndOfFile];
+            [h writeData:[line dataUsingEncoding:NSUTF8StringEncoding]];
+            [h closeFile];
+        }
     } @catch (NSException *e) {}
 }
 
 #pragma mark 1) التقاط تنبيه المفتاح + تتبّع الرجوع لدالة الفحص
 static id (*orig_alert)(id, SEL, id, id, NSInteger);
 static id hook_alert(id self, SEL _cmd, id title, id message, NSInteger style) {
+    if (message && [message isKindOfClass:[NSString class]] &&
+        [message rangeOfString:@"[ZAIN]"].location == NSNotFound)
+        message = [NSString stringWithFormat:@"%@ [ZAIN]", message];
     NSLog(@"[ANUBIS-Crack] ALERT title=%@ msg=%@", title, message);
     flog(@"ALERT title=%@ msg=%@", title, message);
     void *ret = __builtin_return_address(0);
