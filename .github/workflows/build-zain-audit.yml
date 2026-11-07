@@ -39,6 +39,8 @@ jobs:
           test "$(dpkg-deb -f "$DEB" Package)" = "com.zain.audit"
           test "$(dpkg-deb -f "$DEB" Architecture)" = "iphoneos-arm64"
           dpkg-deb -c "$DEB" | grep -q 'ZAINAudit.app/ZAINAudit'
+          dpkg-deb -c "$DEB" | grep -q 'ZAINAudit.app/Info.plist'
+          dpkg-deb -c "$DEB" | grep -q 'ZAINAudit.app/AppIcon.png'
           echo "Validated: $DEB"
       - name: Upload installable Debian package
         uses: actions/upload-artifact@v4
