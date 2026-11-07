@@ -1,0 +1,9 @@
+Package: com.zain.audit
+Name: ZAIN Audit
+Version: 1.0.0
+Architecture: iphoneos-arm64
+Description: Arabic read-only iOS device and jailbreak audit app
+Maintainer: ZAIN Tools
+Author: ZAIN Tools
+Section: Utilities
+Depends: firmware (>= 15.0)

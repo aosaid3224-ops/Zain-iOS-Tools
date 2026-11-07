@@ -1,0 +1,49 @@
+name: Build ZAIN Audit Debian package
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'ZainAudit/**'
+      - '.github/workflows/build-zain-audit.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    env:
+      THEOS: ${{ github.workspace }}/theos
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: brew install ldid dpkg
+      - name: Install Theos
+        run: git clone --recursive https://github.com/theos/theos.git "$THEOS"
+      - name: Build rootless package
+        working-directory: ZainAudit
+        run: |
+          export PATH="$THEOS/bin:$PATH"
+          make clean
+          make package THEOS_PACKAGE_SCHEME=rootless FINALPACKAGE=1
+      - name: Validate package metadata and app bundle
+        run: |
+          set -euo pipefail
+          DEB=$(ls -t ZainAudit/packages/*.deb | head -1)
+          test -n "$DEB"
+          dpkg-deb -I "$DEB"
+          test "$(dpkg-deb -f "$DEB" Package)" = "com.zain.audit"
+          test "$(dpkg-deb -f "$DEB" Architecture)" = "iphoneos-arm64"
+          dpkg-deb -c "$DEB" | grep -q 'ZAINAudit.app/ZAINAudit'
+          echo "Validated: $DEB"
+      - name: Upload installable Debian package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZAIN-Audit-Dopamine-rootless-deb
+          path: ZainAudit/packages/*.deb
+          if-no-files-found: error
+          retention-days: 30
